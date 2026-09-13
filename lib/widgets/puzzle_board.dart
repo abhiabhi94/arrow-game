@@ -14,9 +14,9 @@ const double kBumpDistance = 0.3;
 
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
 /// on its way out) in a single ink — thin lines with a small head, like a
-/// printed puzzle — plus optional grid lines, the hint glow and the
-/// blocked-cell flash, and turns taps into [onTapArrow] calls. Requires a
-/// loaded [GameState.puzzle].
+/// printed puzzle, straight on the page with no frame — plus optional grid
+/// lines, the hint glow and the blocked-cell flash, and turns taps into
+/// [onTapArrow] calls. Requires a loaded [GameState.puzzle].
 ///
 /// Game state changes instantly on a tap; the slide-out and bump animations
 /// are purely visual and live here, keyed on [GameState.moveToken].
@@ -69,9 +69,11 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     final puzzle = widget.state.puzzle!;
     final arrow = puzzle.arrows[id];
     final travel = arrow.length + arrow.exitRay(puzzle.width, puzzle.height).length;
+    // Long enough to read as a slide even for a short arrow at the edge;
+    // capped so a long crossing of a big board doesn't drag.
     final controller = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: (140 + travel * 55).clamp(300, 900)),
+      duration: Duration(milliseconds: (260 + travel * 70).clamp(450, 1300)),
     );
     _exits[id]?.dispose();
     _exits[id] = controller;
@@ -195,24 +197,17 @@ class _BoardPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final cs = size.width / puzzle.width;
     final rect = Offset.zero & size;
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cs * 0.35));
-    canvas.drawRRect(rrect, Paint()..color = palette.boardSurface);
-    canvas.drawRRect(
-      rrect,
-      Paint()
-        ..color = palette.boardBorder
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
 
+    // No frame: the arrows sit straight on the page. Grid lines, when on,
+    // include the outer edge so the board's extent is still readable.
     if (showGrid) {
       final grid = Paint()
         ..color = palette.gridLine
         ..strokeWidth = 1;
-      for (var x = 1; x < puzzle.width; x++) {
+      for (var x = 0; x <= puzzle.width; x++) {
         canvas.drawLine(Offset(x * cs, 0), Offset(x * cs, size.height), grid);
       }
-      for (var y = 1; y < puzzle.height; y++) {
+      for (var y = 0; y <= puzzle.height; y++) {
         canvas.drawLine(Offset(0, y * cs), Offset(size.width, y * cs), grid);
       }
     }
@@ -232,14 +227,14 @@ class _BoardPainter extends CustomPainter {
     }
 
     canvas.save();
-    canvas.clipRRect(rrect);
+    canvas.clipRect(rect);
     for (final arrow in puzzle.arrows) {
       final exiting = exits[arrow.id];
       if (state.removed.contains(arrow.id) && exiting == null) continue;
       final travel = arrow.length + arrow.exitRay(puzzle.width, puzzle.height).length;
       var offset = 0.0;
       if (exiting != null) {
-        offset = Curves.easeIn.transform(exiting) * travel;
+        offset = Curves.easeInCubic.transform(exiting) * travel;
       } else if (bumpId == arrow.id && bumpT != null) {
         offset = sin(bumpT * pi) * kBumpDistance;
       }
@@ -267,7 +262,7 @@ class _BoardPainter extends CustomPainter {
     final ink = palette.arrowInk;
     // Scales with the cell but stays a pen line on small boards, where a
     // cell is huge and a proportional stroke would turn into a slab.
-    final stroke = min(cs * 0.2, 9.0);
+    final stroke = min(cs * 0.16, 5.0);
     final points = <Offset>[for (var i = 0; i < arrow.length; i++) at(offset + i)];
     final headAt = offset + arrow.length - 1;
     final head = at(headAt);
@@ -278,7 +273,7 @@ class _BoardPainter extends CustomPainter {
     dir = dir / dir.distance;
 
     // Body ends a bit short of the head so the triangle caps it cleanly.
-    final headLen = min(cs * 0.36, 18.0);
+    final headLen = min(cs * 0.34, 11.0);
     final bodyEnd = head - dir * (headLen * 0.55);
     final path = Path()..moveTo(points.first.dx, points.first.dy);
     for (var i = 1; i < points.length - 1; i++) {

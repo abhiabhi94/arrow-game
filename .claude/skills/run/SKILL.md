@@ -15,6 +15,7 @@ Testing" Android build) and rendered in headless Chromium at 390×844 @2x.
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run   # ~60 s
 node tool/screenshot.mjs --levels 1,7,13,20 --settings --hint        # -> shots/*.png
 node tool/screenshot.mjs --levels 3,16 --dark --hint                 # dark theme
+node tool/screenshot.mjs --onboarding                                # first-launch walkthrough
 node tool/screenshot.mjs --dump                                      # print reachable buttons/labels
 ```
 
@@ -32,7 +33,7 @@ run `.claude/hooks/session-start.sh` with `CLAUDE_CODE_REMOTE=true`.
   overflow) or a JS error while being driven — treat that as a failing test.
   CI runs the same script via `.github/actions/web-smoke` (see `ci.yml`,
   job "Web smoke & screenshots") and uploads `shots/` as an artifact.
-- Rendering is faithful: Nunito ships in `assets/fonts/`, CanvasKit is
+- Rendering is faithful: Google Sans Flex ships in `assets/fonts/`, CanvasKit is
   bundled by `--no-web-resources-cdn`, and emoji fallback fonts are mirrored
   through the script's local server (cached in `build/font-cache/`).
 
@@ -47,7 +48,8 @@ the tile's digit, and the home "Play" card is "Level N <name>", so anchor
 regexes at the start and pick `.last()` for the grid tile.
 
 Preferences are seeded through `localStorage` (`flutter.<pref key>`, JSON
-encoded) before boot — that is how the theme is picked and haptics muted.
+encoded) before boot — that is how the walkthrough is skipped, music and
+haptics muted and the theme picked.
 Add new prefs there rather than clicking through the UI.
 
 ## Gotchas (all already handled in the script — keep them when porting)

@@ -18,6 +18,70 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSettings => 'Settings';
 
   @override
+  String get homeNextUp => 'Next up';
+
+  @override
+  String get homePlay => 'Play';
+
+  @override
+  String get homeReplay => 'Replay';
+
+  @override
+  String get homeAllCleared => 'Every level cleared — legend!';
+
+  @override
+  String get homeJourney => 'Your journey';
+
+  @override
+  String get onboardSkip => 'Skip';
+
+  @override
+  String get onboardNext => 'Next';
+
+  @override
+  String get onboardStart => 'Let\'s play!';
+
+  @override
+  String get onboardTitle1 => 'Tap an arrow';
+
+  @override
+  String get onboardBody1 => 'It slides out the way it points. Go on, tap it.';
+
+  @override
+  String get onboardDone1 => 'That\'s it — one down!';
+
+  @override
+  String get onboardTitle2 => 'Watch for blockers';
+
+  @override
+  String get onboardBody2 =>
+      'An arrow can\'t pass through another. Tap the one pointing up and see it bump.';
+
+  @override
+  String get onboardBumped2 =>
+      'Bumped! In a real level that costs a life. Clear the top one first, then the other.';
+
+  @override
+  String get onboardDone2 => 'Order matters — you\'ve got it.';
+
+  @override
+  String get onboardTitle3 => 'That\'s the whole game';
+
+  @override
+  String get onboardRuleLives => '3 lives per level — a bump costs one';
+
+  @override
+  String get onboardRuleClock =>
+      'Beat the clock — plenty of time, but it ticks';
+
+  @override
+  String get onboardRuleHints =>
+      'Stuck? 3 hints per level light up a free arrow';
+
+  @override
+  String get onboardRuleZoom => 'Big boards later — pinch or tap to zoom';
+
+  @override
   String homeStars(int count, int total) {
     return '$count of $total stars';
   }
@@ -229,6 +293,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
+  String get settingsMusic => 'Music';
+
+  @override
+  String get settingsMusicSubtitle => 'A calm loop while you play';
+
+  @override
   String get settingsVibration => 'Vibration';
 
   @override
@@ -251,8 +321,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHowToPlay => 'How to play';
 
   @override
-  String get howToPlayBody =>
-      'Every arrow slides the way it points, following its own bends, until it leaves the board. Tap one whose path is clear and it\'s out. Tap one that runs into another arrow and it bumps back — that costs one of your three lives. Get every arrow out before the clock runs down. Three hints per level point at an arrow that can go; grid lines unlock once you clear level 4.';
+  String get howToPlayBody => 'Replay the two-minute walkthrough';
+
+  @override
+  String get settingsCredits => 'Music credits';
+
+  @override
+  String get creditsTitle => 'Credits';
+
+  @override
+  String get creditsIntro =>
+      'The background music is released under a Creative Commons licence that asks for credit — here it is, gladly.';
+
+  @override
+  String creditsBy(String artist) {
+    return 'by $artist';
+  }
 
   @override
   String get settingsResetProgress => 'Reset progress';

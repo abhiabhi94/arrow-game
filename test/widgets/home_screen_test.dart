@@ -25,15 +25,15 @@ void main() {
   testWidgets('renders title, stars tally, play card and 20 tiles', (tester) async {
     await usePhoneSurface(tester);
     await pumpApp(tester, const HomeScreen());
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 800));
 
     expect(find.text('Arrow'), findsOneWidget);
-    expect(find.text('0 of 60 stars'), findsOneWidget);
-    expect(find.text('Level 1'), findsOneWidget); // the play card
-    expect(find.text('First Steps'), findsOneWidget);
-    expect(find.text('Levels'), findsOneWidget);
+    expect(find.bySemanticsLabel('0 of 60 stars'), findsOneWidget);
+    expect(find.text('Level 1'), findsOneWidget); // the hero card
+    expect(find.text('NEXT UP'), findsOneWidget);
+    expect(find.text('Your journey'), findsOneWidget);
     for (var level = 1; level <= 20; level++) {
-      expect(find.text('$level'), findsOneWidget, reason: 'tile $level');
+      expect(find.text('$level', skipOffstage: false), findsOneWidget, reason: 'node $level');
     }
   });
 
@@ -51,11 +51,11 @@ void main() {
         ),
       ],
     );
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(19));
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.byIcon(Icons.lock_rounded, skipOffstage: false), findsNWidgets(19));
 
     await tester.tap(find.byIcon(Icons.lock_rounded).first);
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 800));
     expect(find.byType(GameScreen), findsNothing);
   });
 
@@ -79,19 +79,19 @@ void main() {
         ),
       ],
     );
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('2 of 60 stars'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.bySemanticsLabel('2 of 60 stars'), findsOneWidget);
     expect(find.text('0:21'), findsOneWidget);
-    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(18));
-    // The play card points at level 2 now.
+    expect(find.byIcon(Icons.lock_rounded, skipOffstage: false), findsNWidgets(18));
+    // The hero card points at level 2 now; the node names it too.
     expect(find.text('Level 2'), findsOneWidget);
-    expect(find.text('Two Ways Out'), findsOneWidget);
+    expect(find.text('Two Ways Out'), findsNWidgets(2));
   });
 
   testWidgets('tapping a tile opens the game; the play card too', (tester) async {
     await usePhoneSurface(tester);
     await pumpApp(tester, const HomeScreen(), extraOverrides: _gameOverride);
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 800));
 
     await tester.tap(find.text('3'));
     await tester.pumpAndSettle();
@@ -103,16 +103,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(HomeScreen), findsOneWidget);
 
-    await tester.tap(find.text('First Steps'));
+    await tester.tap(find.text('Play'));
     await tester.pumpAndSettle();
     expect(find.text('Level 1'), findsOneWidget);
     expect(find.text('First Steps'), findsOneWidget);
   });
 
+  testWidgets('with every level cleared the hero offers a replay', (tester) async {
+    await usePhoneSurface(tester);
+    final seed = <String, Object>{
+      for (var l = 1; l <= 20; l++) ...{
+        'arrow_level_${l}_done': true,
+        'arrow_level_${l}_stars': 3,
+      },
+    };
+    await pumpApp(tester, const HomeScreen(), seed: seed);
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Every level cleared — legend!'), findsOneWidget);
+    expect(find.text('Replay'), findsOneWidget);
+    expect(find.bySemanticsLabel('60 of 60 stars'), findsOneWidget);
+  });
+
   testWidgets('settings button opens settings', (tester) async {
     await usePhoneSurface(tester);
     await pumpApp(tester, const HomeScreen());
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 800));
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsOneWidget);

@@ -23,7 +23,7 @@ class TimerBar extends StatelessWidget {
         Icon(Icons.timer_outlined, size: 18, color: warn ? p.timerWarn : p.textMuted),
         const SizedBox(width: 6),
         SizedBox(
-          width: 30,
+          width: 42, // room for a three-digit clock
           child: Text(
             formatSecondsLeft(remainingMs),
             style: TextStyle(

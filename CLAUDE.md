@@ -47,8 +47,9 @@ in `.claude/hooks/session-start.sh` installs the SDK pinned in
 `.flutter-version`.
 
 The web target is a verification/preview target; the shipped platforms are
-Android + iOS. Nunito is bundled in `assets/fonts/` (google_fonts resolves it
-from assets, no runtime fetch).
+Android + iOS. The typeface (Google Sans Flex, OFL, static weights 400–800)
+is bundled in `assets/fonts/` and declared under `flutter: fonts:` as
+`GoogleSansFlex` — no `google_fonts`, no runtime fetch.
 
 ## Build types (no flavors)
 
@@ -99,9 +100,11 @@ lib/
   data/level_specs.dart  the 20 levels (board size, arrow count, length range, clock)
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider
-  services/            haptics_service (injectable HapticEngine)
-  screens/             home (level grid), game (board + toolbar + overlays), settings
-  ui/                  colors.dart (light+dark ArrowPalette), theme.dart (Material 3 + Nunito)
+  services/            haptics_service (injectable HapticEngine), audio_service (looping music)
+  data/audio_credits.dart  CC-BY attribution for the bundled track
+  screens/             onboarding (interactive 3-step walkthrough), home (journey trail),
+                       game (board + toolbar + overlays), settings, credits
+  ui/                  colors.dart (light+dark ArrowPalette), theme.dart (Material 3 + Google Sans Flex)
   widgets/             puzzle_board (painter + slide/bump animations), board_toolbar,
                        lives_indicator, timer_bar, stars_row, result_card
   utils/               format.dart, labels.dart (level names)
@@ -116,13 +119,16 @@ Key patterns:
   edge, in its heading) is free of other arrows still on the board. Arrows
   leave entirely, so "who blocks whom" is fixed; solvable ⇔ acyclic.
 - **Generation:** `puzzle_generator.dart` places arrows in reverse solving
-  order: it enumerates every (head, heading) whose exit ray is clear, samples
-  deep heads first (inside-out fill keeps the free area an outer ring), grows
-  mostly-straight bodies that prefer cells on existing rays and cells hugging
-  other arrows, keeps the best of `kPlacementChoices` bodies per arrow and
-  the fullest/most tangled of `candidatesFor(arrows)` boards. It reaches
-  ~75–85% fill; the level table is sized at roughly ten cells per arrow so
-  every level gets its full count. `puzzleForLevel(spec)` seeds `Random`
+  order on a flat byte grid: it enumerates every (head, heading) whose exit
+  ray is clear, samples deep heads first (inside-out fill keeps the free area
+  an outer ring), grows bodies step by step scoring straightness, hugging
+  (arrows/border) and existing rays, with a length ramp (inner short, outer
+  long — nested rings), keeps the best of `kPlacementChoices` bodies per
+  arrow, then a gap pass grows tails into leftover cells (safe: a tail may
+  only land on rays of arrows placed *earlier*), and finally keeps the
+  fullest/most tangled of `candidatesFor(arrows)` boards. Fill is ~90%+;
+  the level table is sized at roughly ten cells per arrow so every level
+  gets its full count. `puzzleForLevel(spec)` seeds `Random`
   from `LevelSpec.seed`, so each level is a fixed puzzle. It runs on a
   background isolate (`defaultPuzzleBuilder` → `compute`) behind
   `GamePhase.loading`; on web it runs inline (~1 s for the finale).
@@ -141,9 +147,22 @@ Key patterns:
   = 4; always on in the testing build).
 - **Zoom:** `InteractiveViewer` (pinch) + toolbar buttons, `kMinZoom`..`kMaxZoom`
   (1×–4×; the late boards are 30+ cells wide, so zoom is how you tap them).
-- **Board look:** one ink (`palette.arrowInk`), thin strokes, small heads —
-  no per-arrow colour. The hint glow and the blocked flash are the only
-  colour on the board.
+- **Board look:** one ink (`palette.arrowInk`), thin strokes (≤5 px), small
+  heads, no frame — the arrows sit straight on the page. The hint glow and
+  the blocked flash are the only colour on the board. Slide-out and bump are
+  animated in `PuzzleBoard` (450–1300 ms slide, ease-in).
+- **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
+  "Permafrost" by Scott Buckley (CC-BY 4.0, `assets/audio/`), credited on
+  the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
+  settings once on launch, on every change, and pauses on background.
+- **Onboarding:** `OnboardingScreen` — two tiny boards played for real
+  (`tutorialPuzzleOne/Two`) plus a summary; `Settings.onboardingDone` gates
+  it in `main.dart`; Settings → "How to play" replays it (`replay: true`).
+- **Home:** a gradient "Next up" hero card and a winding trail of level
+  nodes (`_Trail` + `_TrailPainter`), locked/current/cleared states with
+  stars and best time.
+- **Icon:** `tool/make_icon.py` (Pillow) renders `assets/icon/*.png`; then
+  `dart run flutter_launcher_icons`.
 - **Difficulty:** every knob is in `data/level_specs.dart`; the tests in
   `test/data/level_specs_test.dart` and `test/engine/puzzle_generator_test.dart`
   pin the curve (sizes never shrink, every level generates its full arrow
@@ -157,6 +176,8 @@ Key patterns:
 - `flutter test` + `tool/coverage.sh`. The gate excludes generated l10n,
   `main.dart`, and glue marked `// coverage:ignore` (the real periodic timer).
   Don't add `coverage:ignore` to hide untested logic — only true glue.
+- `test/widgets/onboarding_test.dart` plays the walkthrough boards for real
+  by tapping grid cells.
 - Widget tests override `gameProvider` with `autoTick: false` and the tiny
   hand-built board in `test/support/sample_puzzle.dart` (taps are aimed at
   grid cells); pass `puzzle:` to skip the loading phase, or a `builder:`
@@ -190,7 +211,6 @@ fails on any Flutter exception, and uploads `shots/`.
 - **Localization:** only English is authored (`lib/l10n/app_en.arb`); the
   l10n pipeline is wired, so adding a language is a second `.arb` file plus a
   language picker in Settings.
-- **Audio:** no music/sfx yet. The sudoku app's `AudioService` pattern
-  (injectable backend, `.mp3` only) is the template if it's wanted.
-- **App icon:** still the default Flutter icon.
+- **Sound effects:** music only; a slide/bump sfx would need new assets
+  (`.mp3`/AAC, never `.ogg` — iOS can't decode Vorbis via audioplayers).
 - **iOS:** code is iOS-ready; the matching iOS scheme needs Xcode (not set up here).

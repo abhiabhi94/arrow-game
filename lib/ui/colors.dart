@@ -35,10 +35,8 @@ const Color _lTextInk = Color(0xFF2D2A4A);
 const Color _lTextMuted = Color(0xFF6E6A8F);
 const Color _lTextFaint = Color(0xFFA6A2C4);
 
-// Board: a white card with faint grid lines.
-const Color _lBoardSurface = Color(0xFFFFFFFF);
+// Board: faint grid lines on the page background.
 const Color _lGridLine = Color(0xFFE4E0FF);
-const Color _lBoardBorder = Color(0xFFDAD7F2);
 const Color _lHintGlow = Color(0x66FFC53D);
 const Color _lBlockedFlash = Color(0x80FF6B6B);
 // One ink for every arrow, like a printed puzzle: colour would only shout.
@@ -78,9 +76,7 @@ const Color _dTextInk = Color(0xFFEAE7F7);
 const Color _dTextMuted = Color(0xFFA9A4CC);
 const Color _dTextFaint = Color(0xFF6E6A8F);
 
-const Color _dBoardSurface = Color(0xFF201D30);
 const Color _dGridLine = Color(0xFF322E4A);
-const Color _dBoardBorder = Color(0xFF3A3560);
 const Color _dHintGlow = Color(0x80FFCE52);
 const Color _dBlockedFlash = Color(0x99FF7B7B);
 const Color _dArrowInk = Color(0xFFEAE7F7);
@@ -116,9 +112,7 @@ class ArrowPalette {
     required this.textInk,
     required this.textMuted,
     required this.textFaint,
-    required this.boardSurface,
     required this.gridLine,
-    required this.boardBorder,
     required this.hintGlow,
     required this.blockedFlash,
     required this.arrowInk,
@@ -147,9 +141,7 @@ class ArrowPalette {
   final Color textInk;
   final Color textMuted;
   final Color textFaint;
-  final Color boardSurface;
   final Color gridLine;
-  final Color boardBorder;
   final Color hintGlow;
   final Color blockedFlash;
 
@@ -180,9 +172,7 @@ class ArrowPalette {
     textInk: _lTextInk,
     textMuted: _lTextMuted,
     textFaint: _lTextFaint,
-    boardSurface: _lBoardSurface,
     gridLine: _lGridLine,
-    boardBorder: _lBoardBorder,
     hintGlow: _lHintGlow,
     blockedFlash: _lBlockedFlash,
     arrowInk: _lArrowInk,
@@ -212,9 +202,7 @@ class ArrowPalette {
     textInk: _dTextInk,
     textMuted: _dTextMuted,
     textFaint: _dTextFaint,
-    boardSurface: _dBoardSurface,
     gridLine: _dGridLine,
-    boardBorder: _dBoardBorder,
     hintGlow: _dHintGlow,
     blockedFlash: _dBlockedFlash,
     arrowInk: _dArrowInk,

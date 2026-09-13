@@ -74,7 +74,6 @@ void main() {
     final container = await _pumpGame(tester);
     expect(find.text('Level 1'), findsOneWidget);
     expect(find.text('First Steps'), findsOneWidget);
-    expect(find.text('0/3'), findsOneWidget);
     expect(find.text('30'), findsOneWidget);
     expect(find.byType(PuzzleBoard), findsOneWidget);
     expect(find.text('Tap an arrow to slide it out the way it points.'), findsOneWidget);
@@ -90,7 +89,6 @@ void main() {
 
     await _tapCell(tester, const Cell(2, 1)); // arrow 0
     expect(notifier.state.removed, {0});
-    expect(find.text('1/3'), findsOneWidget);
 
     await _tapCell(tester, const Cell(2, 1)); // now empty: nothing happens
     expect(notifier.state.moveToken, 1);
@@ -258,7 +256,6 @@ void main() {
     await _settle(tester, 400);
     expect(notifier.state.elapsedMs, 0);
     expect(notifier.state.removed, isEmpty);
-    expect(find.text('0/3'), findsOneWidget);
   });
 
   testWidgets('pause overlay freezes play; resume and quit work', (tester) async {
@@ -388,6 +385,5 @@ void main() {
     await _settle(tester, 300);
     expect(find.text('Knot'), findsOneWidget);
     expect(find.text('Level 7'), findsOneWidget);
-    expect(find.text('0/${specForLevel(7).arrows}'), findsOneWidget);
   });
 }

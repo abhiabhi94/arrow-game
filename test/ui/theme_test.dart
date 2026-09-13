@@ -15,6 +15,8 @@ void main() {
     expect(light.scaffoldBackgroundColor, ArrowPalette.light.backgroundSoft);
     expect(dark.scaffoldBackgroundColor, ArrowPalette.dark.backgroundSoft);
     expect(light.colorScheme.primary, ArrowPalette.light.primary);
+    expect(light.textTheme.bodyMedium?.fontFamily, kFontFamily);
+    expect(dark.appBarTheme.titleTextStyle?.fontFamily, kFontFamily);
     expect(dark.colorScheme.primary, ArrowPalette.dark.primary);
   });
 

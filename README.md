@@ -23,9 +23,13 @@ the way its head points, until it leaves the board. Get every arrow out.
   hint glow and a blocked bump add colour.
 - **Grid lines** are an earned toggle: clear level 4 to unlock them.
 - **Stars**: three for a flawless run, two for one slip, one for two. Best
-  stars and best time are kept per level. Confetti, pause (also on
-  backgrounding), light/dark theme, haptics, locked progression (all levels
-  open in the debug build).
+  stars and best time are kept per level.
+- **First launch** walks you through on two tiny boards you actually play.
+- **Home** is a winding journey trail of levels with a "Next up" card.
+- Background music ("Permafrost" by Scott Buckley, CC-BY 4.0, credited
+  in-app) and haptics, both on by default and configurable; confetti; pause
+  (also on backgrounding); light/dark/system theme; locked progression (all
+  levels open in the debug build); Google Sans Flex throughout.
 
 ## Architecture
 

@@ -28,17 +28,19 @@ same script and uploads the screenshots as an artifact.
 | `.claude/skills/run/SKILL.md` | Tells Claude how to build/screenshot/review in a session. |
 | `tool/screenshot.mjs` | The driver: static server + font mirror + Playwright script + smoke gate. |
 | `.github/actions/web-smoke/action.yml` | Composite action: build web, run the driver, upload `shots/`. Used by the `smoke` job in `ci.yml`. |
-| `assets/fonts/` + `pubspec.yaml` assets entry | Nunito bundled so `google_fonts` never fetches at runtime (offline-safe on phones too). |
+| `assets/fonts/` + `pubspec.yaml` `fonts:` entry | Google Sans Flex bundled as a regular font family — nothing fetched at runtime. |
 | `web/` | Web platform scaffold (`flutter create --platforms=web .`). |
 
 ## App-specific parts of the driver
 
 - **Prefs** seeded into `localStorage` before boot (`flutter.<key>`, JSON
-  encoded): `arrow_haptics_on`, `arrow_theme` (`"light"`/`"dark"`).
-- **Navigation**: home → grid tile "Level N" (`.last()`, because the "Play"
-  card is also named "Level N …") → the board → `--hint` taps the "Hint"
-  toolbar button → the AppBar "Back" button returns home. Settings via the
-  "Settings" tooltip.
+  encoded): `arrow_onboarding_done` (false with `--onboarding`),
+  `arrow_music_on` (false — no audio device), `arrow_haptics_on`,
+  `arrow_theme` (`"light"`/`"dark"`).
+- **Navigation**: home → trail node "Level N" (`.last()`, because the
+  "Next up" card is also named "Level N …") → the board → `--hint` taps the
+  "Hint" toolbar button → the AppBar "Back" button returns home. Settings
+  via the "Settings" tooltip; `--onboarding` captures the walkthrough.
 - Add new screens by giving their entry widget a `Semantics(label: …,
   button: true)` or a `tooltip:`; run `--dump` to list what a screen exposes.
 

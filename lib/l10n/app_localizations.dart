@@ -112,6 +112,126 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get homeSettings;
 
+  /// No description provided for @homeNextUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Next up'**
+  String get homeNextUp;
+
+  /// No description provided for @homePlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get homePlay;
+
+  /// No description provided for @homeReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay'**
+  String get homeReplay;
+
+  /// No description provided for @homeAllCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Every level cleared — legend!'**
+  String get homeAllCleared;
+
+  /// No description provided for @homeJourney.
+  ///
+  /// In en, this message translates to:
+  /// **'Your journey'**
+  String get homeJourney;
+
+  /// No description provided for @onboardSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get onboardSkip;
+
+  /// No description provided for @onboardNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onboardNext;
+
+  /// No description provided for @onboardStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s play!'**
+  String get onboardStart;
+
+  /// No description provided for @onboardTitle1.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an arrow'**
+  String get onboardTitle1;
+
+  /// No description provided for @onboardBody1.
+  ///
+  /// In en, this message translates to:
+  /// **'It slides out the way it points. Go on, tap it.'**
+  String get onboardBody1;
+
+  /// No description provided for @onboardDone1.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s it — one down!'**
+  String get onboardDone1;
+
+  /// No description provided for @onboardTitle2.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch for blockers'**
+  String get onboardTitle2;
+
+  /// No description provided for @onboardBody2.
+  ///
+  /// In en, this message translates to:
+  /// **'An arrow can\'t pass through another. Tap the one pointing up and see it bump.'**
+  String get onboardBody2;
+
+  /// No description provided for @onboardBumped2.
+  ///
+  /// In en, this message translates to:
+  /// **'Bumped! In a real level that costs a life. Clear the top one first, then the other.'**
+  String get onboardBumped2;
+
+  /// No description provided for @onboardDone2.
+  ///
+  /// In en, this message translates to:
+  /// **'Order matters — you\'ve got it.'**
+  String get onboardDone2;
+
+  /// No description provided for @onboardTitle3.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s the whole game'**
+  String get onboardTitle3;
+
+  /// No description provided for @onboardRuleLives.
+  ///
+  /// In en, this message translates to:
+  /// **'3 lives per level — a bump costs one'**
+  String get onboardRuleLives;
+
+  /// No description provided for @onboardRuleClock.
+  ///
+  /// In en, this message translates to:
+  /// **'Beat the clock — plenty of time, but it ticks'**
+  String get onboardRuleClock;
+
+  /// No description provided for @onboardRuleHints.
+  ///
+  /// In en, this message translates to:
+  /// **'Stuck? 3 hints per level light up a free arrow'**
+  String get onboardRuleHints;
+
+  /// No description provided for @onboardRuleZoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Big boards later — pinch or tap to zoom'**
+  String get onboardRuleZoom;
+
   /// No description provided for @homeStars.
   ///
   /// In en, this message translates to:
@@ -490,6 +610,18 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settingsTitle;
 
+  /// No description provided for @settingsMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Music'**
+  String get settingsMusic;
+
+  /// No description provided for @settingsMusicSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A calm loop while you play'**
+  String get settingsMusicSubtitle;
+
   /// No description provided for @settingsVibration.
   ///
   /// In en, this message translates to:
@@ -535,8 +667,32 @@ abstract class AppLocalizations {
   /// No description provided for @howToPlayBody.
   ///
   /// In en, this message translates to:
-  /// **'Every arrow slides the way it points, following its own bends, until it leaves the board. Tap one whose path is clear and it\'s out. Tap one that runs into another arrow and it bumps back — that costs one of your three lives. Get every arrow out before the clock runs down. Three hints per level point at an arrow that can go; grid lines unlock once you clear level 4.'**
+  /// **'Replay the two-minute walkthrough'**
   String get howToPlayBody;
+
+  /// No description provided for @settingsCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'Music credits'**
+  String get settingsCredits;
+
+  /// No description provided for @creditsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Credits'**
+  String get creditsTitle;
+
+  /// No description provided for @creditsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'The background music is released under a Creative Commons licence that asks for credit — here it is, gladly.'**
+  String get creditsIntro;
+
+  /// No description provided for @creditsBy.
+  ///
+  /// In en, this message translates to:
+  /// **'by {artist}'**
+  String creditsBy(String artist);
 
   /// No description provided for @settingsResetProgress.
   ///

@@ -16,8 +16,16 @@ void main() {
       expect(p.arrowCount, spec.arrows, reason: 'level ${spec.level} arrow count');
       expect(p.isSolvable, isTrue, reason: 'level ${spec.level} solvable');
       for (final a in p.arrows) {
-        expect(a.length, inInclusiveRange(spec.minLength, spec.maxLength), reason: 'level ${spec.level} $a');
+        // Tails may grow past the nominal maximum while filling gaps.
+        expect(
+          a.length,
+          inInclusiveRange(spec.minLength, spec.maxLength + kGapTailSlack),
+          reason: 'level ${spec.level} $a',
+        );
       }
+      // Dense like a printed puzzle: at least four cells in five are used.
+      final used = p.arrows.fold<int>(0, (n, a) => n + a.length);
+      expect(used / spec.cellCount, greaterThanOrEqualTo(0.8), reason: 'level ${spec.level} fill');
       expect(sw.elapsedMilliseconds, lessThan(6000), reason: 'level ${spec.level} too slow');
     }
   });

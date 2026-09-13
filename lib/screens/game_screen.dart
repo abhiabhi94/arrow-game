@@ -152,15 +152,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
               child: Column(
                 children: [
-                  TimerBar(remainingMs: state.remainingMs, fraction: state.timeFraction),
-                  const SizedBox(height: 10),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _ProgressPill(
-                        text: l10n.hudArrows(state.arrowsOut, state.arrowsTotal),
-                        fraction: state.progress,
+                      Expanded(
+                        child: TimerBar(
+                          remainingMs: state.remainingMs,
+                          fraction: state.timeFraction,
+                        ),
                       ),
+                      const SizedBox(width: 14),
                       LivesIndicator(livesLeft: state.livesLeft),
                     ],
                   ),
@@ -169,8 +169,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         _viewport = constraints.biggest;
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
+                        return ClipRect(
                           child: InteractiveViewer(
                             transformationController: _zoom,
                             minScale: kMinZoom,
@@ -181,7 +180,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                             },
                             child: SizedBox.expand(
                               child: Padding(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(4),
                                 child: state.isLoading
                                     ? _LoadingView(message: l10n.gameLoading)
                                     : PuzzleBoard(
@@ -374,43 +373,4 @@ class _LoadingView extends StatelessWidget {
           ],
         ),
       );
-}
-
-class _ProgressPill extends StatelessWidget {
-  const _ProgressPill({required this.text, required this.fraction});
-  final String text;
-  final double fraction;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: p.surface,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.north_east_rounded, size: 18, color: p.primary),
-          const SizedBox(width: 6),
-          Text(text, style: TextStyle(fontWeight: FontWeight.w800, color: p.textInk)),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 56,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: fraction,
-                minHeight: 6,
-                backgroundColor: p.timerTrack,
-                color: p.primary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
