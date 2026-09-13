@@ -45,8 +45,20 @@ approval click, and "Deployment branches and tags" can restrict it to
 
 (On macOS `base64` takes no `-w0`; use `base64 -i ~/keys/arrow-upload.jks`.)
 
-The workflow fails fast with a clear message if any of the required secrets
-is missing.
+The workflow fails fast with a clear message if a required secret is missing,
+and it opens the keystore before building, so a wrong password, a bad alias
+or a mangled base64 upload fails in a second rather than after the compile.
+That step prints the certificate's SHA-256 fingerprint; compare it with
+
+```bash
+keytool -list -v -keystore ~/keys/arrow-upload.jks -alias upload
+```
+
+on the machine that holds the keystore. If the workflow reports "keystore
+password was incorrect" but the command above accepts the password, the
+secret value differs from what you typed (a stray trailing space or newline
+when pasting is the usual culprit) or the base64 was truncated when pasted:
+re-set `ANDROID_UPLOAD_KEYSTORE_BASE64` and `ANDROID_UPLOAD_KEYSTORE_PASSWORD`.
 
 ### 3. Play Console
 

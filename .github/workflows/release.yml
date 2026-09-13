@@ -101,6 +101,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
         run: |
+          set -o pipefail
           echo "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
           cat > android/key.properties <<PROPS
           storePassword=$KEYSTORE_PASSWORD
@@ -108,6 +109,24 @@ jobs:
           keyAlias=${KEY_ALIAS:-upload}
           storeFile=$KEYSTORE_PATH
           PROPS
+
+      # Opens the keystore the way Gradle will, so a corrupt upload, a wrong
+      # password or a missing alias fails here in a second instead of after
+      # the five-minute compile. Prints the certificate fingerprint (public)
+      # so it can be compared with `keytool -list` on the machine that made it.
+      - name: Verify upload keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+        run: |
+          alias=${KEY_ALIAS:-upload}
+          size=$(stat -c %s "$KEYSTORE_PATH")
+          if ! keytool -list -keystore "$KEYSTORE_PATH" -storepass:env KEYSTORE_PASSWORD \
+               -alias "$alias" > keytool.out 2>&1; then
+            echo "::error::Cannot open key '$alias' in the upload keystore ($size bytes): $(tr '\n' ' ' < keytool.out)— check ANDROID_UPLOAD_KEYSTORE_BASE64, ANDROID_UPLOAD_KEYSTORE_PASSWORD and ANDROID_UPLOAD_KEY_ALIAS. See docs/release.md."
+            exit 1
+          fi
+          echo "Upload keystore OK ($size bytes): $(grep -i fingerprint keytool.out)"
 
       - name: Resolve version
         id: version
