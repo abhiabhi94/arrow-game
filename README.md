@@ -80,9 +80,14 @@ platforms are Android and iOS.
 
 ## Publishing (Play Store)
 
-Release builds are signed with your **upload key**, read from a gitignored
-`android/key.properties`. Copy `android/key.properties.example` to
-`android/key.properties`, generate an upload keystore, then:
+The upload bundle comes from the **Release** workflow
+(`.github/workflows/release.yml`): push a `v*` tag (or run it manually from
+the Actions tab) and it builds a signed `.aab` + `.apk`, uploads them as an
+artifact and attaches them to a GitHub Release. The upload key lives in
+repository secrets — full setup and the step-by-step in `docs/release.md`.
+
+Locally, release builds are signed with the same upload key read from a
+gitignored `android/key.properties` (copy `android/key.properties.example`):
 
 ```bash
 flutter build appbundle --release   # -> build/app/outputs/bundle/release/app-release.aab
