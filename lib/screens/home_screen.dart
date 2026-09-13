@@ -10,6 +10,7 @@ import '../models/level_progress.dart';
 import '../providers/progress_provider.dart';
 import '../providers/saved_game_provider.dart';
 import '../ui/colors.dart';
+import '../ui/layout.dart';
 import '../utils/format.dart';
 import '../utils/labels.dart';
 import 'game_screen.dart';
@@ -37,94 +38,107 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.appTitle,
-                            style: TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.w800,
-                              color: p.textInk,
-                              letterSpacing: -0.5,
+        // Full-width scroll view, phone-width content: in a desktop browser
+        // the trail would otherwise meander across the whole window. The
+        // gutter (not a centred column) keeps the wheel and a mouse drag
+        // scrolling from anywhere over the page.
+        child: LayoutBuilder(
+          builder: (context, constraints) => CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: contentGutter(constraints.maxWidth),
+                sliver: SliverMainAxisGroup(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.appTitle,
+                                    style: TextStyle(
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.w800,
+                                      color: p.textInk,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  Text(
+                                    l10n.appTagline,
+                                    style: TextStyle(color: p.textMuted, fontSize: 15),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          Text(
-                            l10n.appTagline,
-                            style: TextStyle(color: p.textMuted, fontSize: 15),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _StarsPill(stars: notifier.totalStars, total: totalLevels * 3),
-                    const SizedBox(width: 8),
-                    IconButton.filledTonal(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const SettingsScreen(),
+                            _StarsPill(stars: notifier.totalStars, total: totalLevels * 3),
+                            const SizedBox(width: 8),
+                            IconButton.filledTonal(
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const SettingsScreen(),
+                                ),
+                              ),
+                              icon: const Icon(Icons.settings_rounded),
+                              tooltip: l10n.homeSettings,
+                            ),
+                          ],
                         ),
                       ),
-                      icon: const Icon(Icons.settings_rounded),
-                      tooltip: l10n.homeSettings,
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+                        child: _NextUpCard(
+                          level: heroLevel,
+                          allCleared: allCleared,
+                          resume: saved == null
+                              ? null
+                              : l10n.homeResumeProgress(
+                                  saved.arrowsOut,
+                                  specForLevel(saved.level).arrows,
+                                  formatDurationMs(saved.elapsedMs),
+                                ),
+                          onPlay: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => GameScreen(level: heroLevel),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 4),
+                      sliver: SliverToBoxAdapter(
+                        child: Text(
+                          l10n.homeJourney,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: p.textInk,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                        child: _Trail(
+                          progress: progress,
+                          isUnlocked: notifier.isUnlocked,
+                          current: nextLevel,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
-                child: _NextUpCard(
-                  level: heroLevel,
-                  allCleared: allCleared,
-                  resume: saved == null
-                      ? null
-                      : l10n.homeResumeProgress(
-                          saved.arrowsOut,
-                          specForLevel(saved.level).arrows,
-                          formatDurationMs(saved.elapsedMs),
-                        ),
-                  onPlay: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => GameScreen(level: heroLevel),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 4),
-              sliver: SliverToBoxAdapter(
-                child: Text(
-                  l10n.homeJourney,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: p.textInk,
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                child: _Trail(
-                  progress: progress,
-                  isUnlocked: notifier.isUnlocked,
-                  current: nextLevel,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

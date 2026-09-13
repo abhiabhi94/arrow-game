@@ -8,13 +8,19 @@
 //   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--hint] [--grid] [--resume]
 //                            [--settings] [--onboarding] [--dump] [--no-strict]
 //                            [--build-dir build/web] [--scale 2] [--port 0]
+//                            [--viewport 1440x900] [--keys Equal,KeyH]
 //
 //   --levels  opens each level and captures its board (level-NN-*.png)
 //   --hint    also taps the hint button and captures the glowing arrow
+//             (level-NN-hint-*.png)
 //   --grid    seeds the grid-lines preference on (the lattice under the arrows)
 //   --resume  seeds a saved game on the first level (home shows Continue, the level its Welcome back card)
-//             (level-NN-hint-*.png)
 //   --onboarding  boots into the first-launch walkthrough instead of home
+//   --viewport WxH  renders the desktop layout instead of a phone (the web build
+//             is also served on GitHub Pages, where people play it on a laptop);
+//             non-phone shots carry the size in their filename
+//   --keys    Playwright key names pressed on each opened level, then captured
+//             (level-NN-keys-*.png): e.g. Equal zooms in, KeyH asks for a hint
 //
 // Prereq: `flutter build web --debug --no-web-resources-cdn`
 //   debug   = all levels unlocked (same as the "Arrow Testing" Android build)
@@ -30,7 +36,7 @@
 // wrapped in Semantics(label: …, button: true) / any IconButton(tooltip: …) is
 // reachable with getByRole. `--dump` prints what is reachable on the screen.
 //
-// Fonts: the app bundles Nunito (assets/fonts/), but the engine still fetches
+// Fonts: the app bundles Google Sans Flex (assets/fonts/), but the engine still fetches
 // *fallback* fonts (emoji, …) from fonts.gstatic.com at runtime.
 // Headless Chromium cannot reach that host through the cloud egress proxy, so
 // the local server mirrors it at /__fonts/ (fetched by Node, which can, and
@@ -59,6 +65,12 @@ const resume = Boolean(args.resume);
 const scale = Number(args.scale ?? 2);
 const port = Number(args.port ?? 0);
 const strict = !args['no-strict'];
+// Phone by default; `--viewport WxH` renders the desktop layout instead.
+const viewport = parseViewport(args.viewport);
+const isPhone = viewport.width < 600;
+// Keys to press on each opened level, so keyboard shortcuts can be smoke-tested
+// the same way taps are (e.g. `--keys Equal,Equal,KeyH`).
+const keys = String(args.keys ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 
 if (!fs.existsSync(path.join(buildDir, 'index.html'))) {
   console.error(`No web build at ${buildDir}. Run: flutter build web --debug --no-web-resources-cdn`);
@@ -144,10 +156,10 @@ const prefs = {
 const problems = [];
 const browser = await chromium.launch();
 const context = await browser.newContext({
-  viewport: { width: 390, height: 844 },
+  viewport,
   deviceScaleFactor: scale,
-  isMobile: true,
-  hasTouch: true,
+  isMobile: isPhone,
+  hasTouch: isPhone,
   colorScheme: dark ? 'dark' : 'light',
   locale: 'en-US',
 });
@@ -172,7 +184,10 @@ try {
 
   if (args.dump) console.log(await dumpSemantics(page));
 
-  const tag = `${dark ? 'dark' : 'light'}${grid ? '-grid' : ''}${resume ? '-resume' : ''}`;
+  // Non-phone runs carry their size in the filename so a desktop run doesn't
+  // overwrite the phone shot of the same screen.
+  const size = isPhone ? '' : `-${viewport.width}x${viewport.height}`;
+  const tag = `${dark ? 'dark' : 'light'}${grid ? '-grid' : ''}${resume ? '-resume' : ''}${size}`;
   await shoot(page, `${args.onboarding ? 'onboarding' : 'home'}-${tag}`);
 
   if (args.settings) {
@@ -209,6 +224,13 @@ try {
       await page.getByRole('button', { name: /^Hint/ }).first().click();
       await settle(page, 500);
       await shoot(page, `level-${id}-hint-${tag}`);
+    }
+    if (keys.length) {
+      for (const key of keys) {
+        await page.keyboard.press(key);
+        await settle(page, 250);
+      }
+      await shoot(page, `level-${id}-keys-${tag}`);
     }
     await goBack(page);
   }
@@ -264,6 +286,14 @@ async function shoot(page, name) {
   const file = path.join(outDir, `${name}.png`);
   await page.screenshot({ path: file });
   console.log('  wrote', path.relative(process.cwd(), file));
+}
+
+/// `--viewport 1440x900` -> { width, height }; defaults to a phone.
+function parseViewport(value) {
+  if (!value || value === true) return { width: 390, height: 844 };
+  const m = /^(\d+)x(\d+)$/.exec(String(value));
+  if (!m) { console.error(`Bad --viewport ${value}; expected WxH, e.g. 1440x900`); process.exit(2); }
+  return { width: Number(m[1]), height: Number(m[2]) };
 }
 
 function parseArgs(argv) {

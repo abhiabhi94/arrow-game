@@ -10,6 +10,7 @@ import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/audio_service.dart';
+import 'ui/layout.dart';
 import 'ui/theme.dart';
 
 Future<void> main() async {
@@ -66,6 +67,7 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
     return MaterialApp(
       title: 'Arrow',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const AppScrollBehavior(),
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       themeMode: themeModeFor(settings.themeChoice),

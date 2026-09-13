@@ -5,6 +5,7 @@ import 'package:arrow_game/providers/settings_provider.dart';
 import 'package:arrow_game/screens/credits_screen.dart';
 import 'package:arrow_game/screens/onboarding_screen.dart';
 import 'package:arrow_game/screens/settings_screen.dart';
+import 'package:arrow_game/ui/layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -82,5 +83,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(progress.totalStars, 0);
     expect(container.read(savedGameProvider), isNull);
+  });
+
+  testWidgets('a desktop window keeps the cards phone-wide and centred', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpApp(tester, const SettingsScreen());
+    expect(tester.takeException(), isNull);
+    final card = tester.getRect(find.byType(Switch).first);
+    expect(card.right, lessThanOrEqualTo((1440 + kMaxContentWidth) / 2));
+    final title = tester.getRect(find.text('How to play'));
+    expect(title.left, greaterThanOrEqualTo((1440 - kMaxContentWidth) / 2));
   });
 }

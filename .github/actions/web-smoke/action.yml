@@ -1,8 +1,9 @@
 name: Flutter web smoke & screenshots
 description: >-
   Builds the Flutter app for web (debug, CanvasKit bundled), drives it in
-  headless Chromium at a phone viewport with tool/screenshot.mjs, fails on any
-  Flutter exception / JS error, and uploads the screenshots as an artifact.
+  headless Chromium at phone and desktop viewports with tool/screenshot.mjs,
+  fails on any Flutter exception / JS error, and uploads the screenshots as an
+  artifact.
   Copy this folder + tool/screenshot.mjs to another Flutter game repo and adapt
   the "app-specific" block of the script.
 
@@ -17,6 +18,7 @@ inputs:
       --levels 3,16 --dark --hint --grid
       --onboarding
       --levels 3 --resume
+      --levels 1,8 --viewport 1440x900 --keys Equal,KeyH --settings
   artifact-name:
     description: Name of the uploaded screenshots artifact.
     required: false

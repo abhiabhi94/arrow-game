@@ -1,5 +1,6 @@
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/level_specs.dart';
@@ -9,6 +10,7 @@ import '../providers/game_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/settings_provider.dart';
 import '../ui/colors.dart';
+import '../ui/layout.dart';
 import '../utils/format.dart';
 import '../utils/labels.dart';
 import '../widgets/board_toolbar.dart';
@@ -92,6 +94,43 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
   }
 
+  /// Keyboard shortcuts for the web build, played on a laptop via GitHub
+  /// Pages: H asks for a hint, + / - zoom, G toggles the grid lines (once
+  /// earned) and Space or P pauses and resumes. Taps stay on the mouse — the
+  /// arrows are drawn on a canvas, not focusable widgets. Anything with a
+  /// modifier held is left alone so the browser keeps its own shortcuts.
+  KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final keyboard = HardwareKeyboard.instance;
+    if (keyboard.isControlPressed ||
+        keyboard.isMetaPressed ||
+        keyboard.isAltPressed) {
+      return KeyEventResult.ignored;
+    }
+    final provider = gameProvider(widget.level);
+    final state = ref.read(provider);
+    final notifier = ref.read(provider.notifier);
+    switch (shortcutFor(event)) {
+      case null:
+        return KeyEventResult.ignored;
+      case GameShortcut.hint:
+        notifier.useHint(); // no-op unless playing with a hint to spare
+      case GameShortcut.zoomIn:
+        _setZoom(_scale * kZoomStep);
+      case GameShortcut.zoomOut:
+        _setZoom(_scale / kZoomStep);
+      case GameShortcut.grid:
+        if (ref.read(progressProvider.notifier).gridLinesUnlocked) {
+          final settings = ref.read(settingsProvider.notifier);
+          settings.setGridLines(!ref.read(settingsProvider).gridLinesOn);
+        }
+      case GameShortcut.pause:
+        // Resume covers the "Welcome back" card too: Space is "Continue".
+        state.isPlaying ? notifier.pause() : notifier.resume();
+    }
+    return KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -113,269 +152,302 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final gridUnlocked = progress.gridLinesUnlocked;
     final p = context.palette;
 
-    return Scaffold(
-      appBar: AppBar(
-        // Two lines so long level names never truncate on narrow phones.
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l10n.levelNumber(widget.level)),
-            Text(
-              levelName(l10n, widget.level),
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: p.textMuted,
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _handleKey,
+      // A focusable node would swallow every descendant label (clock, lives,
+      // tutorial line) into one; the screen's widgets keep their own.
+      includeSemantics: false,
+      child: Scaffold(
+        appBar: AppBar(
+          // Two lines so long level names never truncate on narrow phones.
+          title: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.levelNumber(widget.level)),
+              Text(
+                levelName(l10n, widget.level),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: p.textMuted,
+                ),
               ),
-            ),
+            ],
+          ),
+          actions: [
+            if (state.isPlaying) ...[
+              IconButton(
+                tooltip: l10n.gameRestart,
+                onPressed: notifier.restart,
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+              IconButton(
+                tooltip: l10n.gamePause,
+                onPressed: notifier.pause,
+                icon: const Icon(Icons.pause_rounded),
+              ),
+            ],
           ],
         ),
-        actions: [
-          if (state.isPlaying) ...[
-            IconButton(
-              tooltip: l10n.gameRestart,
-              onPressed: notifier.restart,
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-            IconButton(
-              tooltip: l10n.gamePause,
-              onPressed: notifier.pause,
-              icon: const Icon(Icons.pause_rounded),
-            ),
-          ],
-        ],
-      ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: Column(
-                children: [
-                  Row(
+        body: SafeArea(
+          child: Stack(
+            children: [
+              // Phone-first layout in a desktop browser: the clock, board and
+              // toolbar keep to a centred phone-width column instead of
+              // spreading across the window. The board loses nothing — the
+              // levels are taller than wide, so the window's height is what
+              // sizes them there.
+              ContentColumn(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  child: Column(
                     children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TimerBar(
+                              remainingMs: state.remainingMs,
+                              fraction: state.timeFraction,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          LivesIndicator(livesLeft: state.livesLeft),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       Expanded(
-                        child: TimerBar(
-                          remainingMs: state.remainingMs,
-                          fraction: state.timeFraction,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            _viewport = constraints.biggest;
+                            return ClipRect(
+                              child: InteractiveViewer(
+                                transformationController: _zoom,
+                                minScale: kMinZoom,
+                                maxScale: kMaxZoom,
+                                onInteractionEnd: (_) {
+                                  final s = _zoom.value.getMaxScaleOnAxis();
+                                  if (s != _scale) setState(() => _scale = s);
+                                },
+                                child: SizedBox.expand(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4),
+                                    child: state.isLoading
+                                        ? _LoadingView(message: l10n.gameLoading)
+                                        : PuzzleBoard(
+                                            state: state,
+                                            showGrid: gridUnlocked && settings.gridLinesOn,
+                                            onTapArrow: notifier.tapArrow,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      LivesIndicator(livesLeft: state.livesLeft),
+                      if (widget.level <= 2)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            widget.level == 1 ? l10n.tutorialTap : l10n.tutorialBlocked,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: p.textMuted, fontSize: 13),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      BoardToolbar(
+                        hintsLeft: state.hintsLeft,
+                        hintActive: state.hintArrowId != null,
+                        onHint: state.isPlaying ? notifier.useHint : null,
+                        gridUnlocked: gridUnlocked,
+                        gridUnlockLevel: kGridLinesUnlockAfterLevel,
+                        gridOn: settings.gridLinesOn,
+                        onToggleGrid: () => ref
+                            .read(settingsProvider.notifier)
+                            .setGridLines(!settings.gridLinesOn),
+                        onZoomIn: () => _setZoom(_scale * kZoomStep),
+                        onZoomOut: () => _setZoom(_scale / kZoomStep),
+                        canZoomIn: _scale < kMaxZoom - 0.001,
+                        canZoomOut: _scale > kMinZoom + 0.001,
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        _viewport = constraints.biggest;
-                        return ClipRect(
-                          child: InteractiveViewer(
-                            transformationController: _zoom,
-                            minScale: kMinZoom,
-                            maxScale: kMaxZoom,
-                            onInteractionEnd: (_) {
-                              final s = _zoom.value.getMaxScaleOnAxis();
-                              if (s != _scale) setState(() => _scale = s);
-                            },
-                            child: SizedBox.expand(
-                              child: Padding(
-                                padding: const EdgeInsets.all(4),
-                                child: state.isLoading
-                                    ? _LoadingView(message: l10n.gameLoading)
-                                    : PuzzleBoard(
-                                        state: state,
-                                        showGrid: gridUnlocked && settings.gridLinesOn,
-                                        onTapArrow: notifier.tapArrow,
-                                      ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.topCenter,
+                child: ConfettiWidget(
+                  confettiController: _confetti,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  numberOfParticles: 24,
+                  gravity: 0.25,
+                  colors: [p.primary, p.accentCoral, p.accentSun, p.accentMint],
+                ),
+              ),
+              switch (state.phase) {
+                GamePhase.paused when state.resumeOffered => ResultCard(
+                    emoji: '👋',
+                    title: l10n.resumeTitle,
+                    body: l10n.resumeBody(
+                      state.arrowsOut,
+                      state.arrowsTotal,
+                      formatDurationMs(state.elapsedMs),
+                    ),
+                    actions: [
+                      FilledButton(
+                        onPressed: notifier.resume,
+                        child: Text(l10n.resumeContinue),
+                      ),
+                      OutlinedButton(
+                        onPressed: notifier.restart,
+                        child: Text(l10n.resumeStartOver),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(l10n.clearedHome),
+                      ),
+                    ],
+                  ),
+                GamePhase.paused => ResultCard(
+                    emoji: '⏸️',
+                    title: l10n.gamePaused,
+                    body: l10n.gamePausedBody,
+                    actions: [
+                      FilledButton(
+                        onPressed: notifier.resume,
+                        child: Text(l10n.gameResume),
+                      ),
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(l10n.gameQuit),
+                      ),
+                    ],
+                  ),
+                GamePhase.cleared => ResultCard(
+                    emoji: state.stars == 3 ? '🏆' : '🎉',
+                    title: l10n.clearedTitle,
+                    body: switch (state.stars) {
+                      3 => l10n.clearedFlawless,
+                      2 => l10n.clearedGood,
+                      _ => l10n.clearedOkay,
+                    },
+                    content: Column(
+                      children: [
+                        StarsRow(stars: state.stars, size: 44, animated: true),
+                        const SizedBox(height: 10),
+                        Text(
+                          l10n.clearedTime(formatDurationMs(state.elapsedMs)),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: p.textInk,
+                          ),
+                        ),
+                        if (_newBest)
+                          Text(
+                            l10n.clearedNewBest,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: p.accentMint,
+                            ),
+                          ),
+                        if (_gridJustUnlocked)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              l10n.gridUnlockedToast,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: p.primary,
                               ),
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  if (widget.level <= 2)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        widget.level == 1 ? l10n.tutorialTap : l10n.tutorialBlocked,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: p.textMuted, fontSize: 13),
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  BoardToolbar(
-                    hintsLeft: state.hintsLeft,
-                    hintActive: state.hintArrowId != null,
-                    onHint: state.isPlaying ? notifier.useHint : null,
-                    gridUnlocked: gridUnlocked,
-                    gridUnlockLevel: kGridLinesUnlockAfterLevel,
-                    gridOn: settings.gridLinesOn,
-                    onToggleGrid: () => ref
-                        .read(settingsProvider.notifier)
-                        .setGridLines(!settings.gridLinesOn),
-                    onZoomIn: () => _setZoom(_scale * kZoomStep),
-                    onZoomOut: () => _setZoom(_scale / kZoomStep),
-                    canZoomIn: _scale < kMaxZoom - 0.001,
-                    canZoomOut: _scale > kMinZoom + 0.001,
-                  ),
-                ],
-              ),
-            ),
-            Align(
-              alignment: Alignment.topCenter,
-              child: ConfettiWidget(
-                confettiController: _confetti,
-                blastDirectionality: BlastDirectionality.explosive,
-                numberOfParticles: 24,
-                gravity: 0.25,
-                colors: [p.primary, p.accentCoral, p.accentSun, p.accentMint],
-              ),
-            ),
-            switch (state.phase) {
-              GamePhase.paused when state.resumeOffered => ResultCard(
-                  emoji: '👋',
-                  title: l10n.resumeTitle,
-                  body: l10n.resumeBody(
-                    state.arrowsOut,
-                    state.arrowsTotal,
-                    formatDurationMs(state.elapsedMs),
-                  ),
-                  actions: [
-                    FilledButton(
-                      onPressed: notifier.resume,
-                      child: Text(l10n.resumeContinue),
-                    ),
-                    OutlinedButton(
-                      onPressed: notifier.restart,
-                      child: Text(l10n.resumeStartOver),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(l10n.clearedHome),
-                    ),
-                  ],
-                ),
-              GamePhase.paused => ResultCard(
-                  emoji: '⏸️',
-                  title: l10n.gamePaused,
-                  body: l10n.gamePausedBody,
-                  actions: [
-                    FilledButton(
-                      onPressed: notifier.resume,
-                      child: Text(l10n.gameResume),
-                    ),
-                    OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(l10n.gameQuit),
-                    ),
-                  ],
-                ),
-              GamePhase.cleared => ResultCard(
-                  emoji: state.stars == 3 ? '🏆' : '🎉',
-                  title: l10n.clearedTitle,
-                  body: switch (state.stars) {
-                    3 => l10n.clearedFlawless,
-                    2 => l10n.clearedGood,
-                    _ => l10n.clearedOkay,
-                  },
-                  content: Column(
-                    children: [
-                      StarsRow(stars: state.stars, size: 44, animated: true),
-                      const SizedBox(height: 10),
-                      Text(
-                        l10n.clearedTime(formatDurationMs(state.elapsedMs)),
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: p.textInk,
-                        ),
-                      ),
-                      if (_newBest)
-                        Text(
-                          l10n.clearedNewBest,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: p.accentMint,
-                          ),
-                        ),
-                      if (_gridJustUnlocked)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            l10n.gridUnlockedToast,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: p.primary,
+                        if (widget.level == totalLevels)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              l10n.clearedAllDone,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: p.textMuted),
                             ),
                           ),
+                      ],
+                    ),
+                    actions: [
+                      if (widget.level < totalLevels)
+                        FilledButton(
+                          onPressed: () => _openLevel(widget.level + 1),
+                          child: Text(l10n.clearedNext),
                         ),
-                      if (widget.level == totalLevels)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            l10n.clearedAllDone,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: p.textMuted),
-                          ),
-                        ),
+                      OutlinedButton(
+                        onPressed: notifier.restart,
+                        child: Text(l10n.clearedReplay),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(l10n.clearedHome),
+                      ),
                     ],
                   ),
-                  actions: [
-                    if (widget.level < totalLevels)
+                GamePhase.outOfLives => ResultCard(
+                    emoji: '💔',
+                    title: l10n.outOfLivesTitle,
+                    body: l10n.outOfLivesBody,
+                    actions: [
                       FilledButton(
-                        onPressed: () => _openLevel(widget.level + 1),
-                        child: Text(l10n.clearedNext),
+                        onPressed: notifier.restart,
+                        child: Text(l10n.outOfLivesRetry),
                       ),
-                    OutlinedButton(
-                      onPressed: notifier.restart,
-                      child: Text(l10n.clearedReplay),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(l10n.clearedHome),
-                    ),
-                  ],
-                ),
-              GamePhase.outOfLives => ResultCard(
-                  emoji: '💔',
-                  title: l10n.outOfLivesTitle,
-                  body: l10n.outOfLivesBody,
-                  actions: [
-                    FilledButton(
-                      onPressed: notifier.restart,
-                      child: Text(l10n.outOfLivesRetry),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(l10n.clearedHome),
-                    ),
-                  ],
-                ),
-              GamePhase.timeUp => ResultCard(
-                  emoji: '⏰',
-                  title: l10n.timeUpTitle,
-                  body: l10n.timeUpBody(state.arrowsOut, state.arrowsTotal),
-                  actions: [
-                    FilledButton(
-                      onPressed: notifier.restart,
-                      child: Text(l10n.timeUpRetry),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(l10n.clearedHome),
-                    ),
-                  ],
-                ),
-              GamePhase.playing || GamePhase.loading => const SizedBox.shrink(),
-            },
-          ],
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(l10n.clearedHome),
+                      ),
+                    ],
+                  ),
+                GamePhase.timeUp => ResultCard(
+                    emoji: '⏰',
+                    title: l10n.timeUpTitle,
+                    body: l10n.timeUpBody(state.arrowsOut, state.arrowsTotal),
+                    actions: [
+                      FilledButton(
+                        onPressed: notifier.restart,
+                        child: Text(l10n.timeUpRetry),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(l10n.clearedHome),
+                      ),
+                    ],
+                  ),
+                GamePhase.playing || GamePhase.loading => const SizedBox.shrink(),
+              },
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+/// What a key press on the game screen does.
+enum GameShortcut { hint, zoomIn, zoomOut, grid, pause }
+
+/// The shortcut a key press means, or null when it isn't one. Zoom answers
+/// both the main row and the numeric keypad, and `=` stands in for `+` so it
+/// works without Shift on a US layout.
+@visibleForTesting
+GameShortcut? shortcutFor(KeyEvent event) => switch (event.logicalKey) {
+      LogicalKeyboardKey.keyH => GameShortcut.hint,
+      LogicalKeyboardKey.equal ||
+      LogicalKeyboardKey.add ||
+      LogicalKeyboardKey.numpadAdd =>
+        GameShortcut.zoomIn,
+      LogicalKeyboardKey.minus || LogicalKeyboardKey.numpadSubtract => GameShortcut.zoomOut,
+      LogicalKeyboardKey.keyG => GameShortcut.grid,
+      LogicalKeyboardKey.space || LogicalKeyboardKey.keyP => GameShortcut.pause,
+      _ => null,
+    };
 
 class _LoadingView extends StatelessWidget {
   const _LoadingView({required this.message});

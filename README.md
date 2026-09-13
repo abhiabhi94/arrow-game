@@ -3,6 +3,11 @@
 A playful cross-platform (Android + iOS) **arrow exit puzzle** built with
 Flutter.
 
+**Play in the browser:** https://abhiabhi94.github.io/arrow-game/ (release
+build, deployed from `main` by GitHub Actions; installable as a PWA). On a
+laptop the keyboard helps: **H** hint, **+ / -** zoom, **G** grid lines,
+**Space** pause.
+
 ## How it plays
 
 Bent arrow pieces sit on a grid. Tap one and it slides along its own path,
@@ -72,11 +77,20 @@ flutter build apk --release --split-per-abi --dart-define=UNLOCK_ALL=true
 
 flutter build web --debug --no-web-resources-cdn      # web preview build (all levels open)
 node tool/screenshot.mjs --levels 1,7,20 --settings --hint  # phone-size screenshots -> shots/
+node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop + keyboard
 ```
 
-The web build is a preview/verification target (used by CI and cloud dev
-sessions to screenshot every screen — see `docs/cloud-dev.md`); the shipped
-platforms are Android and iOS.
+The web build is played for real in the browser (the GitHub Pages site
+above, phone or laptop) and doubles as the verification target CI and cloud
+dev sessions use to screenshot every screen — see `docs/cloud-dev.md`. The
+store platforms are Android and iOS.
+
+## Publishing (web)
+
+`.github/workflows/pages.yml` builds the release web app with
+`--base-href /<repo>/` and deploys it to GitHub Pages on every push to
+`main` (or manually from the Actions tab). One-time repo setting: Settings →
+Pages → Build and deployment → Source: **GitHub Actions**.
 
 ## Publishing (Play Store)
 
@@ -108,5 +122,6 @@ tool/coverage.sh 92             # coverage gate (fails under 92%)
 
 `.github/workflows/ci.yml` runs on every push to `main` and every PR:
 "Analyze & test" (analyze, tests, coverage gate) and "Web smoke &
-screenshots" (web build driven in headless Chromium; fails on any Flutter
-exception; uploads `shots/`). Flutter is pinned in `.flutter-version`.
+screenshots" (web build driven in headless Chromium at phone and desktop
+viewports, keyboard included; fails on any Flutter exception; uploads
+`shots/`). Flutter is pinned in `.flutter-version`.
