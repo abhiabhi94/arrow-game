@@ -5,12 +5,16 @@
 // at a phone-sized viewport instead.
 //
 // Usage:
-//   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--play]
-//                            [--settings] [--dump] [--no-strict]
+//   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--hint] [--grid] [--resume]
+//                            [--settings] [--onboarding] [--dump] [--no-strict]
 //                            [--build-dir build/web] [--scale 2] [--port 0]
 //
-//   --levels  opens each level (its intro card is captured as level-NN-*.png)
-//   --play    also taps "Go!" and captures the live arena (level-NN-play-*.png)
+//   --levels  opens each level and captures its board (level-NN-*.png)
+//   --hint    also taps the hint button and captures the glowing arrow
+//   --grid    seeds the grid-lines preference on (the lattice under the arrows)
+//   --resume  seeds a saved game on the first level (home shows Continue, the level its Welcome back card)
+//             (level-NN-hint-*.png)
+//   --onboarding  boots into the first-launch walkthrough instead of home
 //
 // Prereq: `flutter build web --debug --no-web-resources-cdn`
 //   debug   = all levels unlocked (same as the "Arrow Testing" Android build)
@@ -49,7 +53,9 @@ const fontCache = path.join(path.dirname(buildDir), 'font-cache');
 const outDir = path.resolve(args.out ?? 'shots');
 const levels = String(args.levels ?? '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 const dark = Boolean(args.dark);
-const play = Boolean(args.play);
+const hint = Boolean(args.hint);
+const grid = Boolean(args.grid);
+const resume = Boolean(args.resume);
 const scale = Number(args.scale ?? 2);
 const port = Number(args.port ?? 0);
 const strict = !args['no-strict'];
@@ -118,11 +124,21 @@ base = `http://127.0.0.1:${server.address().port}/`;
 // --------------------------------------------------------------------------
 
 // shared_preferences_web keeps every key in localStorage as `flutter.<key>`
-// with a JSON-encoded value. Seeding it before the app boots picks the theme
-// without touching the UI.
+// with a JSON-encoded value. Seeding it before the app boots skips the
+// walkthrough, silences music (no audio device in the container) and picks
+// the theme without touching the UI.
 const prefs = {
+  'flutter.arrow_onboarding_done': args.onboarding ? 'false' : 'true',
+  'flutter.arrow_music_on': 'false',
   'flutter.arrow_haptics_on': 'false',
+  'flutter.arrow_sfx_on': 'false',
+  'flutter.arrow_grid_lines': grid ? 'true' : 'false',
   'flutter.arrow_theme': JSON.stringify(dark ? 'dark' : 'light'),
+  // A string preference is stored JSON-encoded (quoted); the saved game is a
+  // JSON document inside that string.
+  ...(resume && levels.length
+    ? { 'flutter.arrow_saved_game': JSON.stringify(JSON.stringify({ level: levels[0], removed: [0, 1], mistakes: 1, hintsLeft: 2, elapsedMs: 30_000 })) }
+    : {}),
 };
 
 const problems = [];
@@ -140,7 +156,7 @@ await context.addInitScript((p) => {
 }, prefs);
 
 const page = await context.newPage();
-page.on('pageerror', (e) => problems.push(`JS error: ${e.message}`));
+page.on('pageerror', (e) => problems.push(`JS error: ${e.message}\n${String(e.stack ?? '').split('\n').slice(0, 8).join('\n')}`));
 page.on('console', (m) => {
   const text = m.text();
   if (text.includes('EXCEPTION CAUGHT BY')) problems.push(text.split('\n').slice(0, 4).join('\n'));
@@ -156,8 +172,8 @@ try {
 
   if (args.dump) console.log(await dumpSemantics(page));
 
-  const tag = dark ? 'dark' : 'light';
-  await shoot(page, `home-${tag}`);
+  const tag = `${dark ? 'dark' : 'light'}${grid ? '-grid' : ''}${resume ? '-resume' : ''}`;
+  await shoot(page, `${args.onboarding ? 'onboarding' : 'home'}-${tag}`);
 
   if (args.settings) {
     await page.getByRole('button', { name: /^settings/i }).first().click();
@@ -166,21 +182,30 @@ try {
     await goBack(page);
   }
 
+  // The journey trail is a long scroll view. Playwright cannot scroll a
+  // Flutter scroll view through the semantics tree, and a single big wheel
+  // delta is clamped, so nudge the wheel until the node's box is in view.
   for (const level of levels) {
-    // The accessible name of a tile is "Level N" + the tile's digit (and the
-    // "Play" card is "Level N <name>"), so anchor only the start and take the
-    // grid tile, which comes after the play card in the tree.
+    // The accessible name of a node is "Level N" + its digit (and the "Next
+    // up" card is "Level N <name>"), so anchor only the start and take the
+    // trail node, which comes after the card in the tree.
     const name = new RegExp(`^Level ${level}(\\s|$)`);
     const tile = page.getByRole('button', { name }).last();
-    await tile.scrollIntoViewIfNeeded();
+    await page.mouse.move(195, 500);
+    for (let i = 0; i < 60; i++) {
+      const box = await tile.boundingBox().catch(() => null);
+      if (box && box.y > 120 && box.y + box.height < 720) break;
+      await page.mouse.wheel(0, box && box.y <= 120 ? -180 : 180);
+      await settle(page, 150);
+    }
     await tile.click();
     await settle(page, 1200);
     const id = String(level).padStart(2, '0');
     await shoot(page, `level-${id}-${tag}`);
-    if (play) {
-      await page.getByRole('button', { name: /^Go!/ }).first().click();
-      await settle(page, 700);
-      await shoot(page, `level-${id}-play-${tag}`);
+    if (hint) {
+      await page.getByRole('button', { name: /^Hint/ }).first().click();
+      await settle(page, 500);
+      await shoot(page, `level-${id}-hint-${tag}`);
     }
     await goBack(page);
   }

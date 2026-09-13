@@ -1,79 +1,76 @@
-import 'package:arrow_game/engine/arrow.dart';
-import 'package:arrow_game/engine/direction.dart';
+import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/models/game_state.dart';
-import 'package:arrow_game/models/level_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _spec = LevelSpec(
-  level: 7,
-  targetHits: 20,
-  timeLimitMs: 30000,
-  arrowTimeoutMs: 2000,
-);
+import '../support/sample_puzzle.dart';
 
 void main() {
-  test('ready state', () {
-    final s = GameState.ready(_spec);
-    expect(s.level, 7);
-    expect(s.phase, GamePhase.ready);
-    expect(s.livesLeft, 3);
-    expect(s.remainingMs, 30000);
-    expect(s.timeFraction, 1.0);
-    expect(s.progress, 0);
-    expect(s.arrow, isNull);
-    expect(s.arrowVisible, isFalse);
+  test('loading state has no board yet', () {
+    final s = GameState.loading(sampleSpec);
+    expect(s.isLoading, isTrue);
     expect(s.isPlaying, isFalse);
-    expect(s.isOver, isFalse);
-    expect(s.stars, 0);
+    expect(s.puzzle, isNull);
+    expect(s.arrowsTotal, sampleSpec.arrows);
+    expect(s.progress, 0);
+    expect(s.hintsLeft, maxHints);
   });
 
-  test('derived values', () {
-    final s = GameState.ready(_spec).copyWith(
-      phase: GamePhase.playing,
-      hits: 5,
+  test('fresh state', () {
+    final s = GameState.fresh(sampleSpec, samplePuzzle());
+    expect(s.level, 1);
+    expect(s.phase, GamePhase.playing);
+    expect(s.isLoading, isFalse);
+    expect(s.isPlaying, isTrue);
+    expect(s.isOver, isFalse);
+    expect(s.livesLeft, 3);
+    expect(s.hintsLeft, maxHints);
+    expect(s.hintArrowId, isNull);
+    expect(s.remainingMs, 30000);
+    expect(s.timeFraction, 1.0);
+    expect(s.arrowsOut, 0);
+    expect(s.arrowsTotal, 3);
+    expect(s.progress, 0);
+    expect(s.stars, 0);
+    expect(s.blockedCell, isNull);
+    expect(s.lastOutcome, MoveOutcome.none);
+    expect(s.resumeOffered, isFalse);
+    expect(s.copyWith(resumeOffered: true).resumeOffered, isTrue);
+  });
+
+  test('derived values and copyWith clears', () {
+    final s = GameState.fresh(sampleSpec, samplePuzzle()).copyWith(
+      removed: const {0},
       mistakes: 1,
       elapsedMs: 12000,
-      arrow: const Arrow(id: 0, direction: Direction.up),
-      arrowAgeMs: 500,
+      hintArrowId: 2,
+      blockedCell: const Cell(1, 1),
     );
     expect(s.livesLeft, 2);
     expect(s.remainingMs, 18000);
     expect(s.timeFraction, closeTo(0.6, 1e-9));
-    expect(s.progress, 0.25);
-    expect(s.fuseFraction, closeTo(0.75, 1e-9));
-    expect(s.arrowVisible, isTrue);
-    expect(s.isPlaying, isTrue);
+    expect(s.progress, closeTo(1 / 3, 1e-9));
+    expect(s.hintArrowId, 2);
+    expect(s.blockedCell, const Cell(1, 1));
+    final cleared = s.copyWith(clearHint: true, clearBlocked: true);
+    expect(cleared.hintArrowId, isNull);
+    expect(cleared.blockedCell, isNull);
+    // Passing a value alongside the clear flag still clears.
+    expect(s.copyWith(clearHint: true, hintArrowId: 1).hintArrowId, isNull);
   });
 
-  test('remaining time and fuse clamp at zero', () {
-    final s = GameState.ready(_spec).copyWith(elapsedMs: 99999, arrowAgeMs: 9999);
+  test('remaining time clamps at zero', () {
+    final s = GameState.fresh(sampleSpec, samplePuzzle()).copyWith(elapsedMs: 99999);
     expect(s.remainingMs, 0);
-    expect(s.fuseFraction, 0);
-  });
-
-  test('no fuse means a null fuse fraction', () {
-    const noFuse = LevelSpec(level: 1, targetHits: 5, timeLimitMs: 1000);
-    expect(GameState.ready(noFuse).fuseFraction, isNull);
-  });
-
-  test('ghosts hide after kGhostVisibleMs, other kinds never do', () {
-    const ghost = Arrow(id: 0, direction: Direction.up, kind: ArrowKind.ghost);
-    const plain = Arrow(id: 1, direction: Direction.up);
-    final base = GameState.ready(_spec);
-    expect(base.copyWith(arrow: ghost, arrowAgeMs: 0).arrowVisible, isTrue);
-    expect(base.copyWith(arrow: ghost, arrowAgeMs: kGhostVisibleMs - 1).arrowVisible, isTrue);
-    expect(base.copyWith(arrow: ghost, arrowAgeMs: kGhostVisibleMs).arrowVisible, isFalse);
-    expect(base.copyWith(arrow: plain, arrowAgeMs: 99999).arrowVisible, isTrue);
   });
 
   test('stars only count once cleared; terminal phases are over', () {
-    final base = GameState.ready(_spec).copyWith(mistakes: 1);
+    final base = GameState.fresh(sampleSpec, samplePuzzle()).copyWith(mistakes: 1);
     expect(base.stars, 0);
     expect(base.copyWith(phase: GamePhase.cleared).stars, 2);
     for (final p in [GamePhase.cleared, GamePhase.outOfLives, GamePhase.timeUp]) {
       expect(base.copyWith(phase: p).isOver, isTrue);
     }
-    for (final p in [GamePhase.ready, GamePhase.playing, GamePhase.paused]) {
+    for (final p in [GamePhase.loading, GamePhase.playing, GamePhase.paused]) {
       expect(base.copyWith(phase: p).isOver, isFalse);
     }
   });

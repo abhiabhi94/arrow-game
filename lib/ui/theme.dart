@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'colors.dart';
+
+/// The bundled typeface (see pubspec `fonts:`): Google Sans Flex, static
+/// instances 400–800, so headings can go bold without a fake-bold pass.
+const String kFontFamily = 'GoogleSansFlex';
 
 /// The app's light theme (the default look).
 ThemeData buildLightTheme() => _buildTheme(ArrowPalette.light, Brightness.light);
@@ -9,8 +12,7 @@ ThemeData buildLightTheme() => _buildTheme(ArrowPalette.light, Brightness.light)
 /// The app's dark theme — same rounded, friendly shapes on deep indigo surfaces.
 ThemeData buildDarkTheme() => _buildTheme(ArrowPalette.dark, Brightness.dark);
 
-/// Builds the app's Material 3 theme — rounded, friendly, and colourful.
-/// Uses Nunito (rounded, warm) for a playful feel while staying readable.
+/// Builds the app's Material 3 theme — clean, rounded, and warm.
 ThemeData _buildTheme(ArrowPalette p, Brightness brightness) {
   final colorScheme = ColorScheme.fromSeed(
     seedColor: p.primary,
@@ -22,7 +24,9 @@ ThemeData _buildTheme(ArrowPalette p, Brightness brightness) {
     surface: p.surface,
   );
 
-  final textTheme = GoogleFonts.nunitoTextTheme().apply(
+  final base = brightness == Brightness.dark ? ThemeData.dark() : ThemeData.light();
+  final textTheme = base.textTheme.apply(
+    fontFamily: kFontFamily,
     bodyColor: p.textInk,
     displayColor: p.textInk,
   );
@@ -30,16 +34,19 @@ ThemeData _buildTheme(ArrowPalette p, Brightness brightness) {
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
+    fontFamily: kFontFamily,
     colorScheme: colorScheme,
     scaffoldBackgroundColor: p.backgroundSoft,
     textTheme: textTheme,
     appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
       elevation: 0,
+      scrolledUnderElevation: 0,
       centerTitle: true,
       foregroundColor: p.textInk,
-      titleTextStyle: GoogleFonts.nunito(
-        fontWeight: FontWeight.w800,
+      titleTextStyle: TextStyle(
+        fontFamily: kFontFamily,
+        fontWeight: FontWeight.w700,
         fontSize: 20,
         color: p.textInk,
       ),
@@ -54,7 +61,11 @@ ThemeData _buildTheme(ArrowPalette p, Brightness brightness) {
       style: FilledButton.styleFrom(
         backgroundColor: p.primary,
         foregroundColor: Colors.white,
-        textStyle: GoogleFonts.nunito(fontWeight: FontWeight.w800, fontSize: 18),
+        textStyle: const TextStyle(
+          fontFamily: kFontFamily,
+          fontWeight: FontWeight.w700,
+          fontSize: 17,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
@@ -63,7 +74,11 @@ ThemeData _buildTheme(ArrowPalette p, Brightness brightness) {
       style: OutlinedButton.styleFrom(
         foregroundColor: p.primary,
         side: BorderSide(color: p.primaryLight, width: 1.5),
-        textStyle: GoogleFonts.nunito(fontWeight: FontWeight.w800, fontSize: 16),
+        textStyle: const TextStyle(
+          fontFamily: kFontFamily,
+          fontWeight: FontWeight.w700,
+          fontSize: 16,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
@@ -71,13 +86,14 @@ ThemeData _buildTheme(ArrowPalette p, Brightness brightness) {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: p.primary,
-        textStyle: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(fontFamily: kFontFamily, fontWeight: FontWeight.w600),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       backgroundColor: p.textInk,
-      contentTextStyle: GoogleFonts.nunito(
+      contentTextStyle: TextStyle(
+        fontFamily: kFontFamily,
         color: p.surface,
         fontWeight: FontWeight.w600,
       ),
@@ -93,6 +109,11 @@ ThemeData _buildTheme(ArrowPalette p, Brightness brightness) {
             ? p.primaryLight
             : p.textFaint,
       ),
+    ),
+    sliderTheme: SliderThemeData(
+      activeTrackColor: p.primary,
+      inactiveTrackColor: p.outlineSoft,
+      thumbColor: p.primary,
     ),
   );
 }

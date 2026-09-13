@@ -8,6 +8,8 @@ import 'models/settings.dart';
 import 'providers/app_providers.dart';
 import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
+import 'services/audio_service.dart';
 import 'ui/theme.dart';
 
 Future<void> main() async {
@@ -21,11 +23,45 @@ Future<void> main() async {
   );
 }
 
-class ArrowApp extends ConsumerWidget {
+class ArrowApp extends ConsumerStatefulWidget {
   const ArrowApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ArrowApp> createState() => _ArrowAppState();
+}
+
+class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // ref.listen below only fires on a *change*, so the persisted settings
+    // have to be applied once explicitly or music never starts on a cold
+    // launch.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(audioServiceProvider).apply(ref.read(settingsProvider));
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Don't keep playing over a phone call, another app, or a locked screen.
+    ref.read(audioServiceProvider).handleLifecycle(state);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Keep background music in sync with the music/volume settings.
+    ref.listen(settingsProvider, (_, next) {
+      ref.read(audioServiceProvider).apply(next);
+    });
     final settings = ref.watch(settingsProvider);
     return MaterialApp(
       title: 'Arrow',
@@ -40,7 +76,7 @@ class ArrowApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const HomeScreen(),
+      home: settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
     );
   }
 }

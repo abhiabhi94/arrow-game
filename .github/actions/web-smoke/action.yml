@@ -13,8 +13,10 @@ inputs:
       tool/screenshot.mjs (see its header for flags).
     required: false
     default: |
-      --levels 1,4,7,10,13,20 --settings --play
-      --levels 3,16 --dark --play
+      --levels 1,5,10,20 --settings --hint
+      --levels 3,16 --dark --hint --grid
+      --onboarding
+      --levels 3 --resume
   artifact-name:
     description: Name of the uploaded screenshots artifact.
     required: false

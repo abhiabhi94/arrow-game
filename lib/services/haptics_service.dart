@@ -1,14 +1,15 @@
-/// Haptic feedback that respects the user's vibration setting. Wraps the
-/// built-in [HapticFeedback] behind an injectable [HapticEngine] so the gate
-/// logic is unit-testable without a platform channel.
+/// Haptic feedback that respects the user's setting. Wraps the platform
+/// behind an injectable [HapticEngine] so the gate logic is unit-testable
+/// without a platform channel.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/settings_provider.dart';
 
-/// Low-level haptic impulses. The real implementation drives [HapticFeedback].
+/// Low-level haptic impulses. The real implementation is [SystemHapticEngine].
 abstract class HapticEngine {
   void selection();
   void light();
@@ -17,19 +18,35 @@ abstract class HapticEngine {
   void vibrate();
 }
 
+/// The channel `MainActivity.kt` answers on Android.
+const kHapticsChannel = MethodChannel('app.curious.arrow/haptics');
+
+/// On Android, Flutter's [HapticFeedback] goes through
+/// `View.performHapticFeedback`, which the OS silences whenever the user has
+/// "touch feedback" turned off — common enough that the game felt mute. So
+/// Android drives the Vibrator service through [kHapticsChannel] instead;
+/// iOS keeps the Taptic engine via [HapticFeedback].
 class SystemHapticEngine implements HapticEngine {
   const SystemHapticEngine();
 
+  bool get _useVibrator =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  void _buzz(String effect) =>
+      kHapticsChannel.invokeMethod<void>('vibrate', effect);
+
   @override
-  void selection() => HapticFeedback.selectionClick();
+  void selection() =>
+      _useVibrator ? _buzz('tick') : HapticFeedback.selectionClick();
   @override
-  void light() => HapticFeedback.lightImpact();
+  void light() => _useVibrator ? _buzz('click') : HapticFeedback.lightImpact();
   @override
-  void medium() => HapticFeedback.mediumImpact();
+  void medium() =>
+      _useVibrator ? _buzz('click') : HapticFeedback.mediumImpact();
   @override
-  void heavy() => HapticFeedback.heavyImpact();
+  void heavy() => _useVibrator ? _buzz('heavy') : HapticFeedback.heavyImpact();
   @override
-  void vibrate() => HapticFeedback.vibrate();
+  void vibrate() => _useVibrator ? _buzz('long') : HapticFeedback.vibrate();
 }
 
 class HapticsService {
@@ -44,10 +61,10 @@ class HapticsService {
   /// A light tick for taps and level start.
   void tap() => _run(_engine.selection);
 
-  /// A soft confirmation for a correct swipe.
+  /// A soft confirmation for an arrow that slid out.
   void hit() => _run(_engine.light);
 
-  /// A firm buzz for a wrong swipe or a burnt fuse.
+  /// A firm buzz for a bump (a life lost).
   void miss() => _run(_engine.heavy);
 
   /// A celebratory nudge on clearing a level.

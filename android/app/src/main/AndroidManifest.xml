@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Haptics go through the Vibrator service (see MainActivity), which
+         works even when the system "touch feedback" setting is off. -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"

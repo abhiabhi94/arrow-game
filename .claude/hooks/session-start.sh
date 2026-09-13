@@ -58,4 +58,4 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
 fi
 
 flutter --version | head -1
-echo "[session-start] Ready. Screenshots: flutter build web --debug --no-web-resources-cdn && node tool/screenshot.mjs --levels 1,7,20 --settings --play"
+echo "[session-start] Ready. Screenshots: flutter build web --debug --no-web-resources-cdn && node tool/screenshot.mjs --levels 1,7,20 --settings --hint"

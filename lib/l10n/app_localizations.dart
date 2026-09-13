@@ -103,7 +103,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTagline.
   ///
   /// In en, this message translates to:
-  /// **'Swipe fast. Think faster.'**
+  /// **'Slide every arrow out'**
   String get appTagline;
 
   /// No description provided for @homeSettings.
@@ -111,6 +111,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings'**
   String get homeSettings;
+
+  /// No description provided for @homeNextUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Next up'**
+  String get homeNextUp;
+
+  /// No description provided for @homePlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get homePlay;
+
+  /// No description provided for @homeReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay'**
+  String get homeReplay;
+
+  /// No description provided for @homeAllCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Every level cleared — legend!'**
+  String get homeAllCleared;
+
+  /// No description provided for @homeContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get homeContinue;
+
+  /// No description provided for @homeResumeEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up where you left off'**
+  String get homeResumeEyebrow;
+
+  /// No description provided for @homeResumeProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{out} of {total} arrows out · {time} on the clock'**
+  String homeResumeProgress(int out, int total, String time);
+
+  /// No description provided for @homeJourney.
+  ///
+  /// In en, this message translates to:
+  /// **'Your journey'**
+  String get homeJourney;
+
+  /// No description provided for @onboardSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get onboardSkip;
+
+  /// No description provided for @onboardNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onboardNext;
+
+  /// No description provided for @onboardStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s play!'**
+  String get onboardStart;
+
+  /// No description provided for @onboardTitle1.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an arrow'**
+  String get onboardTitle1;
+
+  /// No description provided for @onboardBody1.
+  ///
+  /// In en, this message translates to:
+  /// **'It slides out the way it points. Go on, tap it.'**
+  String get onboardBody1;
+
+  /// No description provided for @onboardDone1.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s it — one down!'**
+  String get onboardDone1;
+
+  /// No description provided for @onboardTitle2.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch for blockers'**
+  String get onboardTitle2;
+
+  /// No description provided for @onboardBody2.
+  ///
+  /// In en, this message translates to:
+  /// **'An arrow can\'t pass through another. Tap the one pointing up and see it bump.'**
+  String get onboardBody2;
+
+  /// No description provided for @onboardBumped2.
+  ///
+  /// In en, this message translates to:
+  /// **'Bumped! In a real level that costs a life. Clear the top one first, then the other.'**
+  String get onboardBumped2;
+
+  /// No description provided for @onboardDone2.
+  ///
+  /// In en, this message translates to:
+  /// **'Order matters — you\'ve got it.'**
+  String get onboardDone2;
+
+  /// No description provided for @onboardTitle3.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s the whole game'**
+  String get onboardTitle3;
+
+  /// No description provided for @onboardRuleLives.
+  ///
+  /// In en, this message translates to:
+  /// **'3 lives per level — a bump costs one'**
+  String get onboardRuleLives;
+
+  /// No description provided for @onboardRuleClock.
+  ///
+  /// In en, this message translates to:
+  /// **'Beat the clock — plenty of time, but it ticks'**
+  String get onboardRuleClock;
+
+  /// No description provided for @onboardRuleHints.
+  ///
+  /// In en, this message translates to:
+  /// **'Stuck? 3 hints per level light up a free arrow'**
+  String get onboardRuleHints;
+
+  /// No description provided for @onboardRuleZoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Big boards later — pinch or tap to zoom'**
+  String get onboardRuleZoom;
 
   /// No description provided for @homeStars.
   ///
@@ -136,6 +274,12 @@ abstract class AppLocalizations {
   /// **'Level {number}'**
   String levelNumber(int number);
 
+  /// No description provided for @levelShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Lv.{number}'**
+  String levelShort(int number);
+
   /// No description provided for @levelLocked.
   ///
   /// In en, this message translates to:
@@ -145,206 +289,140 @@ abstract class AppLocalizations {
   /// No description provided for @levelName1.
   ///
   /// In en, this message translates to:
-  /// **'Warm-up'**
+  /// **'First Steps'**
   String get levelName1;
 
   /// No description provided for @levelName2.
   ///
   /// In en, this message translates to:
-  /// **'Getting Going'**
+  /// **'Two Ways Out'**
   String get levelName2;
 
   /// No description provided for @levelName3.
   ///
   /// In en, this message translates to:
-  /// **'Quick Hands'**
+  /// **'Tight Corners'**
   String get levelName3;
 
   /// No description provided for @levelName4.
   ///
   /// In en, this message translates to:
-  /// **'Mirror Mirror'**
+  /// **'Criss-cross'**
   String get levelName4;
 
   /// No description provided for @levelName5.
   ///
   /// In en, this message translates to:
-  /// **'Opposite Day'**
+  /// **'Bottleneck'**
   String get levelName5;
 
   /// No description provided for @levelName6.
   ///
   /// In en, this message translates to:
-  /// **'Double Take'**
+  /// **'Tangle'**
   String get levelName6;
 
   /// No description provided for @levelName7.
   ///
   /// In en, this message translates to:
-  /// **'Short Fuse'**
+  /// **'Knot'**
   String get levelName7;
 
   /// No description provided for @levelName8.
   ///
   /// In en, this message translates to:
-  /// **'Tick Tock'**
+  /// **'Snarl'**
   String get levelName8;
 
   /// No description provided for @levelName9.
   ///
   /// In en, this message translates to:
-  /// **'Pressure Cooker'**
+  /// **'Labyrinth'**
   String get levelName9;
 
   /// No description provided for @levelName10.
   ///
   /// In en, this message translates to:
-  /// **'Now You See It'**
+  /// **'Gridlock'**
   String get levelName10;
 
   /// No description provided for @levelName11.
   ///
   /// In en, this message translates to:
-  /// **'Ghost Town'**
+  /// **'Cobweb'**
   String get levelName11;
 
   /// No description provided for @levelName12.
   ///
   /// In en, this message translates to:
-  /// **'Blink and Miss'**
+  /// **'Thicket'**
   String get levelName12;
 
   /// No description provided for @levelName13.
   ///
   /// In en, this message translates to:
-  /// **'Don\'t Read Me'**
+  /// **'Maze Runner'**
   String get levelName13;
 
   /// No description provided for @levelName14.
   ///
   /// In en, this message translates to:
-  /// **'Word Salad'**
+  /// **'Cat\'s Cradle'**
   String get levelName14;
 
   /// No description provided for @levelName15.
   ///
   /// In en, this message translates to:
-  /// **'Mixed Signals'**
+  /// **'Traffic Jam'**
   String get levelName15;
 
   /// No description provided for @levelName16.
   ///
   /// In en, this message translates to:
-  /// **'All Together Now'**
+  /// **'Spaghetti'**
   String get levelName16;
 
   /// No description provided for @levelName17.
   ///
   /// In en, this message translates to:
-  /// **'Full Tilt'**
+  /// **'Rush Hour'**
   String get levelName17;
 
   /// No description provided for @levelName18.
   ///
   /// In en, this message translates to:
-  /// **'Overdrive'**
+  /// **'Gordian Knot'**
   String get levelName18;
 
   /// No description provided for @levelName19.
   ///
   /// In en, this message translates to:
-  /// **'Lightning Round'**
+  /// **'Escape Artist'**
   String get levelName19;
 
   /// No description provided for @levelName20.
   ///
   /// In en, this message translates to:
-  /// **'Grand Finale'**
+  /// **'Grand Exit'**
   String get levelName20;
 
-  /// No description provided for @introRules.
+  /// No description provided for @tutorialTap.
   ///
   /// In en, this message translates to:
-  /// **'This level'**
-  String get introRules;
+  /// **'Tap an arrow to slide it out the way it points.'**
+  String get tutorialTap;
 
-  /// No description provided for @introTarget.
+  /// No description provided for @tutorialBlocked.
   ///
   /// In en, this message translates to:
-  /// **'{count} arrows'**
-  String introTarget(int count);
+  /// **'An arrow in the way costs a life — find the free ones first.'**
+  String get tutorialBlocked;
 
-  /// No description provided for @introTime.
+  /// No description provided for @gameLoading.
   ///
   /// In en, this message translates to:
-  /// **'{seconds}s on the clock'**
-  String introTime(int seconds);
-
-  /// No description provided for @introLives.
-  ///
-  /// In en, this message translates to:
-  /// **'3 lives'**
-  String get introLives;
-
-  /// No description provided for @introGo.
-  ///
-  /// In en, this message translates to:
-  /// **'Go!'**
-  String get introGo;
-
-  /// No description provided for @ruleNormal.
-  ///
-  /// In en, this message translates to:
-  /// **'Swipe (or tap) the way the arrow points'**
-  String get ruleNormal;
-
-  /// No description provided for @ruleReverse.
-  ///
-  /// In en, this message translates to:
-  /// **'Coral arrows: go the opposite way'**
-  String get ruleReverse;
-
-  /// No description provided for @ruleGhost.
-  ///
-  /// In en, this message translates to:
-  /// **'Ghost arrows vanish — remember them'**
-  String get ruleGhost;
-
-  /// No description provided for @ruleDecoy.
-  ///
-  /// In en, this message translates to:
-  /// **'Trust the arrow, not the word'**
-  String get ruleDecoy;
-
-  /// No description provided for @ruleFuse.
-  ///
-  /// In en, this message translates to:
-  /// **'Each arrow has a fuse — answer before it burns out'**
-  String get ruleFuse;
-
-  /// No description provided for @directionUp.
-  ///
-  /// In en, this message translates to:
-  /// **'Up'**
-  String get directionUp;
-
-  /// No description provided for @directionRight.
-  ///
-  /// In en, this message translates to:
-  /// **'Right'**
-  String get directionRight;
-
-  /// No description provided for @directionDown.
-  ///
-  /// In en, this message translates to:
-  /// **'Down'**
-  String get directionDown;
-
-  /// No description provided for @directionLeft.
-  ///
-  /// In en, this message translates to:
-  /// **'Left'**
-  String get directionLeft;
+  /// **'Laying out the arrows…'**
+  String get gameLoading;
 
   /// No description provided for @gamePause.
   ///
@@ -376,17 +454,47 @@ abstract class AppLocalizations {
   /// **'Quit level'**
   String get gameQuit;
 
+  /// No description provided for @resumeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back'**
+  String get resumeTitle;
+
+  /// No description provided for @resumeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You left this level with {out} of {total} arrows out and {time} on the clock.'**
+  String resumeBody(int out, int total, String time);
+
+  /// No description provided for @resumeContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get resumeContinue;
+
+  /// No description provided for @resumeStartOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Start over'**
+  String get resumeStartOver;
+
+  /// No description provided for @gameRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart level'**
+  String get gameRestart;
+
   /// No description provided for @gameBack.
   ///
   /// In en, this message translates to:
   /// **'Back'**
   String get gameBack;
 
-  /// No description provided for @hudHits.
+  /// No description provided for @hudArrows.
   ///
   /// In en, this message translates to:
-  /// **'{hits}/{target}'**
-  String hudHits(int hits, int target);
+  /// **'{out}/{total}'**
+  String hudArrows(int out, int total);
 
   /// No description provided for @hudLives.
   ///
@@ -394,23 +502,53 @@ abstract class AppLocalizations {
   /// **'{lives} lives left'**
   String hudLives(int lives);
 
-  /// No description provided for @streakOnFire.
+  /// No description provided for @toolHint.
   ///
   /// In en, this message translates to:
-  /// **'On fire!'**
-  String get streakOnFire;
+  /// **'Hint'**
+  String get toolHint;
 
-  /// No description provided for @streakUnstoppable.
+  /// No description provided for @toolHintLeft.
   ///
   /// In en, this message translates to:
-  /// **'Unstoppable!'**
-  String get streakUnstoppable;
+  /// **'{count} hints left'**
+  String toolHintLeft(int count);
 
-  /// No description provided for @streakLegend.
+  /// No description provided for @toolHintNone.
   ///
   /// In en, this message translates to:
-  /// **'Legend!'**
-  String get streakLegend;
+  /// **'No hints left'**
+  String get toolHintNone;
+
+  /// No description provided for @toolGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid lines'**
+  String get toolGrid;
+
+  /// No description provided for @toolGridLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid lines unlock after level {level}'**
+  String toolGridLocked(int level);
+
+  /// No description provided for @toolZoomIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get toolZoomIn;
+
+  /// No description provided for @toolZoomOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get toolZoomOut;
+
+  /// No description provided for @gridUnlockedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Grid lines unlocked! Find the toggle under the board.'**
+  String get gridUnlockedToast;
 
   /// No description provided for @clearedTitle.
   ///
@@ -481,7 +619,7 @@ abstract class AppLocalizations {
   /// No description provided for @outOfLivesBody.
   ///
   /// In en, this message translates to:
-  /// **'Three slips and the level resets. Shake it off and go again?'**
+  /// **'Three blocked arrows and the level resets. Shake it off and go again?'**
   String get outOfLivesBody;
 
   /// No description provided for @outOfLivesRetry.
@@ -499,8 +637,8 @@ abstract class AppLocalizations {
   /// No description provided for @timeUpBody.
   ///
   /// In en, this message translates to:
-  /// **'So close — {hits} of {target}. One more go?'**
-  String timeUpBody(int hits, int target);
+  /// **'So close — {out} of {total} arrows out. One more go?'**
+  String timeUpBody(int out, int total);
 
   /// No description provided for @timeUpRetry.
   ///
@@ -514,17 +652,41 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settingsTitle;
 
-  /// No description provided for @settingsVibration.
+  /// No description provided for @settingsMusic.
   ///
   /// In en, this message translates to:
-  /// **'Vibration'**
-  String get settingsVibration;
+  /// **'Music'**
+  String get settingsMusic;
 
-  /// No description provided for @settingsVibrationSubtitle.
+  /// No description provided for @settingsMusicSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'A tick on every swipe, a buzz on a slip'**
-  String get settingsVibrationSubtitle;
+  /// **'A calm loop while you play'**
+  String get settingsMusicSubtitle;
+
+  /// No description provided for @settingsSfx.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound effects'**
+  String get settingsSfx;
+
+  /// No description provided for @settingsSfxSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The little sounds as you play'**
+  String get settingsSfxSubtitle;
+
+  /// No description provided for @settingsHaptics.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptic feedback'**
+  String get settingsHaptics;
+
+  /// No description provided for @settingsHapticsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A tick on every slide, a buzz on a bump'**
+  String get settingsHapticsSubtitle;
 
   /// No description provided for @settingsTheme.
   ///
@@ -559,8 +721,32 @@ abstract class AppLocalizations {
   /// No description provided for @howToPlayBody.
   ///
   /// In en, this message translates to:
-  /// **'An arrow pops up — swipe the arena or tap the pad in the direction it points. Coral arrows mean the opposite way, ghost arrows fade so you have to remember them, and some arrows wear a misleading word. Three lives per level, a clock on every level, and three stars for a flawless run.'**
+  /// **'Replay the two-minute walkthrough'**
   String get howToPlayBody;
+
+  /// No description provided for @settingsCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'Music credits'**
+  String get settingsCredits;
+
+  /// No description provided for @creditsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Credits'**
+  String get creditsTitle;
+
+  /// No description provided for @creditsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'The background music is free to use under the Pixabay Content License. A credit is not required, but the artist has earned one.'**
+  String get creditsIntro;
+
+  /// No description provided for @creditsBy.
+  ///
+  /// In en, this message translates to:
+  /// **'by {artist}'**
+  String creditsBy(String artist);
 
   /// No description provided for @settingsResetProgress.
   ///

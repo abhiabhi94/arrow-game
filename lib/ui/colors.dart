@@ -35,15 +35,12 @@ const Color _lTextInk = Color(0xFF2D2A4A);
 const Color _lTextMuted = Color(0xFF6E6A8F);
 const Color _lTextFaint = Color(0xFFA6A2C4);
 
-// Arrows: plain is brand indigo, reverse is coral ("go the other way"),
-// ghost is a washed-out lavender that reads as "about to vanish".
-const Color _lArrowNormal = Color(0xFF6C5CE7);
-const Color _lArrowReverse = Color(0xFFFF6B6B);
-const Color _lArrowGhost = Color(0xFF9C90F5);
-const Color _lArrowGlyph = Color(0xFFFFFFFF);
-const Color _lArrowHiddenTile = Color(0xFFE9E6FF);
-const Color _lArenaHit = Color(0xFFD5F6E9);
-const Color _lArenaMiss = Color(0xFFFFE2E2);
+// Board: faint grid lines on the page background.
+const Color _lGridLine = Color(0xFFE4E0FF);
+const Color _lHintGlow = Color(0x66FFC53D);
+const Color _lBlockedFlash = Color(0x80FF6B6B);
+// One ink for every arrow, like a printed puzzle: colour would only shout.
+const Color _lArrowInk = Color(0xFF2D2A4A);
 
 // HUD
 const Color _lHeartFull = Color(0xFFFF6B6B);
@@ -51,8 +48,6 @@ const Color _lHeartEmpty = Color(0xFFDAD7F2);
 const Color _lTimerTrack = Color(0xFFE4E0FF);
 const Color _lTimerFill = Color(0xFF32D296);
 const Color _lTimerWarn = Color(0xFFFF6B6B);
-const Color _lFuseRing = Color(0xFFFFC53D);
-const Color _lFuseTrack = Color(0xFFEDEBFF);
 const Color _lStar = Color(0xFFFFC53D);
 const Color _lStarEmpty = Color(0xFFDAD7F2);
 
@@ -81,21 +76,16 @@ const Color _dTextInk = Color(0xFFEAE7F7);
 const Color _dTextMuted = Color(0xFFA9A4CC);
 const Color _dTextFaint = Color(0xFF6E6A8F);
 
-const Color _dArrowNormal = Color(0xFF7A6BF2);
-const Color _dArrowReverse = Color(0xFFFF7B7B);
-const Color _dArrowGhost = Color(0xFF8A7BF5);
-const Color _dArrowGlyph = Color(0xFFFFFFFF);
-const Color _dArrowHiddenTile = Color(0xFF2C2942);
-const Color _dArenaHit = Color(0xFF163A2E);
-const Color _dArenaMiss = Color(0xFF3E1F27);
+const Color _dGridLine = Color(0xFF322E4A);
+const Color _dHintGlow = Color(0x80FFCE52);
+const Color _dBlockedFlash = Color(0x99FF7B7B);
+const Color _dArrowInk = Color(0xFFEAE7F7);
 
 const Color _dHeartFull = Color(0xFFFF7B7B);
 const Color _dHeartEmpty = Color(0xFF3A3560);
 const Color _dTimerTrack = Color(0xFF2C2942);
 const Color _dTimerFill = Color(0xFF3FE0A6);
 const Color _dTimerWarn = Color(0xFFFF7B7B);
-const Color _dFuseRing = Color(0xFFFFCE52);
-const Color _dFuseTrack = Color(0xFF332E54);
 const Color _dStar = Color(0xFFFFCE52);
 const Color _dStarEmpty = Color(0xFF3A3560);
 
@@ -122,20 +112,15 @@ class ArrowPalette {
     required this.textInk,
     required this.textMuted,
     required this.textFaint,
-    required this.arrowNormal,
-    required this.arrowReverse,
-    required this.arrowGhost,
-    required this.arrowGlyph,
-    required this.arrowHiddenTile,
-    required this.arenaHit,
-    required this.arenaMiss,
+    required this.gridLine,
+    required this.hintGlow,
+    required this.blockedFlash,
+    required this.arrowInk,
     required this.heartFull,
     required this.heartEmpty,
     required this.timerTrack,
     required this.timerFill,
     required this.timerWarn,
-    required this.fuseRing,
-    required this.fuseTrack,
     required this.star,
     required this.starEmpty,
   });
@@ -156,20 +141,17 @@ class ArrowPalette {
   final Color textInk;
   final Color textMuted;
   final Color textFaint;
-  final Color arrowNormal;
-  final Color arrowReverse;
-  final Color arrowGhost;
-  final Color arrowGlyph;
-  final Color arrowHiddenTile;
-  final Color arenaHit;
-  final Color arenaMiss;
+  final Color gridLine;
+  final Color hintGlow;
+  final Color blockedFlash;
+
+  /// The single ink every arrow is drawn in.
+  final Color arrowInk;
   final Color heartFull;
   final Color heartEmpty;
   final Color timerTrack;
   final Color timerFill;
   final Color timerWarn;
-  final Color fuseRing;
-  final Color fuseTrack;
   final Color star;
   final Color starEmpty;
 
@@ -190,20 +172,15 @@ class ArrowPalette {
     textInk: _lTextInk,
     textMuted: _lTextMuted,
     textFaint: _lTextFaint,
-    arrowNormal: _lArrowNormal,
-    arrowReverse: _lArrowReverse,
-    arrowGhost: _lArrowGhost,
-    arrowGlyph: _lArrowGlyph,
-    arrowHiddenTile: _lArrowHiddenTile,
-    arenaHit: _lArenaHit,
-    arenaMiss: _lArenaMiss,
+    gridLine: _lGridLine,
+    hintGlow: _lHintGlow,
+    blockedFlash: _lBlockedFlash,
+    arrowInk: _lArrowInk,
     heartFull: _lHeartFull,
     heartEmpty: _lHeartEmpty,
     timerTrack: _lTimerTrack,
     timerFill: _lTimerFill,
     timerWarn: _lTimerWarn,
-    fuseRing: _lFuseRing,
-    fuseTrack: _lFuseTrack,
     star: _lStar,
     starEmpty: _lStarEmpty,
   );
@@ -225,20 +202,15 @@ class ArrowPalette {
     textInk: _dTextInk,
     textMuted: _dTextMuted,
     textFaint: _dTextFaint,
-    arrowNormal: _dArrowNormal,
-    arrowReverse: _dArrowReverse,
-    arrowGhost: _dArrowGhost,
-    arrowGlyph: _dArrowGlyph,
-    arrowHiddenTile: _dArrowHiddenTile,
-    arenaHit: _dArenaHit,
-    arenaMiss: _dArenaMiss,
+    gridLine: _dGridLine,
+    hintGlow: _dHintGlow,
+    blockedFlash: _dBlockedFlash,
+    arrowInk: _dArrowInk,
     heartFull: _dHeartFull,
     heartEmpty: _dHeartEmpty,
     timerTrack: _dTimerTrack,
     timerFill: _dTimerFill,
     timerWarn: _dTimerWarn,
-    fuseRing: _dFuseRing,
-    fuseTrack: _dFuseTrack,
     star: _dStar,
     starEmpty: _dStarEmpty,
   );

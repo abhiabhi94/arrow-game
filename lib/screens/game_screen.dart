@@ -1,29 +1,30 @@
-import 'dart:math';
-
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/level_specs.dart';
-import '../engine/direction.dart';
 import '../l10n/app_localizations.dart';
 import '../models/game_state.dart';
 import '../providers/game_provider.dart';
 import '../providers/progress_provider.dart';
+import '../providers/settings_provider.dart';
 import '../ui/colors.dart';
 import '../utils/format.dart';
 import '../utils/labels.dart';
-import '../widgets/arrow_view.dart';
-import '../widgets/direction_pad.dart';
-import '../widgets/level_intro.dart';
+import '../widgets/board_toolbar.dart';
 import '../widgets/lives_indicator.dart';
+import '../widgets/puzzle_board.dart';
 import '../widgets/result_card.dart';
 import '../widgets/stars_row.dart';
-import '../widgets/streak_badge.dart';
 import '../widgets/timer_bar.dart';
 
-/// The gameplay screen: HUD (clock, progress, lives), the swipe arena with the
-/// current arrow, the direction pad, and the intro/pause/result overlays.
+/// Zoom steps for the board (pinch works too, within the same bounds).
+const double kMinZoom = 1.0;
+const double kMaxZoom = 4.0;
+const double kZoomStep = 1.35;
+
+/// The gameplay screen: HUD (clock, arrows out, lives), the zoomable board,
+/// the toolbar (hint / grid / zoom), and the pause/result overlays.
 class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key, required this.level});
 
@@ -37,10 +38,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
     with WidgetsBindingObserver {
   late final ConfettiController _confetti =
       ConfettiController(duration: const Duration(seconds: 2));
+  final TransformationController _zoom = TransformationController();
+  double _scale = 1;
+  Size _viewport = Size.zero;
 
   /// Whether the clear being shown beat the previous best (read once, before
   /// the progress notifier records the new time).
   bool _newBest = false;
+
+  /// Whether this clear just earned the grid-lines toggle.
+  bool _gridJustUnlocked = false;
 
   @override
   void initState() {
@@ -52,12 +59,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _confetti.dispose();
+    _zoom.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Never let the clock run while the player can't see the arrow.
+    // Never let the clock run while the player can't see the board.
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
@@ -71,21 +79,38 @@ class _GameScreenState extends ConsumerState<GameScreen>
     );
   }
 
+  /// Zooms about the centre of the board viewport.
+  void _setZoom(double scale) {
+    final s = scale.clamp(kMinZoom, kMaxZoom);
+    final dx = _viewport.width * (1 - s) / 2;
+    final dy = _viewport.height * (1 - s) / 2;
+    setState(() {
+      _scale = s;
+      _zoom.value = Matrix4.identity()
+        ..translateByDouble(dx, dy, 0, 1)
+        ..scaleByDouble(s, s, 1, 1);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final provider = gameProvider(widget.level);
+    final progress = ref.read(progressProvider.notifier);
     ref.listen(provider, (prev, next) {
       if (next.phase == GamePhase.cleared && prev?.phase != GamePhase.cleared) {
-        _newBest = ref
-            .read(progressProvider.notifier)
-            .progressFor(widget.level)
-            .isNewBest(next.elapsedMs);
+        _newBest = progress.progressFor(widget.level).isNewBest(next.elapsedMs);
+        _gridJustUnlocked = widget.level == kGridLinesUnlockAfterLevel &&
+            !progress.progressFor(widget.level).completed;
         _confetti.play();
       }
     });
     final state = ref.watch(provider);
     final notifier = ref.read(provider.notifier);
+    final settings = ref.watch(settingsProvider);
+    // Watch progress so the grid toggle unlocks live.
+    ref.watch(progressProvider);
+    final gridUnlocked = progress.gridLinesUnlocked;
     final p = context.palette;
 
     return Scaffold(
@@ -106,18 +131,98 @@ class _GameScreenState extends ConsumerState<GameScreen>
           ],
         ),
         actions: [
-          if (state.isPlaying)
+          if (state.isPlaying) ...[
+            IconButton(
+              tooltip: l10n.gameRestart,
+              onPressed: notifier.restart,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
             IconButton(
               tooltip: l10n.gamePause,
               onPressed: notifier.pause,
               icon: const Icon(Icons.pause_rounded),
             ),
+          ],
         ],
       ),
       body: SafeArea(
         child: Stack(
           children: [
-            _PlayView(state: state, onDirection: notifier.answer),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TimerBar(
+                          remainingMs: state.remainingMs,
+                          fraction: state.timeFraction,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      LivesIndicator(livesLeft: state.livesLeft),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        _viewport = constraints.biggest;
+                        return ClipRect(
+                          child: InteractiveViewer(
+                            transformationController: _zoom,
+                            minScale: kMinZoom,
+                            maxScale: kMaxZoom,
+                            onInteractionEnd: (_) {
+                              final s = _zoom.value.getMaxScaleOnAxis();
+                              if (s != _scale) setState(() => _scale = s);
+                            },
+                            child: SizedBox.expand(
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: state.isLoading
+                                    ? _LoadingView(message: l10n.gameLoading)
+                                    : PuzzleBoard(
+                                        state: state,
+                                        showGrid: gridUnlocked && settings.gridLinesOn,
+                                        onTapArrow: notifier.tapArrow,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  if (widget.level <= 2)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        widget.level == 1 ? l10n.tutorialTap : l10n.tutorialBlocked,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: p.textMuted, fontSize: 13),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  BoardToolbar(
+                    hintsLeft: state.hintsLeft,
+                    hintActive: state.hintArrowId != null,
+                    onHint: state.isPlaying ? notifier.useHint : null,
+                    gridUnlocked: gridUnlocked,
+                    gridUnlockLevel: kGridLinesUnlockAfterLevel,
+                    gridOn: settings.gridLinesOn,
+                    onToggleGrid: () => ref
+                        .read(settingsProvider.notifier)
+                        .setGridLines(!settings.gridLinesOn),
+                    onZoomIn: () => _setZoom(_scale * kZoomStep),
+                    onZoomOut: () => _setZoom(_scale / kZoomStep),
+                    canZoomIn: _scale < kMaxZoom - 0.001,
+                    canZoomOut: _scale > kMinZoom + 0.001,
+                  ),
+                ],
+              ),
+            ),
             Align(
               alignment: Alignment.topCenter,
               child: ConfettiWidget(
@@ -129,7 +234,29 @@ class _GameScreenState extends ConsumerState<GameScreen>
               ),
             ),
             switch (state.phase) {
-              GamePhase.ready => LevelIntro(spec: state.spec, onStart: notifier.start),
+              GamePhase.paused when state.resumeOffered => ResultCard(
+                  emoji: '👋',
+                  title: l10n.resumeTitle,
+                  body: l10n.resumeBody(
+                    state.arrowsOut,
+                    state.arrowsTotal,
+                    formatDurationMs(state.elapsedMs),
+                  ),
+                  actions: [
+                    FilledButton(
+                      onPressed: notifier.resume,
+                      child: Text(l10n.resumeContinue),
+                    ),
+                    OutlinedButton(
+                      onPressed: notifier.restart,
+                      child: Text(l10n.resumeStartOver),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l10n.clearedHome),
+                    ),
+                  ],
+                ),
               GamePhase.paused => ResultCard(
                   emoji: '⏸️',
                   title: l10n.gamePaused,
@@ -170,6 +297,18 @@ class _GameScreenState extends ConsumerState<GameScreen>
                           style: TextStyle(
                             fontWeight: FontWeight.w800,
                             color: p.accentMint,
+                          ),
+                        ),
+                      if (_gridJustUnlocked)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            l10n.gridUnlockedToast,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: p.primary,
+                            ),
                           ),
                         ),
                       if (widget.level == totalLevels)
@@ -217,7 +356,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
               GamePhase.timeUp => ResultCard(
                   emoji: '⏰',
                   title: l10n.timeUpTitle,
-                  body: l10n.timeUpBody(state.hits, state.spec.targetHits),
+                  body: l10n.timeUpBody(state.arrowsOut, state.arrowsTotal),
                   actions: [
                     FilledButton(
                       onPressed: notifier.restart,
@@ -229,7 +368,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     ),
                   ],
                 ),
-              GamePhase.playing => const SizedBox.shrink(),
+              GamePhase.playing || GamePhase.loading => const SizedBox.shrink(),
             },
           ],
         ),
@@ -238,201 +377,23 @@ class _GameScreenState extends ConsumerState<GameScreen>
   }
 }
 
-class _PlayView extends StatelessWidget {
-  const _PlayView({required this.state, required this.onDirection});
-
-  final GameState state;
-  final ValueChanged<Direction> onDirection;
+class _LoadingView extends StatelessWidget {
+  const _LoadingView({required this.message});
+  final String message;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final arrow = state.arrow;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-      child: Column(
-        children: [
-          TimerBar(remainingMs: state.remainingMs, fraction: state.timeFraction),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _ProgressPill(
-                text: l10n.hudHits(state.hits, state.spec.targetHits),
-                fraction: state.progress,
-              ),
-              LivesIndicator(livesLeft: state.livesLeft),
-            ],
-          ),
-          const SizedBox(height: 8),
-          StreakBadge(streak: state.streak),
-          Expanded(
-            child: _SwipeArena(
-              outcome: state.lastOutcome,
-              outcomeToken: state.outcomeToken,
-              onDirection: onDirection,
-              child: arrow == null
-                  ? const SizedBox.shrink()
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        final size = min(
-                          220.0,
-                          min(constraints.maxWidth, constraints.maxHeight) - 40,
-                        );
-                        return Center(
-                          child: ArrowView(
-                            arrow: arrow,
-                            visible: state.arrowVisible,
-                            fuseFraction: state.fuseFraction,
-                            size: max(size, 100),
-                          ),
-                        );
-                      },
-                    ),
+  Widget build(BuildContext context) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(strokeWidth: 3),
             ),
-          ),
-          const SizedBox(height: 8),
-          DirectionPad(onDirection: onDirection, enabled: state.isPlaying),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProgressPill extends StatelessWidget {
-  const _ProgressPill({required this.text, required this.fraction});
-  final String text;
-  final double fraction;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: p.surface,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.flag_rounded, size: 18, color: p.primary),
-          const SizedBox(width: 6),
-          Text(text, style: TextStyle(fontWeight: FontWeight.w800, color: p.textInk)),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 56,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: fraction,
-                minHeight: 6,
-                backgroundColor: p.timerTrack,
-                color: p.primary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The swipeable area around the arrow. Fires [onDirection] once per gesture
-/// as soon as the drag is decisively in one direction, flashes green/red and
-/// shakes on a miss.
-class _SwipeArena extends StatefulWidget {
-  const _SwipeArena({
-    required this.outcome,
-    required this.outcomeToken,
-    required this.onDirection,
-    required this.child,
-  });
-
-  final Outcome outcome;
-  final int outcomeToken;
-  final ValueChanged<Direction> onDirection;
-  final Widget child;
-
-  @override
-  State<_SwipeArena> createState() => _SwipeArenaState();
-}
-
-class _SwipeArenaState extends State<_SwipeArena> {
-  static const double _swipeDistance = 32;
-
-  Offset _start = Offset.zero;
-  bool _fired = false;
-
-  void _onStart(DragStartDetails d) {
-    _start = d.localPosition;
-    _fired = false;
-  }
-
-  void _onUpdate(DragUpdateDetails d) {
-    if (_fired) return;
-    final delta = d.localPosition - _start;
-    final dir = directionFromSwipe(delta.dx, delta.dy, minDistance: _swipeDistance);
-    if (dir == null) return;
-    _fired = true;
-    widget.onDirection(dir);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final flash = switch (widget.outcome) {
-      Outcome.hit => p.arenaHit,
-      Outcome.miss => p.arenaMiss,
-      Outcome.none => p.surface,
-    };
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onPanStart: _onStart,
-      onPanUpdate: _onUpdate,
-      child: _ShakeOnChange(
-        trigger: widget.outcome == Outcome.miss ? widget.outcomeToken : 0,
-        child: TweenAnimationBuilder<Color?>(
-          key: ValueKey<int>(widget.outcomeToken),
-          tween: ColorTween(begin: flash, end: p.surface),
-          duration: const Duration(milliseconds: 450),
-          builder: (context, color, child) => Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: p.outlineSoft),
-            ),
-            child: child,
-          ),
-          child: widget.child,
+            const SizedBox(height: 16),
+            Text(message, style: TextStyle(color: context.palette.textMuted)),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-/// Plays a quick damped horizontal shake each time [trigger] changes to a
-/// non-zero value. An implicit animation (no stray timers), so it's safe in
-/// widget tests.
-class _ShakeOnChange extends StatelessWidget {
-  const _ShakeOnChange({required this.trigger, required this.child});
-
-  final int trigger;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      key: ValueKey<int>(trigger),
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOut,
-      builder: (context, t, child) {
-        final dx = trigger == 0 ? 0.0 : sin(t * pi * 5) * 9 * (1 - t);
-        return Transform.translate(offset: Offset(dx, 0), child: child);
-      },
-      child: child,
-    );
-  }
+      );
 }

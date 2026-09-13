@@ -9,11 +9,13 @@ void main() {
     expect(formatDurationMs(-5), '0:00');
   });
 
-  test('formatSecondsLeft rounds up so 0 only shows when time is gone', () {
-    expect(formatSecondsLeft(30000), '30');
-    expect(formatSecondsLeft(29999), '30');
-    expect(formatSecondsLeft(1), '1');
-    expect(formatSecondsLeft(0), '0');
-    expect(formatSecondsLeft(-100), '0');
+  test('formatTimeLeft is m:ss and rounds up so 0:00 only shows when time is gone', () {
+    expect(formatTimeLeft(30000), '0:30');
+    expect(formatTimeLeft(29999), '0:30');
+    expect(formatTimeLeft(67001), '1:08');
+    expect(formatTimeLeft(693000), '11:33');
+    expect(formatTimeLeft(1), '0:01');
+    expect(formatTimeLeft(0), '0:00');
+    expect(formatTimeLeft(-100), '0:00');
   });
 }

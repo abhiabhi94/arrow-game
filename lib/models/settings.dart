@@ -8,28 +8,86 @@ library;
 enum ThemeChoice { system, light, dark }
 
 class Settings {
-  const Settings({required this.hapticsOn, required this.themeChoice});
+  const Settings({
+    required this.musicOn,
+    required this.musicVolume,
+    required this.hapticsOn,
+    required this.sfxOn,
+    required this.themeChoice,
+    required this.gridLinesOn,
+    required this.onboardingDone,
+  });
 
-  /// Vibration/haptics on/off (on by default).
+  /// Background music on/off (on by default).
+  final bool musicOn;
+
+  /// Music volume, 0.0 .. 1.0.
+  final double musicVolume;
+
+  /// Haptic feedback on/off (on by default).
   final bool hapticsOn;
+
+  /// Sound effects (every in-game sound, e.g. the exit whoosh) on/off (on by default).
+  final bool sfxOn;
 
   /// Theme preference (system/light/dark). System by default.
   final ThemeChoice themeChoice;
 
-  static const Settings defaults =
-      Settings(hapticsOn: true, themeChoice: ThemeChoice.system);
+  /// Whether the board draws its grid lines. Off by default; the toggle
+  /// itself is earned by clearing a few levels (see progress_provider).
+  final bool gridLinesOn;
 
-  Settings copyWith({bool? hapticsOn, ThemeChoice? themeChoice}) => Settings(
+  /// Whether the one-time "how to play" walkthrough has been seen.
+  final bool onboardingDone;
+
+  static const Settings defaults = Settings(
+    musicOn: true,
+    musicVolume: 0.6,
+    hapticsOn: true,
+    sfxOn: true,
+    themeChoice: ThemeChoice.system,
+    gridLinesOn: false,
+    onboardingDone: false,
+  );
+
+  Settings copyWith({
+    bool? musicOn,
+    double? musicVolume,
+    bool? hapticsOn,
+    bool? sfxOn,
+    ThemeChoice? themeChoice,
+    bool? gridLinesOn,
+    bool? onboardingDone,
+  }) =>
+      Settings(
+        musicOn: musicOn ?? this.musicOn,
+        musicVolume: musicVolume ?? this.musicVolume,
         hapticsOn: hapticsOn ?? this.hapticsOn,
+        sfxOn: sfxOn ?? this.sfxOn,
         themeChoice: themeChoice ?? this.themeChoice,
+        gridLinesOn: gridLinesOn ?? this.gridLinesOn,
+        onboardingDone: onboardingDone ?? this.onboardingDone,
       );
 
   @override
   bool operator ==(Object other) =>
       other is Settings &&
+      other.musicOn == musicOn &&
+      other.musicVolume == musicVolume &&
       other.hapticsOn == hapticsOn &&
-      other.themeChoice == themeChoice;
+      other.sfxOn == sfxOn &&
+      other.themeChoice == themeChoice &&
+      other.gridLinesOn == gridLinesOn &&
+      other.onboardingDone == onboardingDone;
 
   @override
-  int get hashCode => Object.hash(hapticsOn, themeChoice);
+  int get hashCode => Object.hash(
+        musicOn,
+        musicVolume,
+        hapticsOn,
+        sfxOn,
+        themeChoice,
+        gridLinesOn,
+        onboardingDone,
+      );
 }

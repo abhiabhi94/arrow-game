@@ -5,7 +5,7 @@ import '../ui/colors.dart';
 import '../utils/format.dart';
 
 /// The level clock: a draining bar (mint, turning coral in the last quarter)
-/// with the seconds left beside it.
+/// with the time left beside it as m:ss.
 class TimerBar extends StatelessWidget {
   const TimerBar({super.key, required this.remainingMs, required this.fraction});
 
@@ -23,9 +23,9 @@ class TimerBar extends StatelessWidget {
         Icon(Icons.timer_outlined, size: 18, color: warn ? p.timerWarn : p.textMuted),
         const SizedBox(width: 6),
         SizedBox(
-          width: 30,
+          width: 50, // room for "11:33" without reflowing as digits change
           child: Text(
-            formatSecondsLeft(remainingMs),
+            formatTimeLeft(remainingMs),
             style: TextStyle(
               fontWeight: FontWeight.w800,
               fontSize: 16,

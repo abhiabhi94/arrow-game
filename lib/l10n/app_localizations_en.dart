@@ -12,10 +12,85 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Arrow';
 
   @override
-  String get appTagline => 'Swipe fast. Think faster.';
+  String get appTagline => 'Slide every arrow out';
 
   @override
   String get homeSettings => 'Settings';
+
+  @override
+  String get homeNextUp => 'Next up';
+
+  @override
+  String get homePlay => 'Play';
+
+  @override
+  String get homeReplay => 'Replay';
+
+  @override
+  String get homeAllCleared => 'Every level cleared — legend!';
+
+  @override
+  String get homeContinue => 'Continue';
+
+  @override
+  String get homeResumeEyebrow => 'Pick up where you left off';
+
+  @override
+  String homeResumeProgress(int out, int total, String time) {
+    return '$out of $total arrows out · $time on the clock';
+  }
+
+  @override
+  String get homeJourney => 'Your journey';
+
+  @override
+  String get onboardSkip => 'Skip';
+
+  @override
+  String get onboardNext => 'Next';
+
+  @override
+  String get onboardStart => 'Let\'s play!';
+
+  @override
+  String get onboardTitle1 => 'Tap an arrow';
+
+  @override
+  String get onboardBody1 => 'It slides out the way it points. Go on, tap it.';
+
+  @override
+  String get onboardDone1 => 'That\'s it — one down!';
+
+  @override
+  String get onboardTitle2 => 'Watch for blockers';
+
+  @override
+  String get onboardBody2 =>
+      'An arrow can\'t pass through another. Tap the one pointing up and see it bump.';
+
+  @override
+  String get onboardBumped2 =>
+      'Bumped! In a real level that costs a life. Clear the top one first, then the other.';
+
+  @override
+  String get onboardDone2 => 'Order matters — you\'ve got it.';
+
+  @override
+  String get onboardTitle3 => 'That\'s the whole game';
+
+  @override
+  String get onboardRuleLives => '3 lives per level — a bump costs one';
+
+  @override
+  String get onboardRuleClock =>
+      'Beat the clock — plenty of time, but it ticks';
+
+  @override
+  String get onboardRuleHints =>
+      'Stuck? 3 hints per level light up a free arrow';
+
+  @override
+  String get onboardRuleZoom => 'Big boards later — pinch or tap to zoom';
 
   @override
   String homeStars(int count, int total) {
@@ -35,113 +110,82 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String levelShort(int number) {
+    return 'Lv.$number';
+  }
+
+  @override
   String get levelLocked => 'Locked';
 
   @override
-  String get levelName1 => 'Warm-up';
+  String get levelName1 => 'First Steps';
 
   @override
-  String get levelName2 => 'Getting Going';
+  String get levelName2 => 'Two Ways Out';
 
   @override
-  String get levelName3 => 'Quick Hands';
+  String get levelName3 => 'Tight Corners';
 
   @override
-  String get levelName4 => 'Mirror Mirror';
+  String get levelName4 => 'Criss-cross';
 
   @override
-  String get levelName5 => 'Opposite Day';
+  String get levelName5 => 'Bottleneck';
 
   @override
-  String get levelName6 => 'Double Take';
+  String get levelName6 => 'Tangle';
 
   @override
-  String get levelName7 => 'Short Fuse';
+  String get levelName7 => 'Knot';
 
   @override
-  String get levelName8 => 'Tick Tock';
+  String get levelName8 => 'Snarl';
 
   @override
-  String get levelName9 => 'Pressure Cooker';
+  String get levelName9 => 'Labyrinth';
 
   @override
-  String get levelName10 => 'Now You See It';
+  String get levelName10 => 'Gridlock';
 
   @override
-  String get levelName11 => 'Ghost Town';
+  String get levelName11 => 'Cobweb';
 
   @override
-  String get levelName12 => 'Blink and Miss';
+  String get levelName12 => 'Thicket';
 
   @override
-  String get levelName13 => 'Don\'t Read Me';
+  String get levelName13 => 'Maze Runner';
 
   @override
-  String get levelName14 => 'Word Salad';
+  String get levelName14 => 'Cat\'s Cradle';
 
   @override
-  String get levelName15 => 'Mixed Signals';
+  String get levelName15 => 'Traffic Jam';
 
   @override
-  String get levelName16 => 'All Together Now';
+  String get levelName16 => 'Spaghetti';
 
   @override
-  String get levelName17 => 'Full Tilt';
+  String get levelName17 => 'Rush Hour';
 
   @override
-  String get levelName18 => 'Overdrive';
+  String get levelName18 => 'Gordian Knot';
 
   @override
-  String get levelName19 => 'Lightning Round';
+  String get levelName19 => 'Escape Artist';
 
   @override
-  String get levelName20 => 'Grand Finale';
+  String get levelName20 => 'Grand Exit';
 
   @override
-  String get introRules => 'This level';
+  String get tutorialTap => 'Tap an arrow to slide it out the way it points.';
 
   @override
-  String introTarget(int count) {
-    return '$count arrows';
-  }
+  String get tutorialBlocked =>
+      'An arrow in the way costs a life — find the free ones first.';
 
   @override
-  String introTime(int seconds) {
-    return '${seconds}s on the clock';
-  }
-
-  @override
-  String get introLives => '3 lives';
-
-  @override
-  String get introGo => 'Go!';
-
-  @override
-  String get ruleNormal => 'Swipe (or tap) the way the arrow points';
-
-  @override
-  String get ruleReverse => 'Coral arrows: go the opposite way';
-
-  @override
-  String get ruleGhost => 'Ghost arrows vanish — remember them';
-
-  @override
-  String get ruleDecoy => 'Trust the arrow, not the word';
-
-  @override
-  String get ruleFuse => 'Each arrow has a fuse — answer before it burns out';
-
-  @override
-  String get directionUp => 'Up';
-
-  @override
-  String get directionRight => 'Right';
-
-  @override
-  String get directionDown => 'Down';
-
-  @override
-  String get directionLeft => 'Left';
+  String get gameLoading => 'Laying out the arrows…';
 
   @override
   String get gamePause => 'Pause';
@@ -159,11 +203,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameQuit => 'Quit level';
 
   @override
+  String get resumeTitle => 'Welcome back';
+
+  @override
+  String resumeBody(int out, int total, String time) {
+    return 'You left this level with $out of $total arrows out and $time on the clock.';
+  }
+
+  @override
+  String get resumeContinue => 'Continue';
+
+  @override
+  String get resumeStartOver => 'Start over';
+
+  @override
+  String get gameRestart => 'Restart level';
+
+  @override
   String get gameBack => 'Back';
 
   @override
-  String hudHits(int hits, int target) {
-    return '$hits/$target';
+  String hudArrows(int out, int total) {
+    return '$out/$total';
   }
 
   @override
@@ -172,13 +233,33 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get streakOnFire => 'On fire!';
+  String get toolHint => 'Hint';
 
   @override
-  String get streakUnstoppable => 'Unstoppable!';
+  String toolHintLeft(int count) {
+    return '$count hints left';
+  }
 
   @override
-  String get streakLegend => 'Legend!';
+  String get toolHintNone => 'No hints left';
+
+  @override
+  String get toolGrid => 'Grid lines';
+
+  @override
+  String toolGridLocked(int level) {
+    return 'Grid lines unlock after level $level';
+  }
+
+  @override
+  String get toolZoomIn => 'Zoom in';
+
+  @override
+  String get toolZoomOut => 'Zoom out';
+
+  @override
+  String get gridUnlockedToast =>
+      'Grid lines unlocked! Find the toggle under the board.';
 
   @override
   String get clearedTitle => 'Level cleared!';
@@ -217,7 +298,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get outOfLivesBody =>
-      'Three slips and the level resets. Shake it off and go again?';
+      'Three blocked arrows and the level resets. Shake it off and go again?';
 
   @override
   String get outOfLivesRetry => 'Retry';
@@ -226,8 +307,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timeUpTitle => 'Time\'s up!';
 
   @override
-  String timeUpBody(int hits, int target) {
-    return 'So close — $hits of $target. One more go?';
+  String timeUpBody(int out, int total) {
+    return 'So close — $out of $total arrows out. One more go?';
   }
 
   @override
@@ -237,11 +318,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
-  String get settingsVibration => 'Vibration';
+  String get settingsMusic => 'Music';
 
   @override
-  String get settingsVibrationSubtitle =>
-      'A tick on every swipe, a buzz on a slip';
+  String get settingsMusicSubtitle => 'A calm loop while you play';
+
+  @override
+  String get settingsSfx => 'Sound effects';
+
+  @override
+  String get settingsSfxSubtitle => 'The little sounds as you play';
+
+  @override
+  String get settingsHaptics => 'Haptic feedback';
+
+  @override
+  String get settingsHapticsSubtitle =>
+      'A tick on every slide, a buzz on a bump';
 
   @override
   String get settingsTheme => 'Theme';
@@ -259,8 +352,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHowToPlay => 'How to play';
 
   @override
-  String get howToPlayBody =>
-      'An arrow pops up — swipe the arena or tap the pad in the direction it points. Coral arrows mean the opposite way, ghost arrows fade so you have to remember them, and some arrows wear a misleading word. Three lives per level, a clock on every level, and three stars for a flawless run.';
+  String get howToPlayBody => 'Replay the two-minute walkthrough';
+
+  @override
+  String get settingsCredits => 'Music credits';
+
+  @override
+  String get creditsTitle => 'Credits';
+
+  @override
+  String get creditsIntro =>
+      'The background music is free to use under the Pixabay Content License. A credit is not required, but the artist has earned one.';
+
+  @override
+  String creditsBy(String artist) {
+    return 'by $artist';
+  }
 
   @override
   String get settingsResetProgress => 'Reset progress';

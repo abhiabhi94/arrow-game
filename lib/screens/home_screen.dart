@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,14 +8,18 @@ import '../data/level_specs.dart';
 import '../l10n/app_localizations.dart';
 import '../models/level_progress.dart';
 import '../providers/progress_provider.dart';
+import '../providers/saved_game_provider.dart';
 import '../ui/colors.dart';
 import '../utils/format.dart';
 import '../utils/labels.dart';
 import 'game_screen.dart';
 import 'settings_screen.dart';
 
-/// The home screen: a stars tally, a jump-in "Play" card for the furthest open
-/// level, and the 20-level grid with lock/star state.
+/// Vertical distance between trail nodes.
+const double kTrailSpacing = 104;
+
+/// The home screen: a stars tally, a "next up" hero card, and the journey — a
+/// winding trail of 20 level nodes with lock / stars / current state.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -24,6 +30,10 @@ class HomeScreen extends ConsumerWidget {
     final progress = ref.watch(progressProvider);
     final notifier = ref.read(progressProvider.notifier);
     final nextLevel = notifier.highestUnlocked;
+    final allCleared = notifier.levelsCleared == totalLevels;
+    // A level left mid-way takes the hero card: it is where the player was.
+    final saved = ref.watch(savedGameProvider);
+    final heroLevel = saved?.level ?? nextLevel;
 
     return Scaffold(
       body: SafeArea(
@@ -33,7 +43,7 @@ class HomeScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Column(
@@ -41,24 +51,22 @@ class HomeScreen extends ConsumerWidget {
                         children: [
                           Text(
                             l10n.appTitle,
-                            style: Theme.of(context)
-                                .textTheme
-                                .displaySmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  color: p.textInk,
-                                ),
+                            style: TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w800,
+                              color: p.textInk,
+                              letterSpacing: -0.5,
+                            ),
                           ),
                           Text(
                             l10n.appTagline,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: p.textMuted),
+                            style: TextStyle(color: p.textMuted, fontSize: 15),
                           ),
                         ],
                       ),
                     ),
+                    _StarsPill(stars: notifier.totalStars, total: totalLevels * 3),
+                    const SizedBox(width: 8),
                     IconButton.filledTonal(
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
@@ -74,66 +82,45 @@ class HomeScreen extends ConsumerWidget {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-                child: _StarsPill(
-                  stars: notifier.totalStars,
-                  total: totalLevels * 3,
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
-                child: _PlayCard(
-                  level: nextLevel,
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+                child: _NextUpCard(
+                  level: heroLevel,
+                  allCleared: allCleared,
+                  resume: saved == null
+                      ? null
+                      : l10n.homeResumeProgress(
+                          saved.arrowsOut,
+                          specForLevel(saved.level).arrows,
+                          formatDurationMs(saved.elapsedMs),
+                        ),
                   onPlay: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => GameScreen(level: nextLevel),
+                      builder: (_) => GameScreen(level: heroLevel),
                     ),
                   ),
                 ),
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 4),
               sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.homeLevels,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: p.textInk,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.homeLevelsHint,
-                      style: TextStyle(color: p.textFaint, fontSize: 13),
-                    ),
-                  ],
+                child: Text(
+                  l10n.homeJourney,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: p.textInk,
+                  ),
                 ),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) {
-                    final level = i + 1;
-                    return _LevelTile(
-                      level: level,
-                      progress: progress[level] ?? LevelProgress.empty(level),
-                      unlocked: notifier.isUnlocked(level),
-                    );
-                  },
-                  childCount: totalLevels,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                child: _Trail(
+                  progress: progress,
+                  isUnlocked: notifier.isUnlocked,
+                  current: nextLevel,
                 ),
               ),
             ),
@@ -153,33 +140,44 @@ class _StarsPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        color: p.surface,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.star_rounded, color: p.star, size: 30),
-          const SizedBox(width: 10),
-          Text(
-            l10n.homeStars(stars, total),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: p.textInk,
-                ),
-          ),
-        ],
+    return Semantics(
+      label: l10n.homeStars(stars, total),
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: p.surface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_rounded, color: p.star, size: 22),
+            const SizedBox(width: 4),
+            Text(
+              '$stars',
+              style: TextStyle(fontWeight: FontWeight.w800, color: p.textInk, fontSize: 16),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// The jump-in card for the furthest level open by progress.
-class _PlayCard extends StatelessWidget {
-  const _PlayCard({required this.level, required this.onPlay});
+/// The hero: a gradient card for the furthest level open by progress.
+class _NextUpCard extends StatelessWidget {
+  const _NextUpCard({
+    required this.level,
+    required this.allCleared,
+    required this.resume,
+    required this.onPlay,
+  });
   final int level;
+  final bool allCleared;
+
+  /// A one-line summary of the saved game when [level] is one left mid-way.
+  final String? resume;
   final VoidCallback onPlay;
 
   @override
@@ -190,87 +188,315 @@ class _PlayCard extends StatelessWidget {
       label: '${l10n.levelNumber(level)} ${levelName(l10n, level)}',
       button: true,
       child: Material(
-        color: p.primary,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           onTap: onPlay,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: const BoxDecoration(
-                    color: Colors.white24,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 28,
-                  ),
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [p.primary, p.primaryDark],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: p.primary.withValues(alpha: 0.35),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.levelNumber(level),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 18,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        levelName(l10n, level),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded, color: Colors.white70),
               ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(22, 20, 18, 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          resume != null
+                              ? l10n.homeResumeEyebrow.toUpperCase()
+                              : allCleared
+                                  ? l10n.homeAllCleared
+                                  : l10n.homeNextUp.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.levelNumber(level),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 26,
+                          ),
+                        ),
+                        Text(
+                          levelName(l10n, level),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                        if (resume != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              resume!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.play_arrow_rounded, color: p.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          resume != null
+                              ? l10n.homeContinue
+                              : allCleared
+                                  ? l10n.homeReplay
+                                  : l10n.homePlay,
+                          style: TextStyle(
+                            color: p.primary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ).animate().fadeIn(duration: 200.ms).slideY(begin: -0.1);
+    ).animate().fadeIn(duration: 250.ms).slideY(begin: -0.08);
   }
 }
 
-class _LevelTile extends StatelessWidget {
-  const _LevelTile({
+/// A winding path of level nodes. Node `i` sits at a horizontal offset that
+/// follows a gentle sine wave, so the trail meanders down the screen.
+class _Trail extends StatelessWidget {
+  const _Trail({
+    required this.progress,
+    required this.isUnlocked,
+    required this.current,
+  });
+
+  final Map<int, LevelProgress> progress;
+  final bool Function(int level) isUnlocked;
+  final int current;
+
+  static double fractionFor(int level) => 0.5 + 0.36 * sin((level - 1) * 1.05);
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        const nodeSize = 62.0;
+        final points = <Offset>[
+          for (var level = 1; level <= totalLevels; level++)
+            Offset(
+              (width - nodeSize) * fractionFor(level) + nodeSize / 2,
+              (level - 1) * kTrailSpacing + nodeSize / 2 + 8,
+            ),
+        ];
+        final height = (totalLevels - 1) * kTrailSpacing + nodeSize + 48;
+        return SizedBox(
+          width: width,
+          height: height,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _TrailPainter(
+                    points: points,
+                    clearedUpTo: _clearedPrefix(),
+                    color: p.outlineSoft,
+                    doneColor: p.accentMint,
+                  ),
+                ),
+              ),
+              for (var level = 1; level <= totalLevels; level++)
+                Positioned(
+                  left: points[level - 1].dx - nodeSize / 2,
+                  top: points[level - 1].dy - nodeSize / 2,
+                  child: _LevelNode(
+                    level: level,
+                    size: nodeSize,
+                    progress: progress[level] ?? LevelProgress.empty(level),
+                    unlocked: isUnlocked(level),
+                    isCurrent: level == current && !(progress[level]?.completed ?? false),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// How many levels from the start are cleared in a row (the trail is
+  /// painted "done" that far).
+  int _clearedPrefix() {
+    var n = 0;
+    while (n < totalLevels && (progress[n + 1]?.completed ?? false)) {
+      n++;
+    }
+    return n;
+  }
+}
+
+class _TrailPainter extends CustomPainter {
+  _TrailPainter({
+    required this.points,
+    required this.clearedUpTo,
+    required this.color,
+    required this.doneColor,
+  });
+
+  final List<Offset> points;
+  final int clearedUpTo;
+  final Color color;
+  final Color doneColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var i = 0; i + 1 < points.length; i++) {
+      final a = points[i];
+      final b = points[i + 1];
+      final midY = (a.dy + b.dy) / 2;
+      final path = Path()
+        ..moveTo(a.dx, a.dy)
+        ..cubicTo(a.dx, midY, b.dx, midY, b.dx, b.dy);
+      final paint = Paint()
+        ..color = i < clearedUpTo ? doneColor : color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5
+        ..strokeCap = StrokeCap.round;
+      _drawDashed(canvas, path, paint);
+    }
+  }
+
+  static void _drawDashed(Canvas canvas, Path path, Paint paint) {
+    const dash = 10.0;
+    const gap = 9.0;
+    for (final metric in path.computeMetrics()) {
+      var d = 0.0;
+      while (d < metric.length) {
+        final end = min(d + dash, metric.length);
+        canvas.drawPath(metric.extractPath(d, end), paint);
+        d += dash + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TrailPainter old) =>
+      old.clearedUpTo != clearedUpTo ||
+      old.color != color ||
+      old.doneColor != doneColor ||
+      old.points.length != points.length ||
+      (old.points.isNotEmpty && old.points.first != points.first);
+}
+
+class _LevelNode extends StatelessWidget {
+  const _LevelNode({
     required this.level,
+    required this.size,
     required this.progress,
     required this.unlocked,
+    required this.isCurrent,
   });
 
   final int level;
+  final double size;
   final LevelProgress progress;
   final bool unlocked;
+  final bool isCurrent;
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
     final cleared = progress.completed;
+    final Color fill;
+    final Color fg;
+    if (cleared) {
+      fill = p.accentMint;
+      fg = Colors.white;
+    } else if (isCurrent) {
+      fill = p.primary;
+      fg = Colors.white;
+    } else if (unlocked) {
+      fill = p.surface;
+      fg = p.textInk;
+    } else {
+      fill = p.surface;
+      fg = p.textFaint;
+    }
+
+    final circle = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: fill,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isCurrent ? p.primaryLight : (cleared ? p.accentMint : p.outlineSoft),
+          width: isCurrent ? 4 : 1.5,
+        ),
+        boxShadow: [
+          if (isCurrent)
+            BoxShadow(
+              color: p.primary.withValues(alpha: 0.4),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+        ],
+      ),
+      child: Center(
+        child: unlocked
+            ? Text(
+                '$level',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: fg),
+              )
+            : Icon(Icons.lock_rounded, color: fg, size: 22),
+      ),
+    );
+
     return Semantics(
       label: unlocked ? l10n.levelNumber(level) : '${l10n.levelNumber(level)} ${l10n.levelLocked}',
       button: unlocked,
       child: Material(
-        color: unlocked ? p.surface : p.backgroundSoft,
-        borderRadius: BorderRadius.circular(18),
+        color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          customBorder: const CircleBorder(),
           onTap: unlocked
               ? () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -278,64 +504,48 @@ class _LevelTile extends StatelessWidget {
                     ),
                   )
               : null,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: cleared ? p.accentMint : p.outlineSoft,
-                width: cleared ? 2 : 1,
-              ),
-            ),
-            child: Center(
-              child: unlocked
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$level',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: cleared ? p.accentMint : p.textInk,
-                          ),
+          child: SizedBox(
+            width: size + 40,
+            height: size + 36,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                circle,
+                const SizedBox(height: 4),
+                if (cleared)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var i = 0; i < 3; i++)
+                        Icon(
+                          Icons.star_rounded,
+                          size: 13,
+                          color: i < progress.stars ? p.star : p.starEmpty,
                         ),
-                        if (cleared)
-                          _TinyStars(stars: progress.stars)
-                        else
-                          const SizedBox(height: 14),
-                        if (cleared && progress.bestTimeMs != null)
-                          Text(
-                            formatDurationMs(progress.bestTimeMs!),
-                            style: TextStyle(fontSize: 10, color: p.textMuted),
-                          ),
+                      if (progress.bestTimeMs != null) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          formatDurationMs(progress.bestTimeMs!),
+                          style: TextStyle(fontSize: 10, color: p.textMuted),
+                        ),
                       ],
-                    )
-                  : Icon(Icons.lock_rounded, color: p.textFaint, size: 20),
+                    ],
+                  )
+                else if (unlocked)
+                  Text(
+                    levelName(l10n, level),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isCurrent ? p.primary : p.textMuted,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
             ),
           ),
         ),
       ),
-    ).animate().fadeIn(duration: 200.ms).scale(begin: const Offset(0.9, 0.9));
-  }
-}
-
-class _TinyStars extends StatelessWidget {
-  const _TinyStars({required this.stars});
-  final int stars;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List<Widget>.generate(
-        3,
-        (i) => Icon(
-          Icons.star_rounded,
-          size: 12,
-          color: i < stars ? p.star : p.starEmpty,
-        ),
-      ),
-    );
+    ).animate(delay: (min(level, 12) * 30).ms).fadeIn(duration: 200.ms).scale(begin: const Offset(0.85, 0.85));
   }
 }

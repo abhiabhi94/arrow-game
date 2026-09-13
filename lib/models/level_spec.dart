@@ -1,65 +1,51 @@
-/// The knobs that define one level's difficulty. Pure Dart (no Flutter).
+/// The knobs that define one level's board. Pure Dart (no Flutter).
 library;
-
-import '../engine/arrow.dart';
-
-/// How long a ghost arrow stays visible before it fades (memory pressure).
-const int kGhostVisibleMs = 600;
 
 class LevelSpec {
   const LevelSpec({
     required this.level,
-    required this.targetHits,
+    required this.width,
+    required this.height,
+    required this.arrows,
+    required this.minLength,
+    required this.maxLength,
     required this.timeLimitMs,
-    this.reverseChance = 0,
-    this.ghostChance = 0,
-    this.decoyChance = 0,
-    this.arrowTimeoutMs = 0,
+    this.openMoves = 2,
   })  : assert(level >= 1),
-        assert(targetHits > 0),
-        assert(timeLimitMs > 0),
-        assert(reverseChance >= 0 && ghostChance >= 0 && decoyChance >= 0),
-        assert(
-          reverseChance + ghostChance + decoyChance <= 1,
-          'kind chances must leave room for plain arrows',
-        ),
-        assert(arrowTimeoutMs >= 0);
+        assert(openMoves >= 1),
+        assert(width >= 3 && height >= 3),
+        assert(arrows >= 1),
+        assert(minLength >= 2 && maxLength >= minLength),
+        assert(timeLimitMs > 0);
 
   /// 1-based level number.
   final int level;
 
-  /// Correct swipes needed to clear the level.
-  final int targetHits;
+  /// Board size in cells.
+  final int width;
+  final int height;
+
+  /// Arrows on the board (all must exit to clear the level).
+  final int arrows;
+
+  /// Arrow length range in cells.
+  final int minLength;
+  final int maxLength;
 
   /// The level clock: run out and the level is failed.
   final int timeLimitMs;
 
-  /// Fraction of arrows that are [ArrowKind.reverse].
-  final double reverseChance;
+  /// How many arrows the generator tries to keep playable at any moment.
+  /// Small numbers mean the player has to hunt for the next move; big ones
+  /// leave plenty of obvious taps. A soft target, not a guarantee.
+  final int openMoves;
 
-  /// Fraction of arrows that are [ArrowKind.ghost].
-  final double ghostChance;
+  /// Seed for the level's fixed puzzle.
+  int get seed => level * 7919 + 17;
 
-  /// Fraction of arrows that are [ArrowKind.decoy].
-  final double decoyChance;
-
-  /// Per-arrow fuse in milliseconds; an arrow left unanswered this long counts
-  /// as a mistake. 0 disables the fuse.
-  final int arrowTimeoutMs;
-
-  bool get hasFuse => arrowTimeoutMs > 0;
-
-  /// The arrow kinds that can appear, in rule-explanation order.
-  List<ArrowKind> get kinds => <ArrowKind>[
-        ArrowKind.normal,
-        if (reverseChance > 0) ArrowKind.reverse,
-        if (ghostChance > 0) ArrowKind.ghost,
-        if (decoyChance > 0) ArrowKind.decoy,
-      ];
-
-  /// Average seconds the player has per arrow if they use the whole clock.
-  double get secondsPerArrow => timeLimitMs / 1000 / targetHits;
+  int get cellCount => width * height;
 
   @override
-  String toString() => 'LevelSpec($level: $targetHits in ${timeLimitMs}ms)';
+  String toString() =>
+      'LevelSpec($level: ${width}x$height, $arrows arrows, ${timeLimitMs}ms)';
 }

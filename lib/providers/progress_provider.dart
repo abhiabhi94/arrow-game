@@ -51,10 +51,16 @@ class ProgressRepository {
   }
 }
 
+/// The grid-lines toggle is earned: it appears once this level is cleared.
+const int kGridLinesUnlockAfterLevel = 4;
+
 /// Whether the running build unlocks every level regardless of progress. True
-/// for the debug ("Arrow Testing") build so testers can reach any level; the
-/// release ("Arrow") build enforces the locked progression.
-bool get testingUnlocksAllLevels => kDebugMode;
+/// for the debug ("Arrow Testing") build so testers can reach any level, or
+/// for any build compiled with `--dart-define=UNLOCK_ALL=true` (a small
+/// release-mode tester build); the plain release ("Arrow") build enforces
+/// the locked progression.
+bool get testingUnlocksAllLevels =>
+    kDebugMode || const bool.fromEnvironment('UNLOCK_ALL');
 
 class ProgressNotifier extends StateNotifier<Map<int, LevelProgress>> {
   ProgressNotifier(this._repo, {bool? unlockAllLevels})
@@ -94,6 +100,11 @@ class ProgressNotifier extends StateNotifier<Map<int, LevelProgress>> {
   /// Level 1 is always open; each later level unlocks once the previous is
   /// cleared. The debug ("Arrow Testing") build unlocks everything.
   bool isUnlocked(int level) => _unlockAll || unlockedByProgress(level);
+
+  /// Whether the board's grid-lines toggle has been earned (clearing level
+  /// [kGridLinesUnlockAfterLevel]); always true in the testing build.
+  bool get gridLinesUnlocked =>
+      _unlockAll || progressFor(kGridLinesUnlockAfterLevel).completed;
 
   /// The pure unlock rule (ignores debug-mode overrides).
   bool unlockedByProgress(int level) =>

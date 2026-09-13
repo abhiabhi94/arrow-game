@@ -20,7 +20,15 @@ void main() {
 
     test('round-trips saved settings', () async {
       final prefs = await _prefs();
-      const custom = Settings(hapticsOn: false, themeChoice: ThemeChoice.dark);
+      const custom = Settings(
+        musicOn: false,
+        musicVolume: 0.25,
+        hapticsOn: false,
+        sfxOn: false,
+        themeChoice: ThemeChoice.dark,
+        gridLinesOn: true,
+        onboardingDone: true,
+      );
       await SettingsRepository(prefs).save(custom);
       expect(SettingsRepository(prefs).load(), custom);
     });
@@ -41,12 +49,33 @@ void main() {
       final notifier = container.read(settingsProvider.notifier);
 
       notifier.setHaptics(false);
+      notifier.setSfx(false);
       notifier.setThemeChoice(ThemeChoice.light);
+      notifier.setGridLines(true);
+      notifier.setMusic(false);
+      notifier.setMusicVolume(1.7); // clamped
+      notifier.completeOnboarding();
       await Future<void>.delayed(Duration.zero);
 
-      expect(container.read(settingsProvider), const Settings(hapticsOn: false, themeChoice: ThemeChoice.light));
+      expect(
+        container.read(settingsProvider),
+        const Settings(
+          musicOn: false,
+          musicVolume: 1.0,
+          hapticsOn: false,
+          sfxOn: false,
+          themeChoice: ThemeChoice.light,
+          gridLinesOn: true,
+          onboardingDone: true,
+        ),
+      );
       expect(prefs.getBool('arrow_haptics_on'), isFalse);
+      expect(prefs.getBool('arrow_sfx_on'), isFalse);
       expect(prefs.getString('arrow_theme'), 'light');
+      expect(prefs.getBool('arrow_grid_lines'), isTrue);
+      expect(prefs.getBool('arrow_music_on'), isFalse);
+      expect(prefs.getDouble('arrow_music_volume'), 1.0);
+      expect(prefs.getBool('arrow_onboarding_done'), isTrue);
     });
   });
 
