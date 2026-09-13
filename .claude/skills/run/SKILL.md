@@ -58,3 +58,13 @@ Add new prefs there rather than clicking through the UI.
   Node and curl can. Hence bundled fonts + the `/__fonts/` mirror.
 - The level clock runs in real time from the moment a level opens; the
   screenshot is taken ~1.2 s later.
+- `web/index.html` declares the viewport meta tag itself. Without it Chromium's
+  mobile emulation lays the page out 980 px wide and snaps to device width
+  only when the engine injects the tag during boot; that resize event lands
+  inside engine init and the debug engine's keyboard-inset assertion can trip
+  on it ("JS error: Error … _computeOnScreenKeyboardInsets"), which made the
+  CI smoke job flaky. With the tag in the page the resize happens while the
+  HTML is still parsing, before the engine exists.
+- Trail nodes off screen are not in the semantics tree yet, so the scroll loop
+  probes `boundingBox` with a short timeout; the default 30 s per probe made
+  levels 16–20 take 6–10 minutes to reach.

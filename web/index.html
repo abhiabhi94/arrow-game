@@ -17,6 +17,11 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+  <!-- Declared up front so the page lays out at device width from the first
+       frame; otherwise the engine injects the same tag after boot, which
+       resizes the viewport (a 980px mobile-fallback layout snapping to
+       device width) and fires a resize the debug engine can trip on. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Arrow - a fast, playful swipe-the-arrow reflex game.">
 
