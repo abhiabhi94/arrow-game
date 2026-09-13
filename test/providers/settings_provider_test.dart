@@ -20,7 +20,7 @@ void main() {
 
     test('round-trips saved settings', () async {
       final prefs = await _prefs();
-      const custom = Settings(hapticsOn: false, themeChoice: ThemeChoice.dark);
+      const custom = Settings(hapticsOn: false, themeChoice: ThemeChoice.dark, gridLinesOn: true);
       await SettingsRepository(prefs).save(custom);
       expect(SettingsRepository(prefs).load(), custom);
     });
@@ -42,11 +42,16 @@ void main() {
 
       notifier.setHaptics(false);
       notifier.setThemeChoice(ThemeChoice.light);
+      notifier.setGridLines(true);
       await Future<void>.delayed(Duration.zero);
 
-      expect(container.read(settingsProvider), const Settings(hapticsOn: false, themeChoice: ThemeChoice.light));
+      expect(
+        container.read(settingsProvider),
+        const Settings(hapticsOn: false, themeChoice: ThemeChoice.light, gridLinesOn: true),
+      );
       expect(prefs.getBool('arrow_haptics_on'), isFalse);
       expect(prefs.getString('arrow_theme'), 'light');
+      expect(prefs.getBool('arrow_grid_lines'), isTrue);
     });
   });
 

@@ -15,18 +15,21 @@ class SettingsRepository {
 
   static const _kHaptics = 'arrow_haptics_on';
   static const _kTheme = 'arrow_theme';
+  static const _kGridLines = 'arrow_grid_lines';
 
   Settings load() {
     const d = Settings.defaults;
     return Settings(
       hapticsOn: _prefs.getBool(_kHaptics) ?? d.hapticsOn,
       themeChoice: _parseTheme(_prefs.getString(_kTheme), d.themeChoice),
+      gridLinesOn: _prefs.getBool(_kGridLines) ?? d.gridLinesOn,
     );
   }
 
   Future<void> save(Settings s) async {
     await _prefs.setBool(_kHaptics, s.hapticsOn);
     await _prefs.setString(_kTheme, s.themeChoice.name);
+    await _prefs.setBool(_kGridLines, s.gridLinesOn);
   }
 
   /// Maps a stored theme name back to [ThemeChoice], falling back to
@@ -48,6 +51,8 @@ class SettingsNotifier extends StateNotifier<Settings> {
 
   void setThemeChoice(ThemeChoice choice) =>
       _update(state.copyWith(themeChoice: choice));
+
+  void setGridLines(bool on) => _update(state.copyWith(gridLinesOn: on));
 
   void _update(Settings next) {
     state = next;

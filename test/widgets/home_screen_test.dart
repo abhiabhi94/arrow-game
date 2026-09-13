@@ -16,7 +16,7 @@ void main() {
     expect(find.text('Arrow'), findsOneWidget);
     expect(find.text('0 of 60 stars'), findsOneWidget);
     expect(find.text('Level 1'), findsOneWidget); // the play card
-    expect(find.text('Warm-up'), findsOneWidget);
+    expect(find.text('First Steps'), findsOneWidget);
     expect(find.text('Levels'), findsOneWidget);
     for (var level = 1; level <= 20; level++) {
       expect(find.text('$level'), findsOneWidget, reason: 'tile $level');
@@ -71,7 +71,7 @@ void main() {
     expect(find.byIcon(Icons.lock_rounded), findsNWidgets(18));
     // The play card points at level 2 now.
     expect(find.text('Level 2'), findsOneWidget);
-    expect(find.text('Getting Going'), findsOneWidget);
+    expect(find.text('Two Ways Out'), findsOneWidget);
   });
 
   testWidgets('tapping a tile opens the game; the play card too', (tester) async {
@@ -83,16 +83,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(GameScreen), findsOneWidget);
     expect(find.text('Level 3'), findsOneWidget);
-    expect(find.text('Quick Hands'), findsNWidgets(2)); // app bar + intro card
+    expect(find.text('Tight Corners'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
     expect(find.byType(HomeScreen), findsOneWidget);
 
-    await tester.tap(find.text('Warm-up'));
+    await tester.tap(find.text('First Steps'));
     await tester.pumpAndSettle();
     expect(find.text('Level 1'), findsOneWidget);
-    expect(find.text('Warm-up'), findsNWidgets(2)); // app bar + intro card
+    expect(find.text('First Steps'), findsOneWidget);
   });
 
   testWidgets('settings button opens settings', (tester) async {

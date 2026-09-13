@@ -1,6 +1,6 @@
 ---
 name: run
-description: Build the app for web and drive it in headless Chromium at a phone viewport to capture screenshots of home/settings/any level (intro card and, with --play, the live arena), then review the PNGs. Use to visually verify a UI change, check a level's rendering, or run the smoke test. The cloud container has no Android emulator (no KVM); this harness is the stand-in.
+description: Build the app for web and drive it in headless Chromium at a phone viewport to capture screenshots of home/settings/any level's board (and, with --hint, the hint glow), then review the PNGs. Use to visually verify a UI change, check a level's rendering, or run the smoke test. The cloud container has no Android emulator (no KVM); this harness is the stand-in.
 ---
 
 # Run & screenshot the app (cloud stand-in for the emulator)
@@ -13,14 +13,14 @@ Testing" Android build) and rendered in headless Chromium at 390×844 @2x.
 
 ```bash
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run   # ~60 s
-node tool/screenshot.mjs --levels 1,7,13,20 --settings --play        # -> shots/*.png
-node tool/screenshot.mjs --levels 3,16 --dark --play                 # dark theme
+node tool/screenshot.mjs --levels 1,7,13,20 --settings --hint        # -> shots/*.png
+node tool/screenshot.mjs --levels 3,16 --dark --hint                 # dark theme
 node tool/screenshot.mjs --dump                                      # print reachable buttons/labels
 ```
 
-`--levels` opens each level's intro card (`level-NN-*.png`); `--play` also
-taps "Go!" and captures the live arena with the first arrow
-(`level-NN-play-*.png`). Then `Read` the PNGs in `shots/` to review them.
+`--levels` opens each level and captures its board (`level-NN-*.png`);
+`--hint` also taps the toolbar's hint button and captures the glowing arrow
+(`level-NN-hint-*.png`). Then `Read` the PNGs in `shots/` to review them.
 
 Rebuild whenever `lib/` changes; the script serves whatever is in `build/web`.
 `PATH`/`NODE_PATH` are set by the session-start hook; if `flutter` is missing
@@ -54,5 +54,5 @@ Add new prefs there rather than clicking through the UI.
 
 - Headless Chromium cannot reach `*.gstatic.com` through the cloud proxy;
   Node and curl can. Hence bundled fonts + the `/__fonts/` mirror.
-- The level clock runs in real time once "Go!" is tapped; the `--play`
-  screenshot is taken ~0.7 s later, before the first fuse can burn.
+- The level clock runs in real time from the moment a level opens; the
+  screenshot is taken ~1.2 s later.

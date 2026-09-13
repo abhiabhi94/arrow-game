@@ -1,15 +1,14 @@
-/// Per-attempt gameplay state: dealing arrows, scoring swipes, lives, the
-/// level clock and the per-arrow fuse, pause/resume and the three endings.
+/// Per-attempt gameplay state: sliding arrows out, lives, hints, the level
+/// clock, pause/resume and the three endings.
 library;
 
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/level_specs.dart';
-import '../engine/arrow_factory.dart';
-import '../engine/direction.dart';
+import '../engine/puzzle.dart';
+import '../engine/puzzle_generator.dart';
 import '../models/game_state.dart';
 import '../models/level_progress.dart';
 import '../models/level_spec.dart';
@@ -19,19 +18,19 @@ import 'progress_provider.dart';
 /// Called once when a level is cleared, with the clear time and star rating.
 typedef ClearedCallback = void Function(int level, int elapsedMs, int stars);
 
-/// The clock's resolution. Fine enough for a smooth fuse ring; coarse enough
-/// to stay cheap.
+/// The clock's resolution.
 const int kTickMs = 100;
 
 class GameNotifier extends StateNotifier<GameState> {
   GameNotifier(
     this.spec, {
+    Puzzle? puzzle,
     this.haptics,
     this.onCleared,
-    Random? random,
     this.autoTick = true,
-  })  : _factory = ArrowFactory(spec, random: random),
-        super(GameState.ready(spec));
+  }) : super(GameState.fresh(spec, puzzle ?? puzzleForLevel(spec))) {
+    _startTimer();
+  }
 
   final LevelSpec spec;
   final HapticsService? haptics;
@@ -40,28 +39,70 @@ class GameNotifier extends StateNotifier<GameState> {
   /// When false (tests), the clock only advances through [tick].
   final bool autoTick;
 
-  final ArrowFactory _factory;
   Timer? _timer;
 
-  /// Leaves the intro and deals the first arrow. No-op unless [GamePhase.ready].
-  void start() {
-    if (state.phase != GamePhase.ready) return;
+  /// Taps arrow [id]: it slides out if its exit path is clear, otherwise it
+  /// bumps and costs a life.
+  void tapArrow(int id) {
+    if (!state.isPlaying || state.removed.contains(id)) return;
+    final puzzle = state.puzzle;
+    final token = state.moveToken + 1;
+    if (puzzle.canExit(id, state.removed)) {
+      final removed = <int>{...state.removed, id};
+      final cleared = removed.length == puzzle.arrowCount;
+      if (cleared) _stopTimer();
+      state = state.copyWith(
+        removed: removed,
+        phase: cleared ? GamePhase.cleared : GamePhase.playing,
+        clearHint: true,
+        lastMoveId: id,
+        lastOutcome: MoveOutcome.exited,
+        clearBlocked: true,
+        moveToken: token,
+      );
+      if (cleared) {
+        haptics?.victory();
+        onCleared?.call(spec.level, state.elapsedMs, state.stars);
+      } else {
+        haptics?.hit();
+      }
+      return;
+    }
+    final mistakes = state.mistakes + 1;
+    final lost = mistakes >= maxLives;
+    if (lost) _stopTimer();
     state = state.copyWith(
-      phase: GamePhase.playing,
-      arrow: _factory.next(),
-      arrowAgeMs: 0,
+      mistakes: mistakes,
+      phase: lost ? GamePhase.outOfLives : GamePhase.playing,
+      clearHint: true,
+      lastMoveId: id,
+      lastOutcome: MoveOutcome.blocked,
+      blockedCell: puzzle.firstBlockedCell(id, state.removed),
+      moveToken: token,
     );
-    haptics?.tap();
-    _startTimer();
+    if (lost) {
+      haptics?.fail();
+    } else {
+      haptics?.miss();
+    }
   }
 
-  /// Throws away the attempt and immediately starts a fresh one (the "Retry" /
-  /// "Play again" buttons).
+  /// Spends a hint to point at an arrow that can go now. No-op while a hint
+  /// is already showing, when none are left, or outside play.
+  void useHint() {
+    if (!state.isPlaying || state.hintsLeft <= 0 || state.hintArrowId != null) {
+      return;
+    }
+    final id = state.puzzle.hintFor(state.removed);
+    if (id == null) return;
+    state = state.copyWith(hintArrowId: id, hintsLeft: state.hintsLeft - 1);
+    haptics?.tap();
+  }
+
+  /// Throws the attempt away and starts the same puzzle again.
   void restart() {
-    _stopTimer();
-    _factory.reset();
-    state = GameState.ready(spec);
-    start();
+    state = GameState.fresh(spec, state.puzzle);
+    _startTimer();
   }
 
   void pause() {
@@ -76,17 +117,6 @@ class GameNotifier extends StateNotifier<GameState> {
     }
   }
 
-  /// Scores a swipe/tap in [direction] against the current arrow.
-  void answer(Direction direction) {
-    final arrow = state.arrow;
-    if (!state.isPlaying || arrow == null) return;
-    if (arrow.accepts(direction)) {
-      _hit();
-    } else {
-      _miss();
-    }
-  }
-
   /// Advances the clock by [ms]. Public so the timer callback and tests can
   /// drive it. Only the playing phase consumes time.
   void tick(int ms) {
@@ -98,68 +128,7 @@ class GameNotifier extends StateNotifier<GameState> {
       haptics?.fail();
       return;
     }
-    final age = state.arrowAgeMs + ms;
-    if (spec.hasFuse && age >= spec.arrowTimeoutMs) {
-      state = state.copyWith(elapsedMs: elapsed, arrowAgeMs: age);
-      _miss();
-      return;
-    }
-    state = state.copyWith(elapsedMs: elapsed, arrowAgeMs: age);
-  }
-
-  void _hit() {
-    final hits = state.hits + 1;
-    final streak = state.streak + 1;
-    final bestStreak = max(streak, state.bestStreak);
-    if (hits >= spec.targetHits) {
-      _stopTimer();
-      state = state.copyWith(
-        hits: hits,
-        streak: streak,
-        bestStreak: bestStreak,
-        phase: GamePhase.cleared,
-        lastOutcome: Outcome.hit,
-        outcomeToken: state.outcomeToken + 1,
-      );
-      haptics?.victory();
-      onCleared?.call(spec.level, state.elapsedMs, state.stars);
-      return;
-    }
-    state = state.copyWith(
-      hits: hits,
-      streak: streak,
-      bestStreak: bestStreak,
-      arrow: _factory.next(),
-      arrowAgeMs: 0,
-      lastOutcome: Outcome.hit,
-      outcomeToken: state.outcomeToken + 1,
-    );
-    haptics?.hit();
-  }
-
-  void _miss() {
-    final mistakes = state.mistakes + 1;
-    if (mistakes >= maxLives) {
-      _stopTimer();
-      state = state.copyWith(
-        mistakes: mistakes,
-        streak: 0,
-        phase: GamePhase.outOfLives,
-        lastOutcome: Outcome.miss,
-        outcomeToken: state.outcomeToken + 1,
-      );
-      haptics?.fail();
-      return;
-    }
-    state = state.copyWith(
-      mistakes: mistakes,
-      streak: 0,
-      arrow: _factory.next(),
-      arrowAgeMs: 0,
-      lastOutcome: Outcome.miss,
-      outcomeToken: state.outcomeToken + 1,
-    );
-    haptics?.miss();
+    state = state.copyWith(elapsedMs: elapsed);
   }
 
   void _startTimer() {

@@ -4,13 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A fast, playful cross-platform (Android + iOS) **swipe-the-arrow** reflex game
-built with Flutter. An arrow appears; the player swipes the arena (or taps the
-direction pad) the way it points. 20 levels with a hand-tuned difficulty curve,
-3 lives per level (a wrong swipe or a burnt fuse costs one; losing all three
-resets the level behind a "Retry" screen), a clock on every level ("Time's up"
-→ replay the same level), 1–3 stars per clear, local progress, light/dark
-theme, haptics.
+A playful cross-platform (Android + iOS) **arrow exit puzzle** built with
+Flutter (in the spirit of "Arrow Exit Puzzle"). Bent arrow pieces sit on a
+grid; tapping one slides it along its own path, the way its head points, until
+it leaves the board. An arrow whose exit path runs into another arrow bumps
+back and costs a life. 20 fixed, procedurally generated levels of growing
+size/tangle, 3 lives per level (losing all three resets the level behind a
+"Retry" screen), a clock on every level ("Time's up" → replay the same level),
+3 hints per level, zoom in/out, an earned grid-lines toggle (after level 4),
+1–3 stars per clear, local progress, light/dark theme, haptics.
 
 ## Build & Development Commands
 
@@ -22,7 +24,7 @@ flutter test                    # full test suite
 tool/coverage.sh 92             # coverage gate (fails under threshold)
 
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
-node tool/screenshot.mjs --levels 1,7,20 --settings --play          # phone-viewport screenshots -> shots/
+node tool/screenshot.mjs --levels 1,7,20 --settings --hint          # phone-viewport screenshots -> shots/
 
 flutter run                     # debug build = "Arrow Testing", all levels unlocked
 flutter run --release           # release build = "Arrow", locked progression
@@ -35,8 +37,8 @@ flutter build appbundle --release  # -> build/app/outputs/bundle/release/app-rel
 
 Claude Code on the web has no Android emulator (no KVM). The stand-in is the
 **web build + headless Chromium**: `tool/screenshot.mjs` serves `build/web`,
-drives the app (home, settings, any level's intro and — with `--play` — the
-live arena, light/dark) at 390×844 and writes PNGs to `shots/`; it exits 1 on
+drives the app (home, settings, any level's board and — with `--hint` — the
+hint glow, light/dark) at 390×844 and writes PNGs to `shots/`; it exits 1 on
 any Flutter exception, so it doubles as the CI smoke test
 (`.github/actions/web-smoke`, job "Web smoke & screenshots"). See
 `.claude/skills/run/SKILL.md` and `docs/cloud-dev.md`. The SessionStart hook
@@ -79,18 +81,20 @@ Identity is tied to the **build type**, not a product flavor:
 lib/
   main.dart            # prefs awaited once, ProviderScope override, MaterialApp + l10n
   engine/              # PURE DART, zero Flutter imports
-    direction.dart       Direction enum, opposite, swipe-delta -> direction
-    arrow.dart           Arrow (direction, kind: normal/reverse/ghost/decoy) + expected answer
-    arrow_factory.dart   deals arrows from a LevelSpec's chances (seedable Random)
-  data/level_specs.dart  the 20 levels (target hits, clock, twist chances, fuse)
-  models/              level_spec, level_progress (stars), settings, game_state (phases)
+    direction.dart       Direction enum (opposite, vector)
+    cell.dart            grid coordinate
+    arrow_piece.dart     ArrowPiece: cells tail→head + heading; exitRay()
+    puzzle.dart          Puzzle: occupancy, blockers, canExit, solvingOrder, hintFor, difficultyScore
+    puzzle_generator.dart reverse-order generator (solvable by construction), best-of-N candidates
+  data/level_specs.dart  the 20 levels (board size, arrow count, length range, clock)
+  models/              level_spec, level_progress (stars), settings, game_state (phases, moves)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider
   services/            haptics_service (injectable HapticEngine)
-  screens/             home (level grid), game (arena + overlays), settings
+  screens/             home (level grid), game (board + toolbar + overlays), settings
   ui/                  colors.dart (light+dark ArrowPalette), theme.dart (Material 3 + Nunito)
-  widgets/             arrow_view, direction_pad, lives_indicator, timer_bar, streak_badge,
-                       stars_row, result_card, level_intro
-  utils/               format.dart, labels.dart (l10n lookups for engine values)
+  widgets/             puzzle_board (painter + slide/bump animations), board_toolbar,
+                       lives_indicator, timer_bar, stars_row, result_card
+  utils/               format.dart, labels.dart (level names)
   l10n/                app_en.arb (+ generated app_localizations*.dart)
 ```
 
@@ -98,14 +102,30 @@ Key patterns:
 - **DI:** `sharedPreferencesProvider` throws until overridden in `main()`; all
   repositories/providers read prefs through it. Tests override it with a mock.
 - **Persistence:** `shared_preferences` only, keys prefixed `arrow_*`.
+- **Rules:** an arrow can exit iff every cell of its `exitRay` (head → board
+  edge, in its heading) is free of other arrows still on the board. Arrows
+  leave entirely, so "who blocks whom" is fixed; solvable ⇔ acyclic.
+- **Generation:** `puzzle_generator.dart` places arrows in reverse solving
+  order (each new head's ray is clear at placement), grows bodies that prefer
+  cells on existing rays, keeps the best of several placements per arrow and
+  the most tangled of `kGeneratorCandidates` boards. `puzzleForLevel(spec)`
+  seeds `Random` from `LevelSpec.seed`, so each level is a fixed puzzle.
 - **Game loop:** `GameNotifier` owns the phase machine
-  (`ready → playing ⇄ paused → cleared | outOfLives | timeUp`). A 100 ms
-  `Timer.periodic` drives `tick()` when `autoTick` is true; tests pass
-  `autoTick: false` and call `tick()` themselves. The notifier is an
-  `autoDispose.family` keyed by level, so leaving the screen discards the attempt.
+  (`playing ⇄ paused → cleared | outOfLives | timeUp`). `tapArrow` updates
+  state instantly; `PuzzleBoard` animates the slide-out / bump purely
+  visually, keyed on `GameState.moveToken`. A 100 ms `Timer.periodic` drives
+  `tick()` when `autoTick` is true; tests pass `autoTick: false`.
+- **Hints:** `maxHints = 3` per attempt; `Puzzle.hintFor` picks the removable
+  arrow that frees the most others; any tap clears the highlight.
+- **Grid lines:** `Settings.gridLinesOn` (persisted) but the toggle is earned:
+  `ProgressNotifier.gridLinesUnlocked` (clear level `kGridLinesUnlockAfterLevel`
+  = 4; always on in the testing build).
+- **Zoom:** `InteractiveViewer` (pinch) + toolbar buttons, `kMinZoom`..`kMaxZoom`.
 - **Difficulty:** every knob is in `data/level_specs.dart`; the tests in
-  `test/data/level_specs_test.dart` pin the curve's shape (chapters, pace,
-  fuse ≥ ghost window). Tune numbers there, keep the tests honest.
+  `test/data/level_specs_test.dart` and `test/engine/puzzle_generator_test.dart`
+  pin the curve (sizes never shrink, every level generates its full arrow
+  count, solvable, later levels more tangled). Tune numbers there; keep the
+  generator test green — it is what guarantees a level is playable.
 - **Lives / stars:** `maxLives = 3` and `starsForMistakes` live in
   `models/level_progress.dart`.
 
@@ -114,9 +134,10 @@ Key patterns:
 - `flutter test` + `tool/coverage.sh`. The gate excludes generated l10n,
   `main.dart`, and glue marked `// coverage:ignore` (the real periodic timer).
   Don't add `coverage:ignore` to hide untested logic — only true glue.
-- Widget tests override `gameProvider` with `autoTick: false` and a seeded
-  `Random`. `flutter_animate` schedules a zero-delay start on every mount, so
-  tests pump a frame before advancing the clock (see `_settle` in
+- Widget tests override `gameProvider` with `autoTick: false` and the tiny
+  hand-built board in `test/support/sample_puzzle.dart` (taps are aimed at
+  grid cells). `flutter_animate` schedules a zero-delay start on every mount,
+  so tests pump a frame before advancing the clock (see `_settle` in
   `test/widgets/game_screen_test.dart`).
 - Screenshot driver finds widgets by accessible name: give tappable widgets a
   `Semantics(label: …, button: true)` or a `tooltip:`.

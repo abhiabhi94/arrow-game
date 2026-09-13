@@ -56,6 +56,20 @@ void main() {
       n.dispose();
     });
 
+    test('the grid-lines toggle is earned by clearing level 4', () async {
+      final n = ProgressNotifier(ProgressRepository(await _prefs()), unlockAllLevels: false);
+      expect(kGridLinesUnlockAfterLevel, 4);
+      expect(n.gridLinesUnlocked, isFalse);
+      await n.recordCompletion(3, 1000, 3);
+      expect(n.gridLinesUnlocked, isFalse);
+      await n.recordCompletion(4, 1000, 1);
+      expect(n.gridLinesUnlocked, isTrue);
+      final testing = ProgressNotifier(ProgressRepository(await _prefs()), unlockAllLevels: true);
+      expect(testing.gridLinesUnlocked, isTrue);
+      n.dispose();
+      testing.dispose();
+    });
+
     test('the testing build unlocks everything but keeps the pure rule',
         () async {
       final n = ProgressNotifier(ProgressRepository(await _prefs()), unlockAllLevels: true);

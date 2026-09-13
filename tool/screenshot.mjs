@@ -5,12 +5,13 @@
 // at a phone-sized viewport instead.
 //
 // Usage:
-//   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--play]
+//   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--hint]
 //                            [--settings] [--dump] [--no-strict]
 //                            [--build-dir build/web] [--scale 2] [--port 0]
 //
-//   --levels  opens each level (its intro card is captured as level-NN-*.png)
-//   --play    also taps "Go!" and captures the live arena (level-NN-play-*.png)
+//   --levels  opens each level and captures its board (level-NN-*.png)
+//   --hint    also taps the hint button and captures the glowing arrow
+//             (level-NN-hint-*.png)
 //
 // Prereq: `flutter build web --debug --no-web-resources-cdn`
 //   debug   = all levels unlocked (same as the "Arrow Testing" Android build)
@@ -49,7 +50,7 @@ const fontCache = path.join(path.dirname(buildDir), 'font-cache');
 const outDir = path.resolve(args.out ?? 'shots');
 const levels = String(args.levels ?? '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 const dark = Boolean(args.dark);
-const play = Boolean(args.play);
+const hint = Boolean(args.hint);
 const scale = Number(args.scale ?? 2);
 const port = Number(args.port ?? 0);
 const strict = !args['no-strict'];
@@ -177,10 +178,10 @@ try {
     await settle(page, 1200);
     const id = String(level).padStart(2, '0');
     await shoot(page, `level-${id}-${tag}`);
-    if (play) {
-      await page.getByRole('button', { name: /^Go!/ }).first().click();
-      await settle(page, 700);
-      await shoot(page, `level-${id}-play-${tag}`);
+    if (hint) {
+      await page.getByRole('button', { name: /^Hint/ }).first().click();
+      await settle(page, 500);
+      await shoot(page, `level-${id}-hint-${tag}`);
     }
     await goBack(page);
   }

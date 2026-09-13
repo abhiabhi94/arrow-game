@@ -16,7 +16,7 @@ build, test, and **visually verify** the app. Ported from the sudoku repo's
 | iOS build                          | ❌     | Needs macOS/Xcode |
 
 So the loop is: change code → `flutter build web --debug --no-web-resources-cdn`
-→ `node tool/screenshot.mjs --levels … --play` → read the PNGs. CI runs the
+→ `node tool/screenshot.mjs --levels … --hint` → read the PNGs. CI runs the
 same script and uploads the screenshots as an artifact.
 
 ## Files that make this work
@@ -36,8 +36,9 @@ same script and uploads the screenshots as an artifact.
 - **Prefs** seeded into `localStorage` before boot (`flutter.<key>`, JSON
   encoded): `arrow_haptics_on`, `arrow_theme` (`"light"`/`"dark"`).
 - **Navigation**: home → grid tile "Level N" (`.last()`, because the "Play"
-  card is also named "Level N …") → intro card → `--play` taps "Go!" → the
-  AppBar "Back" button returns home. Settings via the "Settings" tooltip.
+  card is also named "Level N …") → the board → `--hint` taps the "Hint"
+  toolbar button → the AppBar "Back" button returns home. Settings via the
+  "Settings" tooltip.
 - Add new screens by giving their entry widget a `Semantics(label: …,
   button: true)` or a `tooltip:`; run `--dump` to list what a screen exposes.
 
@@ -58,5 +59,5 @@ same script and uploads the screenshots as an artifact.
   `RenderFlex overflow` seen only on the very first frame is that transient.
   The script waits ~1.5 s after boot before screenshotting so the gate only
   catches real overflows.
-- The game clock runs in real time on the web build, so a `--play` screenshot
-  taken ~0.7 s after "Go!" shows the first arrow with the clock barely moved.
+- The game clock runs in real time on the web build; a level screenshot is
+  taken ~1.2 s after opening, so the clock reads a second under its limit.
