@@ -192,8 +192,11 @@ try {
     const name = new RegExp(`^Level ${level}(\\s|$)`);
     const tile = page.getByRole('button', { name }).last();
     await page.mouse.move(195, 500);
-    for (let i = 0; i < 60; i++) {
-      const box = await tile.boundingBox().catch(() => null);
+    // A node that is not yet in the semantics tree (Flutter builds it lazily
+    // for the visible part of the list) has no box; ask briefly and keep
+    // nudging rather than sit through Playwright's 30 s default per probe.
+    for (let i = 0; i < 120; i++) {
+      const box = await tile.boundingBox({ timeout: 500 }).catch(() => null);
       if (box && box.y > 120 && box.y + box.height < 720) break;
       await page.mouse.wheel(0, box && box.y <= 120 ? -180 : 180);
       await settle(page, 150);
