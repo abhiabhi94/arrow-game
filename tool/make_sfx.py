@@ -4,7 +4,7 @@ deps). Run once after tweaking a sound; the WAVs are committed.
 
   python3 tool/make_sfx.py
 
-zip.wav — the "zup" of an arrow sliding off the board: a short rising chirp
+whoosh.wav — the whoosh of an arrow sliding off the board: a short rising chirp
 with a breath of low-passed noise, quick attack, exponential tail. WAV
 (16-bit mono, 22.05 kHz) plays everywhere audioplayers does, iOS included.
 """
@@ -17,7 +17,7 @@ from pathlib import Path
 RATE = 22_050
 
 
-def zip_sound(seconds=0.19, f0=420.0, f1=1_500.0):
+def whoosh_sound(seconds=0.19, f0=420.0, f1=1_500.0):
     random.seed(7)
     n = int(RATE * seconds)
     out = []
@@ -49,4 +49,4 @@ def write(path, samples):
 
 if __name__ == "__main__":
     root = Path(__file__).resolve().parent.parent
-    write(root / "assets" / "audio" / "zip.wav", zip_sound())
+    write(root / "assets" / "audio" / "whoosh.wav", whoosh_sound())

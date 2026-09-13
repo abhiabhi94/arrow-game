@@ -27,7 +27,7 @@ class Settings {
   /// Haptic feedback on/off (on by default).
   final bool hapticsOn;
 
-  /// Sound effects (the exit swoosh) on/off (on by default).
+  /// The whoosh on exit on/off (on by default).
   final bool sfxOn;
 
   /// Theme preference (system/light/dark). System by default.

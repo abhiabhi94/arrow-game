@@ -1,4 +1,4 @@
-/// Short sound effects (the "zup" of an arrow leaving the board). Respects the
+/// Short sound effects (the whoosh of an arrow leaving the board). Respects the
 /// user's sound-effects setting and wraps audioplayers behind an injectable
 /// [SfxBackend] so the logic is unit-testable without the plugin.
 library;
@@ -8,16 +8,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/settings_provider.dart';
 
-/// The exit swoosh, relative to `assets/` (see `tool/make_sfx.py`).
-const String kZipSound = 'audio/zip.wav';
+/// The exit whoosh, relative to `assets/` (see `tool/make_sfx.py`).
+const String kWhooshSound = 'audio/whoosh.wav';
 
 /// Consecutive exits within this window pitch the swoosh up a notch each,
-/// so a quick run of taps goes "zup, zup, zup" climbing.
-const Duration kZipStreakWindow = Duration(milliseconds: 1500);
+/// so a quick run of taps climbs in pitch.
+const Duration kWhooshStreakWindow = Duration(milliseconds: 1500);
 
 /// How much each streak step raises the playback rate, and the cap.
-const double kZipStreakStep = 0.06;
-const int kZipStreakMax = 6;
+const double kWhooshStreakStep = 0.06;
+const int kWhooshStreakMax = 6;
 
 /// Minimal playback the service needs.
 abstract class SfxBackend {
@@ -69,22 +69,22 @@ class SfxService {
   DateTime? _lastZip;
   int _streak = 0;
 
-  /// The streak the next [zip] will play at (0 = base pitch).
+  /// The streak the next [whoosh] will play at (0 = base pitch).
   int get streak => _streak;
 
-  /// The "zup" of an arrow sliding out. Pitch climbs with quick successive
+  /// The whoosh of an arrow sliding out. Pitch climbs with quick successive
   /// exits and resets after a pause.
-  void zip() {
+  void whoosh() {
     final now = _now();
     final last = _lastZip;
-    if (last != null && now.difference(last) <= kZipStreakWindow) {
-      _streak = (_streak + 1).clamp(0, kZipStreakMax);
+    if (last != null && now.difference(last) <= kWhooshStreakWindow) {
+      _streak = (_streak + 1).clamp(0, kWhooshStreakMax);
     } else {
       _streak = 0;
     }
     _lastZip = now;
     if (!_enabled()) return;
-    backend.play(kZipSound, rate: 1.0 + _streak * kZipStreakStep);
+    backend.play(kWhooshSound, rate: 1.0 + _streak * kWhooshStreakStep);
   }
 }
 

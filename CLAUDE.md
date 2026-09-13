@@ -109,7 +109,7 @@ lib/
   data/level_specs.dart  the 20 levels (board size, arrow count, length range, clock)
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider
-  services/            haptics_service (injectable HapticEngine), sfx_service (exit swoosh),
+  services/            haptics_service (injectable HapticEngine), sfx_service (the whoosh),
                        audio_service (looping music)
   data/audio_credits.dart  CC-BY attribution for the bundled track
   screens/             onboarding (interactive 3-step walkthrough), home (journey trail),
@@ -165,7 +165,7 @@ Key patterns:
   animated in `PuzzleBoard` (240–600 ms slide, ease-in). Strokes cap at
   3 px and heads at 8 px so the small early boards read as pen lines.
 - **Sound effects:** `SfxService` (`services/sfx_service.dart`, injectable
-  `SfxBackend`, a pool of low-latency players) plays `assets/audio/zip.wav`
+  `SfxBackend`, a pool of low-latency players) plays `assets/audio/whoosh.wav`
   on every exit — the pitch climbs a notch per quick successive exit and
   resets after 1.5 s. The WAV is synthesised by `tool/make_sfx.py` (pure
   Python); `Settings.sfxOn` gates it (on by default).
@@ -229,7 +229,7 @@ fails on any Flutter exception, and uploads `shots/`.
 - **Localization:** only English is authored (`lib/l10n/app_en.arb`); the
   l10n pipeline is wired, so adding a language is a second `.arb` file plus a
   language picker in Settings.
-- **Sound effects:** only the exit "zup" exists; a bump thud would be a
+- **Sound effects:** only the exit "Whoosh" exists; a bump thud would be a
   second WAV from `tool/make_sfx.py` (never `.ogg` — iOS can't decode
   Vorbis via audioplayers) and a `SfxService.bump()`.
 - **iOS:** code is iOS-ready; the matching iOS scheme needs Xcode (not set up here).

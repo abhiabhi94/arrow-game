@@ -96,10 +96,10 @@ void main() {
     expect(n.state.isOver, isTrue);
     expect(cleared, [(1, 1200, 3)]);
     expect(engine.calls, ['light', 'light', 'medium']);
-    // Every exit zups, the streak climbing.
+    // Every exit whooshes, the streak climbing.
     expect(sfxBackend.calls, hasLength(3));
-    expect(sfxBackend.calls.first, '$kZipSound@1.00');
-    expect(sfxBackend.calls.last, '$kZipSound@1.12');
+    expect(sfxBackend.calls.first, '$kWhooshSound@1.00');
+    expect(sfxBackend.calls.last, '$kWhooshSound@1.12');
 
     // Nothing moves after the end.
     n.tick(1000);

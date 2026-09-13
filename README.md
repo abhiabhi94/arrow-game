@@ -27,7 +27,7 @@ the way its head points, until it leaves the board. Get every arrow out.
 - **First launch** walks you through on two tiny boards you actually play.
 - **Home** is a winding journey trail of levels with a "Next up" card.
 - Background music ("Permafrost" by Scott Buckley, CC-BY 4.0, credited
-  in-app), a "zup" on every exit and haptics, all on by default and
+  in-app), a "whoosh" on every exit and haptics, all on by default and
   configurable; confetti; pause
   (also on backgrounding); light/dark/system theme; locked progression (all
   levels open in the debug build); Google Sans Flex throughout.

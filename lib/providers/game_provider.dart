@@ -92,7 +92,7 @@ class GameNotifier extends StateNotifier<GameState> {
         clearBlocked: true,
         moveToken: token,
       );
-      sfx?.zip();
+      sfx?.whoosh();
       if (cleared) {
         haptics?.victory();
         onCleared?.call(spec.level, state.elapsedMs, state.stars);
