@@ -1,6 +1,7 @@
-/// Short sound effects (the whoosh of an arrow leaving the board). Respects the
-/// user's sound-effects setting and wraps audioplayers behind an injectable
-/// [SfxBackend] so the logic is unit-testable without the plugin.
+/// Short sound effects: the whoosh of an arrow leaving the board and the
+/// knock of one that can't. Respects the user's sound-effects setting and
+/// wraps audioplayers behind an injectable [SfxBackend] so the logic is
+/// unit-testable without the plugin.
 library;
 
 import 'package:audioplayers/audioplayers.dart';
@@ -8,8 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/settings_provider.dart';
 
-/// The exit whoosh, relative to `assets/` (see `tool/make_sfx.py`).
+/// The exit whoosh and the blocked knock, relative to `assets/` (see
+/// `tool/make_sfx.py`).
 const String kWhooshSound = 'audio/whoosh.wav';
+const String kBumpSound = 'audio/bump.wav';
 
 /// Consecutive exits within this window pitch the swoosh up a notch each,
 /// so a quick run of taps climbs in pitch.
@@ -85,6 +88,15 @@ class SfxService {
     _lastZip = now;
     if (!_enabled()) return;
     backend.play(kWhooshSound, rate: 1.0 + _streak * kWhooshStreakStep);
+  }
+
+  /// The knock of an arrow that ran into another. Ends any streak: the next
+  /// whoosh starts again from the base pitch.
+  void bump() {
+    _streak = 0;
+    _lastZip = null;
+    if (!_enabled()) return;
+    backend.play(kBumpSound, rate: 1.0);
   }
 }
 

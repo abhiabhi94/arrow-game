@@ -53,6 +53,27 @@ void main() {
     }
   });
 
+  test('the choice stays narrow: a handful of taps at the start, few at any moment', () {
+    for (final spec in levelSpecs) {
+      final p = puzzleForLevel(spec);
+      final profile = p.openMoveProfile();
+      expect(profile, hasLength(p.arrowCount), reason: 'level ${spec.level} solvable');
+      // The generator's cap is soft; this is the hard line the levels hold.
+      expect(profile.first, lessThanOrEqualTo(spec.openMoves + 3), reason: 'level ${spec.level} start');
+      expect(profile.reduce(max), lessThanOrEqualTo(spec.openMoves + 5), reason: 'level ${spec.level} widest');
+      expect(p.meanOpenMoves, lessThanOrEqualTo(spec.openMoves + 1), reason: 'level ${spec.level} mean');
+    }
+  });
+
+  test('an arrow may point straight at another as long as nothing cycles', () {
+    // Level 10 and up are full of arrows that wait for a neighbour; every one
+    // of them still leaves in the greedy order.
+    final p = puzzleForLevel(specForLevel(12));
+    final waiting = p.arrows.where((a) => p.blockersOf(a.id).isNotEmpty).length;
+    expect(waiting, greaterThan(p.arrowCount ~/ 2));
+    expect(p.solvingOrder(), hasLength(p.arrowCount));
+  });
+
   test('candidate count scales down with the arrow count', () {
     expect(candidatesFor(5), 24);
     expect(candidatesFor(60), 10);

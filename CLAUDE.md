@@ -105,11 +105,11 @@ lib/
     cell.dart            grid coordinate
     arrow_piece.dart     ArrowPiece: cells tail→head + heading; exitRay()
     puzzle.dart          Puzzle: occupancy, blockers, canExit, solvingOrder, hintFor, difficultyScore
-    puzzle_generator.dart reverse-order generator (solvable by construction), best-of-N candidates
+    puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N
   data/level_specs.dart  the 20 levels (board size, arrow count, length range, clock)
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider
-  services/            haptics_service (injectable HapticEngine), sfx_service (the whoosh),
+  services/            haptics_service (injectable HapticEngine), sfx_service (whoosh + bump),
                        audio_service (looping music)
   data/audio_credits.dart  attribution for the bundled track
   screens/             onboarding (interactive 3-step walkthrough), home (journey trail),
@@ -128,23 +128,33 @@ Key patterns:
 - **Rules:** an arrow can exit iff every cell of its `exitRay` (head → board
   edge, in its heading) is free of other arrows still on the board. Arrows
   leave entirely, so "who blocks whom" is fixed; solvable ⇔ acyclic.
-- **Generation:** `puzzle_generator.dart` places arrows in reverse solving
-  order on a flat byte grid: it enumerates every (head, heading) whose exit
-  ray is clear, samples deep heads first (inside-out fill keeps the free area
-  an outer ring), grows bodies step by step scoring straightness, hugging
-  (arrows/border) and existing rays, with a length ramp (inner short, outer
-  long — nested rings), keeps the best of `kPlacementChoices` bodies per
-  arrow, then a gap pass grows tails into leftover cells (safe: a tail may
-  only land on rays of arrows placed *earlier*), and finally keeps the
-  fullest/most tangled of `candidatesFor(arrows)` boards. Fill is ~90%+;
-  the level table is sized at roughly ten cells per arrow so every level
-  gets its full count. `puzzleForLevel(spec)` seeds `Random`
-  from `LevelSpec.seed`, so each level is a fixed puzzle. It runs on a
-  background isolate (`defaultPuzzleBuilder` → `compute`) behind
-  `GamePhase.loading`; on web it runs inline (~1 s for the finale).
-  `dart run tool/level_report.dart [level] [extraSeeds]` prints arrows placed
-  vs asked, fill, depth, free-at-start and timing — run it after touching the
-  table or the generator.
+- **Generation:** `puzzle_generator.dart` places arrows one by one on flat
+  typed-data grids, roughly inside-out (deep heads sampled first so the free
+  area stays an outer ring). A head may face free cells *or point straight
+  at an existing arrow*; the only rule is that the "waits for" graph stays
+  a DAG (`_acyclic`: nothing the newcomer waits for may already wait for an
+  arrow whose ray the newcomer's body crosses). Bodies grow step by step
+  scoring straightness, hugging (arrows/border) and existing rays, with a
+  length ramp (inner short, outer long — nested rings); the best of
+  `kPlacementChoices` bodies per arrow wins. **Tightness:** an arrow that
+  waits for nobody is *open* — a tap the player will have. Whenever more
+  than `LevelSpec.openMoves` are open, placement switches to closing mode:
+  heads near open rays weigh more, bodies are pulled onto open rays
+  (`kCloseBonus`, `kCloseStepBias`) and a second strategy grows a body *out
+  from a cell on an open ray* and picks the head end afterwards
+  (`_placeClosing`). Then a gap pass grows tails into leftover cells under
+  the same DAG rule, and the fullest, then lowest-`meanOpenMoves`, of
+  `candidatesFor(arrows)` boards is kept. Fill is ~85–95%; the level table
+  is sized at roughly ten cells per arrow so every level gets its full
+  count, and the levels open with ≤ 5 free arrows and offer ~2 taps at a
+  typical moment (`test/engine/puzzle_generator_test.dart` pins that).
+  `puzzleForLevel(spec)` seeds `Random` from `LevelSpec.seed`, so each
+  level is a fixed puzzle. It runs on a background isolate
+  (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
+  it runs inline (~0.4 s for the finale). `dart run tool/level_report.dart
+  [level] [extraSeeds]` prints arrows placed vs asked, fill, depth,
+  free-at-start, open moves (mean/max vs the cap) and timing — run it after
+  touching the table or the generator.
 - **Game loop:** `GameNotifier` owns the phase machine
   (`loading → playing ⇄ paused → cleared | outOfLives | timeUp`). `tapArrow` updates
   state instantly; `PuzzleBoard` animates the slide-out / bump purely
@@ -167,8 +177,11 @@ Key patterns:
 - **Sound effects:** `SfxService` (`services/sfx_service.dart`, injectable
   `SfxBackend`, a pool of low-latency players) plays `assets/audio/whoosh.wav`
   on every exit — the pitch climbs a notch per quick successive exit and
-  resets after 1.5 s. The WAV is synthesised by `tool/make_sfx.py` (pure
-  Python); `Settings.sfxOn` gates it (on by default).
+  resets after 1.5 s — and `assets/audio/bump.wav` (a knock) on a blocked
+  tap, which also ends the streak. Both WAVs are synthesised by
+  `tool/make_sfx.py` (pure Python, no deps): the whoosh is swept band-passed
+  noise (no tone — a chirp reads as a laser), the bump a noise click over a
+  sagging low thump. `Settings.sfxOn` gates both (on by default).
 - **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
   "Game" by The_Mountain (Pixabay Content License, `assets/audio/game.mp3`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
@@ -181,11 +194,16 @@ Key patterns:
   stars and best time.
 - **Icon:** `tool/make_icon.py` (Pillow) renders `assets/icon/*.png`; then
   `dart run flutter_launcher_icons`.
-- **Difficulty:** every knob is in `data/level_specs.dart`; the tests in
+- **Difficulty:** every knob is in `data/level_specs.dart` — size, arrow
+  count, lengths, clock and `openMoves` (3 on levels 1–3, 2 from level 4:
+  how many taps the generator leaves available at once); the tests in
   `test/data/level_specs_test.dart` and `test/engine/puzzle_generator_test.dart`
-  pin the curve (sizes never shrink, every level generates its full arrow
-  count, solvable, later levels more tangled). Tune numbers there; keep the
-  generator test green — it is what guarantees a level is playable.
+  pin the curve (sizes never shrink, the cap never widens, every level
+  generates its full arrow count, solvable, tight, later levels more
+  tangled). Tune numbers there; keep the generator test green — it is what
+  guarantees a level is playable. The clock is ~4.5 s an arrow on levels
+  1–4, 5.5 s on 5–9 and 6.5 s from 10 (plus 45 s), since tight boards are
+  meant to be thought about.
 - **Lives / stars:** `maxLives = 3` and `starsForMistakes` live in
   `models/level_progress.dart`.
 
@@ -229,7 +247,7 @@ fails on any Flutter exception, and uploads `shots/`.
 - **Localization:** only English is authored (`lib/l10n/app_en.arb`); the
   l10n pipeline is wired, so adding a language is a second `.arb` file plus a
   language picker in Settings.
-- **Sound effects:** only the exit "Whoosh" exists; a bump thud would be a
-  second WAV from `tool/make_sfx.py` (never `.ogg` — iOS can't decode
-  Vorbis via audioplayers) and a `SfxService.bump()`.
+- **Sound effects:** exit whoosh and blocked bump exist; any further sound
+  is another synth in `tool/make_sfx.py` (never `.ogg` — iOS can't decode
+  Vorbis via audioplayers) and a method on `SfxService`.
 - **iOS:** code is iOS-ready; the matching iOS scheme needs Xcode (not set up here).

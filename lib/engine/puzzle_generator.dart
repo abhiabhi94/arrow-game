@@ -1,15 +1,24 @@
 /// Procedural puzzles that are solvable by construction. Pure Dart.
 ///
-/// Arrows are placed in *reverse* solving order onto an empty board: each new
-/// arrow gets a head whose exit ray is clear right now (so it can always go
-/// after everything placed before it), then grows a mostly-straight body
-/// behind the head that hugs whatever is already there. Arrows placed later
-/// may sit across earlier rays — those are exactly the dependencies that make
-/// the puzzle a puzzle. A final pass grows tails into leftover gaps. Several
-/// candidate boards are generated; the fullest, then most tangled, wins.
+/// Arrows are placed one by one onto an empty board, roughly inside-out. A
+/// new arrow may point at free cells (it can leave as soon as everything
+/// placed after it across its path is gone) *or straight at an arrow already
+/// there* (it waits for that one). The one rule is that the "waits for"
+/// graph stays a DAG: a placement is accepted only when nothing the new
+/// arrow waits for is itself, however indirectly, waiting for an arrow that
+/// will now wait for the newcomer. A DAG is solvable, so every board is.
+/// A final pass grows tails into leftover gaps under the same rule. Several
+/// candidate boards are generated; the fullest, then tightest, wins.
 ///
-/// Hot loops run on a flat byte grid rather than hashed cell sets: the big
-/// late boards enumerate every cell for every placement.
+/// Tightness: an arrow that waits for nobody is "open" — a tap available the
+/// moment everything across its path is gone. The count of open arrows while
+/// building is the width of the player's choice at the matching moment of
+/// the game. Whenever it exceeds the level's `openMoves`, new arrows are
+/// pushed to lie across open rays, closing them, so the board never offers
+/// more than a few taps at once.
+///
+/// Hot loops run on flat typed-data grids rather than hashed cell sets: the
+/// big late boards enumerate every cell for every placement.
 library;
 
 import 'dart:math';
@@ -28,11 +37,22 @@ int candidatesFor(int arrows) => (600 ~/ arrows).clamp(kMinCandidates, 24);
 const int kMinCandidates = 3;
 
 /// Valid head placements grown per arrow; the best-scoring body wins.
-const int kPlacementChoices = 8;
+const int kPlacementChoices = 14;
+
+/// Open-ray starting cells tried per arrow while closing.
+const int kClosingChoices = 24;
 
 /// Score bonus for a body step that keeps going straight. Real boards are
 /// mostly long runs with the occasional bend, which also packs more in.
 const double kStraightBias = 4.0;
+
+/// Placement score per open arrow a body closes while the board has more
+/// open arrows than the level wants, and the (small) bonus otherwise.
+const int kCloseBonus = 16;
+const int kCloseBonusRelaxed = 3;
+
+/// Body-growth pull towards a cell on an open ray while closing is wanted.
+const double kCloseStepBias = 6.0;
 
 /// How far past the level's nominal maximum a tail may grow while soaking
 /// up gaps in the final pass.
@@ -45,16 +65,24 @@ class PuzzleGenerator {
 
   /// Builds a puzzle for [spec]. Always solvable. Tries several boards and
   /// keeps the one with the most arrows (the spec's count when the board has
-  /// room — the level table is tested for that), breaking ties by tangle.
+  /// room — the level table is tested for that), breaking ties by the fewest
+  /// moves open at a typical moment, then by tangle.
   Puzzle generate(LevelSpec spec) {
     Puzzle? best;
+    var bestOpen = double.infinity;
+    var bestTangle = 0;
     final candidates = candidatesFor(spec.arrows);
     for (var i = 0; i < candidates; i++) {
       final p = _Builder(spec, _random).build();
+      final open = p.meanOpenMoves;
+      final tangle = p.difficultyScore;
       if (best == null ||
           p.arrowCount > best.arrowCount ||
-          (p.arrowCount == best.arrowCount && p.difficultyScore > best.difficultyScore)) {
+          (p.arrowCount == best.arrowCount &&
+              (open < bestOpen || (open == bestOpen && tangle > bestTangle)))) {
         best = p;
+        bestOpen = open;
+        bestTangle = tangle;
       }
     }
     return best!;
@@ -66,103 +94,204 @@ class _Builder {
   _Builder(this.spec, this.random)
       : w = spec.width,
         h = spec.height,
-        occ = Uint8List(spec.width * spec.height),
-        rays = Uint8List(spec.width * spec.height),
-        scratch = Uint8List(spec.width * spec.height);
+        owner = Int32List(spec.width * spec.height)..fillRange(0, spec.width * spec.height, -1),
+        rayOwners = List<List<int>>.generate(spec.width * spec.height, (_) => <int>[]),
+        scratch = Uint8List(spec.width * spec.height),
+        seen = Uint8List(spec.arrows + 1);
 
   final LevelSpec spec;
   final Random random;
   final int w;
   final int h;
 
-  /// 1 where an arrow sits.
-  final Uint8List occ;
+  /// Cell → placement index of the arrow on it, or -1.
+  final Int32List owner;
 
-  /// How many placed arrows' exit rays pass through each cell.
-  final Uint8List rays;
+  /// Per cell, the placement indices of the arrows whose exit ray covers it.
+  final List<List<int>> rayOwners;
 
   /// Per-growth "used by the arrow being grown" marks (cleared after use).
   final Uint8List scratch;
 
+  /// Visited marks for [_reaches].
+  final Uint8List seen;
+
   final List<ArrowPiece> placed = <ArrowPiece>[];
+
+  /// Per placed arrow, the placed arrows on its ray — what it waits for.
+  final List<List<int>> waits = <List<int>>[];
+
+  /// How many placed arrows wait for nobody right now.
+  int openCount = 0;
 
   bool inside(int x, int y) => x >= 0 && y >= 0 && x < w && y < h;
   int idx(int x, int y) => y * w + x;
-  bool free(int x, int y) => inside(x, y) && occ[idx(x, y)] == 0;
+  bool free(int x, int y) => inside(x, y) && owner[idx(x, y)] < 0;
 
-  Puzzle build() {
-    while (placed.length < spec.arrows) {
-      final piece = _placeOne(placed.length);
-      if (piece == null) break;
-      _commit(piece);
-    }
-    _fillGaps();
-    // Reverse: the first arrow placed is the last one out.
-    final ordered = placed.reversed.toList();
-    return Puzzle(
-      width: w,
-      height: h,
-      arrows: <ArrowPiece>[
-        for (var i = 0; i < ordered.length; i++)
-          ArrowPiece(id: i, cells: ordered[i].cells, heading: ordered[i].heading),
-      ],
-    );
-  }
+  /// Whether the board currently offers more open arrows than the level
+  /// wants, so the next arrow should close some.
+  bool get wantClosing => openCount >= spec.openMoves;
 
-  void _commit(ArrowPiece piece) {
-    placed.add(piece);
-    for (final c in piece.cells) {
-      occ[idx(c.x, c.y)] = 1;
-    }
-    for (final c in piece.exitRay(w, h)) {
-      rays[idx(c.x, c.y)]++;
-    }
-  }
-
-  /// Length of the clear exit ray from ([x],[y]) in [d], or -1 if blocked.
-  int _clearRay(int x, int y, Direction d) {
-    final (dx, dy) = d.vector;
+  /// Open arrows whose ray covers cell [k].
+  int openOn(int k) {
     var n = 0;
-    var cx = x + dx;
-    var cy = y + dy;
-    while (inside(cx, cy)) {
-      if (occ[idx(cx, cy)] != 0) return -1;
-      n++;
-      cx += dx;
-      cy += dy;
+    for (final o in rayOwners[k]) {
+      if (waits[o].isEmpty) n++;
     }
     return n;
   }
 
-  ArrowPiece? _placeOne(int id) {
-    // Every (head, heading) whose head and the cell behind it are free and
-    // whose exit ray is clear, weighted so deep heads come first: filling
-    // from the inside out keeps the free area an outer ring every later ray
-    // can reach.
+  /// Whether any arrow in [from] waits, however indirectly, for one in [goal].
+  bool _reaches(Iterable<int> from, Set<int> goal) {
+    if (goal.isEmpty) return false;
+    seen.fillRange(0, placed.length, 0);
+    final stack = <int>[...from];
+    while (stack.isNotEmpty) {
+      final i = stack.removeLast();
+      if (goal.contains(i)) return true;
+      if (seen[i] != 0) continue;
+      seen[i] = 1;
+      stack.addAll(waits[i]);
+    }
+    return false;
+  }
+
+  /// Every cell from just past ([x],[y]) to the edge in [d], packed.
+  List<int> _rayCells(int x, int y, Direction d) {
+    final (dx, dy) = d.vector;
+    final out = <int>[];
+    for (var cx = x + dx, cy = y + dy; inside(cx, cy); cx += dx, cy += dy) {
+      out.add(idx(cx, cy));
+    }
+    return out;
+  }
+
+  /// Free cells at the start of [ray] before the first arrow on it.
+  int _freeAhead(List<int> ray) {
+    var n = 0;
+    for (final k in ray) {
+      if (owner[k] >= 0) break;
+      n++;
+    }
+    return n;
+  }
+
+  /// Whether an arrow with this [body] and [ray] keeps the graph a DAG: the
+  /// arrows it would wait for (on its ray) must not already wait for any of
+  /// the arrows whose rays the body lies across (those will wait for it).
+  bool _acyclic(List<Cell> body, List<int> ray) {
+    final waiters = <int>{};
+    for (final c in body) {
+      waiters.addAll(rayOwners[idx(c.x, c.y)]);
+    }
+    return !_reaches(<int>[for (final k in ray) if (owner[k] >= 0) owner[k]], waiters);
+  }
+
+  Puzzle build() {
+    while (placed.length < spec.arrows) {
+      final id = placed.length;
+      // Two ways to make an arrow, the better-scoring one wins: grown behind
+      // a sampled head, or (while closing) grown out from an open ray.
+      var best = _placeOne(id);
+      if (wantClosing) {
+        final closing = _placeClosing(id, _targetLength(id));
+        if (closing != null && (best == null || closing.$2 > best.$2)) best = closing;
+      }
+      if (best == null) break;
+      _commit(best.$1);
+    }
+    _fillGaps();
+    // Reverse: the first arrow placed is the last one out (roughly — an
+    // arrow may point at an earlier one and so leave before it).
+    final ordered = placed.reversed.toList();
+    final arrows = <ArrowPiece>[
+      for (var i = 0; i < ordered.length; i++)
+        ArrowPiece(id: i, cells: ordered[i].cells, heading: ordered[i].heading),
+    ];
+    return Puzzle(width: w, height: h, arrows: arrows);
+  }
+
+  /// Registers that arrow [by] now sits on cell [k]: every arrow whose ray
+  /// runs through it waits for [by] from now on.
+  void _cover(int k, int by) {
+    owner[k] = by;
+    for (final o in rayOwners[k]) {
+      if (waits[o].contains(by)) continue;
+      if (waits[o].isEmpty) openCount--;
+      waits[o].add(by);
+    }
+  }
+
+  void _commit(ArrowPiece piece) {
+    final index = placed.length;
+    placed.add(piece);
+    final ray = _rayCells(piece.head.x, piece.head.y, piece.heading);
+    final ahead = <int>[];
+    for (final k in ray) {
+      if (owner[k] >= 0 && !ahead.contains(owner[k])) ahead.add(owner[k]);
+    }
+    waits.add(ahead);
+    if (ahead.isEmpty) openCount++;
+    for (final c in piece.cells) {
+      _cover(idx(c.x, c.y), index);
+    }
+    for (final k in ray) {
+      rayOwners[k].add(index);
+    }
+  }
+
+  /// Where arrow [id] sits on the inside-out ramp: 0 for the first placed
+  /// (the last out), 1 for the last placed.
+  double _ramp(int id) => spec.arrows <= 1 ? 1.0 : id / (spec.arrows - 1);
+
+  /// Inner pieces (placed first, out last) are short; outer ones wrap
+  /// around them and run long — the nested look of a good board.
+  int _targetLength(int id) {
+    final span = spec.maxLength - spec.minLength;
+    final centre = spec.minLength + span * _ramp(id);
+    return (centre + (random.nextDouble() - 0.5) * span * 0.6)
+        .round()
+        .clamp(spec.minLength, spec.maxLength);
+  }
+
+  (ArrowPiece, int)? _placeOne(int id) {
+    // Every (head, heading) whose head and the cell behind it are free,
+    // weighted so deep heads come first: filling from the inside out keeps
+    // the free area an outer ring every later ray can reach. While the board
+    // should close open rays, heads on or next to one weigh extra so the
+    // walk starts where it can do that. A head on the edge facing out can
+    // never be blocked — a free tap for the whole game — so while closing
+    // those are a last resort.
+    final closing = wantClosing;
     final heads = <int>[]; // packed: idx * 4 + heading
     final weights = <int>[];
     var totalWeight = 0;
-    for (var y = 0; y < h; y++) {
-      for (var x = 0; x < w; x++) {
-        if (occ[idx(x, y)] != 0) continue;
-        for (final d in Direction.values) {
-          final (dx, dy) = d.vector;
-          if (!free(x - dx, y - dy)) continue;
-          if (_clearRay(x, y, d) < 0) continue;
-          final depth = min(min(x, w - 1 - x), min(y, h - 1 - y));
-          heads.add(idx(x, y) * 4 + d.index);
-          weights.add((depth + 1) * (depth + 1));
-          totalWeight += (depth + 1) * (depth + 1);
+    for (final allowEdgeHeads in <bool>[!closing, true]) {
+      if (heads.isNotEmpty) break;
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          final k = idx(x, y);
+          if (owner[k] >= 0) continue;
+          for (final d in Direction.values) {
+            final (dx, dy) = d.vector;
+            if (!free(x - dx, y - dy)) continue;
+            if (!allowEdgeHeads && !inside(x + dx, y + dy)) continue;
+            final depth = min(min(x, w - 1 - x), min(y, h - 1 - y));
+            var weight = (depth + 1) * (depth + 1);
+            if (closing && (openOn(k) > 0 || openOn(idx(x - dx, y - dy)) > 0)) {
+              weight *= 4;
+            }
+            heads.add(k * 4 + d.index);
+            weights.add(weight);
+            totalWeight += weight;
+          }
         }
       }
     }
     if (heads.isEmpty) return null;
 
-    // Inner pieces (placed first, out last) are short; outer ones wrap
-    // around them and run long — the nested look of a good board.
-    final ramp = spec.arrows <= 1 ? 1.0 : id / (spec.arrows - 1);
-    final span = spec.maxLength - spec.minLength;
-    final centre = spec.minLength + span * ramp;
+    final ramp = _ramp(id);
+    final closeBonus = closing ? kCloseBonus : kCloseBonusRelaxed;
 
     ArrowPiece? best;
     // A plain literal: dart2js treats `-1 << 30` as unsigned 32-bit (a huge
@@ -187,26 +316,142 @@ class _Builder {
       final hx = (packed ~/ 4) % w;
       final hy = (packed ~/ 4) ~/ w;
       final heading = Direction.values[packed % 4];
-      final rayLength = _clearRay(hx, hy, heading);
-      final target = (centre + (random.nextDouble() - 0.5) * span * 0.6)
-          .round()
-          .clamp(spec.minLength, spec.maxLength);
-      final body = _growBody(hx, hy, heading, rayLength, target);
-      if (body.length < spec.minLength) continue;
+      final ray = _rayCells(hx, hy, heading);
+      final body = _growBody(hx, hy, heading, ray, _targetLength(id), closing);
+      if (body.length < spec.minLength || !_acyclic(body, ray)) continue;
       // Crossing existing rays makes this arrow a blocker now and a longer
-      // body packs the board. A long ray of its own is good early (later
-      // arrows will cross it) and bad late (those cells would stay empty),
-      // so its weight flips sign along the ramp.
-      var score = body.length + (rayLength * (1 - 2 * ramp)).round();
-      for (final c in body) {
-        score += 3 * rays[idx(c.x, c.y)];
-      }
+      // body packs the board. A long clear ray of its own is good early
+      // (later arrows will cross it) and bad late (those cells would stay
+      // empty), so its weight flips sign along the ramp. Closing open
+      // arrows is what keeps the player's choice narrow, so it pays the most.
+      var score = body.length + (_freeAhead(ray) * (1 - 2 * ramp)).round();
+      score += _crossingScore(body, closeBonus);
       if (score > bestScore) {
         bestScore = score;
         best = ArrowPiece(id: id, cells: body, heading: heading);
       }
     }
-    return best;
+    return best == null ? null : (best, bestScore);
+  }
+
+  /// What [body] earns for the rays it lies across: a little per ray, and
+  /// [closeBonus] per open arrow it closes.
+  int _crossingScore(List<Cell> body, int closeBonus) {
+    var score = 0;
+    final closed = <int>{};
+    for (final c in body) {
+      final k = idx(c.x, c.y);
+      score += 3 * rayOwners[k].length;
+      for (final o in rayOwners[k]) {
+        if (waits[o].isEmpty) closed.add(o);
+      }
+    }
+    return score + closeBonus * closed.length;
+  }
+
+  /// Scores a candidate body step onto cell [k] at ([nx],[ny]) when going
+  /// straight would land on ([sx],[sy]): the same way for a walk grown
+  /// behind a head and for one grown out from a ray cell.
+  double _stepScore(int k, int nx, int ny, int sx, int sy, bool closing) =>
+      (nx == sx && ny == sy ? kStraightBias : 0) +
+      3.0 * _hugging(nx, ny) +
+      2.0 * rayOwners[k].length +
+      (closing ? kCloseStepBias * openOn(k) : 0) +
+      random.nextDouble() * 1.5;
+
+  /// While the board has more open arrows than the level wants: a body
+  /// grown *out from a free cell on an open arrow's ray*, so it is certain
+  /// to close that arrow, with the head chosen afterwards at whichever end
+  /// keeps the graph a DAG. Tries a few open rays and keeps the best body;
+  /// null when none of them fits (a fragment too small for
+  /// [LevelSpec.minLength]), in which case the caller falls back to growing
+  /// behind a head.
+  (ArrowPiece, int)? _placeClosing(int id, int target) {
+    // Open arrows with a ray to lie across (a head on the edge has none).
+    final open = <int>[
+      for (var i = 0; i < placed.length; i++)
+        if (waits[i].isEmpty && placed[i].exitRay(w, h).isNotEmpty) i,
+    ];
+    ArrowPiece? best;
+    var bestScore = -1000000000;
+    for (var attempt = 0; attempt < kClosingChoices && open.isNotEmpty; attempt++) {
+      final o = open[random.nextInt(open.length)];
+      final ray = placed[o].exitRay(w, h);
+      final start = ray[random.nextInt(ray.length)];
+      final path = _growFrom(start, target);
+      if (path.length < spec.minLength) continue;
+      for (final piece in _orientations(id, path)) {
+        final score = piece.length + _crossingScore(piece.cells, kCloseBonus);
+        if (score > bestScore) {
+          bestScore = score;
+          best = piece;
+        }
+      }
+    }
+    return best == null ? null : (best, bestScore);
+  }
+
+  /// Grows a self-avoiding walk through free cells out from [start] at both
+  /// ends alternately, up to [target] cells, with the usual step scoring.
+  List<Cell> _growFrom(Cell start, int target) {
+    final path = <Cell>[start];
+    scratch[idx(start.x, start.y)] = 1;
+    var stuck = 0;
+    var atFront = true;
+    while (path.length < target && stuck < 2) {
+      final end = atFront ? path.first : path.last;
+      final prev = path.length == 1 ? end : (atFront ? path[1] : path[path.length - 2]);
+      // Straight on means stepping away from prev in the same direction.
+      final sx = end.x + (end.x - prev.x);
+      final sy = end.y + (end.y - prev.y);
+      Cell? next;
+      var bestStep = double.negativeInfinity;
+      for (final d in Direction.values) {
+        final (ox, oy) = d.vector;
+        final nx = end.x + ox;
+        final ny = end.y + oy;
+        if (!free(nx, ny) || scratch[idx(nx, ny)] != 0) continue;
+        final score = _stepScore(idx(nx, ny), nx, ny, sx, sy, true);
+        if (score > bestStep) {
+          bestStep = score;
+          next = Cell(nx, ny);
+        }
+      }
+      if (next == null) {
+        stuck++;
+      } else {
+        stuck = 0;
+        if (atFront) {
+          path.insert(0, next);
+        } else {
+          path.add(next);
+        }
+        scratch[idx(next.x, next.y)] = 1;
+      }
+      atFront = !atFront;
+    }
+    for (final c in path) {
+      scratch[idx(c.x, c.y)] = 0;
+    }
+    return path;
+  }
+
+  /// The ways to read [path] as an arrow: head at either end, provided the
+  /// ray beyond that end is at least one cell (a head on the edge can never
+  /// be blocked), does not run back across the path, and keeps the graph a
+  /// DAG.
+  List<ArrowPiece> _orientations(int id, List<Cell> path) {
+    final out = <ArrowPiece>[];
+    for (final cells in <List<Cell>>[path, path.reversed.toList()]) {
+      final head = cells.last;
+      final heading = cells[cells.length - 2].directionTo(head)!;
+      final ray = _rayCells(head.x, head.y, heading);
+      if (ray.isEmpty) continue;
+      if (cells.any((c) => ray.contains(idx(c.x, c.y)))) continue;
+      if (!_acyclic(cells, ray)) continue;
+      out.add(ArrowPiece(id: id, cells: cells, heading: heading));
+    }
+    return out;
   }
 
   /// How many of a cell's four neighbours are off the board, occupied, or
@@ -217,7 +462,7 @@ class _Builder {
       final (dx, dy) = d.vector;
       final nx = x + dx;
       final ny = y + dy;
-      if (!inside(nx, ny) || occ[idx(nx, ny)] != 0 || scratch[idx(nx, ny)] != 0) n++;
+      if (!inside(nx, ny) || owner[idx(nx, ny)] >= 0 || scratch[idx(nx, ny)] != 0) n++;
     }
     return n;
   }
@@ -225,24 +470,28 @@ class _Builder {
   /// Grows a self-avoiding walk backwards from the head until it reaches
   /// [target] cells or runs out of room. Each step scores: keep going
   /// straight, hug arrows/the border (that is what nests pieces tightly, ring
-  /// inside ring, with no gaps), and sit on existing exit rays (a
-  /// dependency). A little noise keeps boards from looking machine-made.
-  /// The arrow's own ray is off limits. Returns tail → head.
-  List<Cell> _growBody(int hx, int hy, Direction heading, int rayLength, int target) {
+  /// inside ring, with no gaps), sit on existing exit rays (a dependency)
+  /// and, when [closing], reach for cells on open rays. A little noise keeps
+  /// boards from looking machine-made. The arrow's own ray line is off
+  /// limits. Returns tail → head.
+  List<Cell> _growBody(
+    int hx,
+    int hy,
+    Direction heading,
+    List<int> ray,
+    int target,
+    bool closing,
+  ) {
     final (dx, dy) = heading.vector;
     final body = <Cell>[Cell(hx - dx, hy - dy), Cell(hx, hy)];
     // Mark the head, the cell behind it and the ray as taken for this walk.
-    final marked = <int>[idx(hx, hy), idx(hx - dx, hy - dy)];
-    for (var i = 1, cx = hx + dx, cy = hy + dy; i <= rayLength; i++, cx += dx, cy += dy) {
-      marked.add(idx(cx, cy));
-    }
+    final marked = <int>[idx(hx, hy), idx(hx - dx, hy - dy), ...ray];
     for (final m in marked) {
       scratch[m] = 1;
     }
     while (body.length < target) {
       final tail = body.first;
-      final straightDir = body[1].directionTo(tail)!;
-      final (sx, sy) = straightDir.vector;
+      final (sx, sy) = body[1].directionTo(tail)!.vector;
       Cell? next;
       var bestStep = double.negativeInfinity;
       for (final d in Direction.values) {
@@ -250,10 +499,7 @@ class _Builder {
         final nx = tail.x + ox;
         final ny = tail.y + oy;
         if (!free(nx, ny) || scratch[idx(nx, ny)] != 0) continue;
-        final score = (ox == sx && oy == sy ? kStraightBias : 0) +
-            3.0 * _hugging(nx, ny) +
-            2.0 * rays[idx(nx, ny)] +
-            random.nextDouble() * 1.5;
+        final score = _stepScore(idx(nx, ny), nx, ny, tail.x + sx, tail.y + sy, closing);
         if (score > bestStep) {
           bestStep = score;
           next = Cell(nx, ny);
@@ -273,20 +519,12 @@ class _Builder {
 
   /// Grows arrows' tails into leftover free cells until nothing fits. A tail
   /// cell never changes an arrow's head or exit ray, so the only thing it can
-  /// do is block *other* arrows' rays. That is safe exactly when the blocked
-  /// arrow was placed earlier (it leaves later anyway) — a tail may not sit on
-  /// the ray of any arrow placed after its own, which would make a cycle.
-  /// Filling pockets this way is what packs the board and tangles it.
+  /// do is block *other* arrows' rays — fine as long as none of those is
+  /// something this arrow (indirectly) waits for, which would be a cycle.
+  /// Filling pockets this way is what packs the board and tangles it; a cell
+  /// on an open ray is worth the most, since it takes a tap away.
   void _fillGaps() {
     final maxLength = spec.maxLength + kGapTailSlack;
-    // Cell → highest placement index whose exit ray covers it (-1: none).
-    final latestRayOver = Int32List(w * h)..fillRange(0, w * h, -1);
-    for (var i = 0; i < placed.length; i++) {
-      for (final c in placed[i].exitRay(w, h)) {
-        final k = idx(c.x, c.y);
-        if (i > latestRayOver[k]) latestRayOver[k] = i;
-      }
-    }
     var grew = true;
     while (grew) {
       grew = false;
@@ -302,9 +540,15 @@ class _Builder {
           final (ox, oy) = d.vector;
           final nx = tail.x + ox;
           final ny = tail.y + oy;
-          if (!free(nx, ny) || latestRayOver[idx(nx, ny)] >= i) continue;
-          // Prefer continuing the tail straight, then the snuggest cell.
-          final score = (d == straight ? 2.0 : 0.0) + _hugging(nx, ny) + random.nextDouble();
+          if (!free(nx, ny)) continue;
+          final k = idx(nx, ny);
+          if (rayOwners[k].contains(i) || _reaches(<int>[i], rayOwners[k].toSet())) continue;
+          // Prefer closing an open ray, then continuing straight, then the
+          // snuggest cell.
+          final score = 4.0 * openOn(k) +
+              (d == straight ? 2.0 : 0.0) +
+              _hugging(nx, ny) +
+              random.nextDouble();
           if (score > best) {
             best = score;
             next = Cell(nx, ny);
@@ -316,7 +560,7 @@ class _Builder {
           cells: <Cell>[next, ...piece.cells],
           heading: piece.heading,
         );
-        occ[idx(next.x, next.y)] = 1;
+        _cover(idx(next.x, next.y), i);
         grew = true;
       }
     }

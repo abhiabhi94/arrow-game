@@ -21,6 +21,8 @@ void main() {
       expect(cur.arrows, greaterThanOrEqualTo(prev.arrows), reason: 'level $level');
       expect(cur.maxLength, greaterThanOrEqualTo(prev.maxLength), reason: 'level $level');
       expect(cur.timeLimitMs, greaterThanOrEqualTo(prev.timeLimitMs), reason: 'level $level');
+      // The choice only ever narrows.
+      expect(cur.openMoves, lessThanOrEqualTo(prev.openMoves), reason: 'level $level');
       // Something must get harder every level.
       expect(
         cur.cellCount > prev.cellCount || cur.arrows > prev.arrows || cur.maxLength > prev.maxLength,
@@ -38,6 +40,13 @@ void main() {
     expect(specForLevel(1).arrows, lessThanOrEqualTo(6));
     expect(specForLevel(8).arrows, greaterThanOrEqualTo(50));
     expect(specForLevel(20).arrows, greaterThanOrEqualTo(140));
+    // From level 4 on the player gets two moves to find, never a spread.
+    expect(specForLevel(4).openMoves, 2);
+    expect(specForLevel(20).openMoves, 2);
+    // Thinking levels get a generous clock: over six seconds an arrow.
+    for (final s in levelSpecs.where((s) => s.level >= 10)) {
+      expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(6000), reason: 'level ${s.level}');
+    }
   });
 
   test('seed and toString', () {

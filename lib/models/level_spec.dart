@@ -10,7 +10,9 @@ class LevelSpec {
     required this.minLength,
     required this.maxLength,
     required this.timeLimitMs,
+    this.openMoves = 2,
   })  : assert(level >= 1),
+        assert(openMoves >= 1),
         assert(width >= 3 && height >= 3),
         assert(arrows >= 1),
         assert(minLength >= 2 && maxLength >= minLength),
@@ -32,6 +34,11 @@ class LevelSpec {
 
   /// The level clock: run out and the level is failed.
   final int timeLimitMs;
+
+  /// How many arrows the generator tries to keep playable at any moment.
+  /// Small numbers mean the player has to hunt for the next move; big ones
+  /// leave plenty of obvious taps. A soft target, not a guarantee.
+  final int openMoves;
 
   /// Seed for the level's fixed puzzle.
   int get seed => level * 7919 + 17;

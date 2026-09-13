@@ -88,6 +88,25 @@ void main() {
       expect(p.dependencyDepth, 2);
       // depth 2 * 4 + (3 - 2 free) * 4 + 1 edge
       expect(p.difficultyScore, 13);
+      // 0 and 1 are playable at first; taking 0 frees 2; then only 2 is left.
+      expect(p.openMoveProfile(), [2, 2, 1]);
+      expect(p.meanOpenMoves, closeTo(5 / 3, 1e-9));
+    });
+
+    test('an unsolvable board has an empty open-move profile', () {
+      final p = Puzzle(
+        width: 3,
+        height: 3,
+        arrows: [
+          ArrowPiece(id: 0, cells: const [Cell(0, 0), Cell(1, 0)], heading: Direction.right),
+          ArrowPiece(id: 1, cells: const [Cell(2, 0), Cell(2, 1)], heading: Direction.down),
+          ArrowPiece(id: 2, cells: const [Cell(2, 2), Cell(1, 2)], heading: Direction.left),
+          ArrowPiece(id: 3, cells: const [Cell(0, 2), Cell(0, 1)], heading: Direction.up),
+        ],
+      );
+      expect(p.isSolvable, isFalse);
+      expect(p.openMoveProfile(), isEmpty);
+      expect(p.meanOpenMoves, 0);
     });
 
     test('a deadlock is unsolvable', () {

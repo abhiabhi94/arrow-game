@@ -33,10 +33,31 @@ void main() {
     expect(backend.calls.last, '$kWhooshSound@1.00');
   });
 
+  test('a bump knocks at base pitch and ends the streak', () {
+    final backend = RecordingSfxBackend();
+    var now = DateTime(2026, 1, 1, 12);
+    final s = SfxService(() => true, backend: backend, now: () => now);
+    s.whoosh();
+    now = now.add(const Duration(milliseconds: 200));
+    s.whoosh();
+    expect(s.streak, 1);
+    s.bump();
+    expect(s.streak, 0);
+    now = now.add(const Duration(milliseconds: 200));
+    s.whoosh();
+    expect(backend.calls, [
+      '$kWhooshSound@1.00',
+      '$kWhooshSound@1.06',
+      '$kBumpSound@1.00',
+      '$kWhooshSound@1.00',
+    ]);
+  });
+
   test('stays silent when disabled', () {
     final backend = RecordingSfxBackend();
     final s = SfxService(() => false, backend: backend);
     s.whoosh();
+    s.bump();
     s.whoosh();
     expect(backend.calls, isEmpty);
   });

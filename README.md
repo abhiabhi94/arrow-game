@@ -27,17 +27,18 @@ the way its head points, until it leaves the board. Get every arrow out.
 - **First launch** walks you through on two tiny boards you actually play.
 - **Home** is a winding journey trail of levels with a "Next up" card.
 - Background music ("Game" by The_Mountain, Pixabay Content License, credited
-  in-app), a "whoosh" on every exit and haptics, all on by default and
-  configurable; confetti; pause
+  in-app), sound effects (a whoosh on every exit, a knock on a bump) and
+  haptics, all on by default and configurable; confetti; pause
   (also on backgrounding); light/dark/system theme; locked progression (all
   levels open in the debug build); Google Sans Flex throughout.
 
 ## Architecture
 
 Pure-Dart, zero-Flutter **engine** (`lib/engine/`) — cells, arrow pieces, the
-puzzle rules (exit rays, blockers, solvability, hints) and a reverse-order
-generator that only ever produces solvable boards (run on a background
-isolate) — plus an immutable
+puzzle rules (exit rays, blockers, solvability, hints) and a generator that
+only ever produces solvable boards and keeps the number of playable arrows
+at any moment down to a handful, so the late levels are found, not raced
+(run on a background isolate) — plus an immutable
 `GameState` driven by a Riverpod `StateNotifier`
 (`lib/providers/game_provider.dart`). The level table lives in
 `lib/data/level_specs.dart`; the board is a `CustomPainter` that also

@@ -1,6 +1,6 @@
 // Prints, for each level, how the generator copes: arrows placed vs asked,
 // board fill, average arrow length, dependency depth, arrows free at the
-// start, and generation time. Run after touching level_specs.dart or the
+// start, moves open at a typical moment (and at most), and generation time. Run after touching level_specs.dart or the
 // generator:
 //
 //   dart run tool/level_report.dart            # all levels, the level's seed
@@ -25,9 +25,11 @@ void main(List<String> args) {
       counts.add(p.arrowCount);
       if (seed == 0) {
         final cells = p.arrows.fold<int>(0, (s, a) => s + a.length);
+        final profile = p.openMoveProfile();
         line = 'fill ${(cells / spec.cellCount).toStringAsFixed(2)} '
             'len ${(cells / p.arrowCount).toStringAsFixed(1)} '
             'depth ${p.dependencyDepth} free ${p.removable(const {}).length} '
+            'open ${p.meanOpenMoves.toStringAsFixed(1)} (max ${profile.reduce(max)}, want ${spec.openMoves}) '
             '${sw.elapsedMilliseconds}ms';
       }
     }

@@ -113,6 +113,7 @@ class GameNotifier extends StateNotifier<GameState> {
       blockedCell: puzzle.firstBlockedCell(id, state.removed),
       moveToken: token,
     );
+    sfx?.bump();
     if (lost) {
       haptics?.fail();
     } else {

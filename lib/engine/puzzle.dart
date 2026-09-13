@@ -117,6 +117,45 @@ class Puzzle {
     return max;
   }
 
+  /// How many arrows were playable before each move of a greedy solve (lowest
+  /// id first — the reverse of the generator's placement order). The width
+  /// of the player's choice at every step: a profile of 1s is a forced
+  /// sequence, big numbers mean lots of obvious taps.
+  List<int> openMoveProfile() {
+    final blockers = <List<int>>[for (final a in arrows) blockersOf(a.id).toList()];
+    final removed = List<bool>.filled(arrows.length, false);
+    final profile = <int>[];
+    for (var step = 0; step < arrows.length; step++) {
+      var open = 0;
+      var first = -1;
+      for (var id = 0; id < arrows.length; id++) {
+        if (removed[id]) continue;
+        var canGo = true;
+        for (final b in blockers[id]) {
+          if (!removed[b]) {
+            canGo = false;
+            break;
+          }
+        }
+        if (!canGo) continue;
+        open++;
+        if (first < 0) first = id;
+      }
+      if (first < 0) break; // unsolvable: nothing can move
+      profile.add(open);
+      removed[first] = true;
+    }
+    return profile;
+  }
+
+  /// The average of [openMoveProfile]: how many taps were available at a
+  /// typical moment. Lower is a tighter, more thoughtful puzzle.
+  double get meanOpenMoves {
+    final profile = openMoveProfile();
+    if (profile.isEmpty) return 0;
+    return profile.fold<int>(0, (s, n) => s + n) / profile.length;
+  }
+
   /// A rough "how tangled is this" number used to pick the most interesting
   /// of several generated candidates: deep chains and few free starting moves
   /// score high.

@@ -109,7 +109,11 @@ void main() {
 
   test('a blocked arrow bumps, costs a life and records the blocking cell', () {
     final engine = RecordingHapticEngine();
-    final n = _notifier(haptics: HapticsService(() => true, engine: engine));
+    final sfxBackend = RecordingSfxBackend();
+    final n = _notifier(
+      haptics: HapticsService(() => true, engine: engine),
+      sfx: SfxService(() => true, backend: sfxBackend),
+    );
     n.tapArrow(2);
     expect(n.state.mistakes, 1);
     expect(n.state.livesLeft, 2);
@@ -118,10 +122,12 @@ void main() {
     expect(n.state.blockedCell, const Cell(1, 1));
     expect(n.state.phase, GamePhase.playing);
     expect(engine.calls.last, 'heavy');
+    expect(sfxBackend.calls, ['$kBumpSound@1.00']);
 
     // A later exit clears the blocked marker.
     n.tapArrow(0);
     expect(n.state.blockedCell, isNull);
+    expect(sfxBackend.calls.last, '$kWhooshSound@1.00');
     n.dispose();
   });
 
