@@ -622,17 +622,17 @@ abstract class AppLocalizations {
   /// **'A calm loop while you play'**
   String get settingsMusicSubtitle;
 
-  /// No description provided for @settingsVibration.
+  /// No description provided for @settingsHaptics.
   ///
   /// In en, this message translates to:
-  /// **'Vibration'**
-  String get settingsVibration;
+  /// **'Haptic feedback'**
+  String get settingsHaptics;
 
-  /// No description provided for @settingsVibrationSubtitle.
+  /// No description provided for @settingsHapticsSubtitle.
   ///
   /// In en, this message translates to:
   /// **'A tick on every slide, a buzz on a bump'**
-  String get settingsVibrationSubtitle;
+  String get settingsHapticsSubtitle;
 
   /// No description provided for @settingsTheme.
   ///

@@ -299,10 +299,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsMusicSubtitle => 'A calm loop while you play';
 
   @override
-  String get settingsVibration => 'Vibration';
+  String get settingsHaptics => 'Haptic feedback';
 
   @override
-  String get settingsVibrationSubtitle =>
+  String get settingsHapticsSubtitle =>
       'A tick on every slide, a buzz on a bump';
 
   @override

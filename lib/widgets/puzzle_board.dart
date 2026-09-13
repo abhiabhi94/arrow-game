@@ -69,11 +69,11 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     final puzzle = widget.state.puzzle!;
     final arrow = puzzle.arrows[id];
     final travel = arrow.length + arrow.exitRay(puzzle.width, puzzle.height).length;
-    // Long enough to read as a slide even for a short arrow at the edge;
-    // capped so a long crossing of a big board doesn't drag.
+    // Quick but still readable as a slide: a short arrow at the edge is gone
+    // in about a quarter second; a long crossing of a big board never drags.
     final controller = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: (260 + travel * 70).clamp(450, 1300)),
+      duration: Duration(milliseconds: (140 + travel * 30).clamp(240, 600)),
     );
     _exits[id]?.dispose();
     _exits[id] = controller;
@@ -234,7 +234,7 @@ class _BoardPainter extends CustomPainter {
       final travel = arrow.length + arrow.exitRay(puzzle.width, puzzle.height).length;
       var offset = 0.0;
       if (exiting != null) {
-        offset = Curves.easeInCubic.transform(exiting) * travel;
+        offset = Curves.easeIn.transform(exiting) * travel;
       } else if (bumpId == arrow.id && bumpT != null) {
         offset = sin(bumpT * pi) * kBumpDistance;
       }
@@ -262,7 +262,7 @@ class _BoardPainter extends CustomPainter {
     final ink = palette.arrowInk;
     // Scales with the cell but stays a pen line on small boards, where a
     // cell is huge and a proportional stroke would turn into a slab.
-    final stroke = min(cs * 0.16, 5.0);
+    final stroke = min(cs * 0.12, 3.0);
     final points = <Offset>[for (var i = 0; i < arrow.length; i++) at(offset + i)];
     final headAt = offset + arrow.length - 1;
     final head = at(headAt);
@@ -273,7 +273,7 @@ class _BoardPainter extends CustomPainter {
     dir = dir / dir.distance;
 
     // Body ends a bit short of the head so the triangle caps it cleanly.
-    final headLen = min(cs * 0.34, 11.0);
+    final headLen = min(cs * 0.3, 8.0);
     final bodyEnd = head - dir * (headLen * 0.55);
     final path = Path()..moveTo(points.first.dx, points.first.dy);
     for (var i = 1; i < points.length - 1; i++) {

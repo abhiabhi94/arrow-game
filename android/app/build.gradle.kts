@@ -1,4 +1,5 @@
 import java.io.FileInputStream
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -16,6 +17,17 @@ val hasReleaseKeystore = keystorePropertiesFile.exists()
 if (hasReleaseKeystore) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+
+// `flutter build ... --dart-define=UNLOCK_ALL=true` reaches Gradle as a
+// comma-separated list of base64 strings. A build with every level unlocked
+// is a tester build, so it takes the testing identity (.testing app id,
+// "Arrow Testing") even in release mode and installs alongside the real app.
+val dartDefines: List<String> = (project.findProperty("dart-defines") as String?)
+    ?.split(",")
+    ?.filter { it.isNotBlank() }
+    ?.map { String(Base64.getDecoder().decode(it), Charsets.UTF_8) }
+    ?: emptyList()
+val unlockAllTesterBuild = dartDefines.contains("UNLOCK_ALL=true")
 
 android {
     namespace = "app.curious.arrow"
@@ -61,13 +73,20 @@ android {
         }
         // Release = the production build: "Arrow", levels locked until cleared.
         // Signed with the upload key when key.properties exists, else debug.
+        // With --dart-define=UNLOCK_ALL=true it becomes the small tester build
+        // and borrows the debug identity so it never overwrites the real app.
         getByName("release") {
-            signingConfig = if (hasReleaseKeystore) {
+            signingConfig = if (hasReleaseKeystore && !unlockAllTesterBuild) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
             }
-            resValue("string", "app_name", "Arrow")
+            if (unlockAllTesterBuild) {
+                applicationIdSuffix = ".testing"
+                resValue("string", "app_name", "Arrow Testing")
+            } else {
+                resValue("string", "app_name", "Arrow")
+            }
         }
     }
 }

@@ -13,7 +13,7 @@ curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50), drawn in
 single ink like a printed puzzle, 3 lives per level (losing all three resets the level behind a
 "Retry" screen), a clock on every level ("Time's up" → replay the same level),
 3 hints per level, zoom in/out, an earned grid-lines toggle (after level 4),
-1–3 stars per clear, local progress, light/dark theme, haptics.
+1–3 stars per clear, local progress, light/dark theme, haptic feedback.
 
 ## Build & Development Commands
 
@@ -66,7 +66,16 @@ Identity is tied to the **build type**, not a product flavor:
   `--dart-define=UNLOCK_ALL=true` for a small release-mode tester build:
   `flutter build apk --release --split-per-abi --dart-define=UNLOCK_ALL=true`
   gives a ~20 MB arm64 APK with every level open (the debug APK is ~150 MB
-  with all ABIs). Namespace is `app.curious.arrow`.
+  with all ABIs). `build.gradle.kts` decodes the `dart-defines` Gradle
+  property (base64, comma-separated) and, when it sees `UNLOCK_ALL=true`,
+  gives that release build the debug identity (`.testing` suffix, "Arrow
+  Testing", debug signing) so it installs alongside the real app instead of
+  replacing it. Namespace is `app.curious.arrow`.
+- **Haptics on Android** go through `MainActivity.kt` (channel
+  `app.curious.arrow/haptics`, `VIBRATE` permission) straight to the
+  Vibrator service: Flutter's `HapticFeedback` uses
+  `View.performHapticFeedback`, which the OS mutes whenever the user's
+  system "touch feedback" is off. iOS keeps `HapticFeedback`.
 - **Android SDK in cloud sessions:** not installed by the hook. To build an
   APK: unzip the command-line tools into `/opt/android-sdk/cmdline-tools/latest`,
   `sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358'`,
@@ -150,7 +159,8 @@ Key patterns:
 - **Board look:** one ink (`palette.arrowInk`), thin strokes (≤5 px), small
   heads, no frame — the arrows sit straight on the page. The hint glow and
   the blocked flash are the only colour on the board. Slide-out and bump are
-  animated in `PuzzleBoard` (450–1300 ms slide, ease-in).
+  animated in `PuzzleBoard` (240–600 ms slide, ease-in). Strokes cap at
+  3 px and heads at 8 px so the small early boards read as pen lines.
 - **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
   "Permafrost" by Scott Buckley (CC-BY 4.0, `assets/audio/`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the

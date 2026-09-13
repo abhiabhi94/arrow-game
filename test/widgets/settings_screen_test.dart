@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/pump_app.dart';
 
 void main() {
-  testWidgets('toggles music, volume, vibration and theme', (tester) async {
+  testWidgets('toggles music, volume, haptic feedback and theme', (tester) async {
     await usePhoneSurface(tester);
     final container = await pumpApp(tester, const SettingsScreen());
     expect(find.text('Settings'), findsOneWidget);

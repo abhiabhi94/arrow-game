@@ -23,7 +23,7 @@ class Settings {
   /// Music volume, 0.0 .. 1.0.
   final double musicVolume;
 
-  /// Vibration/haptics on/off (on by default).
+  /// Haptic feedback on/off (on by default).
   final bool hapticsOn;
 
   /// Theme preference (system/light/dark). System by default.
