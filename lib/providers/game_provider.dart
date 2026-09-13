@@ -14,6 +14,7 @@ import '../models/game_state.dart';
 import '../models/level_progress.dart';
 import '../models/level_spec.dart';
 import '../services/haptics_service.dart';
+import '../services/sfx_service.dart';
 import 'progress_provider.dart';
 
 /// Called once when a level is cleared, with the clear time and star rating.
@@ -38,6 +39,7 @@ class GameNotifier extends StateNotifier<GameState> {
     Puzzle? puzzle,
     PuzzleBuilder builder = defaultPuzzleBuilder,
     this.haptics,
+    this.sfx,
     this.onCleared,
     this.autoTick = true,
   }) : super(puzzle == null ? GameState.loading(spec) : GameState.fresh(spec, puzzle)) {
@@ -51,6 +53,7 @@ class GameNotifier extends StateNotifier<GameState> {
 
   final LevelSpec spec;
   final HapticsService? haptics;
+  final SfxService? sfx;
   final ClearedCallback? onCleared;
 
   /// When false (tests), the clock only advances through [tick].
@@ -89,6 +92,7 @@ class GameNotifier extends StateNotifier<GameState> {
         clearBlocked: true,
         moveToken: token,
       );
+      sfx?.zip();
       if (cleared) {
         haptics?.victory();
         onCleared?.call(spec.level, state.elapsedMs, state.stars);
@@ -192,6 +196,7 @@ final gameProvider = StateNotifierProvider.autoDispose
   return GameNotifier(
     specForLevel(level),
     haptics: ref.watch(hapticsProvider),
+    sfx: ref.watch(sfxProvider),
     onCleared: ref.read(progressProvider.notifier).recordCompletion,
   );
 });

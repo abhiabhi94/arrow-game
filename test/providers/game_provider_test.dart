@@ -8,18 +8,25 @@ import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
 import 'package:arrow_game/services/haptics_service.dart';
+import 'package:arrow_game/services/sfx_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/fake_haptics.dart';
+import '../support/fake_sfx.dart';
 import '../support/sample_puzzle.dart';
 
-GameNotifier _notifier({HapticsService? haptics, ClearedCallback? onCleared}) =>
+GameNotifier _notifier({
+  HapticsService? haptics,
+  SfxService? sfx,
+  ClearedCallback? onCleared,
+}) =>
     GameNotifier(
       sampleSpec,
       puzzle: samplePuzzle(),
       haptics: haptics,
+      sfx: sfx,
       onCleared: onCleared,
       autoTick: false,
     );
@@ -65,8 +72,10 @@ void main() {
   test('a free arrow slides out; the last one clears the level', () {
     final cleared = <(int, int, int)>[];
     final engine = RecordingHapticEngine();
+    final sfxBackend = RecordingSfxBackend();
     final n = _notifier(
       haptics: HapticsService(() => true, engine: engine),
+      sfx: SfxService(() => true, backend: sfxBackend),
       onCleared: (l, ms, stars) => cleared.add((l, ms, stars)),
     );
     n.tick(1200);
@@ -87,6 +96,10 @@ void main() {
     expect(n.state.isOver, isTrue);
     expect(cleared, [(1, 1200, 3)]);
     expect(engine.calls, ['light', 'light', 'medium']);
+    // Every exit zups, the streak climbing.
+    expect(sfxBackend.calls, hasLength(3));
+    expect(sfxBackend.calls.first, '$kZipSound@1.00');
+    expect(sfxBackend.calls.last, '$kZipSound@1.12');
 
     // Nothing moves after the end.
     n.tick(1000);
@@ -226,7 +239,7 @@ void main() {
     n.dispose();
   });
 
-  test('gameProvider builds the level puzzle, wires haptics and records progress', () async {
+  test('gameProvider builds the level puzzle, wires haptics + sfx and records progress', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
@@ -239,6 +252,7 @@ void main() {
     final notifier = container.read(gameProvider(1).notifier);
     expect(notifier.spec, same(specForLevel(1)));
     expect(notifier.haptics, isNotNull);
+    expect(notifier.sfx, isNotNull);
     await notifier.ready;
     expect(notifier.state.arrowsTotal, specForLevel(1).arrows);
     notifier.pause(); // stop the real timer from advancing the clock

@@ -622,6 +622,18 @@ abstract class AppLocalizations {
   /// **'A calm loop while you play'**
   String get settingsMusicSubtitle;
 
+  /// No description provided for @settingsSfx.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound effects'**
+  String get settingsSfx;
+
+  /// No description provided for @settingsSfxSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A zup as each arrow slides out'**
+  String get settingsSfxSubtitle;
+
   /// No description provided for @settingsHaptics.
   ///
   /// In en, this message translates to:

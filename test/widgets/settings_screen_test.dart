@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/pump_app.dart';
 
 void main() {
-  testWidgets('toggles music, volume, haptic feedback and theme', (tester) async {
+  testWidgets('toggles music, volume, sound effects, haptic feedback and theme', (tester) async {
     await usePhoneSurface(tester);
     final container = await pumpApp(tester, const SettingsScreen());
     expect(find.text('Settings'), findsOneWidget);
@@ -18,6 +18,10 @@ void main() {
     expect(find.text('60%'), findsOneWidget);
 
     await tester.tap(find.byType(Switch).at(1));
+    await tester.pump();
+    expect(container.read(settingsProvider).sfxOn, isFalse);
+
+    await tester.tap(find.byType(Switch).at(2));
     await tester.pump();
     expect(container.read(settingsProvider).hapticsOn, isFalse);
 

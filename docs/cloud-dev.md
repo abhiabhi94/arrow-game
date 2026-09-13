@@ -35,7 +35,7 @@ same script and uploads the screenshots as an artifact.
 
 - **Prefs** seeded into `localStorage` before boot (`flutter.<key>`, JSON
   encoded): `arrow_onboarding_done` (false with `--onboarding`),
-  `arrow_music_on` (false — no audio device), `arrow_haptics_on`,
+  `arrow_music_on` (false — no audio device), `arrow_sfx_on` (false), `arrow_haptics_on`,
   `arrow_theme` (`"light"`/`"dark"`).
 - **Navigation**: home → trail node "Level N" (`.last()`, because the
   "Next up" card is also named "Level N …") → the board → `--hint` taps the

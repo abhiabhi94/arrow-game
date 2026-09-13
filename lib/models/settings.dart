@@ -12,6 +12,7 @@ class Settings {
     required this.musicOn,
     required this.musicVolume,
     required this.hapticsOn,
+    required this.sfxOn,
     required this.themeChoice,
     required this.gridLinesOn,
     required this.onboardingDone,
@@ -25,6 +26,9 @@ class Settings {
 
   /// Haptic feedback on/off (on by default).
   final bool hapticsOn;
+
+  /// Sound effects (the exit swoosh) on/off (on by default).
+  final bool sfxOn;
 
   /// Theme preference (system/light/dark). System by default.
   final ThemeChoice themeChoice;
@@ -40,6 +44,7 @@ class Settings {
     musicOn: true,
     musicVolume: 0.6,
     hapticsOn: true,
+    sfxOn: true,
     themeChoice: ThemeChoice.system,
     gridLinesOn: false,
     onboardingDone: false,
@@ -49,6 +54,7 @@ class Settings {
     bool? musicOn,
     double? musicVolume,
     bool? hapticsOn,
+    bool? sfxOn,
     ThemeChoice? themeChoice,
     bool? gridLinesOn,
     bool? onboardingDone,
@@ -57,6 +63,7 @@ class Settings {
         musicOn: musicOn ?? this.musicOn,
         musicVolume: musicVolume ?? this.musicVolume,
         hapticsOn: hapticsOn ?? this.hapticsOn,
+        sfxOn: sfxOn ?? this.sfxOn,
         themeChoice: themeChoice ?? this.themeChoice,
         gridLinesOn: gridLinesOn ?? this.gridLinesOn,
         onboardingDone: onboardingDone ?? this.onboardingDone,
@@ -68,6 +75,7 @@ class Settings {
       other.musicOn == musicOn &&
       other.musicVolume == musicVolume &&
       other.hapticsOn == hapticsOn &&
+      other.sfxOn == sfxOn &&
       other.themeChoice == themeChoice &&
       other.gridLinesOn == gridLinesOn &&
       other.onboardingDone == onboardingDone;
@@ -77,6 +85,7 @@ class Settings {
         musicOn,
         musicVolume,
         hapticsOn,
+        sfxOn,
         themeChoice,
         gridLinesOn,
         onboardingDone,

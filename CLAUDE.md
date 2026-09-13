@@ -109,7 +109,8 @@ lib/
   data/level_specs.dart  the 20 levels (board size, arrow count, length range, clock)
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider
-  services/            haptics_service (injectable HapticEngine), audio_service (looping music)
+  services/            haptics_service (injectable HapticEngine), sfx_service (exit swoosh),
+                       audio_service (looping music)
   data/audio_credits.dart  CC-BY attribution for the bundled track
   screens/             onboarding (interactive 3-step walkthrough), home (journey trail),
                        game (board + toolbar + overlays), settings, credits
@@ -163,6 +164,11 @@ Key patterns:
   the blocked flash are the only colour on the board. Slide-out and bump are
   animated in `PuzzleBoard` (240–600 ms slide, ease-in). Strokes cap at
   3 px and heads at 8 px so the small early boards read as pen lines.
+- **Sound effects:** `SfxService` (`services/sfx_service.dart`, injectable
+  `SfxBackend`, a pool of low-latency players) plays `assets/audio/zip.wav`
+  on every exit — the pitch climbs a notch per quick successive exit and
+  resets after 1.5 s. The WAV is synthesised by `tool/make_sfx.py` (pure
+  Python); `Settings.sfxOn` gates it (on by default).
 - **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
   "Permafrost" by Scott Buckley (CC-BY 4.0, `assets/audio/`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
@@ -223,6 +229,7 @@ fails on any Flutter exception, and uploads `shots/`.
 - **Localization:** only English is authored (`lib/l10n/app_en.arb`); the
   l10n pipeline is wired, so adding a language is a second `.arb` file plus a
   language picker in Settings.
-- **Sound effects:** music only; a slide/bump sfx would need new assets
-  (`.mp3`/AAC, never `.ogg` — iOS can't decode Vorbis via audioplayers).
+- **Sound effects:** only the exit "zup" exists; a bump thud would be a
+  second WAV from `tool/make_sfx.py` (never `.ogg` — iOS can't decode
+  Vorbis via audioplayers) and a `SfxService.bump()`.
 - **iOS:** code is iOS-ready; the matching iOS scheme needs Xcode (not set up here).

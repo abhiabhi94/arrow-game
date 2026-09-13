@@ -110,6 +110,8 @@
   "settingsTitle": "Settings",
   "settingsMusic": "Music",
   "settingsMusicSubtitle": "A calm loop while you play",
+  "settingsSfx": "Sound effects",
+  "settingsSfxSubtitle": "A zup as each arrow slides out",
   "settingsHaptics": "Haptic feedback",
   "settingsHapticsSubtitle": "A tick on every slide, a buzz on a bump",
   "settingsTheme": "Theme",

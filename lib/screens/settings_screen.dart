@@ -9,7 +9,7 @@ import '../ui/colors.dart';
 import 'credits_screen.dart';
 import 'onboarding_screen.dart';
 
-/// Settings: music (on/off + volume), haptic feedback, theme, the walkthrough
+/// Settings: music (on/off + volume), sound effects, haptic feedback, theme, the walkthrough
 /// again, music credits, and a progress reset.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -82,6 +82,16 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
               ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SettingCard(
+            child: SwitchListTile(
+              value: settings.sfxOn,
+              onChanged: notifier.setSfx,
+              secondary: const Text('💨', style: TextStyle(fontSize: 24)),
+              title: Text(l10n.settingsSfx),
+              subtitle: Text(l10n.settingsSfxSubtitle),
             ),
           ),
           const SizedBox(height: 16),

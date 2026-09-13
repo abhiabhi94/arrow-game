@@ -129,6 +129,7 @@ const prefs = {
   'flutter.arrow_onboarding_done': args.onboarding ? 'false' : 'true',
   'flutter.arrow_music_on': 'false',
   'flutter.arrow_haptics_on': 'false',
+  'flutter.arrow_sfx_on': 'false',
   'flutter.arrow_grid_lines': grid ? 'true' : 'false',
   'flutter.arrow_theme': JSON.stringify(dark ? 'dark' : 'light'),
 };
