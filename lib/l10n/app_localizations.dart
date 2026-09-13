@@ -625,13 +625,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSfx.
   ///
   /// In en, this message translates to:
-  /// **'Whoosh'**
+  /// **'Sound effects'**
   String get settingsSfx;
 
   /// No description provided for @settingsSfxSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'The swoosh of an arrow flying off the board'**
+  /// **'The little sounds as you play'**
   String get settingsSfxSubtitle;
 
   /// No description provided for @settingsHaptics.

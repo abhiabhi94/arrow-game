@@ -9,7 +9,7 @@ import '../ui/colors.dart';
 import 'credits_screen.dart';
 import 'onboarding_screen.dart';
 
-/// Settings: music (on/off + volume), the whoosh, haptic feedback, theme, the walkthrough
+/// Settings: music (on/off + volume), sound effects, haptic feedback, theme, the walkthrough
 /// again, music credits, and a progress reset.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});

@@ -299,11 +299,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsMusicSubtitle => 'A calm loop while you play';
 
   @override
-  String get settingsSfx => 'Whoosh';
+  String get settingsSfx => 'Sound effects';
 
   @override
-  String get settingsSfxSubtitle =>
-      'The swoosh of an arrow flying off the board';
+  String get settingsSfxSubtitle => 'The little sounds as you play';
 
   @override
   String get settingsHaptics => 'Haptic feedback';
