@@ -53,8 +53,10 @@ Two build types install side-by-side:
 ```bash
 flutter run                 # debug — "Arrow Testing", all levels open
 flutter run --release       # release — "Arrow", locked progression
-flutter build apk --debug   # -> app-debug.apk   ("Arrow Testing")
+flutter build apk --debug   # -> app-debug.apk   ("Arrow Testing", ~150 MB, all ABIs)
 flutter build apk --release # -> app-release.apk  ("Arrow")
+flutter build apk --release --split-per-abi --dart-define=UNLOCK_ALL=true
+                            # -> small per-ABI tester APKs with every level open
 
 flutter build web --debug --no-web-resources-cdn      # web preview build (all levels open)
 node tool/screenshot.mjs --levels 1,7,20 --settings --hint  # phone-size screenshots -> shots/

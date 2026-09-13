@@ -12,7 +12,7 @@ build, test, and **visually verify** the app. Ported from the sudoku repo's
 | `flutter analyze` / `flutter test` | ✅     | Same gates as CI, incl. `tool/coverage.sh` |
 | Web build + headless Chromium      | ✅     | `tool/screenshot.mjs` — phone-viewport screenshots + smoke test |
 | Android emulator                   | ❌     | No `/dev/kvm`; an emulator would not boot usably |
-| Android APK build                  | ⚠️     | Possible but needs a ~2 GB SDK install; not set up |
+| Android APK build                  | ⚠️     | Works after a ~2 GB SDK install (see CLAUDE.md, "Android SDK in cloud sessions"); not done by the hook |
 | iOS build                          | ❌     | Needs macOS/Xcode |
 
 So the loop is: change code → `flutter build web --debug --no-web-resources-cdn`

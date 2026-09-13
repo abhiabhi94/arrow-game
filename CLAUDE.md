@@ -61,7 +61,16 @@ Identity is tied to the **build type**, not a product flavor:
 
 - The debug `.testing` app-id suffix lets both install side-by-side.
 - "Unlock all levels" keys off `kDebugMode` (`testingUnlocksAllLevels` in
-  `lib/providers/progress_provider.dart`). Namespace is `app.curious.arrow`.
+  `lib/providers/progress_provider.dart`), or off
+  `--dart-define=UNLOCK_ALL=true` for a small release-mode tester build:
+  `flutter build apk --release --split-per-abi --dart-define=UNLOCK_ALL=true`
+  gives a ~20 MB arm64 APK with every level open (the debug APK is ~150 MB
+  with all ABIs). Namespace is `app.curious.arrow`.
+- **Android SDK in cloud sessions:** not installed by the hook. To build an
+  APK: unzip the command-line tools into `/opt/android-sdk/cmdline-tools/latest`,
+  `sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358'`,
+  `flutter config --android-sdk /opt/android-sdk`. The first Gradle run
+  takes ~6 minutes.
 - Do NOT name an Android flavor starting with `test` (Gradle reserves it), and
   `android.buildFeatures.resValues` must stay enabled for the per-build app name.
 

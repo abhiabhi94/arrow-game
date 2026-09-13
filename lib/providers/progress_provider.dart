@@ -55,9 +55,12 @@ class ProgressRepository {
 const int kGridLinesUnlockAfterLevel = 4;
 
 /// Whether the running build unlocks every level regardless of progress. True
-/// for the debug ("Arrow Testing") build so testers can reach any level; the
-/// release ("Arrow") build enforces the locked progression.
-bool get testingUnlocksAllLevels => kDebugMode;
+/// for the debug ("Arrow Testing") build so testers can reach any level, or
+/// for any build compiled with `--dart-define=UNLOCK_ALL=true` (a small
+/// release-mode tester build); the plain release ("Arrow") build enforces
+/// the locked progression.
+bool get testingUnlocksAllLevels =>
+    kDebugMode || const bool.fromEnvironment('UNLOCK_ALL');
 
 class ProgressNotifier extends StateNotifier<Map<int, LevelProgress>> {
   ProgressNotifier(this._repo, {bool? unlockAllLevels})
