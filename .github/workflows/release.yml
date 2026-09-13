@@ -4,7 +4,8 @@ name: Release
 # repository secrets) and publishes it as a workflow artifact — and, on a
 # version tag, as a GitHub Release. See docs/release.md.
 #
-# Secrets (Settings → Secrets and variables → Actions):
+# Secrets live in the "release" GitHub environment (Settings → Environments →
+# release), which also lets you require a reviewer before a build runs:
 #   ANDROID_UPLOAD_KEYSTORE_BASE64    the upload .jks, base64-encoded
 #   ANDROID_UPLOAD_KEYSTORE_PASSWORD  keystore password
 #   ANDROID_UPLOAD_KEY_PASSWORD       key password
@@ -33,6 +34,7 @@ jobs:
   bundle:
     name: Play Store bundle
     runs-on: ubuntu-latest
+    environment: release
     env:
       KEYSTORE_PATH: ${{ github.workspace }}/android/upload-keystore.jks
     steps:

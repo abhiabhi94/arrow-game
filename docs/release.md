@@ -20,17 +20,24 @@ manager). With Play App Signing, Google holds the *app* signing key and this
 is only the *upload* key, so it can be reset through Play Console support if
 lost — but that is a slow process, so treat it as precious.
 
-### 2. Store it in repository secrets
+### 2. Store it in the `release` environment's secrets
 
-GitHub → repository → Settings → Secrets and variables → Actions → New
-repository secret, or with the `gh` CLI:
+The workflow's job runs in the GitHub environment named **`release`**, so
+the secrets go there (not in the repository-wide list): GitHub → repository
+→ Settings → Environments → `release` (create it if missing) → Environment
+secrets → Add secret. Or with the `gh` CLI:
 
 ```bash
-gh secret set ANDROID_UPLOAD_KEYSTORE_BASE64 < <(base64 -w0 ~/keys/arrow-upload.jks)
-gh secret set ANDROID_UPLOAD_KEYSTORE_PASSWORD   # prompts for the value
-gh secret set ANDROID_UPLOAD_KEY_PASSWORD
-gh secret set ANDROID_UPLOAD_KEY_ALIAS --body upload   # optional, defaults to "upload"
+gh secret set --env release ANDROID_UPLOAD_KEYSTORE_BASE64 --body "$(base64 -w0 ~/keys/arrow-upload.jks)"
+gh secret set --env release ANDROID_UPLOAD_KEYSTORE_PASSWORD   # prompts for the value
+gh secret set --env release ANDROID_UPLOAD_KEY_PASSWORD
+gh secret set --env release ANDROID_UPLOAD_KEY_ALIAS --body upload   # optional, defaults to "upload"
 ```
+
+An environment also lets you add protection rules (Settings → Environments
+→ release): "Required reviewers" makes every release build wait for an
+approval click, and "Deployment branches and tags" can restrict it to
+`main` and `v*` tags.
 
 (On macOS `base64` takes no `-w0`; use `base64 -i ~/keys/arrow-upload.jks`.)
 
