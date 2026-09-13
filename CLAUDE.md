@@ -246,6 +246,13 @@ Key patterns:
 - Screenshot driver finds widgets by accessible name: give tappable widgets a
   `Semantics(label: …, button: true)` or a `tooltip:`.
 
+## Branching
+
+`main` is the default branch and the only long-lived one. Every piece of
+work starts on a branch cut from the latest `main` and comes back through a
+pull request into `main`; never build on another feature branch, and never
+let a feature branch become the repository's HEAD.
+
 ## Continuous Integration
 
 GitHub Actions runs on every push to `main` and every PR targeting `main`
