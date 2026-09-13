@@ -403,8 +403,128 @@ abstract class AppLocalizations {
   /// No description provided for @levelName20.
   ///
   /// In en, this message translates to:
-  /// **'Grand Exit'**
+  /// **'Halfway Out'**
   String get levelName20;
+
+  /// No description provided for @levelName21.
+  ///
+  /// In en, this message translates to:
+  /// **'Undertow'**
+  String get levelName21;
+
+  /// No description provided for @levelName22.
+  ///
+  /// In en, this message translates to:
+  /// **'Hedge Maze'**
+  String get levelName22;
+
+  /// No description provided for @levelName23.
+  ///
+  /// In en, this message translates to:
+  /// **'Ball of Yarn'**
+  String get levelName23;
+
+  /// No description provided for @levelName24.
+  ///
+  /// In en, this message translates to:
+  /// **'Crossfire'**
+  String get levelName24;
+
+  /// No description provided for @levelName25.
+  ///
+  /// In en, this message translates to:
+  /// **'Switchyard'**
+  String get levelName25;
+
+  /// No description provided for @levelName26.
+  ///
+  /// In en, this message translates to:
+  /// **'Snake Pit'**
+  String get levelName26;
+
+  /// No description provided for @levelName27.
+  ///
+  /// In en, this message translates to:
+  /// **'Hairball'**
+  String get levelName27;
+
+  /// No description provided for @levelName28.
+  ///
+  /// In en, this message translates to:
+  /// **'Clockwork'**
+  String get levelName28;
+
+  /// No description provided for @levelName29.
+  ///
+  /// In en, this message translates to:
+  /// **'Whirlpool'**
+  String get levelName29;
+
+  /// No description provided for @levelName30.
+  ///
+  /// In en, this message translates to:
+  /// **'Ant Farm'**
+  String get levelName30;
+
+  /// No description provided for @levelName31.
+  ///
+  /// In en, this message translates to:
+  /// **'Circuit Board'**
+  String get levelName31;
+
+  /// No description provided for @levelName32.
+  ///
+  /// In en, this message translates to:
+  /// **'Briar Patch'**
+  String get levelName32;
+
+  /// No description provided for @levelName33.
+  ///
+  /// In en, this message translates to:
+  /// **'Root System'**
+  String get levelName33;
+
+  /// No description provided for @levelName34.
+  ///
+  /// In en, this message translates to:
+  /// **'Tapestry'**
+  String get levelName34;
+
+  /// No description provided for @levelName35.
+  ///
+  /// In en, this message translates to:
+  /// **'Hornet\'s Nest'**
+  String get levelName35;
+
+  /// No description provided for @levelName36.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Weave'**
+  String get levelName36;
+
+  /// No description provided for @levelName37.
+  ///
+  /// In en, this message translates to:
+  /// **'Eye of the Needle'**
+  String get levelName37;
+
+  /// No description provided for @levelName38.
+  ///
+  /// In en, this message translates to:
+  /// **'Pandemonium'**
+  String get levelName38;
+
+  /// No description provided for @levelName39.
+  ///
+  /// In en, this message translates to:
+  /// **'Point of No Return'**
+  String get levelName39;
+
+  /// No description provided for @levelName40.
+  ///
+  /// In en, this message translates to:
+  /// **'Grand Exit'**
+  String get levelName40;
 
   /// No description provided for @tutorialTap.
   ///

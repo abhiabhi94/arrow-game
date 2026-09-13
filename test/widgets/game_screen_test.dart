@@ -450,7 +450,7 @@ void main() {
     await usePhoneSurface(tester);
     await pumpApp(
       tester,
-      const GameScreen(level: 20),
+      const GameScreen(level: totalLevels),
       seed: <String, Object>{'arrow_grid_lines': true},
       extraOverrides: _overrides(),
       themeMode: ThemeMode.dark,

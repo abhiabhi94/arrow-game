@@ -41,7 +41,7 @@ void main() {
 
   test('later levels are more tangled than the first', () {
     final first = puzzleForLevel(specForLevel(1));
-    final last = puzzleForLevel(specForLevel(20));
+    final last = puzzleForLevel(specForLevel(totalLevels));
     expect(last.dependencyDepth, greaterThan(first.dependencyDepth));
     expect(last.difficultyScore, greaterThan(first.difficultyScore * 10));
   });
@@ -59,8 +59,9 @@ void main() {
       final profile = p.openMoveProfile();
       expect(profile, hasLength(p.arrowCount), reason: 'level ${spec.level} solvable');
       // The generator's cap is soft; this is the hard line the levels hold.
-      expect(profile.first, lessThanOrEqualTo(spec.openMoves + 3), reason: 'level ${spec.level} start');
-      expect(profile.reduce(max), lessThanOrEqualTo(spec.openMoves + 5), reason: 'level ${spec.level} widest');
+      expect(profile.first, lessThanOrEqualTo(spec.openMoves + PuzzleGenerator.startSlack), reason: 'level ${spec.level} start');
+      expect(profile.reduce(max), lessThanOrEqualTo(spec.openMoves + PuzzleGenerator.widestSlack), reason: 'level ${spec.level} widest');
+      expect(PuzzleGenerator.holdsChoice(spec, profile), isTrue, reason: 'level ${spec.level}');
       expect(p.meanOpenMoves, lessThanOrEqualTo(spec.openMoves + 1), reason: 'level ${spec.level} mean');
     }
   });
@@ -78,6 +79,16 @@ void main() {
     expect(candidatesFor(5), 24);
     expect(candidatesFor(60), 10);
     expect(candidatesFor(170), kMinCandidates);
+    expect(candidatesFor(224), kMinCandidates);
+  });
+
+  test('a board that holds the choice beats a tighter one that spreads', () {
+    const spec = LevelSpec(level: 1, width: 5, height: 5, arrows: 3, minLength: 2, maxLength: 3, timeLimitMs: 1000);
+    expect(PuzzleGenerator.holdsChoice(spec, const <int>[]), isTrue);
+    expect(PuzzleGenerator.holdsChoice(spec, const <int>[5, 1, 1]), isTrue);
+    expect(PuzzleGenerator.holdsChoice(spec, const <int>[6, 1, 1]), isFalse);
+    expect(PuzzleGenerator.holdsChoice(spec, const <int>[1, 7, 1]), isTrue);
+    expect(PuzzleGenerator.holdsChoice(spec, const <int>[1, 8, 1]), isFalse);
   });
 
   test('places as many arrows as fit when the board cannot take them all', () {

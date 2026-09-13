@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
 import 'package:arrow_game/providers/saved_game_provider.dart';
@@ -27,17 +28,17 @@ final List<Override> _gameOverride = [
 ];
 
 void main() {
-  testWidgets('renders title, stars tally, play card and 20 tiles', (tester) async {
+  testWidgets('renders title, stars tally, play card and 40 tiles', (tester) async {
     await usePhoneSurface(tester);
     await pumpApp(tester, const HomeScreen());
     await tester.pump(const Duration(milliseconds: 800));
 
     expect(find.text('Arrow'), findsOneWidget);
-    expect(find.bySemanticsLabel('0 of 60 stars'), findsOneWidget);
+    expect(find.bySemanticsLabel('0 of 120 stars'), findsOneWidget);
     expect(find.text('Level 1'), findsOneWidget); // the hero card
     expect(find.text('NEXT UP'), findsOneWidget);
     expect(find.text('Your journey'), findsOneWidget);
-    for (var level = 1; level <= 20; level++) {
+    for (var level = 1; level <= totalLevels; level++) {
       expect(find.text('$level', skipOffstage: false), findsOneWidget, reason: 'node $level');
     }
   });
@@ -57,7 +58,7 @@ void main() {
       ],
     );
     await tester.pump(const Duration(milliseconds: 800));
-    expect(find.byIcon(Icons.lock_rounded, skipOffstage: false), findsNWidgets(19));
+    expect(find.byIcon(Icons.lock_rounded, skipOffstage: false), findsNWidgets(totalLevels - 1));
 
     await tester.tap(find.byIcon(Icons.lock_rounded).first);
     await tester.pump(const Duration(milliseconds: 800));
@@ -85,9 +86,9 @@ void main() {
       ],
     );
     await tester.pump(const Duration(milliseconds: 800));
-    expect(find.bySemanticsLabel('2 of 60 stars'), findsOneWidget);
+    expect(find.bySemanticsLabel('2 of 120 stars'), findsOneWidget);
     expect(find.text('0:21'), findsOneWidget);
-    expect(find.byIcon(Icons.lock_rounded, skipOffstage: false), findsNWidgets(18));
+    expect(find.byIcon(Icons.lock_rounded, skipOffstage: false), findsNWidgets(totalLevels - 2));
     // The hero card points at level 2 now; the node names it too.
     expect(find.text('Level 2'), findsOneWidget);
     expect(find.text('Two Ways Out'), findsNWidgets(2));
@@ -146,7 +147,7 @@ void main() {
   testWidgets('with every level cleared the hero offers a replay', (tester) async {
     await usePhoneSurface(tester);
     final seed = <String, Object>{
-      for (var l = 1; l <= 20; l++) ...{
+      for (var l = 1; l <= totalLevels; l++) ...{
         'arrow_level_${l}_done': true,
         'arrow_level_${l}_stars': 3,
       },
@@ -155,7 +156,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.text('Every level cleared — legend!'), findsOneWidget);
     expect(find.text('Replay'), findsOneWidget);
-    expect(find.bySemanticsLabel('60 of 60 stars'), findsOneWidget);
+    expect(find.bySemanticsLabel('120 of 120 stars'), findsOneWidget);
   });
 
   testWidgets('settings button opens settings', (tester) async {

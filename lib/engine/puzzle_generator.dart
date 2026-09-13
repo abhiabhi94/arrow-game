@@ -34,7 +34,7 @@ import 'puzzle.dart';
 /// level still opens quickly: 24 for a handful of arrows, down to
 /// [kMinCandidates].
 int candidatesFor(int arrows) => (600 ~/ arrows).clamp(kMinCandidates, 24);
-const int kMinCandidates = 3;
+const int kMinCandidates = 5;
 
 /// Valid head placements grown per arrow; the best-scoring body wins.
 const int kPlacementChoices = 14;
@@ -65,28 +65,51 @@ class PuzzleGenerator {
 
   /// Builds a puzzle for [spec]. Always solvable. Tries several boards and
   /// keeps the one with the most arrows (the spec's count when the board has
-  /// room — the level table is tested for that), breaking ties by the fewest
-  /// moves open at a typical moment, then by tangle.
+  /// room — the level table is tested for that). Ties go to a board that
+  /// holds the level's choice within [startSlack] and [widestSlack] of
+  /// `openMoves` at the start and at its widest, then to the fewest moves
+  /// open at a typical moment, then to tangle.
   Puzzle generate(LevelSpec spec) {
     Puzzle? best;
+    var bestHeld = false;
     var bestOpen = double.infinity;
     var bestTangle = 0;
     final candidates = candidatesFor(spec.arrows);
     for (var i = 0; i < candidates; i++) {
       final p = _Builder(spec, _random).build();
-      final open = p.meanOpenMoves;
+      final profile = p.openMoveProfile();
+      final held = holdsChoice(spec, profile);
+      final open = profile.isEmpty ? 0.0 : profile.fold<int>(0, (s, n) => s + n) / profile.length;
       final tangle = p.difficultyScore;
       if (best == null ||
           p.arrowCount > best.arrowCount ||
           (p.arrowCount == best.arrowCount &&
-              (open < bestOpen || (open == bestOpen && tangle > bestTangle)))) {
+              (held && !bestHeld ||
+                  (held == bestHeld &&
+                      (open < bestOpen || (open == bestOpen && tangle > bestTangle)))))) {
         best = p;
+        bestHeld = held;
         bestOpen = open;
         bestTangle = tangle;
       }
     }
     return best!;
   }
+
+  /// Whether an [openMoveProfile] keeps the player's choice within the slack
+  /// the levels are allowed over `openMoves`: at the first move and at the
+  /// widest moment. The cap is soft while building; this is the hard line.
+  static bool holdsChoice(LevelSpec spec, List<int> profile) {
+    if (profile.isEmpty) return true;
+    return profile.first <= spec.openMoves + startSlack &&
+        profile.reduce(max) <= spec.openMoves + widestSlack;
+  }
+
+  /// How far past `openMoves` the first move may spread.
+  static const int startSlack = 3;
+
+  /// How far past `openMoves` the widest moment may spread.
+  static const int widestSlack = 5;
 }
 
 /// One candidate board under construction.

@@ -14,7 +14,7 @@ inputs:
       tool/screenshot.mjs (see its header for flags).
     required: false
     default: |
-      --levels 1,5,10,20 --settings --hint
+      --levels 1,5,10,20,40 --settings --hint
       --levels 3,16 --dark --hint --grid
       --onboarding
       --levels 3 --resume

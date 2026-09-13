@@ -13,7 +13,7 @@ Testing" Android build) and rendered in headless Chromium at 390×844 @2x.
 
 ```bash
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run   # ~60 s
-node tool/screenshot.mjs --levels 1,7,13,20 --settings --hint        # -> shots/*.png
+node tool/screenshot.mjs --levels 1,7,13,20,40 --settings --hint     # -> shots/*.png
 node tool/screenshot.mjs --levels 3,16 --dark --hint                 # dark theme
 node tool/screenshot.mjs --onboarding                                # first-launch walkthrough
 node tool/screenshot.mjs --levels 1,8 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + shortcuts
