@@ -1,0 +1,106 @@
+import 'package:arrow_game/providers/progress_provider.dart';
+import 'package:arrow_game/screens/game_screen.dart';
+import 'package:arrow_game/screens/home_screen.dart';
+import 'package:arrow_game/screens/settings_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../support/pump_app.dart';
+
+void main() {
+  testWidgets('renders title, stars tally, play card and 20 tiles', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(tester, const HomeScreen());
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Arrow'), findsOneWidget);
+    expect(find.text('0 of 60 stars'), findsOneWidget);
+    expect(find.text('Level 1'), findsOneWidget); // the play card
+    expect(find.text('Warm-up'), findsOneWidget);
+    expect(find.text('Levels'), findsOneWidget);
+    for (var level = 1; level <= 20; level++) {
+      expect(find.text('$level'), findsOneWidget, reason: 'tile $level');
+    }
+  });
+
+  testWidgets('locked levels show a lock and do not open', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(
+      tester,
+      const HomeScreen(),
+      extraOverrides: [
+        progressProvider.overrideWith(
+          (ref) => ProgressNotifier(
+            ref.watch(progressRepositoryProvider),
+            unlockAllLevels: false,
+          ),
+        ),
+      ],
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(19));
+
+    await tester.tap(find.byIcon(Icons.lock_rounded).first);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(GameScreen), findsNothing);
+  });
+
+  testWidgets('cleared levels show stars and best time; next unlocks', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(
+      tester,
+      const HomeScreen(),
+      seed: <String, Object>{
+        'arrow_level_1_done': true,
+        'arrow_level_1_stars': 2,
+        'arrow_level_1_best': 21000,
+        'arrow_level_1_count': 1,
+      },
+      extraOverrides: [
+        progressProvider.overrideWith(
+          (ref) => ProgressNotifier(
+            ref.watch(progressRepositoryProvider),
+            unlockAllLevels: false,
+          ),
+        ),
+      ],
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('2 of 60 stars'), findsOneWidget);
+    expect(find.text('0:21'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(18));
+    // The play card points at level 2 now.
+    expect(find.text('Level 2'), findsOneWidget);
+    expect(find.text('Getting Going'), findsOneWidget);
+  });
+
+  testWidgets('tapping a tile opens the game; the play card too', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(tester, const HomeScreen());
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.tap(find.text('3'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GameScreen), findsOneWidget);
+    expect(find.text('Level 3'), findsOneWidget);
+    expect(find.text('Quick Hands'), findsNWidgets(2)); // app bar + intro card
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
+
+    await tester.tap(find.text('Warm-up'));
+    await tester.pumpAndSettle();
+    expect(find.text('Level 1'), findsOneWidget);
+    expect(find.text('Warm-up'), findsNWidgets(2)); // app bar + intro card
+  });
+
+  testWidgets('settings button opens settings', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(tester, const HomeScreen());
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsScreen), findsOneWidget);
+  });
+}

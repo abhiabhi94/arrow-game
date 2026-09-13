@@ -1,0 +1,82 @@
+name: Flutter web smoke & screenshots
+description: >-
+  Builds the Flutter app for web (debug, CanvasKit bundled), drives it in
+  headless Chromium at a phone viewport with tool/screenshot.mjs, fails on any
+  Flutter exception / JS error, and uploads the screenshots as an artifact.
+  Copy this folder + tool/screenshot.mjs to another Flutter game repo and adapt
+  the "app-specific" block of the script.
+
+inputs:
+  runs:
+    description: >-
+      One screenshot run per line; each line is passed verbatim as arguments to
+      tool/screenshot.mjs (see its header for flags).
+    required: false
+    default: |
+      --levels 1,4,7,10,13,20 --settings --play
+      --levels 3,16 --dark --play
+  artifact-name:
+    description: Name of the uploaded screenshots artifact.
+    required: false
+    default: screenshots
+  playwright-version:
+    description: Playwright version (pin it; Chromium is matched to it).
+    required: false
+    default: 1.56.1
+
+runs:
+  using: composite
+  steps:
+    - name: Read pinned Flutter version
+      id: flutter
+      shell: bash
+      run: echo "version=$(tr -d '[:space:]' < .flutter-version)" >> "$GITHUB_OUTPUT"
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ steps.flutter.outputs.version }}
+        channel: stable
+        cache: true
+
+    - name: Build web (debug = all levels unlocked, CanvasKit bundled)
+      shell: bash
+      run: |
+        flutter pub get
+        flutter gen-l10n
+        flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - name: Install Playwright + Chromium
+      shell: bash
+      run: |
+        npm install -g "playwright@${{ inputs.playwright-version }}"
+        npx --yes "playwright@${{ inputs.playwright-version }}" install --with-deps chromium
+
+    - name: Drive the app and capture screenshots
+      shell: bash
+      env:
+        RUNS: ${{ inputs.runs }}
+      run: |
+        export NODE_PATH="$(npm root -g)"
+        status=0
+        while IFS= read -r line; do
+          [ -z "${line// }" ] && continue
+          echo "::group::node tool/screenshot.mjs $line"
+          # shellcheck disable=SC2086
+          node tool/screenshot.mjs $line --out shots || status=1
+          echo "::endgroup::"
+        done <<< "$RUNS"
+        exit $status
+
+    - name: Upload screenshots
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: shots/
+        if-no-files-found: warn

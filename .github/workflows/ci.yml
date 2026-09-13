@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref so pushes don't pile up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Read pinned Flutter version
+        id: flutter
+        run: echo "version=$(tr -d '[:space:]' < .flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate localizations
+        run: flutter gen-l10n
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      # Runs the full suite with coverage and fails under the threshold.
+      # Same gate developers run locally.
+      - name: Test with coverage gate
+        run: bash tool/coverage.sh 92
+
+  smoke:
+    name: Web smoke & screenshots
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # Builds for web, drives home/settings/levels in headless Chromium at a
+      # phone viewport, fails on any Flutter exception (e.g. layout overflow)
+      # and uploads the PNGs as the "screenshots" artifact for visual review.
+      - name: Smoke test + screenshots
+        uses: ./.github/actions/web-smoke
