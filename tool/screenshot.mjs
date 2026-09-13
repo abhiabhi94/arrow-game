@@ -5,12 +5,13 @@
 // at a phone-sized viewport instead.
 //
 // Usage:
-//   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--hint]
+//   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--hint] [--grid]
 //                            [--settings] [--onboarding] [--dump] [--no-strict]
 //                            [--build-dir build/web] [--scale 2] [--port 0]
 //
 //   --levels  opens each level and captures its board (level-NN-*.png)
 //   --hint    also taps the hint button and captures the glowing arrow
+//   --grid    seeds the grid-lines preference on (the lattice under the arrows)
 //             (level-NN-hint-*.png)
 //   --onboarding  boots into the first-launch walkthrough instead of home
 //
@@ -52,6 +53,7 @@ const outDir = path.resolve(args.out ?? 'shots');
 const levels = String(args.levels ?? '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 const dark = Boolean(args.dark);
 const hint = Boolean(args.hint);
+const grid = Boolean(args.grid);
 const scale = Number(args.scale ?? 2);
 const port = Number(args.port ?? 0);
 const strict = !args['no-strict'];
@@ -127,6 +129,7 @@ const prefs = {
   'flutter.arrow_onboarding_done': args.onboarding ? 'false' : 'true',
   'flutter.arrow_music_on': 'false',
   'flutter.arrow_haptics_on': 'false',
+  'flutter.arrow_grid_lines': grid ? 'true' : 'false',
   'flutter.arrow_theme': JSON.stringify(dark ? 'dark' : 'light'),
 };
 
@@ -161,7 +164,7 @@ try {
 
   if (args.dump) console.log(await dumpSemantics(page));
 
-  const tag = dark ? 'dark' : 'light';
+  const tag = `${dark ? 'dark' : 'light'}${grid ? '-grid' : ''}`;
   await shoot(page, `${args.onboarding ? 'onboarding' : 'home'}-${tag}`);
 
   if (args.settings) {

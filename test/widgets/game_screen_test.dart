@@ -74,7 +74,7 @@ void main() {
     final container = await _pumpGame(tester);
     expect(find.text('Level 1'), findsOneWidget);
     expect(find.text('First Steps'), findsOneWidget);
-    expect(find.text('30'), findsOneWidget);
+    expect(find.text('0:30'), findsOneWidget);
     expect(find.byType(PuzzleBoard), findsOneWidget);
     expect(find.text('Tap an arrow to slide it out the way it points.'), findsOneWidget);
     expect(find.byTooltip('Pause'), findsOneWidget);
@@ -150,7 +150,7 @@ void main() {
     await tester.tap(find.text('Try again'));
     await _settle(tester, 400);
     expect(notifier.state.phase, GamePhase.playing);
-    expect(find.text('30'), findsOneWidget);
+    expect(find.text('0:30'), findsOneWidget);
   });
 
   testWidgets('hints: three per level, the button rests while one shows', (tester) async {

@@ -199,16 +199,22 @@ class _BoardPainter extends CustomPainter {
     final rect = Offset.zero & size;
 
     // No frame: the arrows sit straight on the page. Grid lines, when on,
-    // include the outer edge so the board's extent is still readable.
+    // run through the cell centres — the lattice the arrows are drawn on —
+    // so every body lies exactly on a line and every head points along one.
     if (showGrid) {
       final grid = Paint()
         ..color = palette.gridLine
         ..strokeWidth = 1;
-      for (var x = 0; x <= puzzle.width; x++) {
-        canvas.drawLine(Offset(x * cs, 0), Offset(x * cs, size.height), grid);
+      final first = cs / 2;
+      final lastX = size.width - cs / 2;
+      final lastY = size.height - cs / 2;
+      for (var x = 0; x < puzzle.width; x++) {
+        final px = first + x * cs;
+        canvas.drawLine(Offset(px, first), Offset(px, lastY), grid);
       }
-      for (var y = 0; y <= puzzle.height; y++) {
-        canvas.drawLine(Offset(0, y * cs), Offset(size.width, y * cs), grid);
+      for (var y = 0; y < puzzle.height; y++) {
+        final py = first + y * cs;
+        canvas.drawLine(Offset(first, py), Offset(lastX, py), grid);
       }
     }
 

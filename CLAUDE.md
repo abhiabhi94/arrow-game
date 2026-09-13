@@ -151,7 +151,9 @@ Key patterns:
   `tick()` when `autoTick` is true; tests pass `autoTick: false`.
 - **Hints:** `maxHints = 3` per attempt; `Puzzle.hintFor` picks the removable
   arrow that frees the most others; any tap clears the highlight.
-- **Grid lines:** `Settings.gridLinesOn` (persisted) but the toggle is earned:
+- **Grid lines:** drawn through the cell centres (the lattice the arrows lie
+  on), not between cells, so every arrow body sits on a line.
+  `Settings.gridLinesOn` (persisted) but the toggle is earned:
   `ProgressNotifier.gridLinesUnlocked` (clear level `kGridLinesUnlockAfterLevel`
   = 4; always on in the testing build).
 - **Zoom:** `InteractiveViewer` (pinch) + toolbar buttons, `kMinZoom`..`kMaxZoom`

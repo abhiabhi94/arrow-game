@@ -14,7 +14,7 @@ inputs:
     required: false
     default: |
       --levels 1,5,10,20 --settings --hint
-      --levels 3,16 --dark --hint
+      --levels 3,16 --dark --hint --grid
       --onboarding
   artifact-name:
     description: Name of the uploaded screenshots artifact.
