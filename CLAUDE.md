@@ -92,6 +92,14 @@ Identity is tied to the **build type**, not a product flavor:
   Template: `android/key.properties.example`. Keystore lives OUTSIDE the repo.
 - Never commit `key.properties`, `*.jks`, `*.keystore`, or anything under
   `build/`.
+- **Play Store bundle:** `.github/workflows/release.yml` (tag `v*` or manual
+  dispatch) restores the upload key from the `ANDROID_UPLOAD_*` secrets,
+  runs analyze + tests, builds the signed `.aab`/`.apk` with
+  `--obfuscate --split-debug-info`, and uploads them (plus R8 mapping and
+  Dart symbols) as an artifact and a GitHub Release. Bump `version:` in
+  `pubspec.yaml` (the `+N` code must increase) before tagging. Cloud sessions
+  have no key, so a bundle built here is debug-signed and only proves the
+  build compiles. Guide: `docs/release.md`.
 
 ## Architecture
 
