@@ -41,6 +41,7 @@
   "tutorialTap": "Tap an arrow to slide it out the way it points.",
   "tutorialBlocked": "An arrow in the way costs a life — find the free ones first.",
 
+  "gameLoading": "Laying out the arrows…",
   "gamePause": "Pause",
   "gameResume": "Resume",
   "gamePaused": "Paused",

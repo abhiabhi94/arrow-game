@@ -18,7 +18,7 @@ void main() {
       for (final a in p.arrows) {
         expect(a.length, inInclusiveRange(spec.minLength, spec.maxLength), reason: 'level ${spec.level} $a');
       }
-      expect(sw.elapsedMilliseconds, lessThan(2000), reason: 'level ${spec.level} too slow');
+      expect(sw.elapsedMilliseconds, lessThan(6000), reason: 'level ${spec.level} too slow');
     }
   });
 
@@ -35,7 +35,7 @@ void main() {
     final first = puzzleForLevel(specForLevel(1));
     final last = puzzleForLevel(specForLevel(20));
     expect(last.dependencyDepth, greaterThan(first.dependencyDepth));
-    expect(last.difficultyScore, greaterThan(first.difficultyScore * 3));
+    expect(last.difficultyScore, greaterThan(first.difficultyScore * 10));
   });
 
   test('no level is trivially free: some arrow must wait its turn', () {
@@ -45,7 +45,13 @@ void main() {
     }
   });
 
-  test('relaxes the arrow count when the board cannot take it', () {
+  test('candidate count scales down with the arrow count', () {
+    expect(candidatesFor(5), 24);
+    expect(candidatesFor(60), 10);
+    expect(candidatesFor(170), kMinCandidates);
+  });
+
+  test('places as many arrows as fit when the board cannot take them all', () {
     const impossible = LevelSpec(
       level: 1,
       width: 3,

@@ -280,6 +280,12 @@ abstract class AppLocalizations {
   /// **'An arrow in the way costs a life — find the free ones first.'**
   String get tutorialBlocked;
 
+  /// No description provided for @gameLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Laying out the arrows…'**
+  String get gameLoading;
+
   /// No description provided for @gamePause.
   ///
   /// In en, this message translates to:

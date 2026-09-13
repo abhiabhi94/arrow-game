@@ -4,6 +4,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/level_specs.dart';
@@ -21,15 +22,31 @@ typedef ClearedCallback = void Function(int level, int elapsedMs, int stars);
 /// The clock's resolution.
 const int kTickMs = 100;
 
+/// Builds a level's board; the default runs on a background isolate so the
+/// big late boards never freeze the UI (on web it runs inline).
+typedef PuzzleBuilder = Future<Puzzle> Function(LevelSpec spec);
+
+// coverage:ignore-start
+Future<Puzzle> defaultPuzzleBuilder(LevelSpec spec) => compute(puzzleForLevel, spec);
+// coverage:ignore-end
+
 class GameNotifier extends StateNotifier<GameState> {
+  /// Starts playing at once when [puzzle] is given (tests); otherwise shows
+  /// [GamePhase.loading] until [builder] delivers the board.
   GameNotifier(
     this.spec, {
     Puzzle? puzzle,
+    PuzzleBuilder builder = defaultPuzzleBuilder,
     this.haptics,
     this.onCleared,
     this.autoTick = true,
-  }) : super(GameState.fresh(spec, puzzle ?? puzzleForLevel(spec))) {
-    _startTimer();
+  }) : super(puzzle == null ? GameState.loading(spec) : GameState.fresh(spec, puzzle)) {
+    if (puzzle == null) {
+      _load(builder);
+    } else {
+      _ready.complete();
+      _startTimer();
+    }
   }
 
   final LevelSpec spec;
@@ -40,12 +57,24 @@ class GameNotifier extends StateNotifier<GameState> {
   final bool autoTick;
 
   Timer? _timer;
+  final Completer<void> _ready = Completer<void>();
+
+  /// Completes once the board is on screen (useful in tests).
+  Future<void> get ready => _ready.future;
+
+  Future<void> _load(PuzzleBuilder builder) async {
+    final puzzle = await builder(spec);
+    if (!mounted) return;
+    state = GameState.fresh(spec, puzzle);
+    _startTimer();
+    _ready.complete();
+  }
 
   /// Taps arrow [id]: it slides out if its exit path is clear, otherwise it
   /// bumps and costs a life.
   void tapArrow(int id) {
     if (!state.isPlaying || state.removed.contains(id)) return;
-    final puzzle = state.puzzle;
+    final puzzle = state.puzzle!;
     final token = state.moveToken + 1;
     if (puzzle.canExit(id, state.removed)) {
       final removed = <int>{...state.removed, id};
@@ -93,7 +122,7 @@ class GameNotifier extends StateNotifier<GameState> {
     if (!state.isPlaying || state.hintsLeft <= 0 || state.hintArrowId != null) {
       return;
     }
-    final id = state.puzzle.hintFor(state.removed);
+    final id = state.puzzle!.hintFor(state.removed);
     if (id == null) return;
     state = state.copyWith(hintArrowId: id, hintsLeft: state.hintsLeft - 1);
     haptics?.tap();
@@ -101,7 +130,9 @@ class GameNotifier extends StateNotifier<GameState> {
 
   /// Throws the attempt away and starts the same puzzle again.
   void restart() {
-    state = GameState.fresh(spec, state.puzzle);
+    final puzzle = state.puzzle;
+    if (puzzle == null) return;
+    state = GameState.fresh(spec, puzzle);
     _startTimer();
   }
 

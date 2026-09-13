@@ -20,7 +20,7 @@ import '../widgets/timer_bar.dart';
 
 /// Zoom steps for the board (pinch works too, within the same bounds).
 const double kMinZoom = 1.0;
-const double kMaxZoom = 3.0;
+const double kMaxZoom = 4.0;
 const double kZoomStep = 1.35;
 
 /// The gameplay screen: HUD (clock, arrows out, lives), the zoomable board,
@@ -182,11 +182,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
                             child: SizedBox.expand(
                               child: Padding(
                                 padding: const EdgeInsets.all(8),
-                                child: PuzzleBoard(
-                                  state: state,
-                                  showGrid: gridUnlocked && settings.gridLinesOn,
-                                  onTapArrow: notifier.tapArrow,
-                                ),
+                                child: state.isLoading
+                                    ? _LoadingView(message: l10n.gameLoading)
+                                    : PuzzleBoard(
+                                        state: state,
+                                        showGrid: gridUnlocked && settings.gridLinesOn,
+                                        onTapArrow: notifier.tapArrow,
+                                      ),
                               ),
                             ),
                           ),
@@ -344,13 +346,34 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     ),
                   ],
                 ),
-              GamePhase.playing => const SizedBox.shrink(),
+              GamePhase.playing || GamePhase.loading => const SizedBox.shrink(),
             },
           ],
         ),
       ),
     );
   }
+}
+
+class _LoadingView extends StatelessWidget {
+  const _LoadingView({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(height: 16),
+            Text(message, style: TextStyle(color: context.palette.textMuted)),
+          ],
+        ),
+      );
 }
 
 class _ProgressPill extends StatelessWidget {

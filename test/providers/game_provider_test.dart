@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/engine/cell.dart';
+import 'package:arrow_game/engine/puzzle.dart';
 import 'package:arrow_game/models/game_state.dart';
 import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/game_provider.dart';
@@ -30,6 +33,33 @@ void main() {
     expect(n.state.arrowsTotal, 3);
     expect(n.state.hintsLeft, 3);
     n.dispose();
+  });
+
+  test('without a puzzle it loads first, ignoring input until the board lands', () async {
+    final completer = Completer<Puzzle>();
+    final n = GameNotifier(sampleSpec, builder: (_) => completer.future, autoTick: false);
+    expect(n.state.isLoading, isTrue);
+    n.tapArrow(0);
+    n.useHint();
+    n.restart();
+    n.tick(1000);
+    expect(n.state.isLoading, isTrue);
+    expect(n.state.elapsedMs, 0);
+
+    completer.complete(samplePuzzle());
+    await n.ready;
+    expect(n.state.phase, GamePhase.playing);
+    expect(n.state.arrowsTotal, 3);
+    n.dispose();
+  });
+
+  test('a board that lands after disposal is dropped', () async {
+    final completer = Completer<Puzzle>();
+    final n = GameNotifier(sampleSpec, builder: (_) => completer.future, autoTick: false);
+    n.dispose();
+    completer.complete(samplePuzzle());
+    await Future<void>.delayed(Duration.zero);
+    expect(n.ready, doesNotComplete);
   });
 
   test('a free arrow slides out; the last one clears the level', () {
@@ -209,10 +239,11 @@ void main() {
     final notifier = container.read(gameProvider(1).notifier);
     expect(notifier.spec, same(specForLevel(1)));
     expect(notifier.haptics, isNotNull);
+    await notifier.ready;
     expect(notifier.state.arrowsTotal, specForLevel(1).arrows);
     notifier.pause(); // stop the real timer from advancing the clock
     notifier.resume();
-    for (final id in notifier.state.puzzle.solvingOrder()!) {
+    for (final id in notifier.state.puzzle!.solvingOrder()!) {
       notifier.tapArrow(id);
     }
     expect(notifier.state.phase, GamePhase.cleared);

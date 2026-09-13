@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:arrow_game/data/level_specs.dart';
+import 'package:arrow_game/engine/puzzle.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
 import 'package:arrow_game/models/game_state.dart';
@@ -340,6 +343,33 @@ void main() {
     expect(find.byType(PuzzleBoard), findsOneWidget);
   });
 
+  testWidgets('shows a loading view until the board arrives', (tester) async {
+    final completer = Completer<Puzzle>();
+    await usePhoneSurface(tester);
+    await pumpApp(
+      tester,
+      const GameScreen(level: 1),
+      extraOverrides: [
+        gameProvider.overrideWith(
+          (ref, level) => GameNotifier(
+            sampleSpecFor(level),
+            builder: (_) => completer.future,
+            autoTick: false,
+          ),
+        ),
+      ],
+    );
+    await _settle(tester, 100);
+    expect(find.text('Laying out the arrows…'), findsOneWidget);
+    expect(find.byType(PuzzleBoard), findsNothing);
+    expect(find.byTooltip('Pause'), findsNothing);
+
+    completer.complete(samplePuzzle());
+    await _settle(tester, 300);
+    expect(find.byType(PuzzleBoard), findsOneWidget);
+    expect(find.text('Laying out the arrows…'), findsNothing);
+  });
+
   testWidgets('the real level puzzle renders too', (tester) async {
     await usePhoneSurface(tester);
     await pumpApp(
@@ -357,6 +387,7 @@ void main() {
     );
     await _settle(tester, 300);
     expect(find.text('Knot'), findsOneWidget);
+    expect(find.text('Level 7'), findsOneWidget);
     expect(find.text('0/${specForLevel(7).arrows}'), findsOneWidget);
   });
 }

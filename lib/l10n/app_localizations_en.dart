@@ -110,6 +110,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'An arrow in the way costs a life — find the free ones first.';
 
   @override
+  String get gameLoading => 'Laying out the arrows…';
+
+  @override
   String get gamePause => 'Pause';
 
   @override

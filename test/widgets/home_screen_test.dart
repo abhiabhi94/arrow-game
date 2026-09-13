@@ -1,11 +1,25 @@
+import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
 import 'package:arrow_game/screens/game_screen.dart';
 import 'package:arrow_game/screens/home_screen.dart';
 import 'package:arrow_game/screens/settings_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/pump_app.dart';
+import '../support/sample_puzzle.dart';
+
+/// Opening a level from home must not spin up the real generator/timer.
+final List<Override> _gameOverride = [
+  gameProvider.overrideWith(
+    (ref, level) => GameNotifier(
+      sampleSpecFor(level),
+      puzzle: samplePuzzle(),
+      autoTick: false,
+    ),
+  ),
+];
 
 void main() {
   testWidgets('renders title, stars tally, play card and 20 tiles', (tester) async {
@@ -76,7 +90,7 @@ void main() {
 
   testWidgets('tapping a tile opens the game; the play card too', (tester) async {
     await usePhoneSurface(tester);
-    await pumpApp(tester, const HomeScreen());
+    await pumpApp(tester, const HomeScreen(), extraOverrides: _gameOverride);
     await tester.pump(const Duration(milliseconds: 300));
 
     await tester.tap(find.text('3'));

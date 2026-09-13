@@ -13,8 +13,10 @@ import '../ui/colors.dart';
 const double kBumpDistance = 0.3;
 
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
-/// on its way out), optional grid lines, the hint glow and the blocked-cell
-/// flash, and turns taps into [onTapArrow] calls.
+/// on its way out) in a single ink — thin lines with a small head, like a
+/// printed puzzle — plus optional grid lines, the hint glow and the
+/// blocked-cell flash, and turns taps into [onTapArrow] calls. Requires a
+/// loaded [GameState.puzzle].
 ///
 /// Game state changes instantly on a tap; the slide-out and bump animations
 /// are purely visual and live here, keyed on [GameState.moveToken].
@@ -64,8 +66,9 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   }
 
   void _startExit(int id) {
-    final arrow = widget.state.puzzle.arrows[id];
-    final travel = arrow.length + arrow.exitRay(widget.state.puzzle.width, widget.state.puzzle.height).length;
+    final puzzle = widget.state.puzzle!;
+    final arrow = puzzle.arrows[id];
+    final travel = arrow.length + arrow.exitRay(puzzle.width, puzzle.height).length;
     final controller = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: (140 + travel * 55).clamp(300, 900)),
@@ -119,7 +122,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   }
 
   void _onTapUp(TapUpDetails d, double cellSize) {
-    final puzzle = widget.state.puzzle;
+    final puzzle = widget.state.puzzle!;
     final x = (d.localPosition.dx / cellSize).floor();
     final y = (d.localPosition.dy / cellSize).floor();
     final cell = Cell(x, y);
@@ -131,7 +134,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final puzzle = widget.state.puzzle;
+    final puzzle = widget.state.puzzle!;
     final p = context.palette;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -186,7 +189,7 @@ class _BoardPainter extends CustomPainter {
   final int? bumpId;
   final double? bump;
 
-  Puzzle get puzzle => state.puzzle;
+  Puzzle get puzzle => state.puzzle!;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -261,8 +264,10 @@ class _BoardPainter extends CustomPainter {
       return Offset.lerp(_center(track[i], cs), _center(track[i + 1], cs), f)!;
     }
 
-    final ink = palette.arrowInks[arrow.id % palette.arrowInks.length];
-    final stroke = cs * 0.28;
+    final ink = palette.arrowInk;
+    // Scales with the cell but stays a pen line on small boards, where a
+    // cell is huge and a proportional stroke would turn into a slab.
+    final stroke = min(cs * 0.2, 9.0);
     final points = <Offset>[for (var i = 0; i < arrow.length; i++) at(offset + i)];
     final headAt = offset + arrow.length - 1;
     final head = at(headAt);
@@ -273,7 +278,7 @@ class _BoardPainter extends CustomPainter {
     dir = dir / dir.distance;
 
     // Body ends a bit short of the head so the triangle caps it cleanly.
-    final headLen = cs * 0.42;
+    final headLen = min(cs * 0.36, 18.0);
     final bodyEnd = head - dir * (headLen * 0.55);
     final path = Path()..moveTo(points.first.dx, points.first.dy);
     for (var i = 1; i < points.length - 1; i++) {
@@ -307,9 +312,9 @@ class _BoardPainter extends CustomPainter {
       canvas.drawLine(head - dir * (cs * 0.25), bodyEnd, paint);
     }
 
-    final tip = head + dir * (headLen * 0.75);
+    final tip = head + dir * (headLen * 0.8);
     final base = head - dir * (headLen * 0.55);
-    final side = Offset(-dir.dy, dir.dx) * (headLen * 0.7);
+    final side = Offset(-dir.dy, dir.dx) * (headLen * 0.75);
     final tri = Path()
       ..moveTo(tip.dx, tip.dy)
       ..lineTo(base.dx + side.dx, base.dy + side.dy)
@@ -341,7 +346,12 @@ class _BoardPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BoardPainter old) =>
-      old.state != state ||
+      // The clock ticks ten times a second; only board-relevant state counts.
+      old.state.puzzle != state.puzzle ||
+      old.state.removed != state.removed ||
+      old.state.hintArrowId != state.hintArrowId ||
+      old.state.blockedCell != state.blockedCell ||
+      old.state.moveToken != state.moveToken ||
       old.showGrid != showGrid ||
       old.palette != palette ||
       !_sameMap(old.exits, exits) ||

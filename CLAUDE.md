@@ -8,8 +8,9 @@ A playful cross-platform (Android + iOS) **arrow exit puzzle** built with
 Flutter (in the spirit of "Arrow Exit Puzzle"). Bent arrow pieces sit on a
 grid; tapping one slides it along its own path, the way its head points, until
 it leaves the board. An arrow whose exit path runs into another arrow bumps
-back and costs a life. 20 fixed, procedurally generated levels of growing
-size/tangle, 3 lives per level (losing all three resets the level behind a
+back and costs a life. 20 fixed, procedurally generated levels on a steep
+curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50), drawn in a
+single ink like a printed puzzle, 3 lives per level (losing all three resets the level behind a
 "Retry" screen), a clock on every level ("Time's up" → replay the same level),
 3 hints per level, zoom in/out, an earned grid-lines toggle (after level 4),
 1–3 stars per clear, local progress, light/dark theme, haptics.
@@ -106,12 +107,21 @@ Key patterns:
   edge, in its heading) is free of other arrows still on the board. Arrows
   leave entirely, so "who blocks whom" is fixed; solvable ⇔ acyclic.
 - **Generation:** `puzzle_generator.dart` places arrows in reverse solving
-  order (each new head's ray is clear at placement), grows bodies that prefer
-  cells on existing rays, keeps the best of several placements per arrow and
-  the most tangled of `kGeneratorCandidates` boards. `puzzleForLevel(spec)`
-  seeds `Random` from `LevelSpec.seed`, so each level is a fixed puzzle.
+  order: it enumerates every (head, heading) whose exit ray is clear, samples
+  deep heads first (inside-out fill keeps the free area an outer ring), grows
+  mostly-straight bodies that prefer cells on existing rays and cells hugging
+  other arrows, keeps the best of `kPlacementChoices` bodies per arrow and
+  the fullest/most tangled of `candidatesFor(arrows)` boards. It reaches
+  ~75–85% fill; the level table is sized at roughly ten cells per arrow so
+  every level gets its full count. `puzzleForLevel(spec)` seeds `Random`
+  from `LevelSpec.seed`, so each level is a fixed puzzle. It runs on a
+  background isolate (`defaultPuzzleBuilder` → `compute`) behind
+  `GamePhase.loading`; on web it runs inline (~1 s for the finale).
+  `dart run tool/level_report.dart [level] [extraSeeds]` prints arrows placed
+  vs asked, fill, depth, free-at-start and timing — run it after touching the
+  table or the generator.
 - **Game loop:** `GameNotifier` owns the phase machine
-  (`playing ⇄ paused → cleared | outOfLives | timeUp`). `tapArrow` updates
+  (`loading → playing ⇄ paused → cleared | outOfLives | timeUp`). `tapArrow` updates
   state instantly; `PuzzleBoard` animates the slide-out / bump purely
   visually, keyed on `GameState.moveToken`. A 100 ms `Timer.periodic` drives
   `tick()` when `autoTick` is true; tests pass `autoTick: false`.
@@ -120,7 +130,11 @@ Key patterns:
 - **Grid lines:** `Settings.gridLinesOn` (persisted) but the toggle is earned:
   `ProgressNotifier.gridLinesUnlocked` (clear level `kGridLinesUnlockAfterLevel`
   = 4; always on in the testing build).
-- **Zoom:** `InteractiveViewer` (pinch) + toolbar buttons, `kMinZoom`..`kMaxZoom`.
+- **Zoom:** `InteractiveViewer` (pinch) + toolbar buttons, `kMinZoom`..`kMaxZoom`
+  (1×–4×; the late boards are 30+ cells wide, so zoom is how you tap them).
+- **Board look:** one ink (`palette.arrowInk`), thin strokes, small heads —
+  no per-arrow colour. The hint glow and the blocked flash are the only
+  colour on the board.
 - **Difficulty:** every knob is in `data/level_specs.dart`; the tests in
   `test/data/level_specs_test.dart` and `test/engine/puzzle_generator_test.dart`
   pin the curve (sizes never shrink, every level generates its full arrow
@@ -136,7 +150,8 @@ Key patterns:
   Don't add `coverage:ignore` to hide untested logic — only true glue.
 - Widget tests override `gameProvider` with `autoTick: false` and the tiny
   hand-built board in `test/support/sample_puzzle.dart` (taps are aimed at
-  grid cells). `flutter_animate` schedules a zero-delay start on every mount,
+  grid cells); pass `puzzle:` to skip the loading phase, or a `builder:`
+  returning a `Completer` future to test it. `flutter_animate` schedules a zero-delay start on every mount,
   so tests pump a frame before advancing the clock (see `_settle` in
   `test/widgets/game_screen_test.dart`).
 - Screenshot driver finds widgets by accessible name: give tappable widgets a

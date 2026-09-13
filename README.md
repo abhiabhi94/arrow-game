@@ -14,10 +14,13 @@ the way its head points, until it leaves the board. Get every arrow out.
 - **A clock on every level** (1–5 minutes, growing with the board). Run out
   and it's "Time's up" — replay the same level.
 - **20 levels**, each a fixed, procedurally generated board that is solvable
-  by construction. Boards grow from 4×4 with 3 arrows to 10×11 with 16, and
-  the "who must go before whom" chains get longer.
+  by construction. The curve is steep: 5 arrows on a 5×6 board to learn on,
+  59 arrows on 19×26 by level 8, 144 arrows on 32×50 for the finale — and
+  the "who must go before whom" chains get longer all the way.
 - **3 hints per level** light up an arrow that can go right now.
-- **Zoom** in/out (buttons or pinch) for the big boards.
+- **Zoom** in/out (buttons or pinch, up to 4×) — the late boards need it.
+- **One ink.** Arrows are thin dark lines like a printed puzzle; only the
+  hint glow and a blocked bump add colour.
 - **Grid lines** are an earned toggle: clear level 4 to unlock them.
 - **Stars**: three for a flawless run, two for one slip, one for two. Best
   stars and best time are kept per level. Confetti, pause (also on
@@ -28,7 +31,8 @@ the way its head points, until it leaves the board. Get every arrow out.
 
 Pure-Dart, zero-Flutter **engine** (`lib/engine/`) — cells, arrow pieces, the
 puzzle rules (exit rays, blockers, solvability, hints) and a reverse-order
-generator that only ever produces solvable boards — plus an immutable
+generator that only ever produces solvable boards (run on a background
+isolate) — plus an immutable
 `GameState` driven by a Riverpod `StateNotifier`
 (`lib/providers/game_provider.dart`). The level table lives in
 `lib/data/level_specs.dart`; the board is a `CustomPainter` that also

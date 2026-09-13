@@ -9,9 +9,10 @@ import 'level_spec.dart';
 /// Hints available per attempt.
 const int maxHints = 3;
 
-/// [paused] freezes the clock; the last three are terminal and each maps to
-/// its own result overlay.
-enum GamePhase { playing, paused, cleared, outOfLives, timeUp }
+/// [loading] is the moment the board is being generated (off-thread on
+/// mobile); [paused] freezes the clock; the last three are terminal and each
+/// maps to its own result overlay.
+enum GamePhase { loading, playing, paused, cleared, outOfLives, timeUp }
 
 /// What the most recent tap did, for UI feedback.
 enum MoveOutcome { none, exited, blocked }
@@ -32,6 +33,22 @@ class GameState {
     required this.moveToken,
   });
 
+  /// The board is still being generated.
+  factory GameState.loading(LevelSpec spec) => GameState(
+        spec: spec,
+        puzzle: null,
+        phase: GamePhase.loading,
+        removed: const <int>{},
+        mistakes: 0,
+        hintsLeft: maxHints,
+        hintArrowId: null,
+        elapsedMs: 0,
+        lastMoveId: null,
+        lastOutcome: MoveOutcome.none,
+        blockedCell: null,
+        moveToken: 0,
+      );
+
   /// A fresh attempt at [puzzle], clock at zero, already playing.
   factory GameState.fresh(LevelSpec spec, Puzzle puzzle) => GameState(
         spec: spec,
@@ -49,7 +66,9 @@ class GameState {
       );
 
   final LevelSpec spec;
-  final Puzzle puzzle;
+
+  /// The board, or null while [GamePhase.loading].
+  final Puzzle? puzzle;
   final GamePhase phase;
 
   /// Ids of arrows that have left the board.
@@ -76,7 +95,7 @@ class GameState {
 
   int get level => spec.level;
   int get arrowsOut => removed.length;
-  int get arrowsTotal => puzzle.arrowCount;
+  int get arrowsTotal => puzzle?.arrowCount ?? spec.arrows;
   int get livesLeft => maxLives - mistakes;
   int get remainingMs =>
       (spec.timeLimitMs - elapsedMs).clamp(0, spec.timeLimitMs);
@@ -85,8 +104,9 @@ class GameState {
   double get timeFraction => remainingMs / spec.timeLimitMs;
 
   /// Fraction of arrows out, 0..1.
-  double get progress => arrowsOut / arrowsTotal;
+  double get progress => arrowsTotal == 0 ? 0 : arrowsOut / arrowsTotal;
 
+  bool get isLoading => phase == GamePhase.loading;
   bool get isPlaying => phase == GamePhase.playing;
   bool get isOver =>
       phase == GamePhase.cleared ||

@@ -29,14 +29,19 @@ void main() {
       );
     }
     for (final s in levelSpecs) {
-      expect(s.timeLimitMs, inInclusiveRange(60000, 300000), reason: 'level ${s.level}');
-      // At least ten seconds per arrow, so the clock is a nudge, not a panic.
-      expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(10000), reason: 'level ${s.level}');
+      // A minute at least, never past twenty; at least four seconds an arrow.
+      expect(s.timeLimitMs, inInclusiveRange(60000, 1200000), reason: 'level ${s.level}');
+      expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(4000), reason: 'level ${s.level}');
     }
+    // The curve is steep: a handful to learn on, dozens by the middle,
+    // well over a hundred by the end.
+    expect(specForLevel(1).arrows, lessThanOrEqualTo(6));
+    expect(specForLevel(8).arrows, greaterThanOrEqualTo(50));
+    expect(specForLevel(20).arrows, greaterThanOrEqualTo(140));
   });
 
   test('seed and toString', () {
     expect(specForLevel(1).seed, isNot(specForLevel(2).seed));
-    expect(specForLevel(1).toString(), 'LevelSpec(1: 4x4, 3 arrows, 60000ms)');
+    expect(specForLevel(1).toString(), 'LevelSpec(1: 5x6, 5 arrows, 67000ms)');
   });
 }

@@ -5,10 +5,21 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/sample_puzzle.dart';
 
 void main() {
+  test('loading state has no board yet', () {
+    final s = GameState.loading(sampleSpec);
+    expect(s.isLoading, isTrue);
+    expect(s.isPlaying, isFalse);
+    expect(s.puzzle, isNull);
+    expect(s.arrowsTotal, sampleSpec.arrows);
+    expect(s.progress, 0);
+    expect(s.hintsLeft, maxHints);
+  });
+
   test('fresh state', () {
     final s = GameState.fresh(sampleSpec, samplePuzzle());
     expect(s.level, 1);
     expect(s.phase, GamePhase.playing);
+    expect(s.isLoading, isFalse);
     expect(s.isPlaying, isTrue);
     expect(s.isOver, isFalse);
     expect(s.livesLeft, 3);
@@ -57,7 +68,7 @@ void main() {
     for (final p in [GamePhase.cleared, GamePhase.outOfLives, GamePhase.timeUp]) {
       expect(base.copyWith(phase: p).isOver, isTrue);
     }
-    for (final p in [GamePhase.playing, GamePhase.paused]) {
+    for (final p in [GamePhase.loading, GamePhase.playing, GamePhase.paused]) {
       expect(base.copyWith(phase: p).isOver, isFalse);
     }
   });

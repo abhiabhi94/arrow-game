@@ -35,23 +35,14 @@ const Color _lTextInk = Color(0xFF2D2A4A);
 const Color _lTextMuted = Color(0xFF6E6A8F);
 const Color _lTextFaint = Color(0xFFA6A2C4);
 
-// Board: a white card with faint grid lines; arrows cycle through a small
-// set of saturated inks so neighbours read as different pieces.
+// Board: a white card with faint grid lines.
 const Color _lBoardSurface = Color(0xFFFFFFFF);
 const Color _lGridLine = Color(0xFFE4E0FF);
 const Color _lBoardBorder = Color(0xFFDAD7F2);
 const Color _lHintGlow = Color(0x66FFC53D);
 const Color _lBlockedFlash = Color(0x80FF6B6B);
-const List<Color> _lArrowInks = <Color>[
-  Color(0xFF2D2A4A), // ink
-  Color(0xFF6C5CE7), // indigo
-  Color(0xFFFF6B6B), // coral
-  Color(0xFF12A876), // green
-  Color(0xFFE0A100), // amber
-  Color(0xFF0EA5E9), // sky
-  Color(0xFFD946EF), // magenta
-  Color(0xFF8B5E34), // brown
-];
+// One ink for every arrow, like a printed puzzle: colour would only shout.
+const Color _lArrowInk = Color(0xFF2D2A4A);
 
 // HUD
 const Color _lHeartFull = Color(0xFFFF6B6B);
@@ -92,16 +83,7 @@ const Color _dGridLine = Color(0xFF322E4A);
 const Color _dBoardBorder = Color(0xFF3A3560);
 const Color _dHintGlow = Color(0x80FFCE52);
 const Color _dBlockedFlash = Color(0x99FF7B7B);
-const List<Color> _dArrowInks = <Color>[
-  Color(0xFFEAE7F7), // near-white ink
-  Color(0xFFB7AEFF), // lavender
-  Color(0xFFFF7B7B), // coral
-  Color(0xFF3FE0A6), // mint
-  Color(0xFFFFCE52), // sun
-  Color(0xFF5BC6F5), // sky
-  Color(0xFFE879F9), // magenta
-  Color(0xFFD2A679), // tan
-];
+const Color _dArrowInk = Color(0xFFEAE7F7);
 
 const Color _dHeartFull = Color(0xFFFF7B7B);
 const Color _dHeartEmpty = Color(0xFF3A3560);
@@ -139,7 +121,7 @@ class ArrowPalette {
     required this.boardBorder,
     required this.hintGlow,
     required this.blockedFlash,
-    required this.arrowInks,
+    required this.arrowInk,
     required this.heartFull,
     required this.heartEmpty,
     required this.timerTrack,
@@ -171,8 +153,8 @@ class ArrowPalette {
   final Color hintGlow;
   final Color blockedFlash;
 
-  /// Inks for arrow pieces; arrow `i` uses `arrowInks[i % length]`.
-  final List<Color> arrowInks;
+  /// The single ink every arrow is drawn in.
+  final Color arrowInk;
   final Color heartFull;
   final Color heartEmpty;
   final Color timerTrack;
@@ -203,7 +185,7 @@ class ArrowPalette {
     boardBorder: _lBoardBorder,
     hintGlow: _lHintGlow,
     blockedFlash: _lBlockedFlash,
-    arrowInks: _lArrowInks,
+    arrowInk: _lArrowInk,
     heartFull: _lHeartFull,
     heartEmpty: _lHeartEmpty,
     timerTrack: _lTimerTrack,
@@ -235,7 +217,7 @@ class ArrowPalette {
     boardBorder: _dBoardBorder,
     hintGlow: _dHintGlow,
     blockedFlash: _dBlockedFlash,
-    arrowInks: _dArrowInks,
+    arrowInk: _dArrowInk,
     heartFull: _dHeartFull,
     heartEmpty: _dHeartEmpty,
     timerTrack: _dTimerTrack,
