@@ -8,9 +8,9 @@ void main() {
   testWidgets('lists the bundled track with artist and licence', (tester) async {
     await pumpApp(tester, const CreditsScreen());
     expect(find.text('Credits'), findsOneWidget);
-    expect(find.text('Permafrost'), findsOneWidget);
-    expect(find.text('by Scott Buckley'), findsOneWidget);
-    expect(find.textContaining('CC BY 4.0'), findsOneWidget);
+    expect(find.text('Game'), findsOneWidget);
+    expect(find.text('by The_Mountain'), findsOneWidget);
+    expect(find.textContaining('Pixabay Content License · pixabay.com'), findsOneWidget);
     expect(audioCredits, hasLength(1));
   });
 

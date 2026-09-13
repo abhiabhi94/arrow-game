@@ -1,5 +1,5 @@
-/// Attribution entries for bundled background music (CC-BY requires crediting
-/// each track).
+/// Attribution entries for bundled background music. The Pixabay Content
+/// License does not require a credit, but the artist deserves one anyway.
 library;
 
 class TrackCredit {
@@ -16,14 +16,12 @@ class TrackCredit {
   final String sourceUrl;
 }
 
-/// The bundled tracks and their attributions. The artist's required credit line
-/// is: "'Permafrost' by Scott Buckley - released under CC-BY 4.0.
-/// www.scottbuckley.com.au".
+/// The bundled tracks and their attributions.
 const List<TrackCredit> audioCredits = <TrackCredit>[
   TrackCredit(
-    title: 'Permafrost',
-    artist: 'Scott Buckley',
-    license: 'CC BY 4.0',
-    sourceUrl: 'www.scottbuckley.com.au',
+    title: 'Game',
+    artist: 'The_Mountain',
+    license: 'Pixabay Content License',
+    sourceUrl: 'pixabay.com/music/beats-game-179496',
   ),
 ];

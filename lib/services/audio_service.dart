@@ -11,9 +11,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/settings.dart';
 
 /// The bundled looping track, relative to `assets/` (audioplayers' AssetSource
-/// prefixes that itself). "Permafrost" by Scott Buckley, CC-BY 4.0 — see
-/// `lib/data/audio_credits.dart`.
-const String kBackgroundTrack = 'audio/permafrost.mp3';
+/// prefixes that itself). "Game" by The_Mountain, Pixabay Content License —
+/// see `lib/data/audio_credits.dart`.
+const String kBackgroundTrack = 'audio/game.mp3';
 
 /// Minimal audio operations the service needs.
 abstract class AudioBackend {

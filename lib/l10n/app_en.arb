@@ -122,7 +122,7 @@
   "howToPlayBody": "Replay the two-minute walkthrough",
   "settingsCredits": "Music credits",
   "creditsTitle": "Credits",
-  "creditsIntro": "The background music is released under a Creative Commons licence that asks for credit — here it is, gladly.",
+  "creditsIntro": "The background music is free to use under the Pixabay Content License. A credit is not required, but the artist has earned one.",
   "creditsBy": "by {artist}",
   "@creditsBy": { "placeholders": { "artist": { "type": "String" } } },
   "settingsResetProgress": "Reset progress",

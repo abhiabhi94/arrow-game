@@ -4,7 +4,7 @@ import '../data/audio_credits.dart';
 import '../l10n/app_localizations.dart';
 import '../ui/colors.dart';
 
-/// Lists music attributions (required by the CC-BY licence).
+/// Lists music attributions.
 class CreditsScreen extends StatelessWidget {
   const CreditsScreen({super.key, this.credits = audioCredits});
 

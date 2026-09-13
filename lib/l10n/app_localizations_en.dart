@@ -337,7 +337,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get creditsIntro =>
-      'The background music is released under a Creative Commons licence that asks for credit — here it is, gladly.';
+      'The background music is free to use under the Pixabay Content License. A credit is not required, but the artist has earned one.';
 
   @override
   String creditsBy(String artist) {

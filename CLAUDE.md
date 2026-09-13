@@ -111,7 +111,7 @@ lib/
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider
   services/            haptics_service (injectable HapticEngine), sfx_service (the whoosh),
                        audio_service (looping music)
-  data/audio_credits.dart  CC-BY attribution for the bundled track
+  data/audio_credits.dart  attribution for the bundled track
   screens/             onboarding (interactive 3-step walkthrough), home (journey trail),
                        game (board + toolbar + overlays), settings, credits
   ui/                  colors.dart (light+dark ArrowPalette), theme.dart (Material 3 + Google Sans Flex)
@@ -170,7 +170,7 @@ Key patterns:
   resets after 1.5 s. The WAV is synthesised by `tool/make_sfx.py` (pure
   Python); `Settings.sfxOn` gates it (on by default).
 - **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
-  "Permafrost" by Scott Buckley (CC-BY 4.0, `assets/audio/`), credited on
+  "Game" by The_Mountain (Pixabay Content License, `assets/audio/game.mp3`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
   settings once on launch, on every change, and pauses on background.
 - **Onboarding:** `OnboardingScreen` — two tiny boards played for real
