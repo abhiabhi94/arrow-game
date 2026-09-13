@@ -87,20 +87,21 @@ def draw_card(img, cx, cy, span):
     bx0, by0, bx1, by1 = x0 + inset, y0 + inset, x1 - inset, y1 - inset
     board = bx1 - bx0
     cell = board / 4
-    centres = [bx0 + cell * (i + 0.5) for i in range(4)]
+    xs = [bx0 + cell * (i + 0.5) for i in range(4)]
+    ys = [by0 + cell * (i + 0.5) for i in range(4)]
     grid_w = max(1, int(span * 0.012))
-    for c in centres:
-        d.line([(c, by0), (c, by1)], fill=GRID, width=grid_w)
-        d.line([(bx0, c), (bx1, c)], fill=GRID, width=grid_w)
+    for x in xs:
+        d.line([(x, by0), (x, by1)], fill=GRID, width=grid_w)
+    for y in ys:
+        d.line([(bx0, y), (bx1, y)], fill=GRID, width=grid_w)
 
     stroke = span * 0.052
-    c = centres
     # Two arrows still on the board, in ink.
-    arrow(d, [(c[0], c[0]), (c[0], c[2]), (c[1], c[2])], (1, 0), stroke, INK)
-    arrow(d, [(c[3], c[3]), (c[3], c[1])], (0, -1), stroke, INK)
+    arrow(d, [(xs[0], ys[0]), (xs[0], ys[2]), (xs[1], ys[2])], (1, 0), stroke, INK)
+    arrow(d, [(xs[3], ys[3]), (xs[3], ys[1])], (0, -1), stroke, INK)
     # The coral arrow: its head is already clear of the card's top edge.
     exit_y = y0 - span * 0.10
-    arrow(d, [(c[1], c[3]), (c[2], c[3]), (c[2], exit_y)], (0, -1), stroke, CORAL)
+    arrow(d, [(xs[1], ys[3]), (xs[2], ys[3]), (xs[2], exit_y)], (0, -1), stroke, CORAL)
 
 
 def make_full(path):
