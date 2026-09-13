@@ -8,7 +8,9 @@ name: Release
 # release), which also lets you require a reviewer before a build runs:
 #   ANDROID_UPLOAD_KEYSTORE_BASE64    the upload .jks, base64-encoded
 #   ANDROID_UPLOAD_KEYSTORE_PASSWORD  keystore password
-#   ANDROID_UPLOAD_KEY_PASSWORD       key password
+#   ANDROID_UPLOAD_KEY_PASSWORD       key password (optional, defaults to the
+#                                     keystore password — PKCS12 keystores,
+#                                     the keytool default, share one password)
 #   ANDROID_UPLOAD_KEY_ALIAS          key alias (optional, defaults to "upload")
 
 on:
@@ -45,12 +47,10 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
         run: |
           missing=()
           [ -n "$KEYSTORE_BASE64" ] || missing+=(ANDROID_UPLOAD_KEYSTORE_BASE64)
           [ -n "$KEYSTORE_PASSWORD" ] || missing+=(ANDROID_UPLOAD_KEYSTORE_PASSWORD)
-          [ -n "$KEY_PASSWORD" ] || missing+=(ANDROID_UPLOAD_KEY_PASSWORD)
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "::error::Missing repository secrets: ${missing[*]}. See docs/release.md."
             exit 1
@@ -101,13 +101,32 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
         run: |
+          set -o pipefail
           echo "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
           cat > android/key.properties <<PROPS
           storePassword=$KEYSTORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
+          keyPassword=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}
           keyAlias=${KEY_ALIAS:-upload}
           storeFile=$KEYSTORE_PATH
           PROPS
+
+      # Opens the keystore the way Gradle will, so a corrupt upload, a wrong
+      # password or a missing alias fails here in a second instead of after
+      # the five-minute compile. Prints the certificate fingerprint (public)
+      # so it can be compared with `keytool -list` on the machine that made it.
+      - name: Verify upload keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+        run: |
+          alias=${KEY_ALIAS:-upload}
+          size=$(stat -c %s "$KEYSTORE_PATH")
+          if ! keytool -list -keystore "$KEYSTORE_PATH" -storepass:env KEYSTORE_PASSWORD \
+               -alias "$alias" > keytool.out 2>&1; then
+            echo "::error::Cannot open key '$alias' in the upload keystore ($size bytes): $(tr '\n' ' ' < keytool.out)— check ANDROID_UPLOAD_KEYSTORE_BASE64, ANDROID_UPLOAD_KEYSTORE_PASSWORD and ANDROID_UPLOAD_KEY_ALIAS. See docs/release.md."
+            exit 1
+          fi
+          echo "Upload keystore OK ($size bytes): $(grep -i fingerprint keytool.out)"
 
       - name: Resolve version
         id: version
