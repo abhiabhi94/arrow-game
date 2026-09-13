@@ -8,7 +8,9 @@ name: Release
 # release), which also lets you require a reviewer before a build runs:
 #   ANDROID_UPLOAD_KEYSTORE_BASE64    the upload .jks, base64-encoded
 #   ANDROID_UPLOAD_KEYSTORE_PASSWORD  keystore password
-#   ANDROID_UPLOAD_KEY_PASSWORD       key password
+#   ANDROID_UPLOAD_KEY_PASSWORD       key password (optional, defaults to the
+#                                     keystore password — PKCS12 keystores,
+#                                     the keytool default, share one password)
 #   ANDROID_UPLOAD_KEY_ALIAS          key alias (optional, defaults to "upload")
 
 on:
@@ -45,12 +47,10 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
         run: |
           missing=()
           [ -n "$KEYSTORE_BASE64" ] || missing+=(ANDROID_UPLOAD_KEYSTORE_BASE64)
           [ -n "$KEYSTORE_PASSWORD" ] || missing+=(ANDROID_UPLOAD_KEYSTORE_PASSWORD)
-          [ -n "$KEY_PASSWORD" ] || missing+=(ANDROID_UPLOAD_KEY_PASSWORD)
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "::error::Missing repository secrets: ${missing[*]}. See docs/release.md."
             exit 1
@@ -104,7 +104,7 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
           cat > android/key.properties <<PROPS
           storePassword=$KEYSTORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
+          keyPassword=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}
           keyAlias=${KEY_ALIAS:-upload}
           storeFile=$KEYSTORE_PATH
           PROPS

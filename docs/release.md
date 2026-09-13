@@ -30,9 +30,13 @@ secrets → Add secret. Or with the `gh` CLI:
 ```bash
 gh secret set --env release ANDROID_UPLOAD_KEYSTORE_BASE64 --body "$(base64 -w0 ~/keys/arrow-upload.jks)"
 gh secret set --env release ANDROID_UPLOAD_KEYSTORE_PASSWORD   # prompts for the value
-gh secret set --env release ANDROID_UPLOAD_KEY_PASSWORD
-gh secret set --env release ANDROID_UPLOAD_KEY_ALIAS --body upload   # optional, defaults to "upload"
+gh secret set --env release ANDROID_UPLOAD_KEY_ALIAS --body upload     # optional, defaults to "upload"
+gh secret set --env release ANDROID_UPLOAD_KEY_PASSWORD                # optional, see below
 ```
+
+`ANDROID_UPLOAD_KEY_PASSWORD` is only needed when the key's password differs
+from the keystore's. `keytool` creates PKCS12 keystores by default, and those
+have a single password for both, so most setups can skip it.
 
 An environment also lets you add protection rules (Settings → Environments
 → release): "Required reviewers" makes every release build wait for an
