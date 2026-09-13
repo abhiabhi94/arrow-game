@@ -265,7 +265,7 @@ let a feature branch become the repository's HEAD.
 
 GitHub Actions runs on every push to `main` and every PR targeting `main`
 (`.github/workflows/ci.yml`). Flutter is pinned in **`.flutter-version`**
-(3.44.8 / stable — match `.metadata`; bump both together; the session-start
+(3.47.4 / stable — match `.metadata`; bump both together; the session-start
 hook reads the same file). Job "Analyze & test" runs `flutter analyze
 --fatal-infos` and `bash tool/coverage.sh 92`. Job "Web smoke & screenshots"
 builds the web app, drives it in headless Chromium (`tool/screenshot.mjs`),
