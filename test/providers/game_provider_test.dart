@@ -4,11 +4,13 @@ import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/engine/puzzle.dart';
 import 'package:arrow_game/models/game_state.dart';
+import 'package:arrow_game/models/saved_game.dart';
 import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
 import 'package:arrow_game/services/haptics_service.dart';
 import 'package:arrow_game/services/sfx_service.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,13 +23,17 @@ GameNotifier _notifier({
   HapticsService? haptics,
   SfxService? sfx,
   ClearedCallback? onCleared,
+  SnapshotCallback? onSnapshot,
+  SavedGame? savedGame,
 }) =>
     GameNotifier(
       sampleSpec,
       puzzle: samplePuzzle(),
+      savedGame: savedGame,
       haptics: haptics,
       sfx: sfx,
       onCleared: onCleared,
+      onSnapshot: onSnapshot,
       autoTick: false,
     );
 
@@ -108,42 +114,69 @@ void main() {
   });
 
   test('a blocked arrow bumps, costs a life and records the blocking cell', () {
-    final engine = RecordingHapticEngine();
-    final sfxBackend = RecordingSfxBackend();
-    final n = _notifier(
-      haptics: HapticsService(() => true, engine: engine),
-      sfx: SfxService(() => true, backend: sfxBackend),
-    );
-    n.tapArrow(2);
-    expect(n.state.mistakes, 1);
-    expect(n.state.livesLeft, 2);
-    expect(n.state.removed, isEmpty);
-    expect(n.state.lastOutcome, MoveOutcome.blocked);
-    expect(n.state.blockedCell, const Cell(1, 1));
-    expect(n.state.phase, GamePhase.playing);
-    expect(engine.calls.last, 'heavy');
-    expect(sfxBackend.calls, ['$kBumpSound@1.00']);
+    fakeAsync((async) {
+      final engine = RecordingHapticEngine();
+      final sfxBackend = RecordingSfxBackend();
+      final n = _notifier(
+        haptics: HapticsService(() => true, engine: engine),
+        sfx: SfxService(() => true, backend: sfxBackend),
+      );
+      n.tapArrow(2);
+      expect(n.state.mistakes, 1);
+      expect(n.state.livesLeft, 2);
+      expect(n.state.removed, isEmpty);
+      expect(n.state.lastOutcome, MoveOutcome.blocked);
+      expect(n.state.blockedCell, const Cell(1, 1));
+      expect(n.state.phase, GamePhase.playing);
+      // The finger gets a tick at once; the crash lands when the arrow does.
+      expect(engine.calls, ['selection']);
+      expect(sfxBackend.calls, isEmpty);
+      async.elapse(const Duration(milliseconds: 100));
+      expect(sfxBackend.calls, isEmpty);
+      async.elapse(const Duration(milliseconds: 20));
+      expect(engine.calls, ['selection', 'heavy']);
+      expect(sfxBackend.calls, ['$kBumpSound@1.00']);
 
-    // A later exit clears the blocked marker.
-    n.tapArrow(0);
-    expect(n.state.blockedCell, isNull);
-    expect(sfxBackend.calls.last, '$kWhooshSound@1.00');
-    n.dispose();
+      // A later exit clears the blocked marker.
+      n.tapArrow(0);
+      expect(n.state.blockedCell, isNull);
+      expect(sfxBackend.calls.last, '$kWhooshSound@1.00');
+      n.dispose();
+    });
   });
 
   test('the third blocked tap ends the level out of lives', () {
-    final engine = RecordingHapticEngine();
-    final n = _notifier(haptics: HapticsService(() => true, engine: engine));
-    n.tapArrow(2);
-    n.tapArrow(2);
-    expect(n.state.phase, GamePhase.playing);
-    n.tapArrow(2);
-    expect(n.state.phase, GamePhase.outOfLives);
-    expect(n.state.livesLeft, 0);
-    expect(engine.calls.last, 'vibrate');
-    n.tapArrow(0); // ignored after the end
-    expect(n.state.removed, isEmpty);
-    n.dispose();
+    fakeAsync((async) {
+      final engine = RecordingHapticEngine();
+      final n = _notifier(haptics: HapticsService(() => true, engine: engine));
+      n.tapArrow(2);
+      n.tapArrow(2);
+      expect(n.state.phase, GamePhase.playing);
+      n.tapArrow(2);
+      expect(n.state.phase, GamePhase.outOfLives);
+      expect(n.state.livesLeft, 0);
+      async.elapse(const Duration(seconds: 1));
+      // Two quick taps: the first impact is superseded by the second.
+      expect(engine.calls, ['selection', 'selection', 'selection', 'vibrate']);
+      n.tapArrow(0); // ignored after the end
+      expect(n.state.removed, isEmpty);
+      n.dispose();
+    });
+  });
+
+  test('a restart or disposal drops a pending crash', () {
+    fakeAsync((async) {
+      final engine = RecordingHapticEngine();
+      final n = _notifier(haptics: HapticsService(() => true, engine: engine));
+      n.tapArrow(2);
+      n.restart();
+      async.elapse(const Duration(seconds: 1));
+      expect(engine.calls, ['selection']);
+      n.tapArrow(2);
+      n.dispose();
+      async.elapse(const Duration(seconds: 1));
+      expect(engine.calls, ['selection', 'selection']);
+    });
   });
 
   test('stars reflect mistakes on a clear', () {
@@ -242,6 +275,102 @@ void main() {
     expect(n.state.hintsLeft, 3);
     expect(n.state.elapsedMs, 0);
     expect(n.state.moveToken, 0);
+    n.dispose();
+  });
+
+  test('snapshots after moves, hints, pauses, restarts, endings and disposal', () {
+    final shots = <GameState>[];
+    final n = _notifier(onSnapshot: shots.add);
+    n.tick(500);
+    n.tapArrow(2); // blocked
+    expect(shots, hasLength(1));
+    expect(shots.last.mistakes, 1);
+    expect(shots.last.elapsedMs, 500);
+    n.useHint();
+    expect(shots, hasLength(2));
+    expect(shots.last.hintsLeft, 2);
+    n.pause();
+    expect(shots, hasLength(3));
+    expect(shots.last.phase, GamePhase.paused);
+    n.resume();
+    n.tapArrow(0);
+    n.tapArrow(0); // already gone: nothing to record
+    n.tapArrow(1);
+    expect(shots, hasLength(5));
+    expect(shots.last.removed, {0, 1});
+    n.restart();
+    expect(shots, hasLength(6));
+    expect(shots.last.removed, isEmpty);
+    n.tick(30000);
+    expect(shots.last.phase, GamePhase.timeUp);
+    n.dispose();
+    expect(shots, hasLength(8));
+    expect(shots.last.phase, GamePhase.timeUp);
+  });
+
+  test('a fitting saved game comes back paused with the resume offer', () {
+    const saved = SavedGame(level: 1, removed: [1], mistakes: 1, hintsLeft: 2, elapsedMs: 7000);
+    final n = _notifier(savedGame: saved);
+    expect(n.state.phase, GamePhase.paused);
+    expect(n.state.resumeOffered, isTrue);
+    expect(n.state.removed, {1});
+    expect(n.state.mistakes, 1);
+    expect(n.state.hintsLeft, 2);
+    expect(n.state.elapsedMs, 7000);
+    n.tick(1000); // the clock waits for the answer
+    expect(n.state.elapsedMs, 7000);
+    n.resume();
+    expect(n.state.phase, GamePhase.playing);
+    expect(n.state.resumeOffered, isFalse);
+    n.tick(1000);
+    expect(n.state.elapsedMs, 8000);
+    n.dispose();
+  });
+
+  test('"start over" from the offer is a plain restart', () {
+    const saved = SavedGame(level: 1, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 7000);
+    final n = _notifier(savedGame: saved);
+    n.restart();
+    expect(n.state.phase, GamePhase.playing);
+    expect(n.state.resumeOffered, isFalse);
+    expect(n.state.removed, isEmpty);
+    expect(n.state.elapsedMs, 0);
+    n.dispose();
+  });
+
+  test('a saved game that does not fit is ignored', () {
+    const cases = <SavedGame>[
+      SavedGame(level: 2, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // other level
+      SavedGame(level: 1, removed: [], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // nothing done
+      SavedGame(level: 1, removed: [7], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // no such arrow
+      SavedGame(level: 1, removed: [0, 1, 2], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // already cleared
+      SavedGame(level: 1, removed: [1], mistakes: 3, hintsLeft: 3, elapsedMs: 10), // out of lives
+      SavedGame(level: 1, removed: [1], mistakes: 0, hintsLeft: 4, elapsedMs: 10), // too many hints
+      SavedGame(level: 1, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 30000), // time up
+    ];
+    for (final saved in cases) {
+      final n = _notifier(savedGame: saved);
+      expect(n.state.phase, GamePhase.playing, reason: '$saved');
+      expect(n.state.removed, isEmpty, reason: '$saved');
+      n.dispose();
+    }
+  });
+
+  test('a saved game is applied once the board lands', () async {
+    const saved = SavedGame(level: 1, removed: [0], mistakes: 0, hintsLeft: 3, elapsedMs: 100);
+    final completer = Completer<Puzzle>();
+    final n = GameNotifier(
+      sampleSpec,
+      builder: (_) => completer.future,
+      savedGame: saved,
+      autoTick: false,
+    );
+    expect(n.state.isLoading, isTrue);
+    completer.complete(samplePuzzle());
+    await n.ready;
+    expect(n.state.phase, GamePhase.paused);
+    expect(n.state.resumeOffered, isTrue);
+    expect(n.state.removed, {0});
     n.dispose();
   });
 

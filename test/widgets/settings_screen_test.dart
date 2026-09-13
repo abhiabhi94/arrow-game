@@ -1,5 +1,6 @@
 import 'package:arrow_game/models/settings.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
+import 'package:arrow_game/providers/saved_game_provider.dart';
 import 'package:arrow_game/providers/settings_provider.dart';
 import 'package:arrow_game/screens/credits_screen.dart';
 import 'package:arrow_game/screens/onboarding_screen.dart';
@@ -59,10 +60,15 @@ void main() {
     final container = await pumpApp(
       tester,
       const SettingsScreen(),
-      seed: <String, Object>{'arrow_level_1_done': true, 'arrow_level_1_stars': 3},
+      seed: <String, Object>{
+        'arrow_level_1_done': true,
+        'arrow_level_1_stars': 3,
+        SavedGameRepository.key: '{"level":2,"removed":[1],"mistakes":0,"hintsLeft":3,"elapsedMs":10}',
+      },
     );
     final progress = container.read(progressProvider.notifier);
     expect(progress.totalStars, 3);
+    expect(container.read(savedGameProvider)?.level, 2);
 
     await tester.tap(find.text('Reset progress'));
     await tester.pumpAndSettle();
@@ -75,5 +81,6 @@ void main() {
     await tester.tap(find.text('Reset'));
     await tester.pumpAndSettle();
     expect(progress.totalStars, 0);
+    expect(container.read(savedGameProvider), isNull);
   });
 }

@@ -136,6 +136,24 @@ abstract class AppLocalizations {
   /// **'Every level cleared — legend!'**
   String get homeAllCleared;
 
+  /// No description provided for @homeContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get homeContinue;
+
+  /// No description provided for @homeResumeEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up where you left off'**
+  String get homeResumeEyebrow;
+
+  /// No description provided for @homeResumeProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{out} of {total} arrows out · {time} on the clock'**
+  String homeResumeProgress(int out, int total, String time);
+
   /// No description provided for @homeJourney.
   ///
   /// In en, this message translates to:
@@ -435,6 +453,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Quit level'**
   String get gameQuit;
+
+  /// No description provided for @resumeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back'**
+  String get resumeTitle;
+
+  /// No description provided for @resumeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You left this level with {out} of {total} arrows out and {time} on the clock.'**
+  String resumeBody(int out, int total, String time);
+
+  /// No description provided for @resumeContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get resumeContinue;
+
+  /// No description provided for @resumeStartOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Start over'**
+  String get resumeStartOver;
 
   /// No description provided for @gameRestart.
   ///

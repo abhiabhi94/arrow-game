@@ -8,6 +8,7 @@ import '../data/level_specs.dart';
 import '../l10n/app_localizations.dart';
 import '../models/level_progress.dart';
 import '../providers/progress_provider.dart';
+import '../providers/saved_game_provider.dart';
 import '../ui/colors.dart';
 import '../utils/format.dart';
 import '../utils/labels.dart';
@@ -30,6 +31,9 @@ class HomeScreen extends ConsumerWidget {
     final notifier = ref.read(progressProvider.notifier);
     final nextLevel = notifier.highestUnlocked;
     final allCleared = notifier.levelsCleared == totalLevels;
+    // A level left mid-way takes the hero card: it is where the player was.
+    final saved = ref.watch(savedGameProvider);
+    final heroLevel = saved?.level ?? nextLevel;
 
     return Scaffold(
       body: SafeArea(
@@ -80,11 +84,18 @@ class HomeScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
                 child: _NextUpCard(
-                  level: nextLevel,
+                  level: heroLevel,
                   allCleared: allCleared,
+                  resume: saved == null
+                      ? null
+                      : l10n.homeResumeProgress(
+                          saved.arrowsOut,
+                          specForLevel(saved.level).arrows,
+                          formatDurationMs(saved.elapsedMs),
+                        ),
                   onPlay: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => GameScreen(level: nextLevel),
+                      builder: (_) => GameScreen(level: heroLevel),
                     ),
                   ),
                 ),
@@ -159,10 +170,14 @@ class _NextUpCard extends StatelessWidget {
   const _NextUpCard({
     required this.level,
     required this.allCleared,
+    required this.resume,
     required this.onPlay,
   });
   final int level;
   final bool allCleared;
+
+  /// A one-line summary of the saved game when [level] is one left mid-way.
+  final String? resume;
   final VoidCallback onPlay;
 
   @override
@@ -203,7 +218,11 @@ class _NextUpCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          allCleared ? l10n.homeAllCleared : l10n.homeNextUp.toUpperCase(),
+                          resume != null
+                              ? l10n.homeResumeEyebrow.toUpperCase()
+                              : allCleared
+                                  ? l10n.homeAllCleared
+                                  : l10n.homeNextUp.toUpperCase(),
                           style: const TextStyle(
                             color: Colors.white70,
                             fontWeight: FontWeight.w700,
@@ -228,6 +247,18 @@ class _NextUpCard extends StatelessWidget {
                             fontSize: 15,
                           ),
                         ),
+                        if (resume != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              resume!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -242,7 +273,11 @@ class _NextUpCard extends StatelessWidget {
                         Icon(Icons.play_arrow_rounded, color: p.primary),
                         const SizedBox(width: 4),
                         Text(
-                          allCleared ? l10n.homeReplay : l10n.homePlay,
+                          resume != null
+                              ? l10n.homeContinue
+                              : allCleared
+                                  ? l10n.homeReplay
+                                  : l10n.homePlay,
                           style: TextStyle(
                             color: p.primary,
                             fontWeight: FontWeight.w800,

@@ -6,11 +6,12 @@ import '../engine/arrow_piece.dart';
 import '../engine/cell.dart';
 import '../engine/direction.dart';
 import '../engine/puzzle.dart';
+import '../models/bump_motion.dart';
 import '../models/game_state.dart';
 import '../ui/colors.dart';
 
-/// How far a blocked arrow nudges forward before bouncing back, in cells.
-const double kBumpDistance = 0.3;
+/// How far the arrow that was hit is shoved along, in cells, at full jolt.
+const double kShoveDistance = 0.12;
 
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
 /// on its way out) in a single ink — thin lines with a small head, like a
@@ -40,8 +41,9 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   /// Arrows sliding out: id → progress controller.
   final Map<int, AnimationController> _exits = <int, AnimationController>{};
 
-  /// The arrow currently bumping, if any.
+  /// The arrow currently bumping, if any, and how it moves.
   int? _bumpId;
+  BumpMotion? _bumpMotion;
   AnimationController? _bump;
 
   @override
@@ -88,11 +90,14 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
 
   void _startBump(int id) {
     _bump?.dispose();
+    final puzzle = widget.state.puzzle!;
+    final motion = BumpMotion.forTap(puzzle, id, widget.state.blockedCell!);
     final controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 360),
+      duration: Duration(milliseconds: motion.totalMs),
     );
     _bumpId = id;
+    _bumpMotion = motion;
     _bump = controller;
     controller.addListener(() => setState(() {}));
     controller.forward().whenComplete(() {
@@ -101,6 +106,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
         if (_bump == controller) {
           _bump = null;
           _bumpId = null;
+          _bumpMotion = null;
         }
         controller.dispose();
       });
@@ -115,6 +121,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     _bump?.dispose();
     _bump = null;
     _bumpId = null;
+    _bumpMotion = null;
   }
 
   @override
@@ -162,6 +169,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
                   },
                   bumpId: _bumpId,
                   bump: _bump?.value,
+                  bumpMotion: _bumpMotion,
                 ),
               ),
             ),
@@ -180,6 +188,7 @@ class _BoardPainter extends CustomPainter {
     required this.exits,
     required this.bumpId,
     required this.bump,
+    required this.bumpMotion,
   });
 
   final GameState state;
@@ -188,8 +197,11 @@ class _BoardPainter extends CustomPainter {
 
   /// Slide-out progress (0..1) per exiting arrow.
   final Map<int, double> exits;
+
+  /// The bumping arrow, its progress (0..1) and its motion.
   final int? bumpId;
   final double? bump;
+  final BumpMotion? bumpMotion;
 
   Puzzle get puzzle => state.puzzle!;
 
@@ -218,17 +230,22 @@ class _BoardPainter extends CustomPainter {
       }
     }
 
-    // The blocked cell flashes while the bump plays.
+    // The bump: the tapped arrow runs into the arrow in its way, which takes
+    // the hit — its cell flashes and it is shoved a touch — then springs back.
     final blocked = state.blockedCell;
     final bumpT = bump;
-    if (blocked != null && bumpT != null && bumpId == state.lastMoveId) {
-      final alpha = sin(bumpT * pi).clamp(0.0, 1.0);
+    final motion = bumpMotion;
+    final bumping = blocked != null && bumpT != null && motion != null && bumpId == state.lastMoveId;
+    final flash = bumping ? motion.flashAt(bumpT) : 0.0;
+    final shove = bumping ? motion.shoveAt(bumpT) : 0.0;
+    final hitId = bumping ? puzzle.arrowAt(blocked) : null;
+    if (bumping && flash > 0) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(blocked.x * cs, blocked.y * cs, cs, cs).deflate(cs * 0.08),
           Radius.circular(cs * 0.2),
         ),
-        Paint()..color = palette.blockedFlash.withValues(alpha: palette.blockedFlash.a * alpha),
+        Paint()..color = palette.blockedFlash.withValues(alpha: palette.blockedFlash.a * flash),
       );
     }
 
@@ -241,10 +258,17 @@ class _BoardPainter extends CustomPainter {
       var offset = 0.0;
       if (exiting != null) {
         offset = Curves.easeIn.transform(exiting) * travel;
-      } else if (bumpId == arrow.id && bumpT != null) {
-        offset = sin(bumpT * pi) * kBumpDistance;
+      } else if (bumping && bumpId == arrow.id) {
+        offset = motion.offsetAt(bumpT);
+      }
+      final shoved = bumping && arrow.id == hitId && shove > 0;
+      if (shoved) {
+        final push = _unit(puzzle.arrows[bumpId!].heading) * (shove * kShoveDistance * cs);
+        canvas.save();
+        canvas.translate(push.dx, push.dy);
       }
       _paintArrow(canvas, arrow, cs, offset, arrow.id == state.hintArrowId && exiting == null);
+      if (shoved) canvas.restore();
     }
     canvas.restore();
   }

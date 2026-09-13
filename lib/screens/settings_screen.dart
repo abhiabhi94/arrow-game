@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../models/settings.dart';
 import '../providers/progress_provider.dart';
+import '../providers/saved_game_provider.dart';
 import '../providers/settings_provider.dart';
 import '../ui/colors.dart';
 import 'credits_screen.dart';
@@ -33,7 +34,10 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
-    if (confirmed ?? false) ref.read(progressProvider.notifier).resetAll();
+    if (confirmed ?? false) {
+      ref.read(progressProvider.notifier).resetAll();
+      ref.read(savedGameProvider.notifier).clear();
+    }
   }
 
   @override

@@ -1,12 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/engine/puzzle.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
 import 'package:arrow_game/models/game_state.dart';
+import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
+import 'package:arrow_game/providers/saved_game_provider.dart';
 import 'package:arrow_game/providers/settings_provider.dart';
 import 'package:arrow_game/screens/game_screen.dart';
 import 'package:arrow_game/widgets/puzzle_board.dart';
@@ -24,7 +27,9 @@ List<Override> _overrides({bool unlockAll = true}) => [
         (ref, level) => GameNotifier(
           sampleSpecFor(level),
           puzzle: samplePuzzle(),
+          savedGame: ref.read(savedGameProvider.notifier).forLevel(level),
           onCleared: ref.read(progressProvider.notifier).recordCompletion,
+          onSnapshot: ref.read(savedGameProvider.notifier).record,
           autoTick: false,
         ),
       ),
@@ -129,6 +134,112 @@ void main() {
     expect(notifier.state.phase, GamePhase.playing);
     expect(notifier.state.mistakes, 0);
     expect(find.byIcon(Icons.favorite_rounded), findsNWidgets(3));
+  });
+
+  testWidgets('a bump runs into the blocker, jolts it, and springs back', (tester) async {
+    final container = await _pumpGame(tester);
+    final notifier = container.read(gameProvider(1).notifier);
+    final board = find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint));
+    final rect = tester.getRect(board);
+    final cs = rect.width / 4;
+    await tester.tapAt(rect.topLeft + Offset(1.5 * cs, 2.5 * cs)); // arrow 2's head
+    expect(notifier.state.mistakes, 1);
+    // Mid-flight, at impact and on the way home the board keeps painting.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(find.byType(PuzzleBoard), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(notifier.state.blockedCell, const Cell(1, 1));
+  });
+
+  testWidgets('leaving mid-level saves it; coming back offers to continue', (tester) async {
+    final container = await _pumpGame(tester);
+    await _tapCell(tester, const Cell(2, 1)); // arrow 0 out
+    container.read(gameProvider(1).notifier).tick(4000);
+    // Switching away saves the moment…
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    var saved = container.read(savedGameProvider);
+    expect(saved?.level, 1);
+    expect(saved?.removed, [0]);
+    expect(saved?.elapsedMs, 4000);
+    final prefs = container.read(sharedPreferencesProvider);
+    expect(prefs.getString(SavedGameRepository.key), isNotNull);
+    // …and so does leaving the level.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.tap(find.text('Resume'));
+    await _settle(tester, 400);
+    container.read(gameProvider(1).notifier).tick(1000);
+    container.read(gameProvider(1).notifier).pause();
+    await _settle(tester, 400);
+    await tester.tap(find.text('Quit level'));
+    await tester.pumpAndSettle();
+    saved = container.read(savedGameProvider);
+    expect(saved?.elapsedMs, 5000);
+  });
+
+  testWidgets('a saved game opens paused on the welcome-back card; Continue picks it up', (tester) async {
+    final container = await _pumpGame(
+      tester,
+      seed: {
+        SavedGameRepository.key: jsonEncode(const {
+          'level': 1,
+          'removed': [0],
+          'mistakes': 1,
+          'hintsLeft': 2,
+          'elapsedMs': 5000,
+        }),
+      },
+    );
+    final notifier = container.read(gameProvider(1).notifier);
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('You left this level with 1 of 3 arrows out and 0:05 on the clock.'), findsOneWidget);
+    expect(notifier.state.phase, GamePhase.paused);
+    expect(find.text('0:25'), findsOneWidget);
+    expect(find.byIcon(Icons.favorite_border_rounded), findsOneWidget);
+
+    await tester.tap(find.text('Continue'));
+    await _settle(tester, 400);
+    expect(notifier.state.phase, GamePhase.playing);
+    expect(notifier.state.removed, {0});
+    expect(find.text('Welcome back'), findsNothing);
+    // Finishing the level empties the slot.
+    await _tapCell(tester, const Cell(3, 3));
+    await _tapCell(tester, const Cell(0, 3));
+    expect(notifier.state.phase, GamePhase.cleared);
+    expect(container.read(savedGameProvider), isNull);
+    await _settle(tester, 3000);
+  });
+
+  testWidgets('Start over on the welcome-back card begins the level afresh', (tester) async {
+    final container = await _pumpGame(
+      tester,
+      seed: {
+        SavedGameRepository.key: jsonEncode(const {
+          'level': 1,
+          'removed': [0],
+          'mistakes': 0,
+          'hintsLeft': 3,
+          'elapsedMs': 5000,
+        }),
+      },
+    );
+    final notifier = container.read(gameProvider(1).notifier);
+    await tester.tap(find.text('Start over'));
+    await _settle(tester, 400);
+    expect(notifier.state.phase, GamePhase.playing);
+    expect(notifier.state.removed, isEmpty);
+    expect(notifier.state.elapsedMs, 0);
+    expect(container.read(savedGameProvider), isNull);
+    // Home from the card leaves too.
+    notifier.pause();
+    await _settle(tester, 400);
+    await tester.tap(find.text('Quit level'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GameScreen), findsNothing);
   });
 
   testWidgets('taps outside the board or on empty cells do nothing', (tester) async {

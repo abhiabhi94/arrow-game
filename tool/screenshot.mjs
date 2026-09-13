@@ -5,13 +5,14 @@
 // at a phone-sized viewport instead.
 //
 // Usage:
-//   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--hint] [--grid]
+//   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--hint] [--grid] [--resume]
 //                            [--settings] [--onboarding] [--dump] [--no-strict]
 //                            [--build-dir build/web] [--scale 2] [--port 0]
 //
 //   --levels  opens each level and captures its board (level-NN-*.png)
 //   --hint    also taps the hint button and captures the glowing arrow
 //   --grid    seeds the grid-lines preference on (the lattice under the arrows)
+//   --resume  seeds a saved game on the first level (home shows Continue, the level its Welcome back card)
 //             (level-NN-hint-*.png)
 //   --onboarding  boots into the first-launch walkthrough instead of home
 //
@@ -54,6 +55,7 @@ const levels = String(args.levels ?? '').split(',').map((s) => s.trim()).filter(
 const dark = Boolean(args.dark);
 const hint = Boolean(args.hint);
 const grid = Boolean(args.grid);
+const resume = Boolean(args.resume);
 const scale = Number(args.scale ?? 2);
 const port = Number(args.port ?? 0);
 const strict = !args['no-strict'];
@@ -132,6 +134,11 @@ const prefs = {
   'flutter.arrow_sfx_on': 'false',
   'flutter.arrow_grid_lines': grid ? 'true' : 'false',
   'flutter.arrow_theme': JSON.stringify(dark ? 'dark' : 'light'),
+  // A string preference is stored JSON-encoded (quoted); the saved game is a
+  // JSON document inside that string.
+  ...(resume && levels.length
+    ? { 'flutter.arrow_saved_game': JSON.stringify(JSON.stringify({ level: levels[0], removed: [0, 1], mistakes: 1, hintsLeft: 2, elapsedMs: 30_000 })) }
+    : {}),
 };
 
 const problems = [];
@@ -165,7 +172,7 @@ try {
 
   if (args.dump) console.log(await dumpSemantics(page));
 
-  const tag = `${dark ? 'dark' : 'light'}${grid ? '-grid' : ''}`;
+  const tag = `${dark ? 'dark' : 'light'}${grid ? '-grid' : ''}${resume ? '-resume' : ''}`;
   await shoot(page, `${args.onboarding ? 'onboarding' : 'home'}-${tag}`);
 
   if (args.settings) {

@@ -10,9 +10,9 @@ centre frequency sweeps upward as the arrow "leaves", under a quick swell and
 a soft tail. No tonal component at all — a sine chirp reads as a laser
 bleep.
 
-bump.wav — the knock of an arrow running into another: a woody click of
-band-passed noise over a low thump whose pitch drops as it dies, with a
-touch of saturation for crunch.
+bump.wav — the crash of an arrow running into another: a sharp crack of
+noise over a heavy thump whose pitch sags as it dies, then a lighter second
+knock as the arrow springs back, all with a touch of saturation for crunch.
 
 WAV (16-bit mono, 44.1 kHz) plays everywhere audioplayers does, iOS included.
 """
@@ -63,24 +63,37 @@ def whoosh_sound(seconds=0.26, f0=320.0, f1=2_400.0):
     return [s / peak * 0.85 for s in out]
 
 
-def bump_sound(seconds=0.22):
+def bump_sound(seconds=0.34):
+    """Two hits: the arrow slams into its neighbour (a sharp crack over a
+    heavy thump) and, as it springs back, a lighter second knock."""
     random.seed(11)
     n = int(RATE * seconds)
-    knock = BandPass(q=1.4)
+    crack = BandPass(q=1.2)
+    body = BandPass(q=2.0)
     out = []
     phase = 0.0
+    second = 0.11  # seconds after the first hit
     for i in range(n):
         t = i / RATE
-        # The thump: a sine that starts around 150 Hz and sags to 45 Hz.
-        freq = 45.0 + 105.0 * math.exp(-t * 28.0)
+        # The thump: a sine that starts around 170 Hz and sags to 40 Hz,
+        # with a fast, loud attack.
+        freq = 40.0 + 130.0 * math.exp(-t * 32.0)
         phase += 2 * math.pi * freq / RATE
-        thump = math.sin(phase) * math.exp(-t * 16.0)
-        # The knock: a short burst of noise around 900 Hz, gone in ~30 ms.
-        click = knock.tick(random.uniform(-1.0, 1.0), 900.0) * math.exp(-t * 70.0)
-        s = 1.1 * thump + 0.9 * click
-        out.append(math.tanh(1.6 * s))
+        thump = math.sin(phase) * math.exp(-t * 14.0)
+        noise = random.uniform(-1.0, 1.0)
+        # The crack: a wide splash of noise around 2.2 kHz, gone in ~15 ms,
+        # and a woodier body around 500 Hz that rings ~60 ms.
+        hit = 1.2 * crack.tick(noise, 2200.0) * math.exp(-t * 110.0) \
+            + 0.9 * body.tick(noise, 500.0) * math.exp(-t * 32.0)
+        # The rebound knock: the same body, quieter, a beat later.
+        t2 = t - second
+        rebound = 0.0
+        if t2 >= 0:
+            rebound = 0.5 * body.tick(noise, 650.0) * math.exp(-t2 * 45.0)
+        s = 1.3 * thump + hit + rebound
+        out.append(math.tanh(1.9 * s))
     peak = max(abs(s) for s in out)
-    return [s / peak * 0.9 for s in out]
+    return [s / peak * 0.92 for s in out]
 
 
 def write(path, samples):

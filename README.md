@@ -24,10 +24,15 @@ the way its head points, until it leaves the board. Get every arrow out.
 - **Grid lines** are an earned toggle: clear level 4 to unlock them.
 - **Stars**: three for a flawless run, two for one slip, one for two. Best
   stars and best time are kept per level.
+- **A bump is a bump:** the arrow runs into the one in its way, jolts it,
+  and springs back.
+- **Pick up where you left off:** close the app, switch away or back out
+  mid-level and the level is saved; Home offers Continue, and the level
+  opens on a "Welcome back" card with Continue or Start over.
 - **First launch** walks you through on two tiny boards you actually play.
 - **Home** is a winding journey trail of levels with a "Next up" card.
 - Background music ("Game" by The_Mountain, Pixabay Content License, credited
-  in-app), sound effects (a whoosh on every exit, a knock on a bump) and
+  in-app), sound effects (a whoosh on every exit, a crash on a bump) and
   haptics, all on by default and configurable; confetti; pause
   (also on backgrounding); light/dark/system theme; locked progression (all
   levels open in the debug build); Google Sans Flex throughout.

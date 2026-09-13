@@ -1,5 +1,6 @@
 /// Per-attempt gameplay state: sliding arrows out, lives, hints, the level
-/// clock, pause/resume and the three endings.
+/// clock, pause/resume, the three endings, and snapshots for picking a
+/// level up later.
 library;
 
 import 'dart:async';
@@ -10,15 +11,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/level_specs.dart';
 import '../engine/puzzle.dart';
 import '../engine/puzzle_generator.dart';
+import '../models/bump_motion.dart';
 import '../models/game_state.dart';
 import '../models/level_progress.dart';
 import '../models/level_spec.dart';
+import '../models/saved_game.dart';
 import '../services/haptics_service.dart';
 import '../services/sfx_service.dart';
 import 'progress_provider.dart';
+import 'saved_game_provider.dart';
 
 /// Called once when a level is cleared, with the clear time and star rating.
 typedef ClearedCallback = void Function(int level, int elapsedMs, int stars);
+
+/// Called whenever the level's standing is worth remembering: after every
+/// move, hint, pause, restart or ending, and when the screen goes away.
+typedef SnapshotCallback = void Function(GameState state);
 
 /// The clock's resolution.
 const int kTickMs = 100;
@@ -38,16 +46,17 @@ class GameNotifier extends StateNotifier<GameState> {
     this.spec, {
     Puzzle? puzzle,
     PuzzleBuilder builder = defaultPuzzleBuilder,
+    this.savedGame,
     this.haptics,
     this.sfx,
     this.onCleared,
+    this.onSnapshot,
     this.autoTick = true,
   }) : super(puzzle == null ? GameState.loading(spec) : GameState.fresh(spec, puzzle)) {
     if (puzzle == null) {
       _load(builder);
     } else {
-      _ready.complete();
-      _startTimer();
+      _begin(puzzle);
     }
   }
 
@@ -55,11 +64,15 @@ class GameNotifier extends StateNotifier<GameState> {
   final HapticsService? haptics;
   final SfxService? sfx;
   final ClearedCallback? onCleared;
+  final SnapshotCallback? onSnapshot;
 
   /// When false (tests), the clock only advances through [tick].
   final bool autoTick;
 
+  /// A saved game to restore once the board is ready, if it fits this level.
+  final SavedGame? savedGame;
   Timer? _timer;
+  Timer? _impact;
   final Completer<void> _ready = Completer<void>();
 
   /// Completes once the board is on screen (useful in tests).
@@ -68,10 +81,42 @@ class GameNotifier extends StateNotifier<GameState> {
   Future<void> _load(PuzzleBuilder builder) async {
     final puzzle = await builder(spec);
     if (!mounted) return;
-    state = GameState.fresh(spec, puzzle);
+    _begin(puzzle);
+  }
+
+  /// Puts [puzzle] on the board: fresh and playing, or — when a saved game
+  /// for this level fits it — restored and paused with the resume offer up.
+  void _begin(Puzzle puzzle) {
+    final saved = savedGame;
+    if (saved != null && _fits(saved, puzzle)) {
+      state = GameState.fresh(spec, puzzle).copyWith(
+        phase: GamePhase.paused,
+        removed: saved.removed.toSet(),
+        mistakes: saved.mistakes,
+        hintsLeft: saved.hintsLeft,
+        elapsedMs: saved.elapsedMs,
+        resumeOffered: true,
+      );
+    } else {
+      state = GameState.fresh(spec, puzzle);
+    }
     _startTimer();
     _ready.complete();
   }
+
+  /// Whether [saved] describes a moment this level can still be in.
+  bool _fits(SavedGame saved, Puzzle puzzle) =>
+      saved.level == spec.level &&
+      saved.hasProgress &&
+      saved.removed.length < puzzle.arrowCount &&
+      saved.removed.every((id) => id >= 0 && id < puzzle.arrowCount) &&
+      saved.mistakes < maxLives &&
+      saved.hintsLeft >= 0 &&
+      saved.hintsLeft <= maxHints &&
+      saved.elapsedMs >= 0 &&
+      saved.elapsedMs < spec.timeLimitMs;
+
+  void _snapshot() => onSnapshot?.call(state);
 
   /// Taps arrow [id]: it slides out if its exit path is clear, otherwise it
   /// bumps and costs a life.
@@ -99,26 +144,37 @@ class GameNotifier extends StateNotifier<GameState> {
       } else {
         haptics?.hit();
       }
+      _snapshot();
       return;
     }
     final mistakes = state.mistakes + 1;
     final lost = mistakes >= maxLives;
     if (lost) _stopTimer();
+    final blockedCell = puzzle.firstBlockedCell(id, state.removed)!;
     state = state.copyWith(
       mistakes: mistakes,
       phase: lost ? GamePhase.outOfLives : GamePhase.playing,
       clearHint: true,
       lastMoveId: id,
       lastOutcome: MoveOutcome.blocked,
-      blockedCell: puzzle.firstBlockedCell(id, state.removed),
+      blockedCell: blockedCell,
       moveToken: token,
     );
-    sfx?.bump();
-    if (lost) {
-      haptics?.fail();
-    } else {
-      haptics?.miss();
-    }
+    haptics?.tap();
+    // The knock and the buzz land when the arrow actually hits, not when
+    // the finger does — the board plays the same motion.
+    final motion = BumpMotion.forTap(puzzle, id, blockedCell);
+    _impact?.cancel();
+    _impact = Timer(Duration(milliseconds: motion.forwardMs), () {
+      _impact = null;
+      sfx?.bump();
+      if (lost) {
+        haptics?.fail();
+      } else {
+        haptics?.miss();
+      }
+    });
+    _snapshot();
   }
 
   /// Spends a hint to point at an arrow that can go now. No-op while a hint
@@ -131,25 +187,32 @@ class GameNotifier extends StateNotifier<GameState> {
     if (id == null) return;
     state = state.copyWith(hintArrowId: id, hintsLeft: state.hintsLeft - 1);
     haptics?.tap();
+    _snapshot();
   }
 
   /// Throws the attempt away and starts the same puzzle again.
   void restart() {
     final puzzle = state.puzzle;
     if (puzzle == null) return;
+    _impact?.cancel();
+    _impact = null;
     state = GameState.fresh(spec, puzzle);
     _startTimer();
+    _snapshot();
   }
 
   void pause() {
     if (state.phase == GamePhase.playing) {
       state = state.copyWith(phase: GamePhase.paused);
+      _snapshot();
     }
   }
 
+  /// Continues a paused level — including one just restored, which drops
+  /// the resume offer.
   void resume() {
     if (state.phase == GamePhase.paused) {
-      state = state.copyWith(phase: GamePhase.playing);
+      state = state.copyWith(phase: GamePhase.playing, resumeOffered: false);
     }
   }
 
@@ -162,6 +225,7 @@ class GameNotifier extends StateNotifier<GameState> {
       _stopTimer();
       state = state.copyWith(elapsedMs: spec.timeLimitMs, phase: GamePhase.timeUp);
       haptics?.fail();
+      _snapshot();
       return;
     }
     state = state.copyWith(elapsedMs: elapsed);
@@ -187,17 +251,26 @@ class GameNotifier extends StateNotifier<GameState> {
   @override
   void dispose() {
     _stopTimer();
+    _impact?.cancel();
+    // Leaving the screen (back, quit, next level) is the moment to remember
+    // where the level stood.
+    _snapshot();
     super.dispose();
   }
 }
 
-/// One notifier per level, thrown away when the game screen closes.
+/// One notifier per level, thrown away when the game screen closes. A level
+/// with a saved game comes back where it was left, paused, with the choice
+/// to continue or start over.
 final gameProvider = StateNotifierProvider.autoDispose
     .family<GameNotifier, GameState, int>((ref, level) {
+  final saves = ref.read(savedGameProvider.notifier);
   return GameNotifier(
     specForLevel(level),
+    savedGame: saves.forLevel(level),
     haptics: ref.watch(hapticsProvider),
     sfx: ref.watch(sfxProvider),
     onCleared: ref.read(progressProvider.notifier).recordCompletion,
+    onSnapshot: saves.record,
   );
 });

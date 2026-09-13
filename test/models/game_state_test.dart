@@ -33,6 +33,8 @@ void main() {
     expect(s.stars, 0);
     expect(s.blockedCell, isNull);
     expect(s.lastOutcome, MoveOutcome.none);
+    expect(s.resumeOffered, isFalse);
+    expect(s.copyWith(resumeOffered: true).resumeOffered, isTrue);
   });
 
   test('derived values and copyWith clears', () {

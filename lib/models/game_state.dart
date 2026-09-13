@@ -31,6 +31,7 @@ class GameState {
     required this.lastOutcome,
     required this.blockedCell,
     required this.moveToken,
+    this.resumeOffered = false,
   });
 
   /// The board is still being generated.
@@ -93,6 +94,10 @@ class GameState {
   final Cell? blockedCell;
   final int moveToken;
 
+  /// True while a level restored from a saved game waits, paused, for the
+  /// player to choose between picking it up and starting over.
+  final bool resumeOffered;
+
   int get level => spec.level;
   int get arrowsOut => removed.length;
   int get arrowsTotal => puzzle?.arrowCount ?? spec.arrows;
@@ -130,6 +135,7 @@ class GameState {
     Cell? blockedCell,
     bool clearBlocked = false,
     int? moveToken,
+    bool? resumeOffered,
   }) =>
       GameState(
         spec: spec,
@@ -144,5 +150,6 @@ class GameState {
         lastOutcome: lastOutcome ?? this.lastOutcome,
         blockedCell: clearBlocked ? null : (blockedCell ?? this.blockedCell),
         moveToken: moveToken ?? this.moveToken,
+        resumeOffered: resumeOffered ?? this.resumeOffered,
       );
 }

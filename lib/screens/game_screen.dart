@@ -234,6 +234,29 @@ class _GameScreenState extends ConsumerState<GameScreen>
               ),
             ),
             switch (state.phase) {
+              GamePhase.paused when state.resumeOffered => ResultCard(
+                  emoji: '👋',
+                  title: l10n.resumeTitle,
+                  body: l10n.resumeBody(
+                    state.arrowsOut,
+                    state.arrowsTotal,
+                    formatDurationMs(state.elapsedMs),
+                  ),
+                  actions: [
+                    FilledButton(
+                      onPressed: notifier.resume,
+                      child: Text(l10n.resumeContinue),
+                    ),
+                    OutlinedButton(
+                      onPressed: notifier.restart,
+                      child: Text(l10n.resumeStartOver),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l10n.clearedHome),
+                    ),
+                  ],
+                ),
               GamePhase.paused => ResultCard(
                   emoji: '⏸️',
                   title: l10n.gamePaused,

@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
+import 'package:arrow_game/providers/saved_game_provider.dart';
 import 'package:arrow_game/screens/game_screen.dart';
 import 'package:arrow_game/screens/home_screen.dart';
 import 'package:arrow_game/screens/settings_screen.dart';
@@ -107,6 +110,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Level 1'), findsOneWidget);
     expect(find.text('First Steps'), findsOneWidget);
+  });
+
+  testWidgets('a level left mid-way takes the hero card and opens on tap', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(
+      tester,
+      const HomeScreen(),
+      seed: <String, Object>{
+        SavedGameRepository.key: jsonEncode(const {
+          'level': 3,
+          'removed': [0, 1],
+          'mistakes': 0,
+          'hintsLeft': 3,
+          'elapsedMs': 30000,
+        }),
+      },
+      extraOverrides: _gameOverride,
+    );
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.text('PICK UP WHERE YOU LEFT OFF'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
+    expect(find.text('2 of 12 arrows out · 0:30 on the clock'), findsOneWidget);
+    expect(find.text('NEXT UP'), findsNothing);
+    expect(find.text('Level 3'), findsOneWidget);
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GameScreen), findsOneWidget);
+    expect(find.text('Level 3'), findsOneWidget);
   });
 
   testWidgets('with every level cleared the hero offers a replay', (tester) async {

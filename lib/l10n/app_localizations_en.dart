@@ -30,6 +30,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeAllCleared => 'Every level cleared — legend!';
 
   @override
+  String get homeContinue => 'Continue';
+
+  @override
+  String get homeResumeEyebrow => 'Pick up where you left off';
+
+  @override
+  String homeResumeProgress(int out, int total, String time) {
+    return '$out of $total arrows out · $time on the clock';
+  }
+
+  @override
   String get homeJourney => 'Your journey';
 
   @override
@@ -190,6 +201,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gameQuit => 'Quit level';
+
+  @override
+  String get resumeTitle => 'Welcome back';
+
+  @override
+  String resumeBody(int out, int total, String time) {
+    return 'You left this level with $out of $total arrows out and $time on the clock.';
+  }
+
+  @override
+  String get resumeContinue => 'Continue';
+
+  @override
+  String get resumeStartOver => 'Start over';
 
   @override
   String get gameRestart => 'Restart level';

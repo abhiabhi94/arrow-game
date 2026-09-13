@@ -16,6 +16,7 @@ inputs:
       --levels 1,5,10,20 --settings --hint
       --levels 3,16 --dark --hint --grid
       --onboarding
+      --levels 3 --resume
   artifact-name:
     description: Name of the uploaded screenshots artifact.
     required: false

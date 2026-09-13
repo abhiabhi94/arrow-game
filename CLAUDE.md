@@ -26,6 +26,7 @@ tool/coverage.sh 92             # coverage gate (fails under threshold)
 
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
 node tool/screenshot.mjs --levels 1,7,20 --settings --hint          # phone-viewport screenshots -> shots/
+node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
 
 flutter run                     # debug build = "Arrow Testing", all levels unlocked
 flutter run --release           # release build = "Arrow", locked progression
@@ -107,8 +108,10 @@ lib/
     puzzle.dart          Puzzle: occupancy, blockers, canExit, solvingOrder, hintFor, difficultyScore
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N
   data/level_specs.dart  the 20 levels (board size, arrow count, length range, clock)
-  models/              level_spec, level_progress (stars), settings, game_state (phases, moves)
-  providers/           app_providers (DI root), settings_provider, progress_provider, game_provider
+  models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
+                       bump_motion (the blocked-tap animation), saved_game (resume snapshot)
+  providers/           app_providers (DI root), settings_provider, progress_provider, game_provider,
+                       saved_game_provider (the one level in progress)
   services/            haptics_service (injectable HapticEngine), sfx_service (whoosh + bump),
                        audio_service (looping music)
   data/audio_credits.dart  attribution for the bundled track
@@ -160,6 +163,25 @@ Key patterns:
   state instantly; `PuzzleBoard` animates the slide-out / bump purely
   visually, keyed on `GameState.moveToken`. A 100 ms `Timer.periodic` drives
   `tick()` when `autoTick` is true; tests pass `autoTick: false`.
+- **Bump:** `models/bump_motion.dart` (pure Dart) describes the blocked
+  tap — the arrow accelerates up to the arrow in its way (stopping
+  `kStopShort` of a cell before its centre, 110–320 ms by distance) and
+  eases back over 300 ms; the blocker flashes and is shoved a touch at
+  impact. The board draws `offsetAt/shoveAt/flashAt`, and the provider
+  fires the knock and the heavy buzz on a `Timer` at `forwardMs` so they
+  land on impact (a light tick answers the finger at once). Tests use
+  `fakeAsync` for that timer.
+- **Saved game:** one slot (`models/saved_game.dart`, prefs key
+  `arrow_saved_game`, JSON: level, arrows out, slips, hints, clock — the
+  board itself is rebuilt from the seed). `GameNotifier.onSnapshot` fires
+  after every move/hint/pause/restart/ending and in `dispose` (back, quit,
+  next level); `SavedGameNotifier.record` saves a level with progress,
+  clears on an ending, and clears an untouched/restarted visit of the same
+  level only (peeking at another level keeps the slot). `gameProvider`
+  passes `savedGame: forLevel(level)`; a fitting one comes back paused with
+  `GameState.resumeOffered` and the "Welcome back" card (Continue / Start
+  over / Home). Home's hero card becomes "Pick up where you left off ·
+  Continue" for that level. Reset progress clears the slot too.
 - **Hints:** `maxHints = 3` per attempt; `Puzzle.hintFor` picks the removable
   arrow that frees the most others; any tap clears the highlight.
 - **Grid lines:** drawn through the cell centres (the lattice the arrows lie
@@ -180,8 +202,9 @@ Key patterns:
   resets after 1.5 s — and `assets/audio/bump.wav` (a knock) on a blocked
   tap, which also ends the streak. Both WAVs are synthesised by
   `tool/make_sfx.py` (pure Python, no deps): the whoosh is swept band-passed
-  noise (no tone — a chirp reads as a laser), the bump a noise click over a
-  sagging low thump. `Settings.sfxOn` gates both (on by default).
+  noise (no tone — a chirp reads as a laser), the bump a sharp crack over a
+  sagging thump with a lighter rebound knock. `Settings.sfxOn` gates both
+  (on by default).
 - **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
   "Game" by The_Mountain (Pixabay Content License, `assets/audio/game.mp3`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
