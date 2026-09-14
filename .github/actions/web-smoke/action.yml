@@ -51,7 +51,7 @@ runs:
         flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run
 
     - name: Set up Node
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@v7
       with:
         node-version: 22
 
@@ -79,7 +79,7 @@ runs:
 
     - name: Upload screenshots
       if: always()
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-name }}
         path: shots/

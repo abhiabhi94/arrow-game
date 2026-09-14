@@ -309,15 +309,24 @@ Branch = `gh-pages` / (root), set once):
   them.
 - `.github/workflows/pr-preview.yml` — on every PR event: the release web app
   built with `--dart-define=UNLOCK_ALL=true` (so a reviewer can reach any
-  level) and a base href of `/<repo>/pr-preview/pr-<number>/`, published to
-  `pr-preview/pr-<number>/` on the same branch by `rossjrw/pr-preview-action`,
-  which also posts the link comment and deletes the folder when the PR closes.
+  level) and a base href of `/<repo>/pr-preview/pr-<number>/`, deployed to
+  `pr-preview/pr-<number>/` on the same branch with `target-folder` + `clean`
+  (which wipes only that folder), plus a sticky link comment. Its `remove` job
+  deletes the folder and the comment when the PR closes, re-fetching `gh-pages`
+  before each of 3 push attempts so a concurrent deploy is merged, not
+  overwritten. This is `rossjrw/pr-preview-action` spelled out — that action is
+  a composite that still pins node20 builds of the two actions it wraps.
 
 Both base hrefs are derived from the repo name, so the workflows port to
 other repos unchanged. Both skip PRs from forks (no token to write
 `gh-pages`); the repo needs Settings → Actions → General → Workflow
 permissions = "Read and write permissions" for the branch push and the
 comments.
+
+Every action is pinned to its **major** tag, and every major in use resolves
+to a `node24` (or composite) release — node20 is deprecated on GitHub-hosted
+runners. When adding a third-party action, check its `runs.using`, and for a
+composite action check the `uses:` inside it too.
 
 ## Conventions
 

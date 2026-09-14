@@ -103,7 +103,8 @@ Every PR gets both builds of itself, without anyone checking it out:
 - **Play it in the browser.** `.github/workflows/pr-preview.yml` deploys the
   PR's web build to `…/arrow-game/pr-preview/pr-<number>/` (a release build
   with `UNLOCK_ALL=true`, so every level is reachable) and keeps a comment on
-  the PR with the link. The preview is deleted when the PR closes.
+  the PR with the link. The preview and its comment are deleted when the PR
+  closes.
 - **Install it on a phone.** The `Debug APK` job in `ci.yml` builds
   `app-debug.apk` ("Arrow Testing", all levels open) and comments the
   download link, refreshed on every push.
