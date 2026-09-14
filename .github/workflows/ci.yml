@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Read pinned Flutter version
         id: flutter
@@ -49,10 +49,74 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Builds for web, drives home/settings/levels in headless Chromium at a
       # phone viewport, fails on any Flutter exception (e.g. layout overflow)
       # and uploads the PNGs as the "screenshots" artifact for visual review.
       - name: Smoke test + screenshots
         uses: ./.github/actions/web-smoke
+
+  apk:
+    name: Debug APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # the debug APK comment on PRs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Read pinned Flutter version
+        id: flutter
+        run: echo "version=$(tr -d '[:space:]' < .flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate localizations
+        run: flutter gen-l10n
+
+      # Debug = "Arrow Testing" (app id app.curious.arrow.testing), every level
+      # unlocked, debug-signed — installs next to the real app, so it is the
+      # build a reviewer wants on a phone.
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload debug APK
+        id: apk
+        uses: actions/upload-artifact@v7
+        with:
+          name: arrow-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      # One comment per PR, updated on every push, so the latest APK is one
+      # click away for reviewers. (The web preview link is posted by
+      # pr-preview.yml.)
+      - name: Comment the APK link on the PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: debug-apk
+          message: |
+            📱 **Debug APK** for ${{ github.event.pull_request.head.sha }}: [download `arrow-debug-apk`](${{ steps.apk.outputs.artifact-url }}) (zip; sign-in required, kept 14 days).
+
+            Installs next to the Play build as `app.curious.arrow.testing` ("Arrow Testing") with every level unlocked. It carries all ABIs, so it is a ~150 MB download.

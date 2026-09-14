@@ -1,0 +1,144 @@
+name: PR preview
+
+# Deploys the web build of every pull request to
+# https://<owner>.github.io/<repo>/pr-preview/pr-<number>/ and posts (and keeps
+# updated) a comment on the PR with the link, so reviewers can play the change
+# without building anything. The preview is removed when the PR is closed.
+# Previews live in the pr-preview/ folder of the gh-pages branch, next to the
+# main site that pages.yml deploys to the branch root.
+#
+# The preview is a release build with UNLOCK_ALL=true: production performance,
+# but every level is reachable so a reviewer can look at any board.
+#
+# This is what rossjrw/pr-preview-action does, spelled out — that action is a
+# composite that still pins node20 builds of the two actions below, and node20
+# is deprecated on GitHub-hosted runners.
+#
+# Previews for PRs from forks are skipped (no write token for gh-pages).
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  contents: write # push the preview to gh-pages
+  pull-requests: write # the preview-link comment
+
+# One deploy per PR at a time; pushes to gh-pages from other PRs / main are
+# rebased, not force-pushed, so they do not clobber each other.
+concurrency:
+  group: preview-${{ github.event.number }}
+  cancel-in-progress: false
+
+env:
+  PREVIEW_DIR: pr-preview/pr-${{ github.event.number }}
+
+jobs:
+  deploy:
+    name: Deploy web preview
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Read pinned Flutter version
+        id: flutter
+        run: echo "version=$(tr -d '[:space:]' < .flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+
+      # The preview is served from a sub-folder, so it needs that whole path as
+      # its base href — the same path it is published to below.
+      - name: Build web (release, all levels unlocked)
+        env:
+          BASE_HREF: /${{ github.event.repository.name }}/${{ env.PREVIEW_DIR }}/
+        run: |
+          flutter pub get
+          flutter gen-l10n
+          flutter build web --release --base-href "$BASE_HREF" \
+            --dart-define=UNLOCK_ALL=true --no-wasm-dry-run
+
+      # clean: true wipes only the target folder, so the main site at the
+      # branch root and the other PRs' previews are untouched.
+      - name: Publish the preview to gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: build/web
+          target-folder: ${{ env.PREVIEW_DIR }}
+          clean: true
+          force: false
+          commit-message: 'Deploy preview for PR #${{ github.event.number }} (${{ github.event.pull_request.head.sha }})'
+
+      - name: Comment the preview link on the PR
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: pr-preview
+          message: |
+            🎮 **Playable preview** for ${{ github.event.pull_request.head.sha }}: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.PREVIEW_DIR }}/
+
+            A release build with every level unlocked. It goes live a minute or so after Pages rebuilds, and is removed when this PR closes.
+
+  remove:
+    name: Remove web preview
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      # Nothing to do if no preview was ever deployed (no gh-pages branch).
+      - name: Look for the gh-pages branch
+        id: branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          url="https://x-access-token:$GH_TOKEN@github.com/${{ github.repository }}"
+          if git ls-remote --exit-code --heads "$url" gh-pages > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout gh-pages
+        if: steps.branch.outputs.exists == 'true'
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+
+      # Re-fetch before each attempt so a concurrent deploy (main's, or another
+      # PR's preview) is picked up instead of overwritten.
+      - name: Delete the preview folder
+        if: steps.branch.outputs.exists == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch --depth 1 origin gh-pages
+            git reset --hard FETCH_HEAD
+            if [ ! -d "$PREVIEW_DIR" ]; then
+              echo "No $PREVIEW_DIR on gh-pages; nothing to remove."
+              exit 0
+            fi
+            git rm -rq "$PREVIEW_DIR"
+            git commit -qm "Remove preview for PR #${{ github.event.number }}"
+            if git push origin HEAD:gh-pages; then
+              exit 0
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "::error::Could not remove $PREVIEW_DIR from gh-pages after 3 attempts."
+          exit 1
+
+      - name: Remove the preview comment
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: pr-preview
+          delete: true
