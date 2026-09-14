@@ -1,0 +1,73 @@
+name: Deploy web app to GitHub Pages
+
+# Publishes the release web build of the app to the repo's GitHub Pages site
+# on every push to main. One-time setup in the repo: Settings -> Pages ->
+# Build and deployment -> Source: "GitHub Actions".
+#
+# The site is served at https://<owner>.github.io/<repo>/, so the build needs
+# that path as its base href; it is derived from the repo name below, which
+# keeps this workflow copy-pasteable into other repos. For a custom domain
+# (CNAME) or a user/organisation site, change BASE_HREF to "/".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; don't cancel a deploy that is mid-flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build release web app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Read pinned Flutter version
+        id: flutter
+        run: echo "version=$(tr -d '[:space:]' < .flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate localizations
+        run: flutter gen-l10n
+
+      # Release = "Arrow" with locked progression, same as the store build.
+      - name: Build web (release)
+        env:
+          BASE_HREF: /${{ github.event.repository.name }}/
+        run: flutter build web --release --base-href "$BASE_HREF" --no-wasm-dry-run
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -6,6 +6,8 @@ import 'package:arrow_game/providers/saved_game_provider.dart';
 import 'package:arrow_game/screens/game_screen.dart';
 import 'package:arrow_game/screens/home_screen.dart';
 import 'package:arrow_game/screens/settings_screen.dart';
+import 'package:arrow_game/ui/layout.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -163,5 +165,35 @@ void main() {
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsOneWidget);
+  });
+
+  testWidgets('a desktop window keeps the trail in a centred phone-width column', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpApp(tester, const HomeScreen(), extraOverrides: _gameOverride);
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(tester.takeException(), isNull);
+
+    // The hero card spans the column: its eyebrow starts past the left gutter
+    // and its Play chip ends before the right one.
+    final eyebrow = tester.getRect(find.text('NEXT UP'));
+    final play = tester.getRect(find.text('Play'));
+    expect(eyebrow.left, greaterThan((1440 - kMaxContentWidth) / 2));
+    expect(play.right, lessThan((1440 + kMaxContentWidth) / 2));
+    expect(find.text('Arrow'), findsOneWidget);
+    // Every trail node sits inside the column, not out at the window's edges.
+    for (var level = 1; level <= 3; level++) {
+      final node = tester.getRect(find.text('$level'));
+      expect(node.left, greaterThan((1440 - kMaxContentWidth) / 2));
+      expect(node.right, lessThan((1440 + kMaxContentWidth) / 2));
+    }
+
+    // The wheel scrolls from the gutter, not only over the column.
+    final before = tester.getRect(find.text('1')).top;
+    final pointer = TestPointer(1, PointerDeviceKind.mouse);
+    await tester.sendEventToBinding(pointer.hover(const Offset(100, 500)));
+    await tester.sendEventToBinding(pointer.scroll(const Offset(0, 300)));
+    await tester.pump();
+    expect(tester.getRect(find.text('1')).top, lessThan(before));
   });
 }

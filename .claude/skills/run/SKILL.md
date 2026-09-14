@@ -16,12 +16,16 @@ flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run   # ~60 s
 node tool/screenshot.mjs --levels 1,7,13,20 --settings --hint        # -> shots/*.png
 node tool/screenshot.mjs --levels 3,16 --dark --hint                 # dark theme
 node tool/screenshot.mjs --onboarding                                # first-launch walkthrough
+node tool/screenshot.mjs --levels 1,8 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + shortcuts
 node tool/screenshot.mjs --dump                                      # print reachable buttons/labels
 ```
 
 `--levels` opens each level and captures its board (`level-NN-*.png`);
 `--hint` also taps the toolbar's hint button and captures the glowing arrow
-(`level-NN-hint-*.png`). Then `Read` the PNGs in `shots/` to review them.
+(`level-NN-hint-*.png`). `--viewport WxH` renders the desktop layout (the
+web build is public on GitHub Pages and played on laptops too; shots carry
+the size in their name) and `--keys` presses keys on each opened level
+(`level-NN-keys-*.png`). Then `Read` the PNGs in `shots/` to review them.
 
 Rebuild whenever `lib/` changes; the script serves whatever is in `build/web`.
 `PATH`/`NODE_PATH` are set by the session-start hook; if `flutter` is missing

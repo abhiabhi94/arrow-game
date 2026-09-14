@@ -12,8 +12,11 @@ import 'package:arrow_game/providers/progress_provider.dart';
 import 'package:arrow_game/providers/saved_game_provider.dart';
 import 'package:arrow_game/providers/settings_provider.dart';
 import 'package:arrow_game/screens/game_screen.dart';
+import 'package:arrow_game/ui/layout.dart';
+import 'package:arrow_game/widgets/board_toolbar.dart';
 import 'package:arrow_game/widgets/puzzle_board.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -46,8 +49,14 @@ Future<ProviderContainer> _pumpGame(
   int level = 1,
   bool unlockAll = true,
   Map<String, Object> seed = const {},
+  Size? surface,
 }) async {
-  await usePhoneSurface(tester);
+  if (surface == null) {
+    await usePhoneSurface(tester);
+  } else {
+    await tester.binding.setSurfaceSize(surface);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  }
   final container = await pumpApp(
     tester,
     GameScreen(level: level),
@@ -496,5 +505,140 @@ void main() {
     await _settle(tester, 300);
     expect(find.text('Knot'), findsOneWidget);
     expect(find.text('Level 7'), findsOneWidget);
+  });
+
+  group('keyboard shortcuts (web build on a laptop)', () {
+    double scale(WidgetTester tester) => tester
+        .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+        .transformationController!
+        .value
+        .getMaxScaleOnAxis();
+
+    testWidgets('H asks for a hint', (tester) async {
+      final container = await _pumpGame(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyH);
+      await _settle(tester, 100);
+      expect(container.read(gameProvider(1)).hintArrowId, isNotNull);
+      expect(container.read(gameProvider(1)).hintsLeft, 2);
+      // A second press while the hint still shows spends nothing more.
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyH);
+      await _settle(tester, 100);
+      expect(container.read(gameProvider(1)).hintsLeft, 2);
+    });
+
+    testWidgets('+ and - zoom the board within bounds', (tester) async {
+      await _pumpGame(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.equal);
+      await _settle(tester, 50);
+      expect(scale(tester), closeTo(kZoomStep, 1e-6));
+      await tester.sendKeyEvent(LogicalKeyboardKey.numpadAdd);
+      await _settle(tester, 50);
+      expect(scale(tester), closeTo(kZoomStep * kZoomStep, 1e-6));
+      for (var i = 0; i < 8; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.minus);
+        await _settle(tester, 50);
+      }
+      expect(scale(tester), closeTo(kMinZoom, 1e-6));
+    });
+
+    testWidgets('space pauses and resumes; P too', (tester) async {
+      final container = await _pumpGame(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await _settle(tester, 300);
+      expect(container.read(gameProvider(1)).phase, GamePhase.paused);
+      expect(find.text('Paused'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyP);
+      await _settle(tester, 300);
+      expect(container.read(gameProvider(1)).phase, GamePhase.playing);
+      expect(find.text('Paused'), findsNothing);
+    });
+
+    testWidgets('space is Continue on the Welcome back card', (tester) async {
+      final container = await _pumpGame(
+        tester,
+        seed: <String, Object>{
+          'arrow_saved_game': jsonEncode({
+            'level': 1,
+            'removed': [0],
+            'mistakes': 0,
+            'hintsLeft': 3,
+            'elapsedMs': 5000,
+          }),
+        },
+      );
+      expect(find.text('Welcome back'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await _settle(tester, 300);
+      expect(container.read(gameProvider(1)).phase, GamePhase.playing);
+      expect(container.read(gameProvider(1)).removed, {0});
+    });
+
+    testWidgets('G toggles the grid lines once earned, never before', (tester) async {
+      final container = await _pumpGame(tester, unlockAll: false);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
+      await _settle(tester, 100);
+      expect(container.read(settingsProvider).gridLinesOn, isFalse);
+
+      await container.read(progressProvider.notifier).recordCompletion(4, 1000, 3);
+      await _settle(tester, 100);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
+      await _settle(tester, 100);
+      expect(container.read(settingsProvider).gridLinesOn, isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
+      await _settle(tester, 100);
+      expect(container.read(settingsProvider).gridLinesOn, isFalse);
+    });
+
+    testWidgets('a shortcut with a modifier is left to the browser', (tester) async {
+      final container = await _pumpGame(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyH);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      await _settle(tester, 100);
+      expect(container.read(gameProvider(1)).hintsLeft, 3);
+      expect(scale(tester), 1.0);
+    });
+
+    testWidgets('an unrelated key does nothing', (tester) async {
+      final container = await _pumpGame(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyQ);
+      await _settle(tester, 100);
+      expect(container.read(gameProvider(1)).phase, GamePhase.playing);
+      expect(container.read(gameProvider(1)).hintsLeft, 3);
+    });
+
+    test('shortcutFor maps both keyboard rows', () {
+      KeyEvent press(LogicalKeyboardKey key) => KeyDownEvent(
+            physicalKey: PhysicalKeyboardKey.keyA,
+            logicalKey: key,
+            timeStamp: Duration.zero,
+          );
+      expect(shortcutFor(press(LogicalKeyboardKey.add)), GameShortcut.zoomIn);
+      expect(shortcutFor(press(LogicalKeyboardKey.numpadSubtract)), GameShortcut.zoomOut);
+      expect(shortcutFor(press(LogicalKeyboardKey.keyA)), isNull);
+    });
+  });
+
+  group('desktop-sized window', () {
+    testWidgets('keeps the play column phone-wide and centred', (tester) async {
+      await _pumpGame(tester, surface: const Size(1440, 900));
+      expect(tester.takeException(), isNull);
+      final toolbar = tester.getRect(find.byType(BoardToolbar));
+      expect(toolbar.width, lessThanOrEqualTo(kMaxContentWidth));
+      expect(toolbar.center.dx, closeTo(720, 1));
+      final board = tester.getRect(find.byType(PuzzleBoard));
+      expect(board.center.dx, closeTo(720, 1));
+      expect(board.width, lessThanOrEqualTo(kMaxContentWidth));
+      expect(find.byTooltip('Hint · 3 hints left'), findsOneWidget);
+    });
+
+    testWidgets('a squat window still shows the whole board and toolbar', (tester) async {
+      await _pumpGame(tester, surface: const Size(1280, 600));
+      expect(tester.takeException(), isNull);
+      final board = tester.getRect(find.byType(PuzzleBoard));
+      final toolbar = tester.getRect(find.byType(BoardToolbar));
+      expect(board.bottom, lessThanOrEqualTo(toolbar.top));
+      expect(toolbar.bottom, lessThanOrEqualTo(600));
+    });
   });
 }

@@ -27,6 +27,7 @@ tool/coverage.sh 92             # coverage gate (fails under threshold)
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
 node tool/screenshot.mjs --levels 1,7,20 --settings --hint          # phone-viewport screenshots -> shots/
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
+node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + keyboard
 
 flutter run                     # debug build = "Arrow Testing", all levels unlocked
 flutter run --release           # release build = "Arrow", locked progression
@@ -40,17 +41,34 @@ flutter build appbundle --release  # -> build/app/outputs/bundle/release/app-rel
 Claude Code on the web has no Android emulator (no KVM). The stand-in is the
 **web build + headless Chromium**: `tool/screenshot.mjs` serves `build/web`,
 drives the app (home, settings, any level's board and — with `--hint` — the
-hint glow, light/dark) at 390×844 and writes PNGs to `shots/`; it exits 1 on
-any Flutter exception, so it doubles as the CI smoke test
-(`.github/actions/web-smoke`, job "Web smoke & screenshots"). See
-`.claude/skills/run/SKILL.md` and `docs/cloud-dev.md`. The SessionStart hook
-in `.claude/hooks/session-start.sh` installs the SDK pinned in
-`.flutter-version`.
+hint glow, light/dark) at 390×844 and writes PNGs to `shots/`; `--viewport
+WxH` renders the desktop layout instead and `--keys` presses keys on each
+opened level (both exercised in CI, since the web build is also played on a
+laptop via GitHub Pages). It exits 1 on any Flutter exception, so it doubles
+as the CI smoke test (`.github/actions/web-smoke`, job "Web smoke &
+screenshots"). See `.claude/skills/run/SKILL.md` and `docs/cloud-dev.md`.
+The SessionStart hook in `.claude/hooks/session-start.sh` installs the SDK
+pinned in `.flutter-version`.
 
-The web target is a verification/preview target; the shipped platforms are
-Android + iOS. The typeface (Google Sans Flex, OFL, static weights 400–800)
-is bundled in `assets/fonts/` and declared under `flutter: fonts:` as
-`GoogleSansFlex` — no `google_fonts`, no runtime fetch.
+The web target doubles as a public build: `.github/workflows/pages.yml`
+deploys the release web app to GitHub Pages
+(https://abhiabhi94.github.io/arrow-game/) on every push to `main`. The
+shipped store platforms are Android + iOS. The typeface (Google Sans Flex,
+OFL, static weights 400–800) is bundled in `assets/fonts/` and declared
+under `flutter: fonts:` as `GoogleSansFlex` — no `google_fonts`, no runtime
+fetch.
+
+**Desktop browser (`lib/ui/layout.dart`):** the design is phone-first, so
+every screen keeps its content in a centred column no wider than
+`kMaxContentWidth` (480) — `ContentColumn` for one-block screens (game,
+onboarding), `contentGutter` as extra padding for the scrolling ones (home,
+settings, credits), which keeps the scroll viewport full-width so the wheel
+works anywhere over the page. `AppScrollBehavior` (set on the `MaterialApp`)
+lets a mouse drag scroll too. The game screen's `Focus` handles keyboard
+shortcuts: **H** hint, **+ / =** and **-** zoom, **G** grid lines (once
+earned), **Space / P** pause and resume (`shortcutFor` maps the keys);
+modifier-held keys are left to the browser. Taps stay on the mouse — the
+arrows are canvas drawings.
 
 ## Build types (no flavors)
 
@@ -125,7 +143,8 @@ lib/
   data/audio_credits.dart  attribution for the bundled track
   screens/             onboarding (interactive 3-step walkthrough), home (journey trail),
                        game (board + toolbar + overlays), settings, credits
-  ui/                  colors.dart (light+dark ArrowPalette), theme.dart (Material 3 + Google Sans Flex)
+  ui/                  colors.dart (light+dark ArrowPalette), theme.dart (Material 3 + Google Sans Flex),
+                       layout.dart (phone-width column + mouse-drag scrolling for the desktop browser)
   widgets/             puzzle_board (painter + slide/bump animations), board_toolbar,
                        lives_indicator, timer_bar, stars_row, result_card
   utils/               format.dart, labels.dart (level names)
@@ -268,8 +287,16 @@ GitHub Actions runs on every push to `main` and every PR targeting `main`
 (3.47.4 / stable — match `.metadata`; bump both together; the session-start
 hook reads the same file). Job "Analyze & test" runs `flutter analyze
 --fatal-infos` and `bash tool/coverage.sh 92`. Job "Web smoke & screenshots"
-builds the web app, drives it in headless Chromium (`tool/screenshot.mjs`),
-fails on any Flutter exception, and uploads `shots/`.
+builds the web app, drives it in headless Chromium (`tool/screenshot.mjs`)
+at a phone viewport and at 1440×900 with keyboard presses, fails on any
+Flutter exception, and uploads `shots/`.
+
+A separate workflow, `.github/workflows/pages.yml`, runs on every push to
+`main` (and manually via workflow_dispatch): it builds the release web app
+with `--base-href /<repo>/` and deploys it to GitHub Pages. It needs the repo
+setting Settings → Pages → Source = "GitHub Actions" once; the base href is
+derived from the repo name so the workflow ports to other repos unchanged.
+Release = locked progression, same as the store build.
 
 ## Conventions
 

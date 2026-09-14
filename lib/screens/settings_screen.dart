@@ -7,6 +7,7 @@ import '../providers/progress_provider.dart';
 import '../providers/saved_game_provider.dart';
 import '../providers/settings_provider.dart';
 import '../ui/colors.dart';
+import '../ui/layout.dart';
 import 'credits_screen.dart';
 import 'onboarding_screen.dart';
 
@@ -49,145 +50,149 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _SettingCard(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  value: settings.musicOn,
-                  onChanged: notifier.setMusic,
-                  secondary: const Text('🎵', style: TextStyle(fontSize: 24)),
-                  title: Text(l10n.settingsMusic),
-                  subtitle: Text(l10n.settingsMusicSubtitle),
-                ),
-                if (settings.musicOn)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Row(
-                      children: [
-                        Icon(Icons.volume_up_rounded, color: p.textMuted),
-                        Expanded(
-                          child: Slider(
-                            value: settings.musicVolume,
-                            onChanged: notifier.setMusicVolume,
+      // Full-width list, phone-width content: on a desktop browser the cards
+      // would otherwise stretch across the whole window.
+      body: LayoutBuilder(
+        builder: (context, constraints) => ListView(
+          padding: const EdgeInsets.all(20) + contentGutter(constraints.maxWidth),
+          children: [
+            _SettingCard(
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    value: settings.musicOn,
+                    onChanged: notifier.setMusic,
+                    secondary: const Text('🎵', style: TextStyle(fontSize: 24)),
+                    title: Text(l10n.settingsMusic),
+                    subtitle: Text(l10n.settingsMusicSubtitle),
+                  ),
+                  if (settings.musicOn)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: Row(
+                        children: [
+                          Icon(Icons.volume_up_rounded, color: p.textMuted),
+                          Expanded(
+                            child: Slider(
+                              value: settings.musicVolume,
+                              onChanged: notifier.setMusicVolume,
+                            ),
                           ),
-                        ),
-                        SizedBox(
-                          width: 40,
-                          child: Text(
-                            '${(settings.musicVolume * 100).round()}%',
-                            textAlign: TextAlign.end,
-                            style: TextStyle(color: p.textMuted),
+                          SizedBox(
+                            width: 40,
+                            child: Text(
+                              '${(settings.musicVolume * 100).round()}%',
+                              textAlign: TextAlign.end,
+                              style: TextStyle(color: p.textMuted),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _SettingCard(
+              child: SwitchListTile(
+                value: settings.sfxOn,
+                onChanged: notifier.setSfx,
+                secondary: const Text('💨', style: TextStyle(fontSize: 24)),
+                title: Text(l10n.settingsSfx),
+                subtitle: Text(l10n.settingsSfxSubtitle),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _SettingCard(
+              child: SwitchListTile(
+                value: settings.hapticsOn,
+                onChanged: notifier.setHaptics,
+                secondary: const Text('📳', style: TextStyle(fontSize: 24)),
+                title: Text(l10n.settingsHaptics),
+                subtitle: Text(l10n.settingsHapticsSubtitle),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _SettingCard(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('🌗', style: TextStyle(fontSize: 24)),
+                        const SizedBox(width: 12),
+                        Text(
+                          l10n.settingsTheme,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
                           ),
                         ),
                       ],
                     ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          _SettingCard(
-            child: SwitchListTile(
-              value: settings.sfxOn,
-              onChanged: notifier.setSfx,
-              secondary: const Text('💨', style: TextStyle(fontSize: 24)),
-              title: Text(l10n.settingsSfx),
-              subtitle: Text(l10n.settingsSfxSubtitle),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _SettingCard(
-            child: SwitchListTile(
-              value: settings.hapticsOn,
-              onChanged: notifier.setHaptics,
-              secondary: const Text('📳', style: TextStyle(fontSize: 24)),
-              title: Text(l10n.settingsHaptics),
-              subtitle: Text(l10n.settingsHapticsSubtitle),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _SettingCard(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text('🌗', style: TextStyle(fontSize: 24)),
-                      const SizedBox(width: 12),
-                      Text(
-                        l10n.settingsTheme,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                    const SizedBox(height: 12),
+                    SegmentedButton<ThemeChoice>(
+                      segments: <ButtonSegment<ThemeChoice>>[
+                        ButtonSegment(
+                          value: ThemeChoice.system,
+                          label: Text(l10n.themeSystem),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SegmentedButton<ThemeChoice>(
-                    segments: <ButtonSegment<ThemeChoice>>[
-                      ButtonSegment(
-                        value: ThemeChoice.system,
-                        label: Text(l10n.themeSystem),
-                      ),
-                      ButtonSegment(
-                        value: ThemeChoice.light,
-                        label: Text(l10n.themeLight),
-                      ),
-                      ButtonSegment(
-                        value: ThemeChoice.dark,
-                        label: Text(l10n.themeDark),
-                      ),
-                    ],
-                    selected: {settings.themeChoice},
-                    onSelectionChanged: (sel) =>
-                        notifier.setThemeChoice(sel.first),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _SettingCard(
-            child: ListTile(
-              leading: const Text('🎯', style: TextStyle(fontSize: 24)),
-              title: Text(l10n.settingsHowToPlay),
-              subtitle: Text(l10n.howToPlayBody),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const OnboardingScreen(replay: true),
+                        ButtonSegment(
+                          value: ThemeChoice.light,
+                          label: Text(l10n.themeLight),
+                        ),
+                        ButtonSegment(
+                          value: ThemeChoice.dark,
+                          label: Text(l10n.themeDark),
+                        ),
+                      ],
+                      selected: {settings.themeChoice},
+                      onSelectionChanged: (sel) =>
+                          notifier.setThemeChoice(sel.first),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          _SettingCard(
-            child: ListTile(
-              leading: const Text('🎼', style: TextStyle(fontSize: 24)),
-              title: Text(l10n.settingsCredits),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const CreditsScreen()),
+            const SizedBox(height: 16),
+            _SettingCard(
+              child: ListTile(
+                leading: const Text('🎯', style: TextStyle(fontSize: 24)),
+                title: Text(l10n.settingsHowToPlay),
+                subtitle: Text(l10n.howToPlayBody),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const OnboardingScreen(replay: true),
+                  ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          _SettingCard(
-            child: ListTile(
-              leading: const Text('🧹', style: TextStyle(fontSize: 24)),
-              title: Text(l10n.settingsResetProgress),
-              subtitle: Text(l10n.settingsResetProgressSubtitle),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => _confirmReset(context, ref),
+            const SizedBox(height: 16),
+            _SettingCard(
+              child: ListTile(
+                leading: const Text('🎼', style: TextStyle(fontSize: 24)),
+                title: Text(l10n.settingsCredits),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const CreditsScreen()),
+                ),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            _SettingCard(
+              child: ListTile(
+                leading: const Text('🧹', style: TextStyle(fontSize: 24)),
+                title: Text(l10n.settingsResetProgress),
+                subtitle: Text(l10n.settingsResetProgressSubtitle),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _confirmReset(context, ref),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

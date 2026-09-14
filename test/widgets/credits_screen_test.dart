@@ -1,5 +1,7 @@
 import 'package:arrow_game/data/audio_credits.dart';
 import 'package:arrow_game/screens/credits_screen.dart';
+import 'package:arrow_game/ui/layout.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/pump_app.dart';
@@ -25,5 +27,15 @@ void main() {
     );
     expect(find.text('Tune'), findsOneWidget);
     expect(find.text('by Someone'), findsOneWidget);
+  });
+
+  testWidgets('a desktop window keeps the cards phone-wide and centred', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpApp(tester, const CreditsScreen());
+    expect(tester.takeException(), isNull);
+    final title = tester.getRect(find.text('Game'));
+    expect(title.left, greaterThanOrEqualTo((1440 - kMaxContentWidth) / 2));
+    expect(title.left, lessThan(720));
   });
 }

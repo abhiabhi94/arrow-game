@@ -10,7 +10,7 @@ build, test, and **visually verify** the app. Ported from the sudoku repo's
 |------------------------------------|--------|-------|
 | Flutter SDK (pinned)               | ✅     | Installed by the session-start hook into `/opt/flutter` |
 | `flutter analyze` / `flutter test` | ✅     | Same gates as CI, incl. `tool/coverage.sh` |
-| Web build + headless Chromium      | ✅     | `tool/screenshot.mjs` — phone-viewport screenshots + smoke test |
+| Web build + headless Chromium      | ✅     | `tool/screenshot.mjs` — phone *and* desktop (`--viewport`) screenshots, keyboard (`--keys`) + smoke test |
 | Android emulator                   | ❌     | No `/dev/kvm`; an emulator would not boot usably |
 | Android APK build                  | ⚠️     | Works after a ~2 GB SDK install (see CLAUDE.md, "Android SDK in cloud sessions"); not done by the hook |
 | iOS build                          | ❌     | Needs macOS/Xcode |
@@ -27,7 +27,9 @@ same script and uploads the screenshots as an artifact.
 | `.claude/hooks/session-start.sh` + `.claude/settings.json` | Cloud-only SessionStart hook: installs Flutter, `pub get`, `gen-l10n`, ensures Playwright/Chromium, exports `PATH`/`NODE_PATH`. |
 | `.claude/skills/run/SKILL.md` | Tells Claude how to build/screenshot/review in a session. |
 | `tool/screenshot.mjs` | The driver: static server + font mirror + Playwright script + smoke gate. |
-| `.github/actions/web-smoke/action.yml` | Composite action: build web, run the driver, upload `shots/`. Used by the `smoke` job in `ci.yml`. |
+| `.github/actions/web-smoke/action.yml` | Composite action: build web, run the driver (phone + desktop runs), upload `shots/`. Used by the `smoke` job in `ci.yml`. |
+| `.github/workflows/pages.yml` | Deploys the release web build to GitHub Pages on every push to `main` (base href derived from the repo name). |
+| `lib/ui/layout.dart` | Phone-width content column + mouse-drag scrolling so the Pages build works in a laptop-sized window. |
 | `assets/fonts/` + `pubspec.yaml` `fonts:` entry | Google Sans Flex bundled as a regular font family — nothing fetched at runtime. |
 | `web/` | Web platform scaffold (`flutter create --platforms=web .`). |
 
@@ -53,7 +55,14 @@ same script and uploads the screenshots as an artifact.
   (emoji) are mirrored by the script's server via `fontFallbackBaseUrl`
   (injected into `flutter_bootstrap.js` on the fly).
 - **Debug web build** ≙ "testing" build: `kDebugMode` is true, so the
-  unlock-everything switch applies. Release web builds keep progression.
+  unlock-everything switch applies. Release web builds (what GitHub Pages
+  serves) keep progression.
+- **Desktop viewport:** `--viewport 1440x900` turns Playwright's mobile
+  emulation off (mouse instead of touch), so what it captures is the
+  laptop layout — the centred phone-width column from `lib/ui/layout.dart`.
+  `--keys Equal,KeyH` presses keys on the opened level (Playwright key
+  names) and captures the result, which is how the shortcuts are smoke
+  tested.
 - **Semantics on web** are off until the hidden "Enable accessibility"
   placeholder is clicked; the script does that. The accessible name of a
   widget concatenates its label and child text.

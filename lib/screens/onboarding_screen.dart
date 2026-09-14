@@ -12,6 +12,7 @@ import '../models/level_spec.dart';
 import '../providers/game_provider.dart';
 import '../providers/settings_provider.dart';
 import '../ui/colors.dart';
+import '../ui/layout.dart';
 import '../widgets/puzzle_board.dart';
 
 /// A tiny board with one free arrow: "tap it".
@@ -125,60 +126,64 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  _StepDots(step: _step),
-                  const Spacer(),
-                  TextButton(onPressed: _finish, child: Text(l10n.onboardSkip)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: switch (_step) {
-                    0 => _DemoStep(
-                        key: const ValueKey(0),
-                        title: l10n.onboardTitle1,
-                        body: oneDone ? l10n.onboardDone1 : l10n.onboardBody1,
-                        done: oneDone,
-                        state: _oneState,
-                        onTapArrow: _one.tapArrow,
-                      ),
-                    1 => _DemoStep(
-                        key: const ValueKey(1),
-                        title: l10n.onboardTitle2,
-                        body: twoDone
-                            ? l10n.onboardDone2
-                            : _bumped
-                                ? l10n.onboardBumped2
-                                : l10n.onboardBody2,
-                        done: twoDone,
-                        state: _twoState,
-                        onTapArrow: _two.tapArrow,
-                      ),
-                    _ => _SummaryStep(key: const ValueKey(2)),
-                  },
+        // A phone-width column, centred, so the walkthrough reads the same in
+        // a desktop browser.
+        child: ContentColumn(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    _StepDots(step: _step),
+                    const Spacer(),
+                    TextButton(onPressed: _finish, child: Text(l10n.onboardSkip)),
+                  ],
                 ),
-              ),
-              FilledButton(
-                onPressed: canNext
-                    ? () {
-                        if (_step < 2) {
-                          setState(() => _step++);
-                        } else {
-                          _finish();
+                const SizedBox(height: 8),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: switch (_step) {
+                      0 => _DemoStep(
+                          key: const ValueKey(0),
+                          title: l10n.onboardTitle1,
+                          body: oneDone ? l10n.onboardDone1 : l10n.onboardBody1,
+                          done: oneDone,
+                          state: _oneState,
+                          onTapArrow: _one.tapArrow,
+                        ),
+                      1 => _DemoStep(
+                          key: const ValueKey(1),
+                          title: l10n.onboardTitle2,
+                          body: twoDone
+                              ? l10n.onboardDone2
+                              : _bumped
+                                  ? l10n.onboardBumped2
+                                  : l10n.onboardBody2,
+                          done: twoDone,
+                          state: _twoState,
+                          onTapArrow: _two.tapArrow,
+                        ),
+                      _ => _SummaryStep(key: const ValueKey(2)),
+                    },
+                  ),
+                ),
+                FilledButton(
+                  onPressed: canNext
+                      ? () {
+                          if (_step < 2) {
+                            setState(() => _step++);
+                          } else {
+                            _finish();
+                          }
                         }
-                      }
-                    : null,
-                child: Text(_step < 2 ? l10n.onboardNext : l10n.onboardStart),
-              ),
-            ],
+                      : null,
+                  child: Text(_step < 2 ? l10n.onboardNext : l10n.onboardStart),
+                ),
+              ],
+            ),
           ),
         ),
       ),

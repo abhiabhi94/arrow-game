@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#6C5CE7",
     "theme_color": "#6C5CE7",
-    "description": "Arrow - a fast, playful swipe-the-arrow reflex game.",
+    "description": "Arrow - a playful arrow exit puzzle. Tap an arrow to slide it off the board; get every arrow out.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
