@@ -131,7 +131,7 @@ void main() {
       // The finger gets a tick at once; the crash lands when the arrow does.
       expect(engine.calls, ['selection']);
       expect(sfxBackend.calls, isEmpty);
-      async.elapse(const Duration(milliseconds: 120)); // 140 ms in for 0.4 of a cell
+      async.elapse(const Duration(milliseconds: 160)); // 180 ms in for 0.4 of a cell
       expect(sfxBackend.calls, isEmpty);
       async.elapse(const Duration(milliseconds: 25));
       expect(engine.calls, ['selection', 'crash']);

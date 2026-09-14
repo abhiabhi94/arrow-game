@@ -25,7 +25,7 @@ class BumpMotion {
   static const double kStopShort = 0.6;
 
   /// The back leg, a fixed spring home — also how long the screen shakes.
-  static const int backMs = 360;
+  static const int backMs = 480;
 
   /// Shakes of the screen over the back leg.
   static const int kJoltCycles = 3;
@@ -35,7 +35,7 @@ class BumpMotion {
 
   /// The forward leg: an accelerating slide, longer for a longer run. Slow
   /// enough to be seen — a bump that is over in a blink is a missed life.
-  int get forwardMs => (110 + travel * 60).round().clamp(140, 380);
+  int get forwardMs => (140 + travel * 70).round().clamp(180, 460);
 
   int get totalMs => forwardMs + backMs;
 

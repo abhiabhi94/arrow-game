@@ -47,7 +47,7 @@ hint glow, light/dark) at 390×844 and writes PNGs to `shots/`; `--viewport
 WxH` renders the desktop layout instead and `--keys` presses keys on each
 opened level (both exercised in CI, since the web build is also played on a
 laptop via GitHub Pages); `--crash x,y` taps a grid cell on the first level
-and captures the bump 230 ms in on Playwright's fake clock (a screenshot
+and captures the bump 260 ms in on Playwright's fake clock (a screenshot
 takes longer than the bump), with the semantics layer made pointer-transparent
 for the tap — a click on the board's accessibility node would otherwise be a
 semantic tap at the board's centre. It exits 1 on any Flutter exception, so it doubles
@@ -201,8 +201,8 @@ Key patterns:
   `tick()` when `autoTick` is true; tests pass `autoTick: false`.
 - **Bump:** `models/bump_motion.dart` (pure Dart) describes the blocked
   tap — the arrow accelerates up to the arrow in its way (stopping
-  `kStopShort` of a cell before its centre, 140–380 ms by distance) and
-  eases back over 360 ms; the blocker flashes and is shoved a touch at
+  `kStopShort` of a cell before its centre, 180–460 ms by distance) and
+  eases back over 480 ms; the blocker flashes and is shoved a touch at
   impact. The board draws `offsetAt/shoveAt/flashAt`. The game screen runs
   the same motion in its own controller to throw the whole screen sideways
   (`joltAt` × `kCrashJoltPx`) and bloom a red edge over it (`flashAt` on a
@@ -238,8 +238,8 @@ Key patterns:
 - **Board look:** one ink (`palette.arrowInk`), thin strokes (≤5 px), small
   heads, no frame — the arrows sit straight on the page. The hint glow and
   the blocked flash are the only colour on the board. Slide-out and bump are
-  animated in `PuzzleBoard` (240–600 ms slide, ease-in; the bump 140–380 ms
-  in and 360 ms back). Strokes cap at
+  animated in `PuzzleBoard` (240–600 ms slide, ease-in; the bump 180–460 ms
+  in and 480 ms back). Strokes cap at
   3 px and heads at 8 px so the small early boards read as pen lines.
 - **Sound effects:** `SfxService` (`services/sfx_service.dart`, injectable
   `SfxBackend`, a pool of low-latency players) plays `assets/audio/whoosh.wav`

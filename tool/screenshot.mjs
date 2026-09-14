@@ -174,7 +174,7 @@ await context.addInitScript((p) => {
 }, prefs);
 
 const page = await context.newPage();
-// The bump is over (140-380 ms in, 360 ms back) before a screenshot of the
+// The bump is over (180-460 ms in, 480 ms back) before a screenshot of the
 // canvas can be taken, so a crash run puts the page on a fake clock — which
 // keeps real time until pauseAt — and steps it to the frame it wants.
 // Installed before the app boots: switching clocks under a running Flutter
@@ -236,11 +236,11 @@ try {
     if (crash && level === levels[0]) {
       await page.clock.pauseAt(Date.now() + 1000);
       await tapCell(page, crash);
-      // 230 ms in: a short run hit at 140 ms, the screen is mid-shake and
-      // the red edge is still more than half up.
-      await page.clock.runFor(230);
+      // 260 ms in: a short run hit at 180 ms, the screen is mid-shake and
+      // the red edge is still most of the way up.
+      await page.clock.runFor(260);
       await shoot(page, `level-${id}-crash-${tag}`);
-      await page.clock.runFor(800);
+      await page.clock.runFor(900);
       await page.clock.resume();
     }
     if (hint) {

@@ -9,15 +9,15 @@ void main() {
     // Arrow 2's ray is (1,1),(1,0); arrow 0 sits on (1,1): one step away.
     final m = BumpMotion.forTap(samplePuzzle(), 2, const Cell(1, 1));
     expect(m.travel, closeTo(1 - BumpMotion.kStopShort, 1e-9));
-    expect(m.forwardMs, 140);
+    expect(m.forwardMs, 180);
     expect(m.totalMs, m.forwardMs + BumpMotion.backMs);
-    expect(m.impactAt, closeTo(140 / 500, 1e-9));
+    expect(m.impactAt, closeTo(180 / 660, 1e-9));
   });
 
   test('a long run takes longer to arrive, within bounds', () {
-    expect(const BumpMotion(travel: 0.4).forwardMs, greaterThanOrEqualTo(140));
-    expect(const BumpMotion(travel: 3.4).forwardMs, 314);
-    expect(const BumpMotion(travel: 30).forwardMs, 380);
+    expect(const BumpMotion(travel: 0.4).forwardMs, greaterThanOrEqualTo(180));
+    expect(const BumpMotion(travel: 3.4).forwardMs, 378);
+    expect(const BumpMotion(travel: 30).forwardMs, 460);
   });
 
   test('accelerates in, peaks at impact, eases home; the jolt follows', () {

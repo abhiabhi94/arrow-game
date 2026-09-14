@@ -154,14 +154,14 @@ void main() {
     await tester.tapAt(rect.topLeft + Offset(1.5 * cs, 2.5 * cs)); // arrow 2's head
     expect(notifier.state.mistakes, 1);
     // Mid-flight, at impact and on the way home the board keeps painting.
-    // Arrow 2 runs 0.4 of a cell: 140 ms in, 360 ms back.
+    // Arrow 2 runs 0.4 of a cell: 180 ms in, 480 ms back.
     final flash = find.byKey(const ValueKey<String>('crash-flash'));
     double flashOpacity() => tester.widget<Opacity>(flash).opacity;
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 60));
     expect(find.byType(PuzzleBoard), findsOneWidget);
     expect(flashOpacity(), 0); // nothing until the arrow hits
-    await tester.pump(const Duration(milliseconds: 80));
+    await tester.pump(const Duration(milliseconds: 130));
     expect(flashOpacity(), closeTo(1, 0.05)); // impact: the screen goes red…
     await tester.pump(const Duration(milliseconds: 150));
     expect(flashOpacity(), inExclusiveRange(0, 1)); // …and fades as it springs back

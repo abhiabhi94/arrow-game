@@ -27,7 +27,7 @@ node tool/screenshot.mjs --dump                                      # print rea
 web build is public on GitHub Pages and played on laptops too; shots carry
 the size in their name) and `--keys` presses keys on each opened level
 (`level-NN-keys-*.png`). `--crash x,y` taps that grid cell on the first
-level and captures the frame 230 ms in (`level-NN-crash-*.png`) — on level
+level and captures the frame 260 ms in (`level-NN-crash-*.png`) — on level
 1, cell 2,4 is a blocked arrow head, so the shot shows the crash: the
 screen thrown sideways, the red edge, the flashing blocker (the run drives
 the page on a fake clock, since a screenshot takes longer than the bump).
