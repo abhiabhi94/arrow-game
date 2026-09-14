@@ -52,7 +52,8 @@ pinned in `.flutter-version`.
 
 The web target doubles as a public build: `.github/workflows/pages.yml`
 deploys the release web app to GitHub Pages
-(https://abhiabhi94.github.io/arrow-game/) on every push to `main`. The
+(https://abhiabhi94.github.io/arrow-game/) on every push to `main`, and
+`pr-preview.yml` deploys every PR to `…/pr-preview/pr-<number>/`. The
 shipped store platforms are Android + iOS. The typeface (Google Sans Flex,
 OFL, static weights 400–800) is bundled in `assets/fonts/` and declared
 under `flutter: fonts:` as `GoogleSansFlex` — no `google_fonts`, no runtime
@@ -291,12 +292,32 @@ builds the web app, drives it in headless Chromium (`tool/screenshot.mjs`)
 at a phone viewport and at 1440×900 with keyboard presses, fails on any
 Flutter exception, and uploads `shots/`.
 
-A separate workflow, `.github/workflows/pages.yml`, runs on every push to
-`main` (and manually via workflow_dispatch): it builds the release web app
-with `--base-href /<repo>/` and deploys it to GitHub Pages. It needs the repo
-setting Settings → Pages → Source = "GitHub Actions" once; the base href is
-derived from the repo name so the workflow ports to other repos unchanged.
-Release = locked progression, same as the store build.
+Job "Debug APK" builds `flutter build apk --debug` ("Arrow Testing", every
+level unlocked), uploads it as the `arrow-debug-apk` artifact and, on a PR,
+keeps a sticky comment with the download link — an installable build of every
+change without checking it out.
+
+Two more workflows publish the web build to the **`gh-pages` branch**, which
+GitHub Pages serves (Settings → Pages → Source = "Deploy from a branch",
+Branch = `gh-pages` / (root), set once):
+
+- `.github/workflows/pages.yml` — on every push to `main` (and manually via
+  workflow_dispatch): the release web app with `--base-href /<repo>/`,
+  committed to the branch root. Release = locked progression, same as the
+  store build. It deploys with `clean-exclude: pr-preview/` and `force:
+  false`, so it rebases onto concurrent preview deploys instead of wiping
+  them.
+- `.github/workflows/pr-preview.yml` — on every PR event: the release web app
+  built with `--dart-define=UNLOCK_ALL=true` (so a reviewer can reach any
+  level) and a base href of `/<repo>/pr-preview/pr-<number>/`, published to
+  `pr-preview/pr-<number>/` on the same branch by `rossjrw/pr-preview-action`,
+  which also posts the link comment and deletes the folder when the PR closes.
+
+Both base hrefs are derived from the repo name, so the workflows port to
+other repos unchanged. Both skip PRs from forks (no token to write
+`gh-pages`); the repo needs Settings → Actions → General → Workflow
+permissions = "Read and write permissions" for the branch push and the
+comments.
 
 ## Conventions
 

@@ -28,7 +28,8 @@ same script and uploads the screenshots as an artifact.
 | `.claude/skills/run/SKILL.md` | Tells Claude how to build/screenshot/review in a session. |
 | `tool/screenshot.mjs` | The driver: static server + font mirror + Playwright script + smoke gate. |
 | `.github/actions/web-smoke/action.yml` | Composite action: build web, run the driver (phone + desktop runs), upload `shots/`. Used by the `smoke` job in `ci.yml`. |
-| `.github/workflows/pages.yml` | Deploys the release web build to GitHub Pages on every push to `main` (base href derived from the repo name). |
+| `.github/workflows/pages.yml` | Deploys the release web build to the root of the `gh-pages` branch on every push to `main` (base href derived from the repo name). |
+| `.github/workflows/pr-preview.yml` | Deploys each PR's web build (release + `UNLOCK_ALL=true`) to `pr-preview/pr-<number>/` on the same branch and comments the link; removed when the PR closes. |
 | `lib/ui/layout.dart` | Phone-width content column + mouse-drag scrolling so the Pages build works in a laptop-sized window. |
 | `assets/fonts/` + `pubspec.yaml` `fonts:` entry | Google Sans Flex bundled as a regular font family — nothing fetched at runtime. |
 | `web/` | Web platform scaffold (`flutter create --platforms=web .`). |

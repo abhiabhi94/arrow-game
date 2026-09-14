@@ -1,0 +1,69 @@
+name: PR preview
+
+# Deploys the web build of every pull request to
+# https://<owner>.github.io/<repo>/pr-preview/pr-<number>/ and posts (and keeps
+# updated) a comment on the PR with the link, so reviewers can play the change
+# without building anything. The preview is removed when the PR is closed.
+# Previews live in the pr-preview/ folder of the gh-pages branch, next to the
+# main site that pages.yml deploys to the branch root.
+#
+# The preview is a release build with UNLOCK_ALL=true: production performance,
+# but every level is reachable so a reviewer can look at any board.
+#
+# Previews for PRs from forks are skipped (no write token for gh-pages).
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  contents: write # push the preview to gh-pages
+  pull-requests: write # the preview-link comment
+
+# One deploy per PR at a time; pushes to gh-pages from other PRs / main are
+# rebased, not force-pushed, so they do not clobber each other.
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Deploy web preview
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Read pinned Flutter version
+        id: flutter
+        if: github.event.action != 'closed'
+        run: echo "version=$(tr -d '[:space:]' < .flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Flutter
+        if: github.event.action != 'closed'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+
+      # The preview is served from a sub-folder, so it needs that whole path as
+      # its base href — the same path the pr-preview action publishes it to.
+      - name: Build web (release, all levels unlocked)
+        if: github.event.action != 'closed'
+        env:
+          BASE_HREF: /${{ github.event.repository.name }}/pr-preview/pr-${{ github.event.number }}/
+        run: |
+          flutter pub get
+          flutter gen-l10n
+          flutter build web --release --base-href "$BASE_HREF" \
+            --dart-define=UNLOCK_ALL=true --no-wasm-dry-run
+
+      - name: Deploy preview (or remove it when the PR is closed)
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: build/web
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          action: auto

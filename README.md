@@ -4,7 +4,9 @@ A playful cross-platform (Android + iOS) **arrow exit puzzle** built with
 Flutter.
 
 **Play in the browser:** https://abhiabhi94.github.io/arrow-game/ (release
-build, deployed from `main` by GitHub Actions; installable as a PWA). On a
+build, deployed from `main` by GitHub Actions; installable as a PWA). Every
+pull request gets its own playable preview and a debug APK — see
+[Reviewing a pull request](#reviewing-a-pull-request). On a
 laptop the keyboard helps: **H** hint, **+ / -** zoom, **G** grid lines,
 **Space** pause.
 
@@ -88,9 +90,26 @@ store platforms are Android and iOS.
 ## Publishing (web)
 
 `.github/workflows/pages.yml` builds the release web app with
-`--base-href /<repo>/` and deploys it to GitHub Pages on every push to
-`main` (or manually from the Actions tab). One-time repo setting: Settings →
-Pages → Build and deployment → Source: **GitHub Actions**.
+`--base-href /<repo>/` and commits it to the root of the `gh-pages` branch on
+every push to `main` (or manually from the Actions tab). One-time repo
+setting: Settings → Pages → Build and deployment → Source: **Deploy from a
+branch**, Branch: **`gh-pages` / (root)** — the branch shows up in that
+dropdown only after the workflow has run once.
+
+## Reviewing a pull request
+
+Every PR gets both builds of itself, without anyone checking it out:
+
+- **Play it in the browser.** `.github/workflows/pr-preview.yml` deploys the
+  PR's web build to `…/arrow-game/pr-preview/pr-<number>/` (a release build
+  with `UNLOCK_ALL=true`, so every level is reachable) and keeps a comment on
+  the PR with the link. The preview is deleted when the PR closes.
+- **Install it on a phone.** The `Debug APK` job in `ci.yml` builds
+  `app-debug.apk` ("Arrow Testing", all levels open) and comments the
+  download link, refreshed on every push.
+
+Both run only for branches in this repo — a PR from a fork has no token to
+write `gh-pages`.
 
 ## Publishing (Play Store)
 
