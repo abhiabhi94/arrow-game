@@ -41422,17 +41422,17 @@ $2(a,b){this.a.gjF().du($.auB(),t.Zv).e6(b)},
 $S:287}
 A.ZC.prototype={}
 A.a1q.prototype={
-gkC(){return B.i.cd(B.d.ar(110+this.a*60),140,380)},
-akG(a){var s,r,q=this,p=q.gkC()/(q.gkC()+360)
+gkC(){return B.i.cd(B.d.ar(140+this.a*70),180,460)},
+akG(a){var s,r,q=this,p=q.gkC()/(q.gkC()+480)
 if(a<=0)return 0
 if(a<p){s=a/p
 return q.a*s*s}r=1-B.d.cd((a-p)/(1-p),0,1)
 return q.a*r*r*r},
-Ab(a){var s,r=this.gkC()/(this.gkC()+360)
+Ab(a){var s,r=this.gkC()/(this.gkC()+480)
 if(a<r)return 0
 s=1-B.d.cd((a-r)/(1-r),0,1)
 return s*s},
-ajV(a){var s,r,q=this.gkC()/(this.gkC()+360)
+ajV(a){var s,r,q=this.gkC()/(this.gkC()+480)
 if(a<q)return 0
 s=B.d.cd((a-q)/(1-q),0,1)
 r=1-s
@@ -42005,7 +42005,7 @@ p=A.av_(s,r,q)
 q=this.a
 q.y=p
 q=q.gr3()
-q.e=A.bD(0,p.gkC()+360)
+q.e=A.bD(0,p.gkC()+480)
 q.kB(0)}if(b.c===B.bW)s=(a==null?null:a.c)!==B.bW
 else s=!1
 if(s){s=this.a
@@ -42659,7 +42659,7 @@ s.toString
 o=o.z
 o.toString
 r=A.av_(s,a,o)
-q=A.bZ(null,A.bD(0,r.gkC()+360),null,null,p)
+q=A.bZ(null,A.bD(0,r.gkC()+480),null,null,p)
 p.e=a
 p.f=r
 p.r=q
