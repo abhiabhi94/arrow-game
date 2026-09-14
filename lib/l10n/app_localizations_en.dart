@@ -175,7 +175,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName19 => 'Escape Artist';
 
   @override
-  String get levelName20 => 'Grand Exit';
+  String get levelName20 => 'Halfway Out';
+
+  @override
+  String get levelName21 => 'Undertow';
+
+  @override
+  String get levelName22 => 'Hedge Maze';
+
+  @override
+  String get levelName23 => 'Ball of Yarn';
+
+  @override
+  String get levelName24 => 'Crossfire';
+
+  @override
+  String get levelName25 => 'Switchyard';
+
+  @override
+  String get levelName26 => 'Snake Pit';
+
+  @override
+  String get levelName27 => 'Hairball';
+
+  @override
+  String get levelName28 => 'Clockwork';
+
+  @override
+  String get levelName29 => 'Whirlpool';
+
+  @override
+  String get levelName30 => 'Ant Farm';
+
+  @override
+  String get levelName31 => 'Circuit Board';
+
+  @override
+  String get levelName32 => 'Briar Patch';
+
+  @override
+  String get levelName33 => 'Root System';
+
+  @override
+  String get levelName34 => 'Tapestry';
+
+  @override
+  String get levelName35 => 'Hornet\'s Nest';
+
+  @override
+  String get levelName36 => 'Deep Weave';
+
+  @override
+  String get levelName37 => 'Eye of the Needle';
+
+  @override
+  String get levelName38 => 'Pandemonium';
+
+  @override
+  String get levelName39 => 'Point of No Return';
+
+  @override
+  String get levelName40 => 'Grand Exit';
 
   @override
   String get tutorialTap => 'Tap an arrow to slide it out the way it points.';

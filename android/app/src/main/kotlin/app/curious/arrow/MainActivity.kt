@@ -47,6 +47,13 @@ class MainActivity : FlutterActivity() {
             "click" -> VibrationEffect.createOneShot(24, if (amp) 170 else VibrationEffect.DEFAULT_AMPLITUDE)
             // A firm thud: the arrow bumped, a life lost.
             "heavy" -> VibrationEffect.createOneShot(48, if (amp) 255 else VibrationEffect.DEFAULT_AMPLITUDE)
+            // The crash of a bump, a life lost: a hard hit, a beat, then a
+            // rumble — long enough to be felt without looking.
+            "crash" -> if (amp) {
+                VibrationEffect.createWaveform(longArrayOf(0, 70, 40, 130), intArrayOf(0, 255, 0, 200), -1)
+            } else {
+                VibrationEffect.createWaveform(longArrayOf(0, 70, 40, 130), -1)
+            }
             // A double buzz: level lost.
             "long" -> VibrationEffect.createWaveform(longArrayOf(0, 90, 70, 160), -1)
             else -> return

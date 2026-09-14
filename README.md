@@ -18,12 +18,14 @@ the way its head points, until it leaves the board. Get every arrow out.
 - **Blocked arrows cost a life.** If an arrow's exit path runs into another
   arrow it bumps back. **3 lives per level** — lose all three and the level
   resets behind an "Out of lives / Retry" screen.
-- **A clock on every level** (1–5 minutes, growing with the board). Run out
+- **A clock on every level** (half a minute to learn on, up to ten for the
+  finale, growing with the board — brisk on purpose). Run out
   and it's "Time's up" — replay the same level.
-- **20 levels**, each a fixed, procedurally generated board that is solvable
+- **40 levels**, each a fixed, procedurally generated board that is solvable
   by construction. The curve is steep: 5 arrows on a 5×6 board to learn on,
-  59 arrows on 19×26 by level 8, 144 arrows on 32×50 for the finale — and
-  the "who must go before whom" chains get longer all the way.
+  59 arrows on 19×26 by level 8, 144 arrows on 32×50 at the halfway mark,
+  224 arrows on 42×63 for the finale — and the "who must go before whom"
+  chains get longer all the way.
 - **3 hints per level** light up an arrow that can go right now.
 - **Zoom** in/out (buttons or pinch, up to 4×) — the late boards need it.
 - **One ink.** Arrows are thin dark lines like a printed puzzle; only the
@@ -32,7 +34,8 @@ the way its head points, until it leaves the board. Get every arrow out.
 - **Stars**: three for a flawless run, two for one slip, one for two. Best
   stars and best time are kept per level.
 - **A bump is a bump:** the arrow runs into the one in its way, jolts it,
-  and springs back.
+  and springs back — and the whole screen shakes, flashes red at the edges,
+  cracks and buzzes, so a lost life is never missed.
 - **Pick up where you left off:** close the app, switch away or back out
   mid-level and the level is saved; Home offers Continue, and the level
   opens on a "Welcome back" card with Continue or Start over.
@@ -78,7 +81,7 @@ flutter build apk --release --split-per-abi --dart-define=UNLOCK_ALL=true
                             #    alongside as "Arrow Testing" (.testing id)
 
 flutter build web --debug --no-web-resources-cdn      # web preview build (all levels open)
-node tool/screenshot.mjs --levels 1,7,20 --settings --hint  # phone-size screenshots -> shots/
+node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint  # phone-size screenshots -> shots/
 node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop + keyboard
 ```
 

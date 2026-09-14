@@ -131,10 +131,10 @@ void main() {
       // The finger gets a tick at once; the crash lands when the arrow does.
       expect(engine.calls, ['selection']);
       expect(sfxBackend.calls, isEmpty);
-      async.elapse(const Duration(milliseconds: 100));
+      async.elapse(const Duration(milliseconds: 160)); // 180 ms in for 0.4 of a cell
       expect(sfxBackend.calls, isEmpty);
-      async.elapse(const Duration(milliseconds: 20));
-      expect(engine.calls, ['selection', 'heavy']);
+      async.elapse(const Duration(milliseconds: 25));
+      expect(engine.calls, ['selection', 'crash']);
       expect(sfxBackend.calls, ['$kBumpSound@1.00']);
 
       // A later exit clears the blocked marker.

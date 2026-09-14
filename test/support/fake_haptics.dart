@@ -14,4 +14,6 @@ class RecordingHapticEngine implements HapticEngine {
   void heavy() => calls.add('heavy');
   @override
   void vibrate() => calls.add('vibrate');
+  @override
+  void crash() => calls.add('crash');
 }

@@ -8,8 +8,9 @@ A playful cross-platform (Android + iOS) **arrow exit puzzle** built with
 Flutter (in the spirit of "Arrow Exit Puzzle"). Bent arrow pieces sit on a
 grid; tapping one slides it along its own path, the way its head points, until
 it leaves the board. An arrow whose exit path runs into another arrow bumps
-back and costs a life. 20 fixed, procedurally generated levels on a steep
-curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50), drawn in a
+back and costs a life. 40 fixed, procedurally generated levels on a steep
+curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50 by level
+20 → 224 on 42×63), drawn in a
 single ink like a printed puzzle, 3 lives per level (losing all three resets the level behind a
 "Retry" screen), a clock on every level ("Time's up" → replay the same level),
 3 hints per level, zoom in/out, an earned grid-lines toggle (after level 4),
@@ -25,9 +26,10 @@ flutter test                    # full test suite
 tool/coverage.sh 92             # coverage gate (fails under threshold)
 
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
-node tool/screenshot.mjs --levels 1,7,20 --settings --hint          # phone-viewport screenshots -> shots/
+node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-viewport screenshots -> shots/
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
 node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + keyboard
+node tool/screenshot.mjs --levels 1 --crash 2,4                     # a bump mid-crash (fake clock): jolt + red flash
 
 flutter run                     # debug build = "Arrow Testing", all levels unlocked
 flutter run --release           # release build = "Arrow", locked progression
@@ -44,7 +46,11 @@ drives the app (home, settings, any level's board and — with `--hint` — the
 hint glow, light/dark) at 390×844 and writes PNGs to `shots/`; `--viewport
 WxH` renders the desktop layout instead and `--keys` presses keys on each
 opened level (both exercised in CI, since the web build is also played on a
-laptop via GitHub Pages). It exits 1 on any Flutter exception, so it doubles
+laptop via GitHub Pages); `--crash x,y` taps a grid cell on the first level
+and captures the bump 260 ms in on Playwright's fake clock (a screenshot
+takes longer than the bump), with the semantics layer made pointer-transparent
+for the tap — a click on the board's accessibility node would otherwise be a
+semantic tap at the board's centre. It exits 1 on any Flutter exception, so it doubles
 as the CI smoke test (`.github/actions/web-smoke`, job "Web smoke &
 screenshots"). See `.claude/skills/run/SKILL.md` and `docs/cloud-dev.md`.
 The SessionStart hook in `.claude/hooks/session-start.sh` installs the SDK
@@ -134,7 +140,7 @@ lib/
     arrow_piece.dart     ArrowPiece: cells tail→head + heading; exitRay()
     puzzle.dart          Puzzle: occupancy, blockers, canExit, solvingOrder, hintFor, difficultyScore
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N
-  data/level_specs.dart  the 20 levels (board size, arrow count, length range, clock)
+  data/level_specs.dart  the 40 levels (board size, arrow count, length range, clock)
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider,
@@ -174,15 +180,17 @@ Key patterns:
   (`kCloseBonus`, `kCloseStepBias`) and a second strategy grows a body *out
   from a cell on an open ray* and picks the head end afterwards
   (`_placeClosing`). Then a gap pass grows tails into leftover cells under
-  the same DAG rule, and the fullest, then lowest-`meanOpenMoves`, of
-  `candidatesFor(arrows)` boards is kept. Fill is ~85–95%; the level table
+  the same DAG rule, and the fullest, then (`holdsChoice`) one within
+  `startSlack`/`widestSlack` of `openMoves` at the first move and at its
+  widest, then lowest-`meanOpenMoves`, of `candidatesFor(arrows)` boards
+  is kept (`kMinCandidates` = 5 on the big boards). Fill is ~85–95%; the level table
   is sized at roughly ten cells per arrow so every level gets its full
   count, and the levels open with ≤ 5 free arrows and offer ~2 taps at a
   typical moment (`test/engine/puzzle_generator_test.dart` pins that).
   `puzzleForLevel(spec)` seeds `Random` from `LevelSpec.seed`, so each
   level is a fixed puzzle. It runs on a background isolate
   (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
-  it runs inline (~0.4 s for the finale). `dart run tool/level_report.dart
+  it runs inline (~0.4 s for level 20, about 2 s for the finale). `dart run tool/level_report.dart
   [level] [extraSeeds]` prints arrows placed vs asked, fill, depth,
   free-at-start, open moves (mean/max vs the cap) and timing — run it after
   touching the table or the generator.
@@ -193,12 +201,17 @@ Key patterns:
   `tick()` when `autoTick` is true; tests pass `autoTick: false`.
 - **Bump:** `models/bump_motion.dart` (pure Dart) describes the blocked
   tap — the arrow accelerates up to the arrow in its way (stopping
-  `kStopShort` of a cell before its centre, 110–320 ms by distance) and
-  eases back over 300 ms; the blocker flashes and is shoved a touch at
-  impact. The board draws `offsetAt/shoveAt/flashAt`, and the provider
-  fires the knock and the heavy buzz on a `Timer` at `forwardMs` so they
-  land on impact (a light tick answers the finger at once). Tests use
-  `fakeAsync` for that timer.
+  `kStopShort` of a cell before its centre, 180–460 ms by distance) and
+  eases back over 480 ms; the blocker flashes and is shoved a touch at
+  impact. The board draws `offsetAt/shoveAt/flashAt`. The game screen runs
+  the same motion in its own controller to throw the whole screen sideways
+  (`joltAt` × `kCrashJoltPx`) and bloom a red edge over it (`flashAt` on a
+  radial gradient of `blockedFlash`), so a lost life registers even when
+  the eye was nowhere near the arrow. The provider fires the crash sound
+  and `HapticsService.miss` (`HapticEngine.crash`: a hard hit plus a
+  rumble — an Android waveform, heavy + vibrate elsewhere) on a `Timer` at
+  `forwardMs` so they land on impact (a light tick answers the finger at
+  once). Tests use `fakeAsync` for that timer.
 - **Saved game:** one slot (`models/saved_game.dart`, prefs key
   `arrow_saved_game`, JSON: level, arrows out, slips, hints, clock — the
   board itself is rebuilt from the seed). `GameNotifier.onSnapshot` fires
@@ -213,7 +226,10 @@ Key patterns:
 - **Hints:** `maxHints = 3` per attempt; `Puzzle.hintFor` picks the removable
   arrow that frees the most others; any tap clears the highlight.
 - **Grid lines:** drawn through the cell centres (the lattice the arrows lie
-  on), not between cells, so every arrow body sits on a line.
+  on), not between cells, so every arrow body sits on a line. They are a
+  1 px hairline, so `gridLine` keeps ≥ 40 levels of contrast to the page in
+  both palettes (`test/ui/theme_test.dart` pins it) — fainter and it
+  disappears on a laptop screen.
   `Settings.gridLinesOn` (persisted) but the toggle is earned:
   `ProgressNotifier.gridLinesUnlocked` (clear level `kGridLinesUnlockAfterLevel`
   = 4; always on in the testing build).
@@ -222,7 +238,8 @@ Key patterns:
 - **Board look:** one ink (`palette.arrowInk`), thin strokes (≤5 px), small
   heads, no frame — the arrows sit straight on the page. The hint glow and
   the blocked flash are the only colour on the board. Slide-out and bump are
-  animated in `PuzzleBoard` (240–600 ms slide, ease-in). Strokes cap at
+  animated in `PuzzleBoard` (240–600 ms slide, ease-in; the bump 180–460 ms
+  in and 480 ms back). Strokes cap at
   3 px and heads at 8 px so the small early boards read as pen lines.
 - **Sound effects:** `SfxService` (`services/sfx_service.dart`, injectable
   `SfxBackend`, a pool of low-latency players) plays `assets/audio/whoosh.wav`
@@ -231,8 +248,9 @@ Key patterns:
   tap, which also ends the streak. Both WAVs are synthesised by
   `tool/make_sfx.py` (pure Python, no deps): the whoosh is swept band-passed
   noise (no tone — a chirp reads as a laser), the bump a sharp crack over a
-  sagging thump with a lighter rebound knock. `Settings.sfxOn` gates both
-  (on by default).
+  sagging thump and a low rumble with a lighter rebound knock — half a
+  second and near full scale, since it announces a lost life.
+  `Settings.sfxOn` gates both (on by default).
 - **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
   "Game" by The_Mountain (Pixabay Content License, `assets/audio/game.mp3`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
@@ -243,8 +261,9 @@ Key patterns:
 - **Home:** a gradient "Next up" hero card and a winding trail of level
   nodes (`_Trail` + `_TrailPainter`), locked/current/cleared states with
   stars and best time.
-- **Icon:** `tool/make_icon.py` (Pillow) renders `assets/icon/*.png`; then
-  `dart run flutter_launcher_icons`.
+- **Icon:** `tool/make_icon.py` (Pillow) renders `assets/icon/*.png` and
+  the web icons (`web/favicon.png`, `web/icons/*.png` — flutter_launcher_icons
+  is Android + iOS only); then `dart run flutter_launcher_icons`.
 - **Difficulty:** every knob is in `data/level_specs.dart` — size, arrow
   count, lengths, clock and `openMoves` (3 on levels 1–3, 2 from level 4:
   how many taps the generator leaves available at once); the tests in
@@ -252,9 +271,9 @@ Key patterns:
   pin the curve (sizes never shrink, the cap never widens, every level
   generates its full arrow count, solvable, tight, later levels more
   tangled). Tune numbers there; keep the generator test green — it is what
-  guarantees a level is playable. The clock is ~4.5 s an arrow on levels
-  1–4, 5.5 s on 5–9 and 6.5 s from 10 (plus 45 s), since tight boards are
-  meant to be thought about.
+  guarantees a level is playable. The clock is brisk: ~1.8 s an arrow on
+  levels 1–4, 2.2 s on 5–9 and 2.6 s from 10 (plus ~18 s) — 27 s on level
+  1, ten minutes on the finale — so a level is a sprint of quick reads.
 - **Lives / stars:** `maxLives = 3` and `starsForMistakes` live in
   `models/level_progress.dart`.
 

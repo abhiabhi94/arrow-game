@@ -35,8 +35,10 @@ const Color _lTextInk = Color(0xFF2D2A4A);
 const Color _lTextMuted = Color(0xFF6E6A8F);
 const Color _lTextFaint = Color(0xFFA6A2C4);
 
-// Board: faint grid lines on the page background.
-const Color _lGridLine = Color(0xFFE4E0FF);
+// Board: grid lines like graph paper — soft next to the ink, but far enough
+// from the page (~45 levels a channel) to survive a 1 px hairline on any
+// screen. The old 0xFFE4E0FF sat 16 levels off the page and vanished.
+const Color _lGridLine = Color(0xFFC8C3EC);
 const Color _lHintGlow = Color(0x66FFC53D);
 const Color _lBlockedFlash = Color(0x80FF6B6B);
 // One ink for every arrow, like a printed puzzle: colour would only shout.
@@ -76,7 +78,7 @@ const Color _dTextInk = Color(0xFFEAE7F7);
 const Color _dTextMuted = Color(0xFFA9A4CC);
 const Color _dTextFaint = Color(0xFF6E6A8F);
 
-const Color _dGridLine = Color(0xFF322E4A);
+const Color _dGridLine = Color(0xFF423D66);
 const Color _dHintGlow = Color(0x80FFCE52);
 const Color _dBlockedFlash = Color(0x99FF7B7B);
 const Color _dArrowInk = Color(0xFFEAE7F7);

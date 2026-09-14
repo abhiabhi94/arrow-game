@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/level_specs.dart';
 import '../l10n/app_localizations.dart';
+import '../models/bump_motion.dart';
 import '../models/game_state.dart';
 import '../providers/game_provider.dart';
 import '../providers/progress_provider.dart';
@@ -36,10 +37,19 @@ class GameScreen extends ConsumerStatefulWidget {
   ConsumerState<GameScreen> createState() => _GameScreenState();
 }
 
+/// How far the screen is thrown sideways at the peak of a crash, in
+/// logical pixels.
+const double kCrashJoltPx = 7;
+
 class _GameScreenState extends ConsumerState<GameScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   late final ConfettiController _confetti =
       ConfettiController(duration: const Duration(seconds: 2));
+
+  /// The crash of a bump, felt by the whole screen: it runs the same
+  /// [BumpMotion] as the board so the jolt and the red flash land on impact.
+  late final AnimationController _crash = AnimationController(vsync: this);
+  BumpMotion? _crashMotion;
   final TransformationController _zoom = TransformationController();
   double _scale = 1;
   Size _viewport = Size.zero;
@@ -60,6 +70,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _crash.dispose();
     _confetti.dispose();
     _zoom.dispose();
     super.dispose();
@@ -137,6 +148,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final provider = gameProvider(widget.level);
     final progress = ref.read(progressProvider.notifier);
     ref.listen(provider, (prev, next) {
+      if (next.lastOutcome == MoveOutcome.blocked && next.moveToken != prev?.moveToken) {
+        final motion = BumpMotion.forTap(next.puzzle!, next.lastMoveId!, next.blockedCell!);
+        _crashMotion = motion;
+        _crash
+          ..duration = Duration(milliseconds: motion.totalMs)
+          ..forward(from: 0);
+      }
       if (next.phase == GamePhase.cleared && prev?.phase != GamePhase.cleared) {
         _newBest = progress.progressFor(widget.level).isNewBest(next.elapsedMs);
         _gridJustUnlocked = widget.level == kGridLinesUnlockAfterLevel &&
@@ -198,7 +216,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
               // spreading across the window. The board loses nothing — the
               // levels are taller than wide, so the window's height is what
               // sizes them there.
-              ContentColumn(
+              AnimatedBuilder(
+                animation: _crash,
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(
+                    (_crashMotion?.joltAt(_crash.value) ?? 0) * kCrashJoltPx,
+                    0,
+                  ),
+                  child: child,
+                ),
+                child: ContentColumn(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                   child: Column(
@@ -272,6 +299,30 @@ class _GameScreenState extends ConsumerState<GameScreen>
                         canZoomOut: _scale > kMinZoom + 0.001,
                       ),
                     ],
+                  ),
+                ),
+                ),
+              ),
+              // The crash flash: a red edge over the whole screen that
+              // blooms at impact and fades with the spring back.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _crash,
+                    builder: (context, child) => Opacity(
+                      key: const ValueKey<String>('crash-flash'),
+                      opacity: _crashMotion?.flashAt(_crash.value) ?? 0,
+                      child: child,
+                    ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          radius: 1.1,
+                          colors: [Colors.transparent, p.blockedFlash],
+                          stops: const [0.35, 1],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),

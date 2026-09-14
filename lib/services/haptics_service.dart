@@ -16,6 +16,10 @@ abstract class HapticEngine {
   void medium();
   void heavy();
   void vibrate();
+
+  /// The crash of a bump: a hard hit with a rumble behind it, so a lost
+  /// life is felt even when the eye missed the arrow.
+  void crash();
 }
 
 /// The channel `MainActivity.kt` answers on Android.
@@ -47,6 +51,15 @@ class SystemHapticEngine implements HapticEngine {
   void heavy() => _useVibrator ? _buzz('heavy') : HapticFeedback.heavyImpact();
   @override
   void vibrate() => _useVibrator ? _buzz('long') : HapticFeedback.vibrate();
+  @override
+  void crash() {
+    if (_useVibrator) {
+      _buzz('crash');
+      return;
+    }
+    HapticFeedback.heavyImpact();
+    HapticFeedback.vibrate();
+  }
 }
 
 class HapticsService {
@@ -64,8 +77,8 @@ class HapticsService {
   /// A soft confirmation for an arrow that slid out.
   void hit() => _run(_engine.light);
 
-  /// A firm buzz for a bump (a life lost).
-  void miss() => _run(_engine.heavy);
+  /// The crash of a bump (a life lost): a hard hit and a rumble.
+  void miss() => _run(_engine.crash);
 
   /// A celebratory nudge on clearing a level.
   void victory() => _run(_engine.medium);
