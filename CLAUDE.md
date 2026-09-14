@@ -216,7 +216,10 @@ Key patterns:
 - **Hints:** `maxHints = 3` per attempt; `Puzzle.hintFor` picks the removable
   arrow that frees the most others; any tap clears the highlight.
 - **Grid lines:** drawn through the cell centres (the lattice the arrows lie
-  on), not between cells, so every arrow body sits on a line.
+  on), not between cells, so every arrow body sits on a line. They are a
+  1 px hairline, so `gridLine` keeps ≥ 40 levels of contrast to the page in
+  both palettes (`test/ui/theme_test.dart` pins it) — fainter and it
+  disappears on a laptop screen.
   `Settings.gridLinesOn` (persisted) but the toggle is earned:
   `ProgressNotifier.gridLinesUnlocked` (clear level `kGridLinesUnlockAfterLevel`
   = 4; always on in the testing build).
@@ -246,8 +249,9 @@ Key patterns:
 - **Home:** a gradient "Next up" hero card and a winding trail of level
   nodes (`_Trail` + `_TrailPainter`), locked/current/cleared states with
   stars and best time.
-- **Icon:** `tool/make_icon.py` (Pillow) renders `assets/icon/*.png`; then
-  `dart run flutter_launcher_icons`.
+- **Icon:** `tool/make_icon.py` (Pillow) renders `assets/icon/*.png` and
+  the web icons (`web/favicon.png`, `web/icons/*.png` — flutter_launcher_icons
+  is Android + iOS only); then `dart run flutter_launcher_icons`.
 - **Difficulty:** every knob is in `data/level_specs.dart` — size, arrow
   count, lengths, clock and `openMoves` (3 on levels 1–3, 2 from level 4:
   how many taps the generator leaves available at once); the tests in

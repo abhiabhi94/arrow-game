@@ -5,19 +5,25 @@ Produces, from one drawing routine rendered at high resolution:
   assets/icon/icon.png             1024x1024 full-bleed (launcher source / iOS / Play)
   assets/icon/icon_foreground.png  1024x1024 transparent, the board centred in the
                                    adaptive-icon safe zone (~66%)
+  web/favicon.png                  64x64 of the full tile
+  web/icons/Icon-{192,512}.png     the full tile (PWA "any" icons)
+  web/icons/Icon-maskable-*.png    square, paper edge to edge with the board in
+                                   the maskable safe zone (like the adaptive icon)
 
 Design: the tile *is* the page. A sheet of soft paper with the faint
 lattice the arrows lie on, two bent arrows in the game's single ink and one
 coral arrow sliding up and off the top edge — the move the whole game is
 about. Colours match lib/ui/colors.dart (light palette).
 Run: python3 tool/make_icon.py && dart run flutter_launcher_icons
+(flutter_launcher_icons only covers Android and iOS; the web files are written
+here so the site and the store builds share one icon.)
 The adaptive background colour in pubspec.yaml must match PAPER_BOTTOM.
 """
 from PIL import Image, ImageDraw
 
 PAPER_TOP = (255, 255, 255)
 PAPER_BOTTOM = (244, 243, 255)   # backgroundSoft
-GRID = (228, 224, 255)           # gridLine
+GRID = (228, 224, 255)           # the lattice, a shade fainter than gridLine
 INK = (45, 42, 74)               # arrowInk, the arrows' single ink
 CORAL = (255, 107, 107)          # accentCoral, the arrow on its way out
 SS = 4  # supersample for crisp anti-aliasing
@@ -102,6 +108,24 @@ def make_foreground(path):
     img.resize((SIZE, SIZE), Image.LANCZOS).save(path)
 
 
+def make_maskable(size):
+    """A square tile for PWA maskable icons: the paper runs edge to edge and
+    the board sits in the centre ~66%, which is what survives a circle mask."""
+    s = SIZE * SS
+    img = gradient(s, PAPER_TOP, PAPER_BOTTOM).convert("RGBA")
+    draw_board(img, s / 2, s * 0.52, s * 0.66, s * 0.19)
+    return img.resize((size, size), Image.LANCZOS)
+
+
+def make_web(full_path):
+    full = Image.open(full_path)
+    full.resize((64, 64), Image.LANCZOS).save("web/favicon.png")
+    for size in (192, 512):
+        full.resize((size, size), Image.LANCZOS).save(f"web/icons/Icon-{size}.png")
+        make_maskable(size).save(f"web/icons/Icon-maskable-{size}.png")
+
+
 if __name__ == "__main__":
     make_full("assets/icon/icon.png")
     make_foreground("assets/icon/icon_foreground.png")
+    make_web("assets/icon/icon.png")
