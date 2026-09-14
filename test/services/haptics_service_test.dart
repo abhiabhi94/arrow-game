@@ -20,7 +20,7 @@ void main() {
     s.miss();
     s.victory();
     s.fail();
-    expect(engine.calls, ['selection', 'light', 'heavy', 'medium', 'vibrate']);
+    expect(engine.calls, ['selection', 'light', 'crash', 'medium', 'vibrate']);
   });
 
   test('stays silent when disabled', () {
@@ -78,7 +78,8 @@ void main() {
       ..light()
       ..medium()
       ..heavy()
-      ..vibrate();
+      ..vibrate()
+      ..crash();
     await Future<void>.delayed(Duration.zero);
     expect(calls.map((c) => c.method).toSet(), {'vibrate'});
     expect(calls.map((c) => c.arguments).toList(), [
@@ -87,6 +88,7 @@ void main() {
       'click',
       'heavy',
       'long',
+      'crash',
     ]);
   });
 
@@ -107,13 +109,17 @@ void main() {
       ..light()
       ..medium()
       ..heavy()
-      ..vibrate();
+      ..vibrate()
+      ..crash();
     await Future<void>.delayed(Duration.zero);
-    expect(calls, hasLength(5));
+    // The crash is a heavy hit with the long buzz behind it.
+    expect(calls, hasLength(7));
     expect(calls.map((c) => c.arguments).toList(), [
       'HapticFeedbackType.selectionClick',
       'HapticFeedbackType.lightImpact',
       'HapticFeedbackType.mediumImpact',
+      'HapticFeedbackType.heavyImpact',
+      null,
       'HapticFeedbackType.heavyImpact',
       null,
     ]);

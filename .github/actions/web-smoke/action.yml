@@ -16,6 +16,7 @@ inputs:
     default: |
       --levels 1,5,10,20,40 --settings --hint
       --levels 3,16 --dark --hint --grid
+      --levels 1 --crash 2,4
       --onboarding
       --levels 3 --resume
       --levels 1,8 --viewport 1440x900 --keys Equal,KeyH --settings

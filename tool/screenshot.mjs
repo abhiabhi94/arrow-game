@@ -8,7 +8,7 @@
 //   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--hint] [--grid] [--resume]
 //                            [--settings] [--onboarding] [--dump] [--no-strict]
 //                            [--build-dir build/web] [--scale 2] [--port 0]
-//                            [--viewport 1440x900] [--keys Equal,KeyH]
+//                            [--viewport 1440x900] [--keys Equal,KeyH] [--crash 2,4]
 //
 //   --levels  opens each level and captures its board (level-NN-*.png)
 //   --hint    also taps the hint button and captures the glowing arrow
@@ -21,6 +21,11 @@
 //             non-phone shots carry the size in their filename
 //   --keys    Playwright key names pressed on each opened level, then captured
 //             (level-NN-keys-*.png): e.g. Equal zooms in, KeyH asks for a hint
+//   --crash x,y  taps grid cell (x, y) on the first level and captures the
+//             moment after impact (level-NN-crash-*.png): the screen jolt and
+//             the red flash of a bump. On level 1, cell 2,4 is a blocked head.
+//             A screenshot takes longer than the bump, so this run drives the
+//             page on Playwright's fake clock and steps it to the frame.
 //
 // Prereq: `flutter build web --debug --no-web-resources-cdn`
 //   debug   = all levels unlocked (same as the "Arrow Testing" Android build)
@@ -71,6 +76,7 @@ const isPhone = viewport.width < 600;
 // Keys to press on each opened level, so keyboard shortcuts can be smoke-tested
 // the same way taps are (e.g. `--keys Equal,Equal,KeyH`).
 const keys = String(args.keys ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+const crash = parseCell(args.crash);
 
 if (!fs.existsSync(path.join(buildDir, 'index.html'))) {
   console.error(`No web build at ${buildDir}. Run: flutter build web --debug --no-web-resources-cdn`);
@@ -168,6 +174,12 @@ await context.addInitScript((p) => {
 }, prefs);
 
 const page = await context.newPage();
+// The bump is over (140-380 ms in, 360 ms back) before a screenshot of the
+// canvas can be taken, so a crash run puts the page on a fake clock — which
+// keeps real time until pauseAt — and steps it to the frame it wants.
+// Installed before the app boots: switching clocks under a running Flutter
+// engine trips its frame-timestamp assertion in the debug build.
+if (crash) await page.clock.install();
 page.on('pageerror', (e) => problems.push(`JS error: ${e.message}\n${String(e.stack ?? '').split('\n').slice(0, 8).join('\n')}`));
 page.on('console', (m) => {
   const text = m.text();
@@ -218,8 +230,19 @@ try {
     }
     await tile.click();
     await settle(page, 1200);
+    if (args.dump) console.log(await dumpSemantics(page));
     const id = String(level).padStart(2, '0');
     await shoot(page, `level-${id}-${tag}`);
+    if (crash && level === levels[0]) {
+      await page.clock.pauseAt(Date.now() + 1000);
+      await tapCell(page, crash);
+      // 230 ms in: a short run hit at 140 ms, the screen is mid-shake and
+      // the red edge is still more than half up.
+      await page.clock.runFor(230);
+      await shoot(page, `level-${id}-crash-${tag}`);
+      await page.clock.runFor(800);
+      await page.clock.resume();
+    }
     if (hint) {
       await page.getByRole('button', { name: /^Hint/ }).first().click();
       await settle(page, 500);
@@ -282,10 +305,40 @@ async function goBack(page) {
 
 function settle(page, ms) { return page.waitForTimeout(ms); }
 
+/// Taps the centre of grid cell {x, y} on the board. The board is one canvas
+/// (a tappable node named "Puzzle board W by H"), so the cell size comes
+/// from its box. With semantics on, a click lands on that node and Flutter
+/// turns it into a *semantic* tap at the node's centre, whatever the cell;
+/// so the semantics layer is made transparent to the pointer for the tap and
+/// the click reaches the canvas with its real coordinates.
+async function tapCell(page, { x, y }) {
+  const board = page.getByRole('button', { name: /^Puzzle board \d+ by \d+$/ }).first();
+  const name = await board.textContent();
+  const [, w, h] = /(\d+) by (\d+)/.exec(name).map(Number);
+  const box = await board.boundingBox();
+  const cell = Math.min(box.width / w, box.height / h);
+  const left = box.x + (box.width - cell * w) / 2;
+  const top = box.y + (box.height - cell * h) / 2;
+  const style = await page.addStyleTag({
+    // The nodes set their own pointer-events inline, so hit every one of them.
+    content: 'flt-semantics-host, flt-semantics-host * { pointer-events: none !important; }',
+  });
+  await page.mouse.click(left + (x + 0.5) * cell, top + (y + 0.5) * cell);
+  await style.evaluate((el) => el.remove());
+}
+
 async function shoot(page, name) {
   const file = path.join(outDir, `${name}.png`);
   await page.screenshot({ path: file });
   console.log('  wrote', path.relative(process.cwd(), file));
+}
+
+/// `--crash 2,4` -> { x, y }; nothing when the flag is absent.
+function parseCell(value) {
+  if (!value || value === true) return null;
+  const m = /^(\d+),(\d+)$/.exec(String(value));
+  if (!m) { console.error(`Bad --crash ${value}; expected a grid cell, e.g. 2,4`); process.exit(2); }
+  return { x: Number(m[1]), y: Number(m[2]) };
 }
 
 /// `--viewport 1440x900` -> { width, height }; defaults to a phone.

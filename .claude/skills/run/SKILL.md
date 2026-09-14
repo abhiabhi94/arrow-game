@@ -17,6 +17,7 @@ node tool/screenshot.mjs --levels 1,7,13,20,40 --settings --hint     # -> shots/
 node tool/screenshot.mjs --levels 3,16 --dark --hint                 # dark theme
 node tool/screenshot.mjs --onboarding                                # first-launch walkthrough
 node tool/screenshot.mjs --levels 1,8 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + shortcuts
+node tool/screenshot.mjs --levels 1 --crash 2,4                      # a bump mid-crash: screen jolt + red flash
 node tool/screenshot.mjs --dump                                      # print reachable buttons/labels
 ```
 
@@ -25,7 +26,12 @@ node tool/screenshot.mjs --dump                                      # print rea
 (`level-NN-hint-*.png`). `--viewport WxH` renders the desktop layout (the
 web build is public on GitHub Pages and played on laptops too; shots carry
 the size in their name) and `--keys` presses keys on each opened level
-(`level-NN-keys-*.png`). Then `Read` the PNGs in `shots/` to review them.
+(`level-NN-keys-*.png`). `--crash x,y` taps that grid cell on the first
+level and captures the frame 230 ms in (`level-NN-crash-*.png`) — on level
+1, cell 2,4 is a blocked arrow head, so the shot shows the crash: the
+screen thrown sideways, the red edge, the flashing blocker (the run drives
+the page on a fake clock, since a screenshot takes longer than the bump).
+Then `Read` the PNGs in `shots/` to review them.
 
 Rebuild whenever `lib/` changes; the script serves whatever is in `build/web`.
 `PATH`/`NODE_PATH` are set by the session-start hook; if `flutter` is missing

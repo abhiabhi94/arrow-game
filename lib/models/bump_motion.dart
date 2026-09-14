@@ -4,6 +4,8 @@
 /// can draw the same motion.
 library;
 
+import 'dart:math';
+
 import '../engine/cell.dart';
 import '../engine/puzzle.dart';
 
@@ -22,14 +24,18 @@ class BumpMotion {
   /// How far short of the blocker's centre the head stops, in cells.
   static const double kStopShort = 0.6;
 
-  /// The back leg, a fixed spring home.
-  static const int backMs = 300;
+  /// The back leg, a fixed spring home — also how long the screen shakes.
+  static const int backMs = 360;
+
+  /// Shakes of the screen over the back leg.
+  static const int kJoltCycles = 3;
 
   /// Cells the head moves before impact.
   final double travel;
 
-  /// The forward leg: a quick accelerating slide, longer for a longer run.
-  int get forwardMs => (90 + travel * 55).round().clamp(110, 320);
+  /// The forward leg: an accelerating slide, longer for a longer run. Slow
+  /// enough to be seen — a bump that is over in a blink is a missed life.
+  int get forwardMs => (110 + travel * 60).round().clamp(140, 380);
 
   int get totalMs => forwardMs + backMs;
 
@@ -62,4 +68,15 @@ class BumpMotion {
 
   /// The blocked-cell flash, 0..1: full at impact, fading over the back leg.
   double flashAt(double t) => shoveAt(t);
+
+  /// The whole screen's sideways jolt at [t], -1..1: nothing until impact,
+  /// then [kJoltCycles] shakes that die away over the back leg, so a crash
+  /// registers even when the eye is nowhere near the arrow.
+  double joltAt(double t) {
+    final impact = impactAt;
+    if (t < impact) return 0;
+    final u = ((t - impact) / (1 - impact)).clamp(0.0, 1.0);
+    final left = 1 - u;
+    return sin(u * kJoltCycles * 2 * pi) * left * left;
+  }
 }

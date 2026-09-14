@@ -63,9 +63,11 @@ def whoosh_sound(seconds=0.26, f0=320.0, f1=2_400.0):
     return [s / peak * 0.85 for s in out]
 
 
-def bump_sound(seconds=0.34):
+def bump_sound(seconds=0.5):
     """Two hits: the arrow slams into its neighbour (a sharp crack over a
-    heavy thump) and, as it springs back, a lighter second knock."""
+    heavy thump with a low rumble rolling under it) and, as it springs back,
+    a lighter second knock. Big on purpose — a life is lost here, and the
+    sound has to say so even when the eye missed the arrow."""
     random.seed(11)
     n = int(RATE * seconds)
     crack = BandPass(q=1.2)
@@ -79,7 +81,10 @@ def bump_sound(seconds=0.34):
         # with a fast, loud attack.
         freq = 40.0 + 130.0 * math.exp(-t * 32.0)
         phase += 2 * math.pi * freq / RATE
-        thump = math.sin(phase) * math.exp(-t * 14.0)
+        thump = math.sin(phase) * math.exp(-t * 11.0)
+        # The rumble: a slow 55 Hz roll under the thump that hangs on for
+        # ~0.4 s, so the crash has weight on a phone speaker.
+        rumble = math.sin(2 * math.pi * 55.0 * t) * math.exp(-t * 7.0) * min(1.0, t * 60.0)
         noise = random.uniform(-1.0, 1.0)
         # The crack: a wide splash of noise around 2.2 kHz, gone in ~15 ms,
         # and a woodier body around 500 Hz that rings ~60 ms.
@@ -89,11 +94,11 @@ def bump_sound(seconds=0.34):
         t2 = t - second
         rebound = 0.0
         if t2 >= 0:
-            rebound = 0.5 * body.tick(noise, 650.0) * math.exp(-t2 * 45.0)
-        s = 1.3 * thump + hit + rebound
-        out.append(math.tanh(1.9 * s))
+            rebound = 0.6 * body.tick(noise, 650.0) * math.exp(-t2 * 45.0)
+        s = 1.6 * thump + 0.7 * rumble + 1.2 * hit + rebound
+        out.append(math.tanh(2.2 * s))
     peak = max(abs(s) for s in out)
-    return [s / peak * 0.92 for s in out]
+    return [s / peak * 0.98 for s in out]
 
 
 def write(path, samples):
