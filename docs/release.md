@@ -96,25 +96,50 @@ Pushing is opt-in and asked for a piece at a time:
 `--dry-run` prints the plan and stops before even the commit; `-y` answers
 every prompt yes (for a script or a CI job).
 
-Which part of the name moves is the argument — the version code (the `+N`
-part) always increments, because Play requires it to be **strictly higher**
-than any previously uploaded build:
+### Where "the current version" comes from
 
-| Argument            | 1.0.0+3 becomes | Tag        |
-|---------------------|-----------------|------------|
-| `patch` *(default)* | 1.0.1+4         | `v1.0.1`   |
-| `minor`             | 1.1.0+4         | `v1.1.0`   |
-| `major`             | 2.0.0+4         | `v2.0.0`   |
-| `build`             | 1.0.0+4         | `v1.0.0+5` |
-| `2.5.1`             | 2.5.1+4         | `v2.5.1`   |
+**The released version name lives in the newest `v*` tag, not in
+`pubspec.yaml`.** Through v1.2.0 this repo tagged `v1.0.0`, `v1.1.0` and
+`v1.2.0` while pubspec's name sat at `1.0.0` the whole time — only the `+N`
+code was ever bumped there (`+1`, `+2`, `+3`), because the workflow's
+`build_name` input supplied the name. Reading pubspec alone would propose
+`1.0.1` when the shipped version is `1.2.0`.
 
-`build` re-uploads the same version name with a new code, so `v1.0.0` is
-normally already taken; the tag then carries the code instead, which still
-matches the workflow's `v*` trigger. `--tag NAME` overrides it.
+So the script takes:
 
-Before it changes anything the script refuses to run on a dirty tree, off
-`main` (`--any-branch` overrides), on a branch behind `origin`, or onto a
-tag that already exists. `--check` runs `flutter analyze --fatal-infos` and
+- the **name** from whichever is further along, the newest `v*` tag or
+  pubspec (and says so in the plan when the tag wins);
+- the **code** from whichever is higher, pubspec now or the pubspec at that
+  tag — it has to clear every build ever uploaded.
+
+Bumping then also drags pubspec's name back in line with reality, so after
+the first run the two agree.
+
+### What each argument does
+
+The version code always increments, because Play requires it **strictly
+higher** than any previously uploaded build. Against today's `v1.2.0` and
+pubspec `1.0.0+3`:
+
+| Argument            | Becomes  | Tag        |
+|---------------------|----------|------------|
+| `patch` *(default)* | 1.2.1+4  | `v1.2.1`   |
+| `minor`             | 1.3.0+4  | `v1.3.0`   |
+| `major`             | 2.0.0+4  | `v2.0.0`   |
+| `build`             | 1.2.0+4  | `v1.2.0+4` |
+| `2.5.1`             | 2.5.1+4  | `v2.5.1`   |
+
+`build` re-uploads the same version name with a new code, so `v1.2.0` is
+already taken; the tag then carries the code instead, which still matches
+the workflow's `v*` trigger. `--tag NAME` overrides it. An explicit `X.Y.Z`
+must be higher than the current name — `1.0.1` is refused today, not
+silently accepted.
+
+Because the tags decide the version, the script fetches them first
+(`--no-fetch` skips that, and then only local tags are consulted). Before it
+changes anything it refuses to run on a dirty tree, off `main`
+(`--any-branch` overrides), on a branch behind `origin`, or onto a tag that
+already exists. `--check` runs `flutter analyze --fatal-infos` and
 `flutter test` first, and `--no-tag` commits the bump alone.
 `tool/bump_version.sh --help` lists them all.
 

@@ -130,9 +130,14 @@ Identity is tied to the **build type**, not a product flavor:
   build compiles. Guide: `docs/release.md`.
 - **Cutting a release** is `tool/bump_version.sh` from an up-to-date `main`:
   it rewrites `version:` in `pubspec.yaml`, commits, makes an annotated
-  `v<name>` tag and prints the commit as a patch. The argument (`patch`
-  default, `minor`, `major`, `build`, or an explicit `X.Y.Z`) moves the
-  name; the `+N` code always increments, because Play needs it strictly
+  `v<name>` tag and prints the commit as a patch. **The current version name
+  comes from the newest `v*` tag, not from `pubspec.yaml`** — v1.0.0, v1.1.0
+  and v1.2.0 all shipped while pubspec's name stayed `1.0.0` and only its
+  `+N` moved, so the script takes the name from whichever is further along
+  (tag or pubspec) and the code from whichever is higher (pubspec now, or
+  pubspec at that tag), which also drags pubspec back in line. The argument
+  (`patch` default, `minor`, `major`, `build`, or an explicit `X.Y.Z`) moves
+  the name; the `+N` code always increments, because Play needs it strictly
   higher than any uploaded build. **Pushing is opt-in** — `--push`, which
   then asks separately for the branch and for the tag (the tag push is what
   runs the workflow); without it the bump stays local and the script prints

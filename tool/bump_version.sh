@@ -9,16 +9,20 @@
 # push are each confirmed on their own — so a bump can be read (and undone)
 # before any of it is public.
 #
-# Play requires the version code (the `+N` part) to be strictly higher than
-# any build already uploaded, so every bump increments it; the argument only
-# decides what happens to the name.
+# WHERE THE CURRENT VERSION COMES FROM. The released version *name* lives in
+# the newest `v*` tag, not necessarily in pubspec.yaml — this repo shipped
+# v1.0.0, v1.1.0 and v1.2.0 while pubspec's name sat at 1.0.0 throughout. So
+# the name is taken from whichever is higher, the newest tag or pubspec, and
+# the code (`+N`) from whichever is higher, pubspec or the pubspec at that
+# tag. Play requires the code to be strictly higher than any build already
+# uploaded, so every bump increments it; the argument only moves the name.
 #
 # Usage: tool/bump_version.sh [patch|minor|major|build|X.Y.Z] [options]
 #
-#   patch (default)   1.0.0+3 -> 1.0.1+4
-#   minor             1.0.0+3 -> 1.1.0+4
-#   major             1.0.0+3 -> 2.0.0+4
-#   build             1.0.0+3 -> 1.0.0+4   (same name, fresh upload)
+#   patch (default)   v1.2.0 / 1.0.0+3 -> 1.2.1+4
+#   minor             v1.2.0 / 1.0.0+3 -> 1.3.0+4
+#   major             v1.2.0 / 1.0.0+3 -> 2.0.0+4
+#   build             v1.2.0 / 1.0.0+3 -> 1.2.0+4   (same name, fresh upload)
 #   X.Y.Z             set the name outright (must be higher than the current)
 #
 # Options:
@@ -29,7 +33,7 @@
 #       --check       run `flutter analyze --fatal-infos` + `flutter test` first
 #       --no-tag      commit the bump only, no tag
 #       --tag NAME    use this tag name instead of the derived one
-#       --no-fetch    skip the fetch that checks the branch/tag against origin
+#       --no-fetch    skip the fetch that checks the branch/tags against origin
 #       --any-branch  allow cutting from a branch other than main
 set -euo pipefail
 
@@ -50,6 +54,10 @@ confirm() {
 }
 usage() { awk 'NR == 1 {next} !/^#/ {exit} {sub(/^# ?/, ""); print}' "$0"; }
 
+# Sortable key, so 1.10.0 beats 1.9.0.
+version_key() { local a b c; IFS=. read -r a b c <<<"$1"; printf '%05d%05d%05d' "$a" "$b" "$c"; }
+is_name() { [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; }
+
 while [ $# -gt 0 ]; do
   case "$1" in
     patch|minor|major|build)
@@ -59,10 +67,10 @@ while [ $# -gt 0 ]; do
       [ -z "$bump" ] || die "two version arguments: '$bump' and '$1'"
       bump=$1 ;;
     [0-9]*) die "'$1' is not X.Y.Z" ;;
+    --push) push=1 ;;
     -y|--yes) yes=1 ;;
     -n|--dry-run) dry_run=1 ;;
     --check) check=1 ;;
-    --push) push=1 ;;
     --no-tag) tag=0 ;;
     --any-branch) any_branch=1 ;;
     --no-fetch) fetch=0 ;;
@@ -73,38 +81,6 @@ while [ $# -gt 0 ]; do
   shift
 done
 bump=${bump:-patch}
-
-# --- the version in pubspec.yaml -------------------------------------------
-
-current=$(sed -n 's/^version: *//p' pubspec.yaml | head -1 | tr -d '[:space:]')
-[ -n "$current" ] || die "no 'version:' line in pubspec.yaml"
-case "$current" in
-  *+*) ;;
-  *) die "pubspec version '$current' has no '+code' part" ;;
-esac
-name=${current%%+*}
-code=${current##*+}
-[[ "$name" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "version name '$name' is not X.Y.Z"
-[[ "$code" =~ ^[0-9]+$ ]] || die "version code '$code' is not a number"
-
-IFS=. read -r major minor patch <<<"$name"
-
-# Sortable key, so 1.10.0 beats 1.9.0.
-version_key() { local a b c; IFS=. read -r a b c <<<"$1"; printf '%05d%05d%05d' "$a" "$b" "$c"; }
-
-case "$bump" in
-  major) new_name="$((major + 1)).0.0" ;;
-  minor) new_name="$major.$((minor + 1)).0" ;;
-  patch) new_name="$major.$minor.$((patch + 1))" ;;
-  build) new_name="$name" ;;
-  *)
-    new_name=$bump
-    [[ "$new_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "'$new_name' is not X.Y.Z"
-    [ "$(version_key "$new_name")" -gt "$(version_key "$name")" ] \
-      || die "$new_name is not higher than the current $name" ;;
-esac
-new_code=$((code + 1))
-new_version="$new_name+$new_code"
 
 # --- the git side ----------------------------------------------------------
 
@@ -129,6 +105,7 @@ retry() {
   "$@"
 }
 
+# Tags decide the version, so fetching them is not optional bookkeeping.
 if [ "$fetch" -eq 1 ]; then
   # A branch that is not on origin yet is fine; only an unreachable origin isn't.
   retry git fetch --quiet --tags origin "$branch" \
@@ -140,6 +117,66 @@ if [ "$fetch" -eq 1 ]; then
       || die "$branch is $behind commit(s) behind origin — 'git pull origin $branch' first"
   fi
 fi
+
+# --- where the current version stands --------------------------------------
+
+pubspec_version=$(sed -n 's/^version: *//p' pubspec.yaml | head -1 | tr -d '[:space:]')
+[ -n "$pubspec_version" ] || die "no 'version:' line in pubspec.yaml"
+case "$pubspec_version" in
+  *+*) ;;
+  *) die "pubspec version '$pubspec_version' has no '+code' part" ;;
+esac
+pubspec_name=${pubspec_version%%+*}
+pubspec_code=${pubspec_version##*+}
+is_name "$pubspec_name" || die "version name '$pubspec_name' is not X.Y.Z"
+[[ "$pubspec_code" =~ ^[0-9]+$ ]] || die "version code '$pubspec_code' is not a number"
+
+# The newest release tag. `v1.2.0+4` (the build-bump form below) counts as 1.2.0.
+tag_latest="" tag_ref="" best_key=""
+while IFS= read -r t; do
+  [ -n "$t" ] || continue
+  n=${t#v}; n=${n%%+*}
+  is_name "$n" || continue
+  k=$(version_key "$n")
+  if [ -z "$best_key" ] || [ "$k" -gt "$best_key" ]; then
+    best_key=$k tag_latest=$n tag_ref=$t
+  fi
+done < <(git tag --list 'v[0-9]*')
+
+# The name is whichever source is further along — pubspec's name can lag the
+# tags for a whole release series, as it did here through v1.2.0.
+base_name=$pubspec_name
+name_from=pubspec
+if [ -n "$tag_latest" ] && [ "$(version_key "$tag_latest")" -gt "$(version_key "$pubspec_name")" ]; then
+  base_name=$tag_latest
+  name_from=tag
+fi
+
+# The code must clear every build ever uploaded, so take the highest seen.
+base_code=$pubspec_code
+if [ -n "$tag_ref" ]; then
+  tagged=$(git show "$tag_ref:pubspec.yaml" 2>/dev/null | sed -n 's/^version: *//p' | head -1 | tr -d '[:space:]' || true)
+  tagged=${tagged##*+}
+  if [[ "$tagged" =~ ^[0-9]+$ ]] && [ "$tagged" -gt "$base_code" ]; then
+    base_code=$tagged
+  fi
+fi
+
+IFS=. read -r major minor patch <<<"$base_name"
+
+case "$bump" in
+  major) new_name="$((major + 1)).0.0" ;;
+  minor) new_name="$major.$((minor + 1)).0" ;;
+  patch) new_name="$major.$minor.$((patch + 1))" ;;
+  build) new_name="$base_name" ;;
+  *)
+    new_name=$bump
+    is_name "$new_name" || die "'$new_name' is not X.Y.Z"
+    [ "$(version_key "$new_name")" -gt "$(version_key "$base_name")" ] \
+      || die "$new_name is not higher than the current $base_name" ;;
+esac
+new_code=$((base_code + 1))
+new_version="$new_name+$new_code"
 
 tag_exists() { git rev-parse --verify --quiet "refs/tags/$1" >/dev/null; }
 
@@ -156,7 +193,15 @@ fi
 # --- the plan --------------------------------------------------------------
 
 echo "bump_version:"
-echo "  version   $current  ->  $new_version"
+if [ -n "$tag_latest" ]; then
+  echo "  released  $tag_ref (newest tag), pubspec $pubspec_version"
+  if [ "$name_from" = tag ]; then
+    echo "            pubspec's name lags the tags — bumping from $base_name"
+  fi
+else
+  echo "  released  no v* tags yet, pubspec $pubspec_version"
+fi
+echo "  version   $base_name+$base_code  ->  $new_version"
 echo "  commit    Bump version to $new_version   (on $branch)"
 if [ "$tag" -eq 1 ]; then
   echo "  tag       $tag_name"

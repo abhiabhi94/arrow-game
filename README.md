@@ -129,16 +129,20 @@ Cutting one is a single command from an up-to-date `main` — it bumps
 `version:` in `pubspec.yaml`, commits, tags, and prints the commit for review:
 
 ```bash
-tool/bump_version.sh                  # 1.0.0+3 -> 1.0.1+4, tag v1.0.1, local only
+tool/bump_version.sh                  # v1.2.0 -> 1.2.1+4, tag v1.2.1, local only
 tool/bump_version.sh --push           # ... and push, asking for branch and tag separately
 tool/bump_version.sh minor --dry-run  # also major | build | an explicit X.Y.Z
 ```
 
-Pushing is opt-in: without `--push` the bump stays on the machine and the
-script prints the push commands and the undo. The version code (the `+N`)
+The current version name comes from the **newest `v*` tag**, not from
+`pubspec.yaml` — the releases through v1.2.0 left pubspec's name at `1.0.0`
+and moved only the `+N` code, so the tag is the honest source. The code
 always increments, since Play needs it strictly higher than any build
-already uploaded. `--help` lists the rest (`--check`, `--no-tag`,
-`--tag NAME`, `--any-branch`, `-y`).
+already uploaded.
+
+Pushing is opt-in: without `--push` the bump stays on the machine and the
+script prints the push commands and the undo. `--help` lists the rest
+(`--check`, `--no-tag`, `--tag NAME`, `--any-branch`, `-y`).
 
 Locally, release builds are signed with the same upload key read from a
 gitignored `android/key.properties` (copy `android/key.properties.example`):
