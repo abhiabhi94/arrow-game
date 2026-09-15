@@ -859,7 +859,7 @@ abstract class AppLocalizations {
   /// No description provided for @outOfLivesBody.
   ///
   /// In en, this message translates to:
-  /// **'That was the last one. Carry on and finish for a single star, or take the level from the top?'**
+  /// **'That was the last one. Carry on and finish for a single star, or restart the level?'**
   String get outOfLivesBody;
 
   /// No description provided for @outOfLivesKeepGoing.
@@ -981,12 +981,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Credits'**
   String get creditsTitle;
-
-  /// No description provided for @creditsIntro.
-  ///
-  /// In en, this message translates to:
-  /// **'The background music is free to use under the Pixabay Content License. A credit is not required, but the artist has earned one.'**
-  String get creditsIntro;
 
   /// No description provided for @creditsBy.
   ///

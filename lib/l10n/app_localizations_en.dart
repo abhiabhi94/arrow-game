@@ -418,7 +418,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get outOfLivesBody =>
-      'That was the last one. Carry on and finish for a single star, or take the level from the top?';
+      'That was the last one. Carry on and finish for a single star, or restart the level?';
 
   @override
   String get outOfLivesKeepGoing => 'Keep going';
@@ -482,10 +482,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get creditsTitle => 'Credits';
-
-  @override
-  String get creditsIntro =>
-      'The background music is free to use under the Pixabay Content License. A credit is not required, but the artist has earned one.';
 
   @override
   String creditsBy(String artist) {

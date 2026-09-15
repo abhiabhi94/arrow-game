@@ -1,5 +1,4 @@
-/// Attribution entries for bundled background music. The Pixabay Content
-/// License does not require a credit, but the artist deserves one anyway.
+/// Attribution entries for bundled background music.
 library;
 
 class TrackCredit {

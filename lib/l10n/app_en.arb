@@ -148,7 +148,7 @@
   "clearedAllDone": "You beat every level. Legend!",
 
   "outOfLivesTitle": "Out of lives",
-  "outOfLivesBody": "That was the last one. Carry on and finish for a single star, or take the level from the top?",
+  "outOfLivesBody": "That was the last one. Carry on and finish for a single star, or restart the level?",
   "outOfLivesKeepGoing": "Keep going",
   "outOfLivesRetry": "Start over",
 
@@ -172,7 +172,6 @@
   "howToPlayBody": "Replay the two-minute walkthrough",
   "settingsCredits": "Music credits",
   "creditsTitle": "Credits",
-  "creditsIntro": "The background music is free to use under the Pixabay Content License. A credit is not required, but the artist has earned one.",
   "creditsBy": "by {artist}",
   "@creditsBy": { "placeholders": { "artist": { "type": "String" } } },
   "settingsResetProgress": "Reset progress",
