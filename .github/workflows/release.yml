@@ -56,6 +56,33 @@ jobs:
             exit 1
           fi
 
+      # The tag and pubspec.yaml must name the same version. They drifted once
+      # and nothing noticed: v1.0.0, v1.1.0 and v1.2.0 were all built from a
+      # pubspec that still said 1.0.0, so every bundle was versionName 1.0.0
+      # while its release claimed otherwise. The build reads pubspec and the
+      # tag is only a label, so nothing downstream can catch this — fail here,
+      # in a second, rather than publish a bundle that contradicts its release.
+      # workflow_dispatch skips the check: its build_name input exists exactly
+      # to build a name pubspec does not carry.
+      - name: Check the tag matches pubspec
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          pubspec=$(sed -n 's/^version: *//p' pubspec.yaml | head -1 | tr -d '[:space:]')
+          tag=${GITHUB_REF_NAME#v}
+          if [ "${tag%%+*}" != "${pubspec%%+*}" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME names version ${tag%%+*}, but pubspec.yaml says $pubspec. Bump pubspec with tool/bump_version.sh so the two agree, delete the tag and tag the bump commit. See docs/release.md."
+            exit 1
+          fi
+          # A vX.Y.Z+N tag (the build-bump form) pins the code as well.
+          case "$tag" in
+            *+*)
+              if [ "${tag##*+}" != "${pubspec##*+}" ]; then
+                echo "::error::Tag $GITHUB_REF_NAME names code ${tag##*+}, but pubspec.yaml says code ${pubspec##*+} ($pubspec)."
+                exit 1
+              fi ;;
+          esac
+          echo "Tag $GITHUB_REF_NAME matches pubspec $pubspec"
+
       - name: Read pinned Flutter version
         id: flutter
         run: echo "version=$(tr -d '[:space:]' < .flutter-version)" >> "$GITHUB_OUTPUT"

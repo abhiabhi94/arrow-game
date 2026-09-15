@@ -184,6 +184,26 @@ to **debug signing**, which Play rejects — so the workflow above is the
 recommended path. Cloud (Claude Code on the web) sessions never have the key
 and can only verify that the release build compiles.
 
+## The tag and pubspec must agree
+
+A `v*` tag and `pubspec.yaml` name the same version, and the Release
+workflow enforces it: a tag-triggered run fails in its first seconds unless
+`vX.Y.Z` matches pubspec's `X.Y.Z` (and, for the `vX.Y.Z+N` build form, the
+`+N` too). `tool/bump_version.sh` keeps them in step by construction — it
+writes the name into pubspec and tags that same commit.
+
+This is a guard against a real drift. `v1.0.0`, `v1.1.0` and `v1.2.0` were
+all cut by tagging alone, while pubspec's name sat at `1.0.0` and only its
+`+N` moved. The build reads pubspec, so every bundle those releases carry is
+`versionName 1.0.0` — `arrow-1.0.0-1.aab`, `arrow-1.0.0-2.aab`,
+`arrow-1.0.0-3.aab` — under tags claiming three different versions. Nothing
+downstream could catch it: the tag is only a label on a commit.
+
+If the check fires, do not re-point the tag at a new commit. Bump pubspec
+properly, delete the bad tag (`git tag -d vX.Y.Z && git push origin
+:refs/tags/vX.Y.Z`), and tag the bump commit — which is what
+`tool/bump_version.sh` does on its own.
+
 ## Permissions in the Play Console
 
 The bundle ships exactly two permissions, and both are expected:
