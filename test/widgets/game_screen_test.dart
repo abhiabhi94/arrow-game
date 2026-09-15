@@ -12,6 +12,7 @@ import 'package:arrow_game/providers/progress_provider.dart';
 import 'package:arrow_game/providers/saved_game_provider.dart';
 import 'package:arrow_game/providers/settings_provider.dart';
 import 'package:arrow_game/screens/game_screen.dart';
+import 'package:arrow_game/ui/colors.dart';
 import 'package:arrow_game/ui/layout.dart';
 import 'package:arrow_game/widgets/board_toolbar.dart';
 import 'package:arrow_game/widgets/puzzle_board.dart';
@@ -289,6 +290,40 @@ void main() {
     await _settle(tester, 400);
     expect(notifier.state.phase, GamePhase.playing);
     expect(find.text('0:30'), findsOneWidget);
+  });
+
+  testWidgets('the hints-left badge stays readable on the amber in dark theme', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(
+      tester,
+      const GameScreen(level: 1),
+      extraOverrides: _overrides(),
+      themeMode: ThemeMode.dark,
+    );
+    await _settle(tester, 300);
+    final badge = tester.widget<Text>(
+      find.descendant(of: find.byType(BoardToolbar), matching: find.text('3')),
+    );
+    expect(badge.style?.color, ArrowPalette.dark.onAccent);
+    expect(badge.style?.color, isNot(ArrowPalette.dark.textInk));
+  });
+
+  testWidgets('a showing hint keeps pinging so the eye can find it', (tester) async {
+    final container = await _pumpGame(tester);
+    expect(tester.hasRunningAnimations, isFalse);
+
+    await tester.tap(find.byTooltip('Hint · 3 hints left'));
+    await tester.pump();
+    expect(container.read(gameProvider(1)).hintArrowId, isNotNull);
+    // The ring repeats, so the board keeps painting until the hint clears.
+    expect(tester.hasRunningAnimations, isTrue);
+    await _settle(tester, 600);
+    expect(tester.hasRunningAnimations, isTrue);
+
+    await _tapCell(tester, const Cell(2, 1)); // any tap clears the hint
+    expect(container.read(gameProvider(1)).hintArrowId, isNull);
+    await _settle(tester, 700);
+    expect(tester.hasRunningAnimations, isFalse);
   });
 
   testWidgets('hints: three per level, the button rests while one shows', (tester) async {

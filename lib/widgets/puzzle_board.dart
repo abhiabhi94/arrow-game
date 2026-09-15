@@ -13,6 +13,9 @@ import '../ui/colors.dart';
 /// How far the arrow that was hit is shoved along, in cells, at full jolt.
 const double kShoveDistance = 0.12;
 
+/// How long one ping of the hint ring takes.
+const Duration kHintPingPeriod = Duration(milliseconds: 1100);
+
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
 /// on its way out) in a single ink — thin lines with a small head, like a
 /// printed puzzle, straight on the page with no frame — plus optional grid
@@ -41,14 +44,26 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   /// Arrows sliding out: id → progress controller.
   final Map<int, AnimationController> _exits = <int, AnimationController>{};
 
+  /// Drives the hint ring while a hint is showing. A late board is a hundred
+  /// arrows in one ink, and the eye does not find a static smudge among them
+  /// — it finds movement.
+  AnimationController? _hintPing;
+
   /// The arrow currently bumping, if any, and how it moves.
   int? _bumpId;
   BumpMotion? _bumpMotion;
   AnimationController? _bump;
 
   @override
+  void initState() {
+    super.initState();
+    _syncHintPing();
+  }
+
+  @override
   void didUpdateWidget(PuzzleBoard old) {
     super.didUpdateWidget(old);
+    _syncHintPing();
     final s = widget.state;
     if (s.puzzle != old.state.puzzle || s.moveToken < old.state.moveToken) {
       // A restart: forget every animation.
@@ -113,6 +128,20 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     });
   }
 
+  /// Runs the ping while a hint points somewhere, and stops it otherwise.
+  void _syncHintPing() {
+    final showing = widget.state.hintArrowId != null;
+    if (showing == (_hintPing != null)) return;
+    if (showing) {
+      _hintPing = AnimationController(vsync: this, duration: kHintPingPeriod)
+        ..addListener(() => setState(() {}))
+        ..repeat();
+    } else {
+      _hintPing?.dispose();
+      _hintPing = null;
+    }
+  }
+
   void _disposeAll() {
     for (final c in _exits.values) {
       c.dispose();
@@ -126,6 +155,8 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
 
   @override
   void dispose() {
+    _hintPing?.dispose();
+    _hintPing = null;
     _disposeAll();
     super.dispose();
   }
@@ -164,9 +195,8 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
                   state: widget.state,
                   palette: p,
                   showGrid: widget.showGrid,
-                  exits: <int, double>{
-                    for (final e in _exits.entries) e.key: e.value.value,
-                  },
+                  exits: <int, double>{for (final e in _exits.entries) e.key: e.value.value},
+                  hintPing: _hintPing?.value,
                   bumpId: _bumpId,
                   bump: _bump?.value,
                   bumpMotion: _bumpMotion,
@@ -186,6 +216,7 @@ class _BoardPainter extends CustomPainter {
     required this.palette,
     required this.showGrid,
     required this.exits,
+    required this.hintPing,
     required this.bumpId,
     required this.bump,
     required this.bumpMotion,
@@ -197,6 +228,9 @@ class _BoardPainter extends CustomPainter {
 
   /// Slide-out progress (0..1) per exiting arrow.
   final Map<int, double> exits;
+
+  /// The hint ring's progress (0..1), or null when no hint is showing.
+  final double? hintPing;
 
   /// The bumping arrow, its progress (0..1) and its motion.
   final int? bumpId;
@@ -235,7 +269,8 @@ class _BoardPainter extends CustomPainter {
     final blocked = state.blockedCell;
     final bumpT = bump;
     final motion = bumpMotion;
-    final bumping = blocked != null && bumpT != null && motion != null && bumpId == state.lastMoveId;
+    final bumping =
+        blocked != null && bumpT != null && motion != null && bumpId == state.lastMoveId;
     final flash = bumping ? motion.flashAt(bumpT) : 0.0;
     final shove = bumping ? motion.shoveAt(bumpT) : 0.0;
     final hitId = bumping ? puzzle.arrowAt(blocked) : null;
@@ -267,10 +302,38 @@ class _BoardPainter extends CustomPainter {
         canvas.save();
         canvas.translate(push.dx, push.dy);
       }
-      _paintArrow(canvas, arrow, cs, offset, arrow.id == state.hintArrowId && exiting == null);
+      _paintArrow(canvas, arrow, cs, offset, false);
       if (shoved) canvas.restore();
     }
+    _paintHint(canvas, size, cs);
     canvas.restore();
+  }
+
+  /// The hint, drawn over the finished board: everything else dims behind a
+  /// veil, the hinted arrow is redrawn at full strength on top of it, and a
+  /// ring swells out of its head and fades, over and over. A late board is a
+  /// hundred arrows in one ink — the eye does not find a static smudge among
+  /// them, it finds the one thing still bright, and it finds movement.
+  void _paintHint(Canvas canvas, Size size, double cs) {
+    final id = state.hintArrowId;
+    if (id == null || state.removed.contains(id)) return;
+    final arrow = puzzle.arrows[id];
+    canvas.drawRect(Offset.zero & size, Paint()..color = palette.hintVeil);
+    _paintArrow(canvas, arrow, cs, 0, true);
+
+    final ping = hintPing;
+    if (ping == null) return;
+    final t = Curves.easeOutCubic.transform(ping);
+    final from = min(cs * 0.9, 20.0);
+    final to = max(from + 6, min(cs * 2.6, 56.0));
+    canvas.drawCircle(
+      _center(arrow.head, cs),
+      from + (to - from) * t,
+      Paint()
+        ..color = palette.hintGlow.withValues(alpha: 0.95 - 0.7 * t)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2.5, min(cs * 0.26, 5.0)),
+    );
   }
 
   /// Draws [arrow] shifted [offset] cells forward along its own track (its
@@ -314,14 +377,20 @@ class _BoardPainter extends CustomPainter {
     }
 
     if (hinted) {
+      // The ink is capped at 3 px, so a halo proportional to it is a hair on
+      // a dense board: it gets its own floor in pixels.
       final glow = Paint()
         ..color = palette.hintGlow
         ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke * 2.4
+        ..strokeWidth = max(stroke * 2.4, min(cs * 0.6, 6.0))
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
       canvas.drawPath(path, glow);
-      canvas.drawCircle(head, headLen * 1.1, Paint()..color = palette.hintGlow);
+      canvas.drawCircle(
+        head,
+        max(headLen * 1.1, min(cs * 0.55, 10.0)),
+        Paint()..color = palette.hintGlow,
+      );
     }
 
     final paint = Paint()
@@ -375,6 +444,7 @@ class _BoardPainter extends CustomPainter {
       old.state.puzzle != state.puzzle ||
       old.state.removed != state.removed ||
       old.state.hintArrowId != state.hintArrowId ||
+      old.hintPing != hintPing ||
       old.state.blockedCell != state.blockedCell ||
       old.state.moveToken != state.moveToken ||
       old.showGrid != showGrid ||
@@ -391,4 +461,3 @@ class _BoardPainter extends CustomPainter {
     return true;
   }
 }
-
