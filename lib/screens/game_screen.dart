@@ -451,7 +451,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   title: l10n.outOfLivesTitle,
                   body: l10n.outOfLivesBody,
                   actions: [
-                    FilledButton(onPressed: notifier.restart, child: Text(l10n.outOfLivesRetry)),
+                    // Carrying on is the default: a level's worth of correct
+                    // taps is too much to lose to a slipped finger. The clock
+                    // keeps running, so there is still a real ending.
+                    FilledButton(
+                      onPressed: notifier.keepGoing,
+                      child: Text(l10n.outOfLivesKeepGoing),
+                    ),
+                    OutlinedButton(onPressed: notifier.restart, child: Text(l10n.outOfLivesRetry)),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(l10n.clearedHome),

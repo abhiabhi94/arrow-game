@@ -26,11 +26,11 @@ import '../support/sample_puzzle.dart';
 
 /// Every level gets the tiny sample puzzle with the real timer off (tests
 /// drive the clock through [GameNotifier.tick]).
-List<Override> _overrides({bool unlockAll = true}) => [
+List<Override> _overrides({bool unlockAll = true, bool blocked = false}) => [
       gameProvider.overrideWith(
         (ref, level) => GameNotifier(
-          sampleSpecFor(level),
-          puzzle: samplePuzzle(),
+          blocked ? blockedSpecFor(level) : sampleSpecFor(level),
+          puzzle: blocked ? blockedPuzzle() : samplePuzzle(),
           savedGame: ref.read(savedGameProvider.notifier).forLevel(level),
           onCleared: ref.read(progressProvider.notifier).recordCompletion,
           onSnapshot: ref.read(savedGameProvider.notifier).record,
@@ -49,6 +49,7 @@ Future<ProviderContainer> _pumpGame(
   WidgetTester tester, {
   int level = 1,
   bool unlockAll = true,
+  bool blocked = false,
   Map<String, Object> seed = const {},
   Size? surface,
 }) async {
@@ -62,7 +63,7 @@ Future<ProviderContainer> _pumpGame(
     tester,
     GameScreen(level: level),
     seed: seed,
-    extraOverrides: _overrides(unlockAll: unlockAll),
+    extraOverrides: _overrides(unlockAll: unlockAll, blocked: blocked),
   );
   await _settle(tester, 300);
   return container;
@@ -75,11 +76,11 @@ Future<void> _settle(WidgetTester tester, int ms) async {
   await tester.pump(Duration(milliseconds: ms));
 }
 
-/// Taps the centre of grid [cell] on the board.
-Future<void> _tapCell(WidgetTester tester, Cell cell) async {
+/// Taps the centre of grid [cell] on a [width]-column board.
+Future<void> _tapCell(WidgetTester tester, Cell cell, {int width = 4}) async {
   final board = find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint));
   final rect = tester.getRect(board);
-  final cs = rect.width / 4;
+  final cs = rect.width / width;
   await tester.tapAt(rect.topLeft + Offset((cell.x + 0.5) * cs, (cell.y + 0.5) * cs));
   await _settle(tester, 1000); // let the slide / bump animation finish
 }
@@ -126,24 +127,57 @@ void main() {
   });
 
   testWidgets('a blocked arrow bumps and costs a life; three end the level', (tester) async {
-    final container = await _pumpGame(tester);
+    final container = await _pumpGame(tester, blocked: true);
     final notifier = container.read(gameProvider(1).notifier);
 
-    await _tapCell(tester, const Cell(1, 2)); // arrow 2's head, blocked by 0
+    // Arrows 1, 2 and 3 are each blocked by arrow 0: three separate dead
+    // ends, since running into the same one twice is free.
+    await _tapCell(tester, const Cell(1, 0), width: 5); // arrow 1's head
     expect(notifier.state.mistakes, 1);
     expect(find.byIcon(Icons.favorite_border_rounded), findsOneWidget);
     expect(find.bySemanticsLabel('2 lives left'), findsOneWidget);
 
-    await _tapCell(tester, const Cell(1, 2));
-    await _tapCell(tester, const Cell(1, 2));
+    // The same arrow again: a bump, but no life.
+    await _tapCell(tester, const Cell(1, 0), width: 5);
+    expect(notifier.state.mistakes, 1);
+    expect(find.bySemanticsLabel('2 lives left'), findsOneWidget);
+
+    await _tapCell(tester, const Cell(1, 1), width: 5); // arrow 2
+    await _tapCell(tester, const Cell(1, 2), width: 5); // arrow 3
     expect(notifier.state.phase, GamePhase.outOfLives);
     expect(find.text('Out of lives'), findsOneWidget);
 
-    await tester.tap(find.text('Retry'));
+    await tester.tap(find.text('Start over'));
     await _settle(tester, 400);
     expect(notifier.state.phase, GamePhase.playing);
     expect(notifier.state.mistakes, 0);
     expect(find.byIcon(Icons.favorite_rounded), findsNWidgets(3));
+  });
+
+  testWidgets('"Keep going" carries the level on instead of replaying it', (tester) async {
+    final container = await _pumpGame(tester, blocked: true);
+    final notifier = container.read(gameProvider(1).notifier);
+    await _tapCell(tester, const Cell(1, 0), width: 5);
+    await _tapCell(tester, const Cell(1, 1), width: 5);
+    await _tapCell(tester, const Cell(1, 2), width: 5);
+    expect(find.text('Out of lives'), findsOneWidget);
+
+    await tester.tap(find.text('Keep going'));
+    await _settle(tester, 400);
+    expect(notifier.state.phase, GamePhase.playing);
+    expect(find.text('Out of lives'), findsNothing);
+    // The arrows already out stay out, and no heart comes back.
+    expect(find.bySemanticsLabel('0 lives left'), findsOneWidget);
+
+    // Clearing from here is still a clear, worth one star.
+    await _tapCell(tester, const Cell(2, 0), width: 5); // arrow 0, the wall
+    await _tapCell(tester, const Cell(1, 0), width: 5);
+    await _tapCell(tester, const Cell(1, 1), width: 5);
+    await _tapCell(tester, const Cell(1, 2), width: 5);
+    await _settle(tester, 1500);
+    expect(notifier.state.phase, GamePhase.cleared);
+    expect(notifier.state.stars, 1);
+    expect(container.read(progressProvider.notifier).progressFor(1).stars, 1);
   });
 
   testWidgets('the late levels show their extra hearts beside the clock', (tester) async {
@@ -594,13 +628,14 @@ void main() {
   });
 
   testWidgets('two slips still clear with one star', (tester) async {
-    final container = await _pumpGame(tester, level: 3);
+    final container = await _pumpGame(tester, level: 3, blocked: true);
     final notifier = container.read(gameProvider(3).notifier);
-    notifier.tapArrow(2);
-    notifier.tapArrow(2);
+    notifier.tapArrow(1); // blocked
+    notifier.tapArrow(2); // blocked, a different dead end
     notifier.tapArrow(0);
     notifier.tapArrow(1);
     notifier.tapArrow(2);
+    notifier.tapArrow(3);
     await _settle(tester, 1500);
     expect(find.text('Made it! Fewer slips next time for more stars.'), findsOneWidget);
     expect(find.text('Tap an arrow to slide it out the way it points.'), findsNothing);

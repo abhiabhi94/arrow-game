@@ -229,7 +229,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardRuleLives.
   ///
   /// In en, this message translates to:
-  /// **'3 lives per level — a bump costs one'**
+  /// **'A bump costs a life — three to start, more on the big boards'**
   String get onboardRuleLives;
 
   /// No description provided for @onboardRuleClock.
@@ -739,13 +739,19 @@ abstract class AppLocalizations {
   /// No description provided for @outOfLivesBody.
   ///
   /// In en, this message translates to:
-  /// **'Three blocked arrows and the level resets. Shake it off and go again?'**
+  /// **'That was the last one. Carry on and finish for a single star, or take the level from the top?'**
   String get outOfLivesBody;
+
+  /// No description provided for @outOfLivesKeepGoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep going'**
+  String get outOfLivesKeepGoing;
 
   /// No description provided for @outOfLivesRetry.
   ///
   /// In en, this message translates to:
-  /// **'Retry'**
+  /// **'Start over'**
   String get outOfLivesRetry;
 
   /// No description provided for @timeUpTitle.

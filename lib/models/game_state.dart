@@ -1,6 +1,8 @@
 /// Immutable gameplay state for one attempt at a level. Pure Dart (no Flutter).
 library;
 
+import 'dart:math' show max;
+
 import '../engine/cell.dart';
 import '../engine/puzzle.dart';
 import 'level_progress.dart';
@@ -23,6 +25,7 @@ class GameState {
     required this.puzzle,
     required this.phase,
     required this.removed,
+    required this.bumped,
     required this.mistakes,
     required this.hintsLeft,
     required this.hintArrowId,
@@ -32,6 +35,7 @@ class GameState {
     required this.blockedCell,
     required this.moveToken,
     this.resumeOffered = false,
+    this.continuedAfterLoss = false,
   });
 
   /// The board is still being generated.
@@ -40,6 +44,7 @@ class GameState {
         puzzle: null,
         phase: GamePhase.loading,
         removed: const <int>{},
+        bumped: const <int>{},
         mistakes: 0,
         hintsLeft: maxHints,
         hintArrowId: null,
@@ -56,6 +61,7 @@ class GameState {
         puzzle: puzzle,
         phase: GamePhase.playing,
         removed: const <int>{},
+        bumped: const <int>{},
         mistakes: 0,
         hintsLeft: maxHints,
         hintArrowId: null,
@@ -74,6 +80,11 @@ class GameState {
 
   /// Ids of arrows that have left the board.
   final Set<int> removed;
+
+  /// Ids of arrows that have already bumped this attempt. Running into the
+  /// same one twice teaches nothing new, so only the first costs a life — on
+  /// a board of 200 arrows, remembering every dead end is not the puzzle.
+  final Set<int> bumped;
 
   /// Blocked taps so far (each costs a life).
   final int mistakes;
@@ -98,12 +109,17 @@ class GameState {
   /// player to choose between picking it up and starting over.
   final bool resumeOffered;
 
+  /// True once the player has spent every life and chosen to carry on rather
+  /// than replay. Further blocked taps cost nothing — there is nothing left
+  /// to take — and the clear is worth one star.
+  final bool continuedAfterLoss;
+
   int get level => spec.level;
   int get arrowsOut => removed.length;
   int get arrowsTotal => puzzle?.arrowCount ?? spec.arrows;
   /// Lives this level grants; the denser late boards grant more.
   int get lives => livesForLevel(level);
-  int get livesLeft => lives - mistakes;
+  int get livesLeft => (lives - mistakes).clamp(0, lives);
   int get remainingMs =>
       (spec.timeLimitMs - elapsedMs).clamp(0, spec.timeLimitMs);
 
@@ -120,13 +136,17 @@ class GameState {
       phase == GamePhase.outOfLives ||
       phase == GamePhase.timeUp;
 
-  /// Stars earned — meaningful once [phase] is [GamePhase.cleared].
-  int get stars =>
-      phase == GamePhase.cleared ? starsForMistakes(mistakes, level) : 0;
+  /// Stars earned — meaningful once [phase] is [GamePhase.cleared]. Clearing
+  /// is always worth at least one, even on an allowance the player blew and
+  /// played on past, so a zero here only ever means "not cleared".
+  int get stars => phase == GamePhase.cleared
+      ? max(1, starsForMistakes(mistakes, level))
+      : 0;
 
   GameState copyWith({
     GamePhase? phase,
     Set<int>? removed,
+    Set<int>? bumped,
     int? mistakes,
     int? hintsLeft,
     int? hintArrowId,
@@ -138,12 +158,14 @@ class GameState {
     bool clearBlocked = false,
     int? moveToken,
     bool? resumeOffered,
+    bool? continuedAfterLoss,
   }) =>
       GameState(
         spec: spec,
         puzzle: puzzle,
         phase: phase ?? this.phase,
         removed: removed ?? this.removed,
+        bumped: bumped ?? this.bumped,
         mistakes: mistakes ?? this.mistakes,
         hintsLeft: hintsLeft ?? this.hintsLeft,
         hintArrowId: clearHint ? null : (hintArrowId ?? this.hintArrowId),
@@ -153,5 +175,6 @@ class GameState {
         blockedCell: clearBlocked ? null : (blockedCell ?? this.blockedCell),
         moveToken: moveToken ?? this.moveToken,
         resumeOffered: resumeOffered ?? this.resumeOffered,
+        continuedAfterLoss: continuedAfterLoss ?? this.continuedAfterLoss,
       );
 }

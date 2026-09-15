@@ -37,6 +37,21 @@ GameNotifier _notifier({
       autoTick: false,
     );
 
+/// A notifier on [blockedPuzzle], where arrows 1, 2 and 3 are each blocked by
+/// arrow 0 — the board for the rules about spending an allowance.
+GameNotifier _blockedNotifier({
+  HapticsService? haptics,
+  SnapshotCallback? onSnapshot,
+  int level = 1,
+}) =>
+    GameNotifier(
+      blockedSpecFor(level),
+      puzzle: blockedPuzzle(),
+      haptics: haptics,
+      onSnapshot: onSnapshot,
+      autoTick: false,
+    );
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -148,11 +163,11 @@ void main() {
   test('the third blocked tap ends the level out of lives', () {
     fakeAsync((async) {
       final engine = RecordingHapticEngine();
-      final n = _notifier(haptics: HapticsService(() => true, engine: engine));
-      n.tapArrow(2);
+      final n = _blockedNotifier(haptics: HapticsService(() => true, engine: engine));
+      n.tapArrow(1);
       n.tapArrow(2);
       expect(n.state.phase, GamePhase.playing);
-      n.tapArrow(2);
+      n.tapArrow(3);
       expect(n.state.phase, GamePhase.outOfLives);
       expect(n.state.livesLeft, 0);
       async.elapse(const Duration(seconds: 1));
@@ -164,31 +179,81 @@ void main() {
     });
   });
 
-  test('the denser late levels grant a fourth and a fifth life', () {
-    final four = GameNotifier(sampleSpecFor(16), puzzle: samplePuzzle(), autoTick: false);
-    expect(four.state.lives, 4);
-    four.tapArrow(2);
-    four.tapArrow(2);
-    four.tapArrow(2);
-    expect(four.state.phase, GamePhase.playing);
-    expect(four.state.livesLeft, 1);
-    four.tapArrow(2);
-    expect(four.state.phase, GamePhase.outOfLives);
-    four.dispose();
+  test('the denser late levels grant a fourth life', () {
+    // Three distinct dead ends on a level-16 board leave one life standing.
+    final n = _blockedNotifier(level: 16);
+    expect(n.state.lives, 4);
+    n.tapArrow(1);
+    n.tapArrow(2);
+    n.tapArrow(3);
+    expect(n.state.phase, GamePhase.playing);
+    expect(n.state.livesLeft, 1);
+    n.dispose();
+  });
 
-    final five = GameNotifier(sampleSpecFor(26), puzzle: samplePuzzle(), autoTick: false);
-    expect(five.state.lives, 5);
-    for (var i = 0; i < 4; i++) {
-      five.tapArrow(2);
-    }
-    expect(five.state.phase, GamePhase.playing);
-    // Four slips still clears a five-life level, at one star.
-    five.tapArrow(0);
-    five.tapArrow(1);
-    five.tapArrow(2);
-    expect(five.state.phase, GamePhase.cleared);
-    expect(five.state.stars, 1);
-    five.dispose();
+  test('a second run at the same arrow is free', () {
+    final n = _blockedNotifier();
+    n.tapArrow(1);
+    expect(n.state.mistakes, 1);
+    // The board taught this lesson already; it does not charge twice.
+    n.tapArrow(1);
+    n.tapArrow(1);
+    expect(n.state.mistakes, 1);
+    expect(n.state.livesLeft, 2);
+    expect(n.state.phase, GamePhase.playing);
+    // Still a bump, though: the move is recorded and the board reacts.
+    expect(n.state.lastOutcome, MoveOutcome.blocked);
+    expect(n.state.moveToken, 3);
+    // A different arrow is a new lesson, and costs.
+    n.tapArrow(2);
+    expect(n.state.mistakes, 2);
+    n.dispose();
+  });
+
+  test('keepGoing plays on past a spent allowance, for a single star', () {
+    final n = _blockedNotifier();
+    n.tick(4000);
+    n.tapArrow(1);
+    n.tapArrow(2);
+    n.tapArrow(3);
+    expect(n.state.phase, GamePhase.outOfLives);
+
+    n.keepGoing();
+    expect(n.state.phase, GamePhase.playing);
+    expect(n.state.continuedAfterLoss, isTrue);
+    expect(n.state.elapsedMs, 4000); // the clock picks up where it stopped
+    // Nothing left to take, and no second out-of-lives card.
+    n.tapArrow(2);
+    expect(n.state.mistakes, 3);
+    expect(n.state.livesLeft, 0);
+    expect(n.state.phase, GamePhase.playing);
+    // The clock is still a real ending.
+    n.tick(30000);
+    expect(n.state.phase, GamePhase.timeUp);
+    n.dispose();
+  });
+
+  test('a clear after playing on is worth one star, never zero', () {
+    final n = _blockedNotifier();
+    n.tapArrow(1);
+    n.tapArrow(2);
+    n.tapArrow(3);
+    n.keepGoing();
+    n.tapArrow(0);
+    n.tapArrow(1);
+    n.tapArrow(2);
+    n.tapArrow(3);
+    expect(n.state.phase, GamePhase.cleared);
+    expect(n.state.stars, 1);
+    n.dispose();
+  });
+
+  test('keepGoing does nothing outside the out-of-lives ending', () {
+    final n = _blockedNotifier();
+    n.keepGoing();
+    expect(n.state.phase, GamePhase.playing);
+    expect(n.state.continuedAfterLoss, isFalse);
+    n.dispose();
   });
 
   test('a restart or disposal drops a pending crash', () {
@@ -286,12 +351,12 @@ void main() {
   });
 
   test('restart keeps the same puzzle and resets everything else', () {
-    final n = _notifier();
+    final n = _blockedNotifier();
     n.tick(2000);
     n.useHint();
+    n.tapArrow(1);
     n.tapArrow(2);
-    n.tapArrow(2);
-    n.tapArrow(2);
+    n.tapArrow(3);
     expect(n.state.phase, GamePhase.outOfLives);
     final puzzle = n.state.puzzle;
 

@@ -92,10 +92,12 @@ class GameNotifier extends StateNotifier<GameState> {
       state = GameState.fresh(spec, puzzle).copyWith(
         phase: GamePhase.paused,
         removed: saved.removed.toSet(),
+        bumped: saved.bumped.toSet(),
         mistakes: saved.mistakes,
         hintsLeft: saved.hintsLeft,
         elapsedMs: saved.elapsedMs,
         resumeOffered: true,
+        continuedAfterLoss: saved.continuedAfterLoss,
       );
     } else {
       state = GameState.fresh(spec, puzzle);
@@ -110,7 +112,7 @@ class GameNotifier extends StateNotifier<GameState> {
       saved.hasProgress &&
       saved.removed.length < puzzle.arrowCount &&
       saved.removed.every((id) => id >= 0 && id < puzzle.arrowCount) &&
-      saved.mistakes < livesForLevel(spec.level) &&
+      (saved.continuedAfterLoss || saved.mistakes < livesForLevel(spec.level)) &&
       saved.hintsLeft >= 0 &&
       saved.hintsLeft <= maxHints &&
       saved.elapsedMs >= 0 &&
@@ -147,12 +149,18 @@ class GameNotifier extends StateNotifier<GameState> {
       _snapshot();
       return;
     }
-    final mistakes = state.mistakes + 1;
-    final lost = mistakes >= state.lives;
+    // Two bumps the board does not charge for: a second run at an arrow that
+    // has already bumped (that lesson is paid for, and a 200-arrow board is
+    // far too big to hold every dead end in your head), and any bump at all
+    // once the player has spent the allowance and chosen to play on.
+    final free = state.bumped.contains(id) || state.continuedAfterLoss;
+    final mistakes = free ? state.mistakes : state.mistakes + 1;
+    final lost = !state.continuedAfterLoss && mistakes >= state.lives;
     if (lost) _stopTimer();
     final blockedCell = puzzle.firstBlockedCell(id, state.removed)!;
     state = state.copyWith(
       mistakes: mistakes,
+      bumped: <int>{...state.bumped, id},
       phase: lost ? GamePhase.outOfLives : GamePhase.playing,
       clearHint: true,
       lastMoveId: id,
@@ -170,6 +178,9 @@ class GameNotifier extends StateNotifier<GameState> {
       sfx?.bump();
       if (lost) {
         haptics?.fail();
+      } else if (free) {
+        // No life lost: answer the finger, but don't punch.
+        haptics?.tap();
       } else {
         haptics?.miss();
       }
@@ -197,6 +208,18 @@ class GameNotifier extends StateNotifier<GameState> {
     _impact?.cancel();
     _impact = null;
     state = GameState.fresh(spec, puzzle);
+    _startTimer();
+    _snapshot();
+  }
+
+  /// Carries on from [GamePhase.outOfLives] instead of replaying: the board
+  /// and the clock are where they were, blocked taps stop costing anything,
+  /// and the clear will be worth one star. Losing a level's worth of correct
+  /// taps to a slipped finger is the worst thing the game does; running out
+  /// of time is still a real ending.
+  void keepGoing() {
+    if (state.phase != GamePhase.outOfLives) return;
+    state = state.copyWith(phase: GamePhase.playing, continuedAfterLoss: true);
     _startTimer();
     _snapshot();
   }

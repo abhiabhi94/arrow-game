@@ -234,8 +234,20 @@ Key patterns:
   `Settings.gridLinesOn` (persisted) but the toggle is earned:
   `ProgressNotifier.gridLinesUnlocked` (clear level `kGridLinesUnlockAfterLevel`
   = 4; always on in the testing build).
-- **Zoom:** `InteractiveViewer` (pinch) + toolbar buttons, `kMinZoom`..`kMaxZoom`
-  (1×–4×; the late boards are 30+ cells wide, so zoom is how you tap them).
+- **Zoom:** `InteractiveViewer` (pinch) + toolbar buttons, from `kMinZoom` to
+  `maxZoomFor(cellPx)` — `kMaxZoom` (4×), or as much more as it takes to bring
+  a cell up to `kFingerCellPx` (46). A flat 4× left a level-40 cell at 33 px,
+  so the last levels had no zoom at which a target was finger-sized.
+- **Taps the player didn't mean** (`widgets/puzzle_board.dart`): a tap is
+  dropped while the board is still moving from the last one (the whole bump,
+  the first `kSettleFraction` of a slide — keyed off the animation
+  controllers, so the engine stays pure), and when the gesture had more than
+  one finger down (a pinch below the pan slop used to end as a tap). A tap on
+  an empty cell takes the nearest arrow within `kTouchSlopPx` on screen,
+  capped at 1.5 cells; an occupied cell always wins, so slop never overrides
+  a deliberate hit. The board's `zoom` keeps the slop a fixed size on screen.
+  The HUD and toolbar keep the side gutter and the board runs edge to edge,
+  which is ~9% more cell on the dense levels.
 - **Board look:** one ink (`palette.arrowInk`), thin strokes (≤5 px), small
   heads, no frame — the arrows sit straight on the page. The hint glow and
   the blocked flash are the only colour on the board. Slide-out and bump are
@@ -281,7 +293,15 @@ Key patterns:
   so a slip there is as often the finger's fault as the player's.
   `starsForMistakes(mistakes, level)` splits the level's allowance: flawless
   is always three stars, the better half of the rest two, the remainder one,
-  which leaves the three-life levels rated exactly as before.
+  which leaves the three-life levels rated exactly as before. Spending the
+  allowance is no longer the end of the level: the "Out of lives" card offers
+  **Keep going** (`GameNotifier.keepGoing`), which plays on with
+  `GameState.continuedAfterLoss` set — further bumps cost nothing, the clock
+  keeps running so time is still a real ending, and the clear is worth one
+  star (`GameState.stars` floors a clear at one, so a zero only ever means
+  "not cleared"). A second run at an arrow already in `GameState.bumped` is
+  free too: that lesson is paid for, and a 200-arrow board is too big to
+  hold every dead end in your head. Both travel in the saved game.
 
 ## Testing
 

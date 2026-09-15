@@ -58,7 +58,7 @@ void main() {
     await _settle(tester, 600);
 
     expect(find.text("That's the whole game"), findsOneWidget);
-    expect(find.textContaining('3 lives'), findsOneWidget);
+    expect(find.textContaining('bump costs a life'), findsOneWidget);
     expect(container.read(settingsProvider).onboardingDone, isFalse);
     await tester.tap(find.text("Let's play!"));
     await _settle(tester, 300);
