@@ -36,6 +36,14 @@ abstract class AudioBackend {
   /// Without it the service's idea of what is playing silently drifts from
   /// the truth, and it never restarts the loop.
   Stream<void> get interruptions;
+
+  /// Whether the player has actually produced any sound. Worth asking,
+  /// because a browser can accept a call to play and then quietly not play:
+  /// before the page has been touched the AudioContext is created
+  /// `suspended` and the call returns perfectly normally, and the plugin's
+  /// own `state` is intent rather than evidence. A playhead that has moved
+  /// is evidence.
+  Future<bool> get isPlaying;
 }
 
 /// Real backend backed by an [AudioPlayer] set to loop. The player is created
@@ -55,6 +63,12 @@ class AudioPlayersBackend implements AudioBackend {
 
   @override
   Stream<void> get interruptions => _interruptions.stream;
+
+  @override
+  Future<bool> get isPlaying async {
+    final at = await _player?.getCurrentPosition();
+    return at != null && at > Duration.zero;
+  }
 
   /// Starts watching a freshly created player for stops it was not asked for.
   void _watch(AudioPlayer player) {
@@ -142,6 +156,24 @@ class AudioService {
     await _sync();
   }
 
+  /// A user has touched the page or the screen. Browsers refuse to start
+  /// audio before that happens — the AudioContext is created `suspended` and
+  /// playback silently never begins — so the first gesture is the moment to
+  /// try the loop again. A no-op once it is audible, and on platforms that
+  /// never refused in the first place.
+  Future<void> nudge() async {
+    // Our own bookkeeping is not evidence here: on the web the call to start
+    // the loop resolves normally and then plays nothing, so the only thing
+    // worth acting on is what the player says it is doing.
+    if (_playing && await _backend.isPlaying) return;
+    // A player that never really started cannot be resumed, so the next
+    // attempt has to go back through [AudioBackend.loop].
+    _playing = false;
+    _started = false;
+    _recoveries = 0;
+    await _sync();
+  }
+
   /// Drives the backend to match [_settings] and the foreground state. Both
   /// entry points funnel through here so returning to the foreground *starts*
   /// the loop when it never got going — not just resumes an existing one.
@@ -151,16 +183,25 @@ class AudioService {
     if (track == null || settings == null) return;
 
     if (settings.musicOn && !_backgrounded) {
-      if (!_started) {
-        await _backend.loop(track, settings.musicVolume);
-        _started = true;
-        _playing = true;
-        return;
-      }
-      await _backend.setVolume(settings.musicVolume);
-      if (!_playing) {
-        await _backend.resume();
-        _playing = true;
+      // A browser refuses to start audio until the page has been touched, and
+      // audioplayers surfaces that refusal as a thrown error. Staying "not
+      // playing" is what lets the next gesture retry through [nudge]; letting
+      // it throw would just be an unhandled error at launch and silence for
+      // the rest of the visit.
+      try {
+        if (!_started) {
+          await _backend.loop(track, settings.musicVolume);
+          _started = true;
+          _playing = true;
+          return;
+        }
+        await _backend.setVolume(settings.musicVolume);
+        if (!_playing) {
+          await _backend.resume();
+          _playing = true;
+        }
+      } catch (_) {
+        _playing = false;
       }
     } else if (_playing) {
       await _backend.pause();

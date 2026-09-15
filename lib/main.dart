@@ -69,21 +69,28 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
       ref.read(audioServiceProvider).apply(next);
     });
     final settings = ref.watch(settingsProvider);
-    return MaterialApp(
-      title: 'Arrow',
-      debugShowCheckedModeBanner: false,
-      scrollBehavior: const AppScrollBehavior(),
-      theme: buildLightTheme(),
-      darkTheme: buildDarkTheme(),
-      themeMode: themeModeFor(settings.themeChoice),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
+    // Browsers will not start audio until the page has been touched, and say
+    // nothing when they refuse, so the first tap anywhere is the cue to try
+    // the music again. Harmless everywhere else: a nudge is a no-op once the
+    // loop is audible.
+    return Listener(
+      onPointerDown: (_) => ref.read(audioServiceProvider).nudge(),
+      child: MaterialApp(
+        title: 'Arrow',
+        debugShowCheckedModeBanner: false,
+        scrollBehavior: const AppScrollBehavior(),
+        theme: buildLightTheme(),
+        darkTheme: buildDarkTheme(),
+        themeMode: themeModeFor(settings.themeChoice),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
+      ),
     );
   }
 }

@@ -313,6 +313,22 @@ Key patterns:
   settings/foreground change so a platform that is refusing to play is not
   asked forever. Without that feedback the service's `_playing` flag drifted
   from reality and one lost focus meant silence for the rest of the session.
+- **Autoplay on the web:** a browser will not start audio before the page has
+  been touched — `audioplayers_web` builds an `AudioContext` that is created
+  `suspended` — and it refuses *quietly*: the call to play resolves normally,
+  or never completes at all, and the plugin's own `AudioPlayer.state` is
+  intent rather than evidence. So `main.dart` wraps the app in a `Listener`
+  whose `onPointerDown` calls `AudioService.nudge()`, and `nudge` asks
+  `AudioBackend.isPlaying` — implemented as "has the playhead moved",
+  the only honest signal — before deciding there is nothing to do. It then
+  goes back through `loop`, because a player that never started cannot be
+  resumed. Nothing may latch for the duration of a start attempt: the web
+  plugin's future can hang forever, and a flag held across it blocked every
+  retry for the whole visit (a regression test in
+  `test/services/audio_service_test.dart` pins that). Verified in headless
+  Chromium with `--autoplay-policy=document-user-activation-required`: the
+  context starts suspended, and the first tap takes it to `running` with the
+  track playing.
 - **Onboarding:** `OnboardingScreen` — two tiny boards played for real
   (`tutorialPuzzleOne/Two`) plus a summary; `Settings.onboardingDone` gates
   it in `main.dart`; Settings → "How to play" replays it (`replay: true`).

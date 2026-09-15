@@ -7,6 +7,22 @@ import 'package:flutter_test/flutter_test.dart';
 
 class _FakeBackend implements AudioBackend {
   final List<String> calls = <String>[];
+
+  /// When true, the next [loop] throws the way a browser's autoplay refusal
+  /// can reach us through audioplayers.
+  bool blockStart = false;
+
+  /// When true, [loop] resolves normally but nothing actually plays — the
+  /// other way a browser refuses, and the quieter one.
+  bool silentlyRefuse = false;
+
+  /// When true, [loop] never completes at all, as the web plugin's does
+  /// while it waits for a source it is not allowed to start.
+  bool hangOnStart = false;
+
+  @override
+  Future<bool> get isPlaying async => _playing;
+  bool _playing = false;
   final StreamController<void> _interruptions = StreamController<void>.broadcast();
 
   @override
@@ -21,15 +37,31 @@ class _FakeBackend implements AudioBackend {
   }
 
   @override
-  Future<void> loop(String asset, double volume) async => calls.add('loop $asset $volume');
+  Future<void> loop(String asset, double volume) async {
+    calls.add('loop $asset $volume');
+    if (blockStart) throw Exception('NotAllowedError: needs a user gesture');
+    if (hangOnStart) return Completer<void>().future;
+    _playing = !silentlyRefuse;
+  }
   @override
   Future<void> setVolume(double volume) async => calls.add('volume $volume');
   @override
-  Future<void> resume() async => calls.add('resume');
+  Future<void> resume() async {
+    calls.add('resume');
+    _playing = true;
+  }
+
   @override
-  Future<void> pause() async => calls.add('pause');
+  Future<void> pause() async {
+    calls.add('pause');
+    _playing = false;
+  }
+
   @override
-  Future<void> stop() async => calls.add('stop');
+  Future<void> stop() async {
+    calls.add('stop');
+    _playing = false;
+  }
 }
 
 const _on = Settings.defaults;
@@ -155,6 +187,83 @@ void main() {
     await s.handleLifecycle(AppLifecycleState.paused);
     b.calls.clear();
     await b.interrupt();
+    expect(b.calls, isEmpty);
+  });
+
+  test('a refused start is retried on the next user gesture', () async {
+    final b = _FakeBackend()..blockStart = true;
+    final s = AudioService(b, trackAsset: kBackgroundTrack);
+    addTearDown(s.dispose);
+
+    // Launch: the browser refuses, and the refusal must not become an
+    // unhandled error or a silent session.
+    await s.apply(_on);
+    expect(b.calls, ['loop $kBackgroundTrack 0.6']);
+
+    // The page has now been touched, so it works.
+    b.blockStart = false;
+    await s.nudge();
+    expect(b.calls, ['loop $kBackgroundTrack 0.6', 'loop $kBackgroundTrack 0.6']);
+
+    // And once it is playing, further gestures cost nothing.
+    await s.nudge();
+    await s.nudge();
+    expect(b.calls, hasLength(2));
+  });
+
+  test('a start that resolves but plays nothing is retried on a gesture', () async {
+    final b = _FakeBackend()..silentlyRefuse = true;
+    final s = AudioService(b, trackAsset: kBackgroundTrack);
+    addTearDown(s.dispose);
+
+    // This is the web case: the call succeeds, so the service would happily
+    // believe it is playing, and the visit would be silent from here on.
+    await s.apply(_on);
+    expect(b.calls, ['loop $kBackgroundTrack 0.6']);
+    expect(await b.isPlaying, isFalse);
+
+    // The page has been touched, so the player is asked again.
+    b.silentlyRefuse = false;
+    await s.nudge();
+    expect(await b.isPlaying, isTrue);
+    expect(b.calls.where((c) => c.startsWith('loop')), hasLength(2));
+
+    // Now that it really is playing, further gestures leave it alone.
+    await s.nudge();
+    expect(b.calls.where((c) => c.startsWith('loop')), hasLength(2));
+  });
+
+  test('a start that never finishes does not block the next gesture', () async {
+    // The web case that cost me an afternoon: the platform call to start the
+    // loop simply never completes. Anything that latches for the duration of
+    // that call blocks every retry for the rest of the visit.
+    final b = _FakeBackend()..hangOnStart = true;
+    final s = AudioService(b, trackAsset: kBackgroundTrack);
+    addTearDown(s.dispose);
+    final launch = s.apply(_on); // deliberately not awaited: it never returns
+    await Future<void>.delayed(Duration.zero);
+    expect(b.calls, ['loop $kBackgroundTrack 0.6']);
+
+    b.hangOnStart = false;
+    await s.nudge();
+    expect(await b.isPlaying, isTrue);
+    expect(b.calls.where((c) => c.startsWith('loop')), hasLength(2));
+    // ignore: unawaited_futures
+    launch; // still pending, and that is fine
+  });
+
+  test('a nudge starts nothing when music is off or the app is away', () async {
+    final b = _FakeBackend();
+    final s = AudioService(b, trackAsset: kBackgroundTrack);
+    addTearDown(s.dispose);
+    await s.apply(_off);
+    await s.nudge();
+    expect(b.calls, isEmpty);
+
+    await s.apply(_on);
+    await s.handleLifecycle(AppLifecycleState.paused);
+    b.calls.clear();
+    await s.nudge();
     expect(b.calls, isEmpty);
   });
 
