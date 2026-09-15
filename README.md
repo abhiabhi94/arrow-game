@@ -129,7 +129,7 @@ Cutting one is a single command from an up-to-date `main` — it bumps
 `version:` in `pubspec.yaml`, commits, tags, and prints the commit for review:
 
 ```bash
-tool/bump_version.sh                  # v1.2.0 -> 1.2.1+4, tag v1.2.1, local only
+tool/bump_version.sh                  # v1.2.0 -> 1.2.1+4, tag v1.2.1+4, local only
 tool/bump_version.sh --push           # ... and push, asking for branch and tag separately
 tool/bump_version.sh minor --dry-run  # also major | build | an explicit X.Y.Z
 ```
@@ -138,7 +138,9 @@ The current version name comes from the **newest `v*` tag**, not from
 `pubspec.yaml` — the releases through v1.2.0 left pubspec's name at `1.0.0`
 and moved only the `+N` code, so the tag is the honest source. The code
 always increments, since Play needs it strictly higher than any build
-already uploaded.
+already uploaded. A new tag is `v` + the whole version, code included
+(`v1.3.0+4`), so tag and pubspec mirror each other exactly; the Release
+workflow refuses a tag that disagrees.
 
 Pushing is opt-in: without `--push` the bump stays on the machine and the
 script prints the push commands and the undo. `--help` lists the rest

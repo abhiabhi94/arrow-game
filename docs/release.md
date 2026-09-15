@@ -109,8 +109,9 @@ So the script takes:
 
 - the **name** from whichever is further along, the newest `v*` tag or
   pubspec (and says so in the plan when the tag wins);
-- the **code** from whichever is higher, pubspec now or the pubspec at that
-  tag — it has to clear every build ever uploaded.
+- the **code** from the highest of three: pubspec now, the code the newest
+  tag spells out, and the code the pubspec at that tag carried (all a bare
+  legacy tag can tell us) — it has to clear every build ever uploaded.
 
 Bumping then also drags pubspec's name back in line with reality, so after
 the first run the two agree.
@@ -123,17 +124,22 @@ pubspec `1.0.0+3`:
 
 | Argument            | Becomes  | Tag        |
 |---------------------|----------|------------|
-| `patch` *(default)* | 1.2.1+4  | `v1.2.1`   |
-| `minor`             | 1.3.0+4  | `v1.3.0`   |
-| `major`             | 2.0.0+4  | `v2.0.0`   |
+| `patch` *(default)* | 1.2.1+4  | `v1.2.1+4` |
+| `minor`             | 1.3.0+4  | `v1.3.0+4` |
+| `major`             | 2.0.0+4  | `v2.0.0+4` |
 | `build`             | 1.2.0+4  | `v1.2.0+4` |
-| `2.5.1`             | 2.5.1+4  | `v2.5.1`   |
+| `2.5.1`             | 2.5.1+4  | `v2.5.1+4` |
 
-`build` re-uploads the same version name with a new code, so `v1.2.0` is
-already taken; the tag then carries the code instead, which still matches
-the workflow's `v*` trigger. `--tag NAME` overrides it. An explicit `X.Y.Z`
-must be higher than the current name — `1.0.1` is refused today, not
-silently accepted.
+**A tag is `v` + the whole version, code included.** One shape, always, so a
+tag and pubspec mirror each other exactly and there is no reading to do.
+It is unique by construction too — the code strictly increments — so `build`
+can re-upload under the same name (`v1.3.0+4`, then `v1.3.0+5`) without a
+special case. `--tag NAME` overrides it. An explicit `X.Y.Z` must be higher
+than the current name: `1.0.1` is refused today, not silently accepted.
+
+The three tags cut before this scheme (`v1.0.0`, `v1.1.0`, `v1.2.0`) carry
+only a name. They are still read correctly — that is how the table above
+gets `1.2.0` — but no new tag looks like that.
 
 Because the tags decide the version, the script fetches them first
 (`--no-fetch` skips that, and then only local tags are consulted). Before it
@@ -186,11 +192,13 @@ and can only verify that the release build compiles.
 
 ## The tag and pubspec must agree
 
-A `v*` tag and `pubspec.yaml` name the same version, and the Release
-workflow enforces it: a tag-triggered run fails in its first seconds unless
-`vX.Y.Z` matches pubspec's `X.Y.Z` (and, for the `vX.Y.Z+N` build form, the
-`+N` too). `tool/bump_version.sh` keeps them in step by construction — it
-writes the name into pubspec and tags that same commit.
+A tag is `v` + the whole pubspec version — `v1.3.0+4` for `1.3.0+4` — and
+the Release workflow enforces it: a tag-triggered run fails in its first
+seconds unless `${tag#v}` equals pubspec's `version:` exactly. Requiring the
+code as well as the name is what keeps it to one tag shape; otherwise
+`v1.3.0` and `v1.3.0+5` end up side by side meaning different things.
+`tool/bump_version.sh` keeps them in step by construction — it writes the
+version into pubspec and tags that same commit.
 
 This is a guard against a real drift. `v1.0.0`, `v1.1.0` and `v1.2.0` were
 all cut by tagging alone, while pubspec's name sat at `1.0.0` and only its
@@ -199,9 +207,10 @@ all cut by tagging alone, while pubspec's name sat at `1.0.0` and only its
 `arrow-1.0.0-3.aab` — under tags claiming three different versions. Nothing
 downstream could catch it: the tag is only a label on a commit.
 
-If the check fires, do not re-point the tag at a new commit. Bump pubspec
-properly, delete the bad tag (`git tag -d vX.Y.Z && git push origin
-:refs/tags/vX.Y.Z`), and tag the bump commit — which is what
+If the check fires, do not re-point the tag at a new commit — that gives a
+release whose artifacts do not match the source it names. Bump pubspec
+properly, delete the bad tag (`git tag -d <tag> && git push origin
+:refs/tags/<tag>`), and tag the bump commit, which is what
 `tool/bump_version.sh` does on its own.
 
 ## Permissions in the Play Console

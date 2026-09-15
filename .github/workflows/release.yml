@@ -56,12 +56,15 @@ jobs:
             exit 1
           fi
 
-      # The tag and pubspec.yaml must name the same version. They drifted once
-      # and nothing noticed: v1.0.0, v1.1.0 and v1.2.0 were all built from a
-      # pubspec that still said 1.0.0, so every bundle was versionName 1.0.0
-      # while its release claimed otherwise. The build reads pubspec and the
-      # tag is only a label, so nothing downstream can catch this — fail here,
-      # in a second, rather than publish a bundle that contradicts its release.
+      # A tag is `v` + the whole pubspec version, code included (v1.3.0+4), and
+      # this is where that is enforced. They drifted once and nothing noticed:
+      # v1.0.0, v1.1.0 and v1.2.0 were all built from a pubspec that still said
+      # 1.0.0, so every bundle was versionName 1.0.0 while its release claimed
+      # otherwise. The build reads pubspec and the tag is only a label, so
+      # nothing downstream can catch this — fail here, in a second, rather than
+      # publish a bundle that contradicts its release. Requiring the code in
+      # the tag too keeps one tag shape, so `v1.3.0` and `v1.3.0+5` can never
+      # sit side by side meaning different things.
       # workflow_dispatch skips the check: its build_name input exists exactly
       # to build a name pubspec does not carry.
       - name: Check the tag matches pubspec
@@ -69,18 +72,10 @@ jobs:
         run: |
           pubspec=$(sed -n 's/^version: *//p' pubspec.yaml | head -1 | tr -d '[:space:]')
           tag=${GITHUB_REF_NAME#v}
-          if [ "${tag%%+*}" != "${pubspec%%+*}" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME names version ${tag%%+*}, but pubspec.yaml says $pubspec. Bump pubspec with tool/bump_version.sh so the two agree, delete the tag and tag the bump commit. See docs/release.md."
+          if [ "$tag" != "$pubspec" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME and pubspec.yaml ($pubspec) name different versions. A tag is 'v' + the whole version, code included — v$pubspec here. Bump with tool/bump_version.sh, which tags the commit it bumps; do not move a tag onto a different commit. See docs/release.md."
             exit 1
           fi
-          # A vX.Y.Z+N tag (the build-bump form) pins the code as well.
-          case "$tag" in
-            *+*)
-              if [ "${tag##*+}" != "${pubspec##*+}" ]; then
-                echo "::error::Tag $GITHUB_REF_NAME names code ${tag##*+}, but pubspec.yaml says code ${pubspec##*+} ($pubspec)."
-                exit 1
-              fi ;;
-          esac
           echo "Tag $GITHUB_REF_NAME matches pubspec $pubspec"
 
       - name: Read pinned Flutter version

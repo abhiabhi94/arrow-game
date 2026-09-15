@@ -13,17 +13,24 @@
 # the newest `v*` tag, not necessarily in pubspec.yaml — this repo shipped
 # v1.0.0, v1.1.0 and v1.2.0 while pubspec's name sat at 1.0.0 throughout. So
 # the name is taken from whichever is higher, the newest tag or pubspec, and
-# the code (`+N`) from whichever is higher, pubspec or the pubspec at that
-# tag. Play requires the code to be strictly higher than any build already
-# uploaded, so every bump increments it; the argument only moves the name.
+# the code (`+N`) from the highest of three: pubspec now, the code the newest
+# tag carries, and the pubspec at that tag. Play requires the code to be
+# strictly higher than any build already uploaded, so every bump increments
+# it; the argument only moves the name.
 #
 # Usage: tool/bump_version.sh [patch|minor|major|build|X.Y.Z] [options]
 #
-#   patch (default)   v1.2.0 / 1.0.0+3 -> 1.2.1+4
-#   minor             v1.2.0 / 1.0.0+3 -> 1.3.0+4
-#   major             v1.2.0 / 1.0.0+3 -> 2.0.0+4
-#   build             v1.2.0 / 1.0.0+3 -> 1.2.0+4   (same name, fresh upload)
+#   patch (default)   v1.2.0 / 1.0.0+3 -> 1.2.1+4, tag v1.2.1+4
+#   minor             v1.2.0 / 1.0.0+3 -> 1.3.0+4, tag v1.3.0+4
+#   major             v1.2.0 / 1.0.0+3 -> 2.0.0+4, tag v2.0.0+4
+#   build             v1.2.0 / 1.0.0+3 -> 1.2.0+4, tag v1.2.0+4  (same name,
+#                     fresh upload — the code is what makes the tag unique)
 #   X.Y.Z             set the name outright (must be higher than the current)
+#
+# A tag is always `v` + the whole pubspec version, code included, so a tag and
+# pubspec.yaml mirror each other exactly and there is only ever one tag shape.
+# The three tags cut before this (v1.0.0, v1.1.0, v1.2.0) carry only a name;
+# they are still read correctly.
 #
 # Options:
 #       --push        push the branch and the tag to origin (asks for each);
@@ -131,15 +138,22 @@ pubspec_code=${pubspec_version##*+}
 is_name "$pubspec_name" || die "version name '$pubspec_name' is not X.Y.Z"
 [[ "$pubspec_code" =~ ^[0-9]+$ ]] || die "version code '$pubspec_code' is not a number"
 
-# The newest release tag. `v1.2.0+4` (the build-bump form below) counts as 1.2.0.
-tag_latest="" tag_ref="" best_key=""
+# The newest release tag. A tag is `v<name>+<code>`; the three cut before this
+# scheme are bare `v<name>`, so the code is optional here.
+tag_latest="" tag_ref="" tag_code="" best_key=""
 while IFS= read -r t; do
   [ -n "$t" ] || continue
-  n=${t#v}; n=${n%%+*}
+  n=${t#v}
+  c=""
+  case "$n" in *+*) c=${n##*+} ;; esac
+  n=${n%%+*}
   is_name "$n" || continue
+  [[ "$c" =~ ^[0-9]*$ ]] || continue
   k=$(version_key "$n")
-  if [ -z "$best_key" ] || [ "$k" -gt "$best_key" ]; then
-    best_key=$k tag_latest=$n tag_ref=$t
+  # Same name, different code (a re-upload): the higher code is the newer tag.
+  if [ -z "$best_key" ] || [ "$k" -gt "$best_key" ] \
+     || { [ "$k" -eq "$best_key" ] && [ "${c:-0}" -gt "${tag_code:-0}" ]; }; then
+    best_key=$k tag_latest=$n tag_ref=$t tag_code=$c
   fi
 done < <(git tag --list 'v[0-9]*')
 
@@ -152,8 +166,13 @@ if [ -n "$tag_latest" ] && [ "$(version_key "$tag_latest")" -gt "$(version_key "
   name_from=tag
 fi
 
-# The code must clear every build ever uploaded, so take the highest seen.
+# The code must clear every build ever uploaded, so take the highest seen: the
+# code in pubspec now, the one the newest tag spells out, and the one the
+# pubspec at that tag carried (all a bare legacy tag can tell us).
 base_code=$pubspec_code
+if [ -n "$tag_code" ] && [ "$tag_code" -gt "$base_code" ]; then
+  base_code=$tag_code
+fi
 if [ -n "$tag_ref" ]; then
   tagged=$(git show "$tag_ref:pubspec.yaml" 2>/dev/null | sed -n 's/^version: *//p' | head -1 | tr -d '[:space:]' || true)
   tagged=${tagged##*+}
@@ -181,12 +200,9 @@ new_version="$new_name+$new_code"
 tag_exists() { git rev-parse --verify --quiet "refs/tags/$1" >/dev/null; }
 
 if [ "$tag" -eq 1 ]; then
-  if [ -z "$tag_name" ]; then
-    tag_name="v$new_name"
-    # A `build` bump keeps the name, so the plain tag is already taken; fall
-    # back to one that carries the code, which still matches the v* trigger.
-    if tag_exists "$tag_name"; then tag_name="v$new_name+$new_code"; fi
-  fi
+  # One shape, always: `v` + the whole version. The code strictly increments,
+  # so this is unique even when a re-upload keeps the name.
+  [ -n "$tag_name" ] || tag_name="v$new_version"
   if tag_exists "$tag_name"; then die "tag $tag_name already exists"; fi
 fi
 
