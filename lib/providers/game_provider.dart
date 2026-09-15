@@ -110,7 +110,7 @@ class GameNotifier extends StateNotifier<GameState> {
       saved.hasProgress &&
       saved.removed.length < puzzle.arrowCount &&
       saved.removed.every((id) => id >= 0 && id < puzzle.arrowCount) &&
-      saved.mistakes < maxLives &&
+      saved.mistakes < livesForLevel(spec.level) &&
       saved.hintsLeft >= 0 &&
       saved.hintsLeft <= maxHints &&
       saved.elapsedMs >= 0 &&
@@ -148,7 +148,7 @@ class GameNotifier extends StateNotifier<GameState> {
       return;
     }
     final mistakes = state.mistakes + 1;
-    final lost = mistakes >= maxLives;
+    final lost = mistakes >= state.lives;
     if (lost) _stopTimer();
     final blockedCell = puzzle.firstBlockedCell(id, state.removed)!;
     state = state.copyWith(

@@ -101,7 +101,9 @@ class GameState {
   int get level => spec.level;
   int get arrowsOut => removed.length;
   int get arrowsTotal => puzzle?.arrowCount ?? spec.arrows;
-  int get livesLeft => maxLives - mistakes;
+  /// Lives this level grants; the denser late boards grant more.
+  int get lives => livesForLevel(level);
+  int get livesLeft => lives - mistakes;
   int get remainingMs =>
       (spec.timeLimitMs - elapsedMs).clamp(0, spec.timeLimitMs);
 
@@ -120,7 +122,7 @@ class GameState {
 
   /// Stars earned — meaningful once [phase] is [GamePhase.cleared].
   int get stars =>
-      phase == GamePhase.cleared ? starsForMistakes(mistakes) : 0;
+      phase == GamePhase.cleared ? starsForMistakes(mistakes, level) : 0;
 
   GameState copyWith({
     GamePhase? phase,

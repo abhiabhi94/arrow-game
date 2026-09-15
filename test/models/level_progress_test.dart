@@ -1,13 +1,38 @@
+import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/models/level_progress.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('stars: flawless 3, one slip 2, two slips 1', () {
-    expect(starsForMistakes(0), 3);
-    expect(starsForMistakes(1), 2);
-    expect(starsForMistakes(2), 1);
-    expect(starsForMistakes(3), 0);
-    expect(starsForMistakes(9), 0);
+    expect(starsForMistakes(0, 1), 3);
+    expect(starsForMistakes(1, 1), 2);
+    expect(starsForMistakes(2, 1), 1);
+    expect(starsForMistakes(3, 1), 0);
+    expect(starsForMistakes(9, 1), 0);
+  });
+
+  test('lives: three, then four from 16 and five from 26', () {
+    expect(livesForLevel(1), 3);
+    expect(livesForLevel(kFourthLifeAfterLevel), 3);
+    expect(livesForLevel(kFourthLifeAfterLevel + 1), 4);
+    expect(livesForLevel(kFifthLifeAfterLevel), 4);
+    expect(livesForLevel(kFifthLifeAfterLevel + 1), 5);
+    expect(livesForLevel(totalLevels), 5);
+  });
+
+  test('stars split the extra lives without cheapening a flawless run', () {
+    // Four lives: flawless three, one slip two, then one.
+    expect(starsForMistakes(0, 16), 3);
+    expect(starsForMistakes(1, 16), 2);
+    expect(starsForMistakes(2, 16), 1);
+    expect(starsForMistakes(3, 16), 1);
+    expect(starsForMistakes(4, 16), 0);
+    // Five: flawless three, one or two slips two, then one.
+    expect(starsForMistakes(0, 26), 3);
+    expect(starsForMistakes(2, 26), 2);
+    expect(starsForMistakes(3, 26), 1);
+    expect(starsForMistakes(4, 26), 1);
+    expect(starsForMistakes(5, 26), 0);
   });
 
   test('empty progress', () {

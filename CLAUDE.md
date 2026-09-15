@@ -11,8 +11,9 @@ it leaves the board. An arrow whose exit path runs into another arrow bumps
 back and costs a life. 40 fixed, procedurally generated levels on a steep
 curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50 by level
 20 → 224 on 42×63), drawn in a
-single ink like a printed puzzle, 3 lives per level (losing all three resets the level behind a
-"Retry" screen), a clock on every level ("Time's up" → replay the same level),
+single ink like a printed puzzle, 3 lives per level — 4 from level 16 and 5
+from level 26, where a cell is drawn at barely a dozen pixels (losing them all
+resets the level behind a "Retry" screen), a clock on every level ("Time's up" → replay the same level),
 3 hints per level, zoom in/out, an earned grid-lines toggle (after level 4),
 1–3 stars per clear, local progress, light/dark theme, haptic feedback.
 
@@ -274,8 +275,13 @@ Key patterns:
   guarantees a level is playable. The clock is brisk: ~1.8 s an arrow on
   levels 1–4, 2.2 s on 5–9 and 2.6 s from 10 (plus ~18 s) — 27 s on level
   1, ten minutes on the finale — so a level is a sprint of quick reads.
-- **Lives / stars:** `maxLives = 3` and `starsForMistakes` live in
-  `models/level_progress.dart`.
+- **Lives / stars:** `models/level_progress.dart`. `livesForLevel` grants
+  `maxLives` (3), then 4 past `kFourthLifeAfterLevel` (15) and 5 past
+  `kFifthLifeAfterLevel` (25) — the late boards are tapped at ~12 px a cell,
+  so a slip there is as often the finger's fault as the player's.
+  `starsForMistakes(mistakes, level)` splits the level's allowance: flawless
+  is always three stars, the better half of the rest two, the remainder one,
+  which leaves the three-life levels rated exactly as before.
 
 ## Testing
 

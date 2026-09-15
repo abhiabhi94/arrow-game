@@ -145,6 +145,17 @@ void main() {
     expect(find.byIcon(Icons.favorite_rounded), findsNWidgets(3));
   });
 
+  testWidgets('the late levels show their extra hearts beside the clock', (tester) async {
+    final container = await _pumpGame(tester, level: 26);
+    expect(find.byIcon(Icons.favorite_rounded), findsNWidgets(5));
+    expect(find.bySemanticsLabel('5 lives left'), findsOneWidget);
+
+    container.read(gameProvider(26).notifier).tapArrow(2); // blocked
+    await _settle(tester, 1000);
+    expect(find.byIcon(Icons.favorite_rounded), findsNWidgets(4));
+    expect(find.byIcon(Icons.favorite_border_rounded), findsOneWidget);
+  });
+
   testWidgets('a bump runs into the blocker, jolts it, and springs back', (tester) async {
     final container = await _pumpGame(tester);
     final notifier = container.read(gameProvider(1).notifier);

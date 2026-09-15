@@ -113,3 +113,24 @@ re-set `ANDROID_UPLOAD_KEYSTORE_BASE64` and `ANDROID_UPLOAD_KEYSTORE_PASSWORD`.
 to **debug signing**, which Play rejects — so the workflow above is the
 recommended path. Cloud (Claude Code on the web) sessions never have the key
 and can only verify that the release build compiles.
+
+## Permissions in the Play Console
+
+The bundle ships exactly two permissions, and both are expected:
+
+| Permission | Declared by |
+|------------|-------------|
+| `android.permission.VIBRATE` | `android/app/src/main/AndroidManifest.xml` — the haptics channel in `MainActivity.kt` |
+| `<applicationId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | `androidx.core:core`, pulled in by `io.flutter:flutter_embedding_release`. Signature-level, used when androidx registers a non-exported dynamic broadcast receiver on Android 13+. Invisible to users. |
+
+Play Console's **App bundle** page lists a third, `com.android.vending.CHECK_LICENSE`.
+It is **not** in the uploaded artifact — Google Play injects it when it
+processes the bundle and generates the delivered APKs. Verified on the
+`1.0.0+2` bundle: the manifest-merger blame report names only the two above,
+and neither `aapt2 dump permissions app-release.apk` nor `bundletool dump
+manifest --bundle=app-release.aab` mentions it. There is nothing to remove on
+our side (a `tools:node="remove"` rule would be a no-op), and the permission
+is `normal` protection level, so it never prompts the user.
+
+To check what a device actually installs: App bundle explorer → Downloads →
+download a device-spec APK → `aapt2 dump permissions <apk>`.

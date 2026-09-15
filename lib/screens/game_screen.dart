@@ -239,7 +239,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
                             ),
                           ),
                           const SizedBox(width: 14),
-                          LivesIndicator(livesLeft: state.livesLeft),
+                          LivesIndicator(
+                            livesLeft: state.livesLeft,
+                            lives: state.lives,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),

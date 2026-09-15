@@ -164,6 +164,33 @@ void main() {
     });
   });
 
+  test('the denser late levels grant a fourth and a fifth life', () {
+    final four = GameNotifier(sampleSpecFor(16), puzzle: samplePuzzle(), autoTick: false);
+    expect(four.state.lives, 4);
+    four.tapArrow(2);
+    four.tapArrow(2);
+    four.tapArrow(2);
+    expect(four.state.phase, GamePhase.playing);
+    expect(four.state.livesLeft, 1);
+    four.tapArrow(2);
+    expect(four.state.phase, GamePhase.outOfLives);
+    four.dispose();
+
+    final five = GameNotifier(sampleSpecFor(26), puzzle: samplePuzzle(), autoTick: false);
+    expect(five.state.lives, 5);
+    for (var i = 0; i < 4; i++) {
+      five.tapArrow(2);
+    }
+    expect(five.state.phase, GamePhase.playing);
+    // Four slips still clears a five-life level, at one star.
+    five.tapArrow(0);
+    five.tapArrow(1);
+    five.tapArrow(2);
+    expect(five.state.phase, GamePhase.cleared);
+    expect(five.state.stars, 1);
+    five.dispose();
+  });
+
   test('a restart or disposal drops a pending crash', () {
     fakeAsync((async) {
       final engine = RecordingHapticEngine();

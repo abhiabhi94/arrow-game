@@ -1,12 +1,34 @@
 /// Per-level progress: completion, stars, best time and play count. Pure Dart.
 library;
 
-/// Lives per level; each mistake costs one.
+/// Lives on the early levels; each mistake costs one.
 const int maxLives = 3;
 
-/// Stars earned for clearing a level with [mistakes] slips: flawless is three,
-/// one slip is two, two slips is one. (Three slips never clears the level.)
-int starsForMistakes(int mistakes) => (maxLives - mistakes).clamp(0, 3);
+/// The last level played with three lives. Past [kFourthLifeAfterLevel] a
+/// board is tapped at barely a dozen pixels a cell, so a slip is as often the
+/// finger's fault as the player's; [kFifthLifeAfterLevel] adds one more for
+/// the very biggest boards.
+const int kFourthLifeAfterLevel = 15;
+const int kFifthLifeAfterLevel = 25;
+
+/// Lives for [level]: three, four from level 16, five from level 26.
+int livesForLevel(int level) {
+  if (level > kFifthLifeAfterLevel) return maxLives + 2;
+  if (level > kFourthLifeAfterLevel) return maxLives + 1;
+  return maxLives;
+}
+
+/// Stars for clearing [level] with [mistakes] slips. Flawless is always
+/// three; the rest of the level's allowance splits in half, the better half
+/// two stars and the rest one. On a three-life level that is the old rule
+/// (one slip two stars, two slips one), and the extra lives later buy room
+/// to slip without making three stars any cheaper.
+int starsForMistakes(int mistakes, int level) {
+  final lives = livesForLevel(level);
+  if (mistakes <= 0) return 3;
+  if (mistakes >= lives) return 0;
+  return mistakes <= (lives - 1) ~/ 2 ? 2 : 1;
+}
 
 class LevelProgress {
   const LevelProgress({
