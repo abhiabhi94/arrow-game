@@ -193,8 +193,21 @@ Key patterns:
   (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
   it runs inline (~0.4 s for level 20, about 2 s for the finale). `dart run tool/level_report.dart
   [level] [extraSeeds]` prints arrows placed vs asked, fill, depth,
-  free-at-start, open moves (mean/max vs the cap) and timing — run it after
-  touching the table or the generator.
+  free-at-start, open moves (mean/max vs the cap), `Puzzle.openTapRisk` and
+  timing — run it after touching the table or the generator.
+- **`Puzzle.openTapRisk`** is the fat-finger number: the share of a playable
+  arrow's own cells that touch an arrow which cannot move yet, averaged over
+  a greedy solve. It sits near 0.49 from level 12 on — half the cells of the
+  arrow you want are one slipped finger from a lost life. It is measured but
+  deliberately *not* selected on. Candidates vary (0.41–0.60 at level 18),
+  but the kind boards are the loose, shallow ones: picking the lowest risk
+  outright took level 1 from depth 5 to 3, level 10 from 41 to 28 and level
+  18's opening from 2 free arrows to 5, while choosing only among boards the
+  curve cannot tell apart won nothing (level 18 came back identical), and on
+  levels 20 and 40 the lowest-risk candidate is already the one the existing
+  keys pick. Playable arrows also already average ~8 free cells of margin
+  (~40% of their perimeter), so an "apron" pass has nothing to add. Density
+  is the wrong lever for mis-taps; input handling is.
 - **Game loop:** `GameNotifier` owns the phase machine
   (`loading → playing ⇄ paused → cleared | outOfLives | timeUp`). `tapArrow` updates
   state instantly; `PuzzleBoard` animates the slide-out / bump purely
