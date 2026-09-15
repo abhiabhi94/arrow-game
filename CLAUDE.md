@@ -12,10 +12,12 @@ back and costs a life. 40 fixed, procedurally generated levels on a steep
 curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50 by level
 20 → 224 on 42×63), drawn in a
 single ink like a printed puzzle, 3 lives per level — 4 from level 16 and 5
-from level 26, where a cell is drawn at barely a dozen pixels (losing them all
-resets the level behind a "Retry" screen), a clock on every level ("Time's up" → replay the same level),
-3 hints per level, zoom in/out, an earned grid-lines toggle (after level 4),
-1–3 stars per clear, local progress, light/dark theme, haptic feedback.
+from level 26, where a cell is drawn at barely a dozen pixels (spend them all
+and a card offers "Keep going" for a one-star clear, or a fresh start), a
+clock on every level ("Time's up" → replay the same level), 3 hints per
+level, zoom in/out, a grid-lines toggle earned after level 4 and on by
+default from there, 1–3 stars per clear, local progress, light/dark theme,
+haptic feedback.
 
 ## Build & Development Commands
 
