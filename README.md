@@ -18,14 +18,16 @@ the way its head points, until it leaves the board. Get every arrow out.
 - **Blocked arrows cost a life.** If an arrow's exit path runs into another
   arrow it bumps back. **3 lives per level** — lose all three and the level
   resets behind an "Out of lives / Retry" screen.
-- **A clock on every level** (half a minute to learn on, up to ten for the
-  finale, growing with the board — brisk on purpose). Run out
-  and it's "Time's up" — replay the same level.
-- **40 levels**, each a fixed, procedurally generated board that is solvable
+- **A clock on every level** (half a minute to learn on, up to thirteen and
+  a half minutes for the finale, growing with the board — brisk on purpose).
+  Run out and it's "Time's up" — replay the same level.
+- **60 levels**, each a fixed, procedurally generated board that is solvable
   by construction. The curve is steep: 5 arrows on a 5×6 board to learn on,
-  59 arrows on 19×26 by level 8, 144 arrows on 32×50 at the halfway mark,
-  224 arrows on 42×63 for the finale — and the "who must go before whom"
-  chains get longer all the way.
+  59 arrows on 19×26 by level 8, 144 arrows on 32×50 by level 20,
+  224 arrows on 42×63 by level 40, 304 arrows on 47×73 for the finale — and
+  the "who must go before whom" chains get longer all the way. The last
+  twenty levels pack more arrows onto a board that hardly grows, so the
+  endgame gets tighter, not just wider.
 - **3 hints per level** light up an arrow that can go right now.
 - **Zoom** in/out (buttons or pinch, up to 4×) — the late boards need it.
 - **One ink.** Arrows are thin dark lines like a printed puzzle; only the

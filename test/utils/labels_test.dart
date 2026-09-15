@@ -10,8 +10,8 @@ void main() {
     final names = <String>{for (var l = 1; l <= totalLevels; l++) levelName(l10n, l)};
     expect(names, hasLength(totalLevels));
     expect(levelName(l10n, 1), 'First Steps');
-    expect(levelName(l10n, 20), 'Halfway Out');
-    expect(levelName(l10n, 40), 'Grand Exit');
+    expect(levelName(l10n, 30), 'Halfway Out');
+    expect(levelName(l10n, 60), 'Grand Exit');
     expect(levelName(l10n, 99), 'Grand Exit');
   });
 }

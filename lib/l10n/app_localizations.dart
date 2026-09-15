@@ -403,7 +403,7 @@ abstract class AppLocalizations {
   /// No description provided for @levelName20.
   ///
   /// In en, this message translates to:
-  /// **'Halfway Out'**
+  /// **'Deep End'**
   String get levelName20;
 
   /// No description provided for @levelName21.
@@ -463,7 +463,7 @@ abstract class AppLocalizations {
   /// No description provided for @levelName30.
   ///
   /// In en, this message translates to:
-  /// **'Ant Farm'**
+  /// **'Halfway Out'**
   String get levelName30;
 
   /// No description provided for @levelName31.
@@ -523,8 +523,128 @@ abstract class AppLocalizations {
   /// No description provided for @levelName40.
   ///
   /// In en, this message translates to:
-  /// **'Grand Exit'**
+  /// **'The Gauntlet'**
   String get levelName40;
+
+  /// No description provided for @levelName41.
+  ///
+  /// In en, this message translates to:
+  /// **'Overgrowth'**
+  String get levelName41;
+
+  /// No description provided for @levelName42.
+  ///
+  /// In en, this message translates to:
+  /// **'Chain Reaction'**
+  String get levelName42;
+
+  /// No description provided for @levelName43.
+  ///
+  /// In en, this message translates to:
+  /// **'Logjam'**
+  String get levelName43;
+
+  /// No description provided for @levelName44.
+  ///
+  /// In en, this message translates to:
+  /// **'Bramble'**
+  String get levelName44;
+
+  /// No description provided for @levelName45.
+  ///
+  /// In en, this message translates to:
+  /// **'Crosshatch'**
+  String get levelName45;
+
+  /// No description provided for @levelName46.
+  ///
+  /// In en, this message translates to:
+  /// **'Nested Dolls'**
+  String get levelName46;
+
+  /// No description provided for @levelName47.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadlock'**
+  String get levelName47;
+
+  /// No description provided for @levelName48.
+  ///
+  /// In en, this message translates to:
+  /// **'Iron Maze'**
+  String get levelName48;
+
+  /// No description provided for @levelName49.
+  ///
+  /// In en, this message translates to:
+  /// **'Loose Threads'**
+  String get levelName49;
+
+  /// No description provided for @levelName50.
+  ///
+  /// In en, this message translates to:
+  /// **'Dead Reckoning'**
+  String get levelName50;
+
+  /// No description provided for @levelName51.
+  ///
+  /// In en, this message translates to:
+  /// **'Fever Dream'**
+  String get levelName51;
+
+  /// No description provided for @levelName52.
+  ///
+  /// In en, this message translates to:
+  /// **'Cross Purposes'**
+  String get levelName52;
+
+  /// No description provided for @levelName53.
+  ///
+  /// In en, this message translates to:
+  /// **'Ant Farm'**
+  String get levelName53;
+
+  /// No description provided for @levelName54.
+  ///
+  /// In en, this message translates to:
+  /// **'Ravel'**
+  String get levelName54;
+
+  /// No description provided for @levelName55.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Resort'**
+  String get levelName55;
+
+  /// No description provided for @levelName56.
+  ///
+  /// In en, this message translates to:
+  /// **'Vanishing Point'**
+  String get levelName56;
+
+  /// No description provided for @levelName57.
+  ///
+  /// In en, this message translates to:
+  /// **'Endgame'**
+  String get levelName57;
+
+  /// No description provided for @levelName58.
+  ///
+  /// In en, this message translates to:
+  /// **'The Long Haul'**
+  String get levelName58;
+
+  /// No description provided for @levelName59.
+  ///
+  /// In en, this message translates to:
+  /// **'Final Approach'**
+  String get levelName59;
+
+  /// No description provided for @levelName60.
+  ///
+  /// In en, this message translates to:
+  /// **'Grand Exit'**
+  String get levelName60;
 
   /// No description provided for @tutorialTap.
   ///
@@ -739,7 +859,7 @@ abstract class AppLocalizations {
   /// No description provided for @outOfLivesBody.
   ///
   /// In en, this message translates to:
-  /// **'That was the last one. Carry on and finish for a single star, or take the level from the top?'**
+  /// **'That was the last one. Carry on and finish for a single star, or restart the level?'**
   String get outOfLivesBody;
 
   /// No description provided for @outOfLivesKeepGoing.
@@ -861,12 +981,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Credits'**
   String get creditsTitle;
-
-  /// No description provided for @creditsIntro.
-  ///
-  /// In en, this message translates to:
-  /// **'The background music is free to use under the Pixabay Content License. A credit is not required, but the artist has earned one.'**
-  String get creditsIntro;
 
   /// No description provided for @creditsBy.
   ///

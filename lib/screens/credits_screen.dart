@@ -22,11 +22,6 @@ class CreditsScreen extends StatelessWidget {
         builder: (context, constraints) => ListView(
           padding: const EdgeInsets.all(20) + contentGutter(constraints.maxWidth),
           children: [
-            Text(
-              l10n.creditsIntro,
-              style: TextStyle(color: context.palette.textMuted, height: 1.5),
-            ),
-            const SizedBox(height: 20),
             for (final credit in credits)
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
