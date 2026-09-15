@@ -73,9 +73,42 @@ re-set `ANDROID_UPLOAD_KEYSTORE_BASE64` and `ANDROID_UPLOAD_KEYSTORE_PASSWORD`.
 
 ## Cutting a release
 
-1. Bump `version:` in `pubspec.yaml`. Play requires the version code (the
-   `+N` part) to be **strictly higher** than any previously uploaded build,
-   so always increment `N`; bump the name part (`1.0.0`) as you see fit.
+From an up-to-date `main`, one command does the whole thing:
+
+```bash
+tool/bump_version.sh            # 1.0.0+3 -> 1.0.1+4, commit, tag v1.0.1, push
+```
+
+It rewrites `version:` in `pubspec.yaml`, commits ("Bump version to
+1.0.1+4"), makes an annotated `v1.0.1` tag and pushes the branch and the tag
+— and the tag push is what runs the Release workflow. It prints the plan and
+asks before touching anything; `--dry-run` prints it and stops.
+
+Which part of the name moves is the argument — the version code (the `+N`
+part) always increments, because Play requires it to be **strictly higher**
+than any previously uploaded build:
+
+| Argument            | 1.0.0+3 becomes | Tag        |
+|---------------------|-----------------|------------|
+| `patch` *(default)* | 1.0.1+4         | `v1.0.1`   |
+| `minor`             | 1.1.0+4         | `v1.1.0`   |
+| `major`             | 2.0.0+4         | `v2.0.0`   |
+| `build`             | 1.0.0+4         | `v1.0.0+5` |
+| `2.5.1`             | 2.5.1+4         | `v2.5.1`   |
+
+`build` re-uploads the same version name with a new code, so `v1.0.0` is
+normally already taken; the tag then carries the code instead, which still
+matches the workflow's `v*` trigger. `--tag NAME` overrides it.
+
+Before it changes anything the script refuses to run on a dirty tree, off
+`main` (`--any-branch` overrides), on a branch behind `origin`, or onto a
+tag that already exists. `--check` runs `flutter analyze --fatal-infos` and
+`flutter test` first; `--no-push` stops after the local commit and tag, and
+`--no-tag` commits the bump alone. `tool/bump_version.sh --help` lists them all.
+
+Doing it by hand is the same three steps:
+
+1. Bump `version:` in `pubspec.yaml` and commit.
 2. Merge that to `main` through a PR as usual.
 3. Tag and push:
 
@@ -84,26 +117,26 @@ re-set `ANDROID_UPLOAD_KEYSTORE_BASE64` and `ANDROID_UPLOAD_KEYSTORE_PASSWORD`.
    git tag v1.0.0 && git push origin v1.0.0
    ```
 
-   The tag push runs the Release workflow: analyze + tests, then a signed
-   `.aab` and `.apk`, uploaded as the workflow artifact
-   `arrow-<name>-<code>` and attached to a GitHub Release named
-   "Arrow 1.0.0 (1)".
+Either way, the tag push runs the Release workflow: analyze + tests, then a
+signed `.aab` and `.apk`, uploaded as the workflow artifact
+`arrow-<name>-<code>` and attached to a GitHub Release named
+"Arrow 1.0.0 (1)".
 
-   To build without tagging (a dry run, or an internal-testing upload), use
-   **Actions → Release → Run workflow**; the optional inputs override the
-   version name/code for that build only.
+To build without tagging (a dry run, or an internal-testing upload), use
+**Actions → Release → Run workflow**; the optional inputs override the
+version name/code for that build only.
 
-4. Download the artifact. It contains:
+Then download the artifact. It contains:
 
-   | File                                | Use                                              |
-   |-------------------------------------|--------------------------------------------------|
-   | `arrow-<v>.aab`                     | Upload this to Play Console                      |
-   | `arrow-<v>.apk`                     | Same signed build as an APK, for a device check  |
-   | `arrow-<v>-mapping.txt`             | R8 mapping — upload under App bundle explorer → Downloads → "Upload ReTrace mapping file" so native/Kotlin crash reports are readable |
-   | `arrow-<v>-dart-symbols.zip`        | Dart obfuscation symbols; keep with the release (`flutter symbolize -d`) |
+| File                         | Use                                             |
+|------------------------------|-------------------------------------------------|
+| `arrow-<v>.aab`              | Upload this to Play Console                     |
+| `arrow-<v>.apk`              | Same signed build as an APK, for a device check |
+| `arrow-<v>-mapping.txt`      | R8 mapping — upload under App bundle explorer → Downloads → "Upload ReTrace mapping file" so native/Kotlin crash reports are readable |
+| `arrow-<v>-dart-symbols.zip` | Dart obfuscation symbols; keep with the release (`flutter symbolize -d`) |
 
-5. In Play Console: Release → Testing (internal) or Production → Create new
-   release → upload the `.aab` → release notes → review → roll out.
+In Play Console: Release → Testing (internal) or Production → Create new
+release → upload the `.aab` → release notes → review → roll out.
 
 ## Building locally instead
 

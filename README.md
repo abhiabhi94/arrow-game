@@ -123,6 +123,19 @@ the Actions tab) and it builds a signed `.aab` + `.apk`, uploads them as an
 artifact and attaches them to a GitHub Release. The upload key lives in
 repository secrets — full setup and the step-by-step in `docs/release.md`.
 
+Cutting one is a single command from an up-to-date `main` — it bumps
+`version:` in `pubspec.yaml`, commits, tags and pushes both (which is what
+fires the workflow), after showing the plan and asking:
+
+```bash
+tool/bump_version.sh                  # 1.0.0+3 -> 1.0.1+4, tag v1.0.1
+tool/bump_version.sh minor --dry-run  # also major | build | an explicit X.Y.Z
+```
+
+The version code (the `+N`) always increments, since Play needs it strictly
+higher than any build already uploaded. `--help` lists the rest
+(`--check`, `--no-push`, `--no-tag`, `--tag NAME`, `--any-branch`).
+
 Locally, release builds are signed with the same upload key read from a
 gitignored `android/key.properties` (copy `android/key.properties.example`):
 
