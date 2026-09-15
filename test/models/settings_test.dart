@@ -2,13 +2,15 @@ import 'package:arrow_game/models/settings.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('defaults: music, sfx and haptics on, system theme, grid off, onboarding pending', () {
+  test('defaults: music, sfx, haptics and grid on, system theme, onboarding pending', () {
     expect(Settings.defaults.musicOn, isTrue);
     expect(Settings.defaults.musicVolume, 0.6);
     expect(Settings.defaults.hapticsOn, isTrue);
     expect(Settings.defaults.sfxOn, isTrue);
     expect(Settings.defaults.themeChoice, ThemeChoice.system);
-    expect(Settings.defaults.gridLinesOn, isFalse);
+    // On by default, but the toggle is locked until it is earned, so the
+    // lattice first appears when the player clears the unlock level.
+    expect(Settings.defaults.gridLinesOn, isTrue);
     expect(Settings.defaults.onboardingDone, isFalse);
   });
 

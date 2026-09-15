@@ -13,6 +13,17 @@ import '../ui/colors.dart';
 /// How far the arrow that was hit is shoved along, in cells, at full jolt.
 const double kShoveDistance = 0.12;
 
+/// How far from a tap the board looks for an arrow when the finger lands on
+/// an empty cell, in logical pixels on screen. A late board draws a cell at
+/// about a dozen pixels — a quarter of a fingertip — so a tap that misses
+/// into a gap still gets the arrow it was plainly aimed at. A cell that *is*
+/// occupied always wins: slop never overrides a deliberate hit.
+const double kTouchSlopPx = 22;
+
+/// How far into a slide the board starts accepting taps again. The slide runs
+/// 240-600 ms, so this is the first 70-180 ms of it.
+const double kSettleFraction = 0.3;
+
 /// How long one ping of the hint ring takes.
 const Duration kHintPingPeriod = Duration(milliseconds: 1100);
 
@@ -30,11 +41,16 @@ class PuzzleBoard extends StatefulWidget {
     required this.state,
     required this.showGrid,
     required this.onTapArrow,
+    this.zoom = 1,
   });
 
   final GameState state;
   final bool showGrid;
   final ValueChanged<int> onTapArrow;
+
+  /// The scale the board is being viewed at, so touch slop stays the same
+  /// size on screen however far in the player has pinched.
+  final double zoom;
 
   @override
   State<PuzzleBoard> createState() => _PuzzleBoardState();
@@ -43,6 +59,12 @@ class PuzzleBoard extends StatefulWidget {
 class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin {
   /// Arrows sliding out: id → progress controller.
   final Map<int, AnimationController> _exits = <int, AnimationController>{};
+
+  /// Pointers on the board now, and the most this gesture has seen. A pinch
+  /// that never travels far enough to be read as a pan can end as a tap,
+  /// which would play an arrow the player was only zooming in on.
+  int _pointersDown = 0;
+  int _pointersInGesture = 0;
 
   /// Drives the hint ring while a hint is showing. A late board is a hundred
   /// arrows in one ink, and the eye does not find a static smudge among them
@@ -161,15 +183,69 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     super.dispose();
   }
 
-  void _onTapUp(TapUpDetails d, double cellSize) {
+  /// Whether the board is still reacting to the last tap. A bump throws the
+  /// whole screen sideways for two thirds of a second, and a slide is in
+  /// flight for up to another half: a tap that lands in that window is a
+  /// finger still finishing the last move, not a new decision.
+  bool get _settling {
+    if (_bump != null) return true;
+    for (final c in _exits.values) {
+      if (c.value < kSettleFraction) return true;
+    }
+    return false;
+  }
+
+  void _onPointerDown() {
+    _pointersDown++;
+    if (_pointersDown > _pointersInGesture) _pointersInGesture = _pointersDown;
+  }
+
+  void _onPointerUp() {
+    _pointersDown--;
+    if (_pointersDown <= 0) {
+      _pointersDown = 0;
+      _pointersInGesture = 0;
+    }
+  }
+
+  /// The arrow a touch at [p] means: the one under the finger, or — when that
+  /// cell is empty — the nearest arrow still on the board within
+  /// [kTouchSlopPx] of it. Null when the finger is over open space.
+  int? _arrowFor(Offset p, double cellSize) {
     final puzzle = widget.state.puzzle!;
-    final x = (d.localPosition.dx / cellSize).floor();
-    final y = (d.localPosition.dy / cellSize).floor();
-    final cell = Cell(x, y);
-    if (!cell.isInside(puzzle.width, puzzle.height)) return;
-    final id = puzzle.arrowAt(cell);
-    if (id == null || widget.state.removed.contains(id)) return;
-    widget.onTapArrow(id);
+    final cell = Cell((p.dx / cellSize).floor(), (p.dy / cellSize).floor());
+    if (cell.isInside(puzzle.width, puzzle.height)) {
+      final under = puzzle.arrowAt(cell);
+      if (under != null && !widget.state.removed.contains(under)) return under;
+    }
+    // Capped in cells as well, so on the small early boards — where a cell is
+    // already far bigger than a finger — slop never reaches a neighbour.
+    final slop = min(kTouchSlopPx / widget.zoom, cellSize * 1.5);
+    final reach = (slop / cellSize).ceil();
+    int? best;
+    var nearest = slop;
+    for (var dy = -reach; dy <= reach; dy++) {
+      for (var dx = -reach; dx <= reach; dx++) {
+        final c = Cell(cell.x + dx, cell.y + dy);
+        if (!c.isInside(puzzle.width, puzzle.height)) continue;
+        final id = puzzle.arrowAt(c);
+        if (id == null || widget.state.removed.contains(id)) continue;
+        final d = (_BoardPainter._center(c, cellSize) - p).distance;
+        if (d < nearest) {
+          nearest = d;
+          best = id;
+        }
+      }
+    }
+    return best;
+  }
+
+  void _onTapUp(TapUpDetails d, double cellSize) {
+    // Taps the player never meant: one finger of a pinch, or a stutter while
+    // the board is still moving from the last one.
+    if (_pointersInGesture > 1 || _settling) return;
+    final id = _arrowFor(d.localPosition, cellSize);
+    if (id != null) widget.onTapArrow(id);
   }
 
   @override
@@ -186,20 +262,25 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
         return Center(
           child: Semantics(
             label: 'Puzzle board ${puzzle.width} by ${puzzle.height}',
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapUp: (d) => _onTapUp(d, cellSize),
-              child: CustomPaint(
-                size: size,
-                painter: _BoardPainter(
-                  state: widget.state,
-                  palette: p,
-                  showGrid: widget.showGrid,
-                  exits: <int, double>{for (final e in _exits.entries) e.key: e.value.value},
-                  hintPing: _hintPing?.value,
-                  bumpId: _bumpId,
-                  bump: _bump?.value,
-                  bumpMotion: _bumpMotion,
+            child: Listener(
+              onPointerDown: (_) => _onPointerDown(),
+              onPointerUp: (_) => _onPointerUp(),
+              onPointerCancel: (_) => _onPointerUp(),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: (d) => _onTapUp(d, cellSize),
+                child: CustomPaint(
+                  size: size,
+                  painter: _BoardPainter(
+                    state: widget.state,
+                    palette: p,
+                    showGrid: widget.showGrid,
+                    exits: <int, double>{for (final e in _exits.entries) e.key: e.value.value},
+                    hintPing: _hintPing?.value,
+                    bumpId: _bumpId,
+                    bump: _bump?.value,
+                    bumpMotion: _bumpMotion,
+                  ),
                 ),
               ),
             ),

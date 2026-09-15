@@ -33,8 +33,10 @@ class Settings {
   /// Theme preference (system/light/dark). System by default.
   final ThemeChoice themeChoice;
 
-  /// Whether the board draws its grid lines. Off by default; the toggle
-  /// itself is earned by clearing a few levels (see progress_provider).
+  /// Whether the board draws its grid lines. On by default — the toggle is
+  /// locked until it is earned by clearing a few levels (see
+  /// progress_provider), so "on" only ever takes effect from that point, and
+  /// the lattice is a reading aid the dense boards need.
   final bool gridLinesOn;
 
   /// Whether the one-time "how to play" walkthrough has been seen.
@@ -46,7 +48,7 @@ class Settings {
     hapticsOn: true,
     sfxOn: true,
     themeChoice: ThemeChoice.system,
-    gridLinesOn: false,
+    gridLinesOn: true,
     onboardingDone: false,
   );
 

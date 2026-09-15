@@ -157,6 +157,108 @@ void main() {
     expect(find.byIcon(Icons.favorite_border_rounded), findsOneWidget);
   });
 
+  test('the zoom ceiling stretches until a cell can reach a fingertip', () {
+    // Big cells keep the plain 4x ceiling.
+    expect(maxZoomFor(70), kMaxZoom);
+    expect(maxZoomFor(kFingerCellPx / kMaxZoom + 1), kMaxZoom);
+    // A level-18 cell (12 px on a phone) needs just under 4x, so 4x stands.
+    expect(maxZoomFor(12.8), closeTo(kMaxZoom, 0.001));
+    // A level-40 cell is 8 px: 4x would cap it at 33 px, so the ceiling
+    // stretches to bring it up to a finger.
+    expect(maxZoomFor(8.3), closeTo(kFingerCellPx / 8.3, 0.001));
+    expect(maxZoomFor(8.3) * 8.3, closeTo(kFingerCellPx, 0.001));
+    // And never beyond a sane limit, however small the cell.
+    expect(maxZoomFor(1), 8.0);
+    expect(maxZoomFor(0), kMaxZoom);
+  });
+
+  group('taps the player did not mean', () {
+    /// The board's rect and cell size (the sample puzzle is 4x4).
+    (Rect, double) boardRect(WidgetTester tester) {
+      final board = find.descendant(
+        of: find.byType(PuzzleBoard),
+        matching: find.byType(CustomPaint),
+      );
+      final rect = tester.getRect(board);
+      return (rect, rect.width / 4);
+    }
+
+    testWidgets('a tap in a gap takes the arrow it was plainly aimed at', (tester) async {
+      // Slop is measured to cell centres, so it only bites where a cell is
+      // smaller than a fingertip: a 48 px board of 4 cells is 12 px a cell,
+      // the size of a level-18 board on a phone.
+      int? tapped;
+      await pumpApp(
+        tester,
+        Center(
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: PuzzleBoard(
+              state: GameState.fresh(sampleSpec, samplePuzzle()),
+              showGrid: false,
+              onTapArrow: (id) => tapped = id,
+            ),
+          ),
+        ),
+      );
+      final rect = tester.getRect(find.byType(CustomPaint).last);
+      // (2,0) is empty; arrow 0's head sits just below it at (2,1), 7 px from
+      // this tap. A finger landing that far off still means that arrow.
+      await tester.tapAt(rect.topLeft + const Offset(30, 11));
+      await tester.pump();
+      expect(tapped, 0);
+
+      // A cell that *is* occupied still wins: slop never overrides a hit.
+      tapped = null;
+      await tester.tapAt(rect.topLeft + const Offset(6, 42)); // arrow 2's tail
+      await tester.pump();
+      expect(tapped, 2);
+    });
+
+    testWidgets('a tap in open space, far from every arrow, does nothing', (tester) async {
+      final container = await _pumpGame(tester);
+      final (rect, cs) = boardRect(tester);
+      await tester.tapAt(rect.topLeft + Offset(0.5 * cs, 0.5 * cs)); // (0,0)
+      await _settle(tester, 300);
+      expect(container.read(gameProvider(1)).moveToken, 0);
+    });
+
+    testWidgets('a stutter while the board is still moving is dropped', (tester) async {
+      final container = await _pumpGame(tester);
+      final (rect, cs) = boardRect(tester);
+      await tester.tapAt(rect.topLeft + Offset(2.5 * cs, 1.5 * cs)); // arrow 0
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(container.read(gameProvider(1)).removed, {0});
+      // A second tap landing while arrow 0 is still sliding: a finger
+      // finishing the last move, not a new one.
+      await tester.tapAt(rect.topLeft + Offset(3.5 * cs, 3.5 * cs)); // arrow 1
+      await _settle(tester, 1200);
+      expect(container.read(gameProvider(1)).removed, {0});
+      // Once it has settled, the same tap plays.
+      await tester.tapAt(rect.topLeft + Offset(3.5 * cs, 3.5 * cs));
+      await _settle(tester, 1200);
+      expect(container.read(gameProvider(1)).removed, {0, 1});
+    });
+
+    testWidgets('one finger of a pinch does not play an arrow', (tester) async {
+      final container = await _pumpGame(tester);
+      final (rect, cs) = boardRect(tester);
+      final first = await tester.startGesture(rect.topLeft + Offset(2.5 * cs, 1.5 * cs));
+      final second = await tester.startGesture(rect.topLeft + Offset(3.5 * cs, 3.5 * cs));
+      await tester.pump(const Duration(milliseconds: 40));
+      await first.up();
+      await second.up();
+      await _settle(tester, 600);
+      expect(container.read(gameProvider(1)).moveToken, 0);
+
+      // The same spot, one finger: plays.
+      await tester.tapAt(rect.topLeft + Offset(2.5 * cs, 1.5 * cs));
+      await _settle(tester, 1000);
+      expect(container.read(gameProvider(1)).removed, {0});
+    });
+  });
+
   testWidgets('a bump runs into the blocker, jolts it, and springs back', (tester) async {
     final container = await _pumpGame(tester);
     final notifier = container.read(gameProvider(1).notifier);
@@ -350,19 +452,24 @@ void main() {
   testWidgets('grid lines are locked until level 4 is cleared, then toggle', (tester) async {
     final container = await _pumpGame(tester, unlockAll: false);
     expect(find.byTooltip('Grid lines unlock after level 4'), findsOneWidget);
+    // Locked: the setting is on by default but the button does nothing, and
+    // the board draws no lattice.
     await tester.tap(find.byTooltip('Grid lines unlock after level 4'));
     await _settle(tester, 200);
-    expect(container.read(settingsProvider).gridLinesOn, isFalse);
+    expect(container.read(settingsProvider).gridLinesOn, isTrue);
+    expect(tester.widget<PuzzleBoard>(find.byType(PuzzleBoard)).showGrid, isFalse);
 
     await container.read(progressProvider.notifier).recordCompletion(4, 1000, 3);
     await _settle(tester, 200);
     expect(find.byTooltip('Grid lines'), findsOneWidget);
-    await tester.tap(find.byTooltip('Grid lines'));
-    await _settle(tester, 200);
-    expect(container.read(settingsProvider).gridLinesOn, isTrue);
+    // Earned: it is already on, and now it toggles.
+    expect(tester.widget<PuzzleBoard>(find.byType(PuzzleBoard)).showGrid, isTrue);
     await tester.tap(find.byTooltip('Grid lines'));
     await _settle(tester, 200);
     expect(container.read(settingsProvider).gridLinesOn, isFalse);
+    await tester.tap(find.byTooltip('Grid lines'));
+    await _settle(tester, 200);
+    expect(container.read(settingsProvider).gridLinesOn, isTrue);
   });
 
   testWidgets('clearing level 4 announces the grid unlock', (tester) async {
@@ -628,18 +735,19 @@ void main() {
 
     testWidgets('G toggles the grid lines once earned, never before', (tester) async {
       final container = await _pumpGame(tester, unlockAll: false);
+      // Locked: G changes nothing, so the default stays as it is.
       await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
       await _settle(tester, 100);
-      expect(container.read(settingsProvider).gridLinesOn, isFalse);
+      expect(container.read(settingsProvider).gridLinesOn, isTrue);
 
       await container.read(progressProvider.notifier).recordCompletion(4, 1000, 3);
       await _settle(tester, 100);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
       await _settle(tester, 100);
-      expect(container.read(settingsProvider).gridLinesOn, isTrue);
+      expect(container.read(settingsProvider).gridLinesOn, isFalse);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
       await _settle(tester, 100);
-      expect(container.read(settingsProvider).gridLinesOn, isFalse);
+      expect(container.read(settingsProvider).gridLinesOn, isTrue);
     });
 
     testWidgets('a shortcut with a modifier is left to the browser', (tester) async {
