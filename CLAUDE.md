@@ -270,7 +270,10 @@ Key patterns:
   in and 480 ms back). Strokes cap at
   3 px and heads at 8 px so the small early boards read as pen lines.
 - **Sound effects:** `SfxService` (`services/sfx_service.dart`, injectable
-  `SfxBackend`, a pool of low-latency players) plays `assets/audio/whoosh.wav`
+  `SfxBackend`, a pool of low-latency players built once behind a single
+  `_building` future — `play` is fire-and-forget, so an unguarded
+  `if (_pool.isEmpty)` let two quick taps each fill the pool — and warmed up
+  from `main.dart` at launch, never while effects are off) plays `assets/audio/whoosh.wav`
   on every exit — the pitch climbs a notch per quick successive exit and
   resets after 1.5 s — and `assets/audio/bump.wav` (a knock) on a blocked
   tap, which also ends the streak. Both WAVs are synthesised by
@@ -283,6 +286,19 @@ Key patterns:
   "Game" by The_Mountain (Pixabay Content License, `assets/audio/game.mp3`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
   settings once on launch, on every change, and pauses on background.
+  **Audio focus:** every audioplayers player carries its own Android focus
+  request, and the default is `AUDIOFOCUS_GAIN` — which Android grants by
+  taking focus *off the music player in the same app*, whereupon the plugin
+  pauses it (`WrappedPlayer.onLoss`). That is why the music died on the first
+  arrow of a level. The effect players are therefore built with
+  `AndroidAudioFocus.none`, which `FocusManager` grants without asking
+  anyone. Music keeps `gain` so it still yields to calls and other apps.
+  `AudioBackend.interruptions` reports any stop the service did not ask for,
+  and `AudioService._recover` restarts the loop (via `loop`, not `resume` —
+  a *stopped* player cannot resume), capped at `kMaxMusicRecoveries` per
+  settings/foreground change so a platform that is refusing to play is not
+  asked forever. Without that feedback the service's `_playing` flag drifted
+  from reality and one lost focus meant silence for the rest of the session.
 - **Onboarding:** `OnboardingScreen` — two tiny boards played for real
   (`tutorialPuzzleOne/Two`) plus a summary; `Settings.onboardingDone` gates
   it in `main.dart`; Settings → "How to play" replays it (`replay: true`).

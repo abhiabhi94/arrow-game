@@ -10,6 +10,7 @@ import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/audio_service.dart';
+import 'services/sfx_service.dart';
 import 'ui/layout.dart';
 import 'ui/theme.dart';
 
@@ -42,6 +43,10 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(audioServiceProvider).apply(ref.read(settingsProvider));
+      // Build the effect players now rather than on the first tap of a
+      // level: creating them is the moment the plugin gets busy, and the
+      // first arrow of a level is a bad time for that.
+      ref.read(sfxProvider).warmUp();
     });
   }
 

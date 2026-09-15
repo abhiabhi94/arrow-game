@@ -25,6 +25,10 @@ const int kWhooshStreakMax = 6;
 /// Minimal playback the service needs.
 abstract class SfxBackend {
   Future<void> play(String asset, {required double rate});
+
+  /// Builds whatever the backend needs before the first [play], so the first
+  /// tap of a level is not also the moment the audio plumbing appears.
+  Future<void> warmUp();
 }
 
 /// Real backend: a small pool of low-latency players used round-robin so a
@@ -37,18 +41,38 @@ class AudioPlayersSfxBackend implements SfxBackend {
 
   final int poolSize;
   final List<AudioPlayer> _pool = <AudioPlayer>[];
+
+  /// The one in-flight pool build. [play] is fire-and-forget, so without this
+  /// two quick taps both found an empty pool and both filled it: the players
+  /// multiplied, and on Android each one is another SoundPool and another
+  /// audio-focus requester.
+  Future<void>? _building;
   int _next = 0;
 
   @override
-  Future<void> play(String asset, {required double rate}) async {
-    if (_pool.isEmpty) {
-      for (var i = 0; i < poolSize; i++) {
-        final p = AudioPlayer();
-        await p.setPlayerMode(PlayerMode.lowLatency);
-        await p.setReleaseMode(ReleaseMode.stop);
-        _pool.add(p);
-      }
+  Future<void> warmUp() => _building ??= _buildPool();
+
+  Future<void> _buildPool() async {
+    // Effects must not ask for audio focus. On Android every player carries
+    // its own focus request, and a GAIN request — the audioplayers default —
+    // takes focus off the music player in the *same* app, which the plugin
+    // then pauses. That is what killed the music on the first arrow of a
+    // level. AUDIOFOCUS_NONE is granted without asking anyone.
+    final quiet = AudioContext(
+      android: const AudioContextAndroid(audioFocus: AndroidAudioFocus.none),
+    );
+    for (var i = 0; i < poolSize; i++) {
+      final p = AudioPlayer();
+      await p.setAudioContext(quiet);
+      await p.setPlayerMode(PlayerMode.lowLatency);
+      await p.setReleaseMode(ReleaseMode.stop);
+      _pool.add(p);
     }
+  }
+
+  @override
+  Future<void> play(String asset, {required double rate}) async {
+    await warmUp();
     final player = _pool[_next];
     _next = (_next + 1) % _pool.length;
     await player.stop();
@@ -88,6 +112,13 @@ class SfxService {
     _lastZip = now;
     if (!_enabled()) return;
     backend.play(kWhooshSound, rate: 1.0 + _streak * kWhooshStreakStep);
+  }
+
+  /// Builds the players before the first tap needs them. A session with
+  /// effects off still never touches the plugin.
+  Future<void> warmUp() async {
+    if (!_enabled()) return;
+    await backend.warmUp();
   }
 
   /// The knock of an arrow that ran into another. Ends any streak: the next

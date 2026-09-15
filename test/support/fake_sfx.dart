@@ -6,4 +6,7 @@ class RecordingSfxBackend implements SfxBackend {
   @override
   Future<void> play(String asset, {required double rate}) async =>
       calls.add('$asset@${rate.toStringAsFixed(2)}');
+
+  @override
+  Future<void> warmUp() async => calls.add('warmUp');
 }
