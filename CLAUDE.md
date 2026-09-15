@@ -39,7 +39,7 @@ flutter build apk --debug       # -> build/app/outputs/flutter-apk/app-debug.apk
 flutter build apk --release     # -> app-release.apk (upload-key signed if key.properties present)
 flutter build appbundle --release  # -> build/app/outputs/bundle/release/app-release.aab (for Play Store)
 
-tool/bump_version.sh [patch|minor|major|build|X.Y.Z]  # bump pubspec, commit, tag, push (cuts a release)
+tool/bump_version.sh [patch|minor|major|build|X.Y.Z] [--push]  # bump pubspec, commit, tag (+ push: cuts a release)
 ```
 
 ## Cloud sessions & visual verification
@@ -130,13 +130,16 @@ Identity is tied to the **build type**, not a product flavor:
   build compiles. Guide: `docs/release.md`.
 - **Cutting a release** is `tool/bump_version.sh` from an up-to-date `main`:
   it rewrites `version:` in `pubspec.yaml`, commits, makes an annotated
-  `v<name>` tag and pushes branch + tag (the tag push is what runs the
-  workflow). The argument (`patch` default, `minor`, `major`, `build`, or an
-  explicit `X.Y.Z`) moves the name; the `+N` code always increments, because
-  Play needs it strictly higher than any uploaded build. It prints the plan
-  and asks first, and refuses a dirty tree, a non-`main` branch, a branch
-  behind `origin` or an existing tag (`--dry-run`, `--check`, `--no-push`,
-  `--no-tag`, `--tag NAME`, `--any-branch`, `--no-fetch`).
+  `v<name>` tag and prints the commit as a patch. The argument (`patch`
+  default, `minor`, `major`, `build`, or an explicit `X.Y.Z`) moves the
+  name; the `+N` code always increments, because Play needs it strictly
+  higher than any uploaded build. **Pushing is opt-in** — `--push`, which
+  then asks separately for the branch and for the tag (the tag push is what
+  runs the workflow); without it the bump stays local and the script prints
+  the push and undo commands. It prints the plan and asks before the commit
+  too, and refuses a dirty tree, a non-`main` branch, a branch behind
+  `origin` or an existing tag (`--dry-run`, `-y`, `--check`, `--no-tag`,
+  `--tag NAME`, `--any-branch`, `--no-fetch`).
 
 ## Architecture
 

@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
-# Version bump + release tag, in one step. Does the whole manual dance:
-# rewrites `version:` in pubspec.yaml, commits it, tags the commit and pushes
-# branch + tag — and the tag push is what fires the Release workflow
+# Version bump + release tag. Rewrites `version:` in pubspec.yaml, commits it
+# and tags the commit; with --push it also pushes the branch and the tag —
+# and the tag push is what fires the Release workflow
 # (.github/workflows/release.yml). See docs/release.md.
+#
+# Nothing leaves the machine without --push: the commit and tag are made
+# locally, the commit is printed for review, and the branch push and the tag
+# push are each confirmed on their own — so a bump can be read (and undone)
+# before any of it is public.
 #
 # Play requires the version code (the `+N` part) to be strictly higher than
 # any build already uploaded, so every bump increments it; the argument only
@@ -17,10 +22,11 @@
 #   X.Y.Z             set the name outright (must be higher than the current)
 #
 # Options:
-#   -y, --yes         don't ask before committing/tagging/pushing
+#       --push        push the branch and the tag to origin (asks for each);
+#                     without it the bump stays local
+#   -y, --yes         answer every prompt yes
 #   -n, --dry-run     print the plan and change nothing
 #       --check       run `flutter analyze --fatal-infos` + `flutter test` first
-#       --no-push     commit and tag locally, push nothing
 #       --no-tag      commit the bump only, no tag
 #       --tag NAME    use this tag name instead of the derived one
 #       --no-fetch    skip the fetch that checks the branch/tag against origin
@@ -32,9 +38,16 @@ cd "$(dirname "$0")/.."
 readonly MAIN_BRANCH=main
 bump=""
 tag_name=""
-yes=0 dry_run=0 check=0 push=1 tag=1 any_branch=0 fetch=1
+yes=0 dry_run=0 check=0 push=0 tag=1 any_branch=0 fetch=1
 
 die() { echo "bump_version: $*" >&2; exit 1; }
+confirm() {
+  [ "$yes" -eq 0 ] || return 0
+  [ -t 0 ] || die "not a terminal — pass --yes to run unattended"
+  local reply
+  read -r -p "$1 [y/N] " reply
+  case "$reply" in [yY]|[yY][eE][sS]) return 0 ;; *) return 1 ;; esac
+}
 usage() { awk 'NR == 1 {next} !/^#/ {exit} {sub(/^# ?/, ""); print}' "$0"; }
 
 while [ $# -gt 0 ]; do
@@ -49,7 +62,7 @@ while [ $# -gt 0 ]; do
     -y|--yes) yes=1 ;;
     -n|--dry-run) dry_run=1 ;;
     --check) check=1 ;;
-    --no-push) push=0 ;;
+    --push) push=1 ;;
     --no-tag) tag=0 ;;
     --any-branch) any_branch=1 ;;
     --no-fetch) fetch=0 ;;
@@ -151,9 +164,9 @@ else
   echo "  tag       (skipped)"
 fi
 if [ "$push" -eq 1 ]; then
-  echo "  push      origin $branch$([ "$tag" -eq 1 ] && echo " + $tag_name")"
+  echo "  push      origin $branch$([ "$tag" -eq 1 ] && echo ", then $tag_name") (asked for separately)"
 else
-  echo "  push      (skipped)"
+  echo "  push      no — stays local (--push pushes)"
 fi
 
 if [ "$dry_run" -eq 1 ]; then
@@ -161,11 +174,7 @@ if [ "$dry_run" -eq 1 ]; then
   exit 0
 fi
 
-if [ "$yes" -eq 0 ]; then
-  [ -t 0 ] || die "not a terminal — pass --yes to run unattended"
-  read -r -p "Proceed? [y/N] " reply
-  case "$reply" in [yY]|[yY][eE][sS]) ;; *) die "aborted" ;; esac
-fi
+confirm "Proceed?" || die "aborted"
 
 # --- do it -----------------------------------------------------------------
 
@@ -192,24 +201,46 @@ if [ "$tag" -eq 1 ]; then
   undo="$undo && git tag -d $tag_name"
 fi
 
+# What is about to be pushed, in full — it is one line, so print the patch.
+echo
+git --no-pager show --no-color HEAD
+echo
+
+push_commands() {
+  echo "    git push -u origin $branch"
+  if [ "$tag" -eq 1 ]; then echo "    git push origin $tag_name"; fi
+  echo "    (undo instead: $undo)"
+}
+
 if [ "$push" -eq 0 ]; then
-  echo "bump_version: nothing pushed. Push with:"
-  echo "    git push -u origin $branch$([ "$tag" -eq 1 ] && echo " && git push origin $tag_name")"
+  echo "bump_version: nothing pushed. When it looks right:"
+  push_commands
   exit 0
 fi
 
+if ! confirm "Push $branch to origin?"; then
+  echo "bump_version: nothing pushed. When it looks right:"
+  push_commands
+  exit 0
+fi
 if ! retry git push -u origin "$branch"; then
   echo "bump_version: push failed. The commit is local; undo it with:" >&2
   echo "    $undo" >&2
   exit 1
 fi
-if [ "$tag" -eq 1 ]; then
-  if ! retry git push origin "$tag_name"; then
-    echo "bump_version: the commit is pushed but the tag is not. Retry with:" >&2
-    echo "    git push origin $tag_name" >&2
-    exit 1
-  fi
-  echo "bump_version: pushed $branch and $tag_name — the Release workflow is building $new_version"
-else
-  echo "bump_version: pushed $branch"
+echo "bump_version: pushed $branch"
+
+[ "$tag" -eq 1 ] || exit 0
+
+# The tag is asked separately because it is the one that starts a release.
+if ! confirm "Push $tag_name to origin? (this starts the Release workflow)"; then
+  echo "bump_version: tag $tag_name is local only. Push it with:"
+  echo "    git push origin $tag_name"
+  exit 0
 fi
+if ! retry git push origin "$tag_name"; then
+  echo "bump_version: the commit is pushed but the tag is not. Retry with:" >&2
+  echo "    git push origin $tag_name" >&2
+  exit 1
+fi
+echo "bump_version: pushed $tag_name — the Release workflow is building $new_version"

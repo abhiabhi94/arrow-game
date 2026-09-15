@@ -76,13 +76,25 @@ re-set `ANDROID_UPLOAD_KEYSTORE_BASE64` and `ANDROID_UPLOAD_KEYSTORE_PASSWORD`.
 From an up-to-date `main`, one command does the whole thing:
 
 ```bash
-tool/bump_version.sh            # 1.0.0+3 -> 1.0.1+4, commit, tag v1.0.1, push
+tool/bump_version.sh --push     # 1.0.0+3 -> 1.0.1+4, commit, tag v1.0.1, push
+tool/bump_version.sh            # the same, but stops before pushing anything
 ```
 
 It rewrites `version:` in `pubspec.yaml`, commits ("Bump version to
-1.0.1+4"), makes an annotated `v1.0.1` tag and pushes the branch and the tag
-— and the tag push is what runs the Release workflow. It prints the plan and
-asks before touching anything; `--dry-run` prints it and stops.
+1.0.1+4"), makes an annotated `v1.0.1` tag — and then **prints the commit,
+patch and all**, so the change can be read before it goes anywhere.
+
+Pushing is opt-in and asked for a piece at a time:
+
+- without `--push` nothing leaves the machine; the script prints the two
+  push commands and the one-line undo, so the bump can sit until it looks
+  right;
+- with `--push` it asks once for the branch and again for the tag — the tag
+  being the one that actually starts a release. Declining either stops
+  there and prints what is left to run.
+
+`--dry-run` prints the plan and stops before even the commit; `-y` answers
+every prompt yes (for a script or a CI job).
 
 Which part of the name moves is the argument — the version code (the `+N`
 part) always increments, because Play requires it to be **strictly higher**
@@ -103,8 +115,8 @@ matches the workflow's `v*` trigger. `--tag NAME` overrides it.
 Before it changes anything the script refuses to run on a dirty tree, off
 `main` (`--any-branch` overrides), on a branch behind `origin`, or onto a
 tag that already exists. `--check` runs `flutter analyze --fatal-infos` and
-`flutter test` first; `--no-push` stops after the local commit and tag, and
-`--no-tag` commits the bump alone. `tool/bump_version.sh --help` lists them all.
+`flutter test` first, and `--no-tag` commits the bump alone.
+`tool/bump_version.sh --help` lists them all.
 
 Doing it by hand is the same three steps:
 
