@@ -19,7 +19,7 @@ inputs:
       --levels 1 --crash 2,4
       --onboarding
       --levels 3 --resume
-      --levels 1,8 --viewport 1440x900 --keys KeyG,KeyH --settings
+      --levels 1,8 --viewport 1440x900 --keys Equal,KeyH --settings
   artifact-name:
     description: Name of the uploaded screenshots artifact.
     required: false

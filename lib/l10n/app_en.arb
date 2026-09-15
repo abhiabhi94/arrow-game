@@ -30,7 +30,7 @@
   "onboardRuleLives": "3 lives per level — a bump costs a life",
   "onboardRuleClock": "Beat the clock — plenty of time, but it ticks",
   "onboardRuleHints": "Stuck? 3 hints per level light up a free arrow",
-  "onboardRuleFits": "Every board fits the screen — no zooming, no scrolling",
+  "onboardRuleZoom": "Big boards later — pinch or tap to zoom",
   "homeStars": "{count} of {total} stars",
   "@homeStars": { "placeholders": { "count": { "type": "int" }, "total": { "type": "int" } } },
   "homeLevels": "Levels",
@@ -131,6 +131,8 @@
   "toolGrid": "Grid lines",
   "toolGridLocked": "Grid lines unlock after level {level}",
   "@toolGridLocked": { "placeholders": { "level": { "type": "int" } } },
+  "toolZoomIn": "Zoom in",
+  "toolZoomOut": "Zoom out",
   "gridUnlockedToast": "Grid lines unlocked! Find the toggle under the board.",
 
   "clearedTitle": "Level cleared!",

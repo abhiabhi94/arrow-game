@@ -79,12 +79,7 @@ class PuzzleGenerator {
       final p = _Builder(spec, _random).build();
       final profile = p.openMoveProfile();
       final held = holdsChoice(spec, profile);
-      final mean = profile.isEmpty ? 0.0 : profile.fold<int>(0, (s, n) => s + n) / profile.length;
-      // How far the board's typical choice sits from the one the level asks
-      // for. Nearest wins, from either side: a board that leaves the player
-      // no choice at all is as wrong for an early level as a spread one is
-      // for a late level.
-      final open = (mean - spec.openMoves).abs();
+      final open = profile.isEmpty ? 0.0 : profile.fold<int>(0, (s, n) => s + n) / profile.length;
       final tangle = p.difficultyScore;
       if (best == null ||
           p.arrowCount > best.arrowCount ||

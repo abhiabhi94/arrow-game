@@ -188,6 +188,21 @@ void main() {
     expect(container.read(progressProvider.notifier).progressFor(1).completed, isTrue);
   });
 
+  test('the zoom ceiling stretches until a cell can reach a fingertip', () {
+    // Big cells keep the plain 4x ceiling.
+    expect(maxZoomFor(70), kMaxZoom);
+    expect(maxZoomFor(kFingerCellPx / kMaxZoom + 1), kMaxZoom);
+    // A level-18 cell (12 px on a phone) needs just under 4x, so 4x stands.
+    expect(maxZoomFor(12.8), closeTo(kMaxZoom, 0.001));
+    // A level-40 cell is 8 px: 4x would cap it at 33 px, so the ceiling
+    // stretches to bring it up to a finger.
+    expect(maxZoomFor(8.3), closeTo(kFingerCellPx / 8.3, 0.001));
+    expect(maxZoomFor(8.3) * 8.3, closeTo(kFingerCellPx, 0.001));
+    // And never beyond a sane limit, however small the cell.
+    expect(maxZoomFor(1), 8.0);
+    expect(maxZoomFor(0), kMaxZoom);
+  });
+
   group('taps the player did not mean', () {
     /// The board's rect and cell size (the sample puzzle is 4x4).
     (Rect, double) boardRect(WidgetTester tester) {
@@ -498,6 +513,50 @@ void main() {
     expect(find.text('Grid lines unlocked! Find the toggle under the board.'), findsOneWidget);
   });
 
+  testWidgets('zoom buttons scale the board within bounds', (tester) async {
+    await _pumpGame(tester);
+    InteractiveViewer viewer() => tester.widget<InteractiveViewer>(find.byType(InteractiveViewer));
+    expect(viewer().transformationController!.value.getMaxScaleOnAxis(), 1.0);
+    expect(find.byTooltip('Zoom out'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Zoom in'));
+    await _settle(tester, 100);
+    expect(viewer().transformationController!.value.getMaxScaleOnAxis(), closeTo(kZoomStep, 1e-6));
+
+    for (var i = 0; i < 6; i++) {
+      await tester.tap(find.byTooltip('Zoom in'));
+      await _settle(tester, 50);
+    }
+    expect(viewer().transformationController!.value.getMaxScaleOnAxis(), closeTo(kMaxZoom, 1e-6));
+
+    for (var i = 0; i < 8; i++) {
+      await tester.tap(find.byTooltip('Zoom out'));
+      await _settle(tester, 50);
+    }
+    expect(viewer().transformationController!.value.getMaxScaleOnAxis(), closeTo(kMinZoom, 1e-6));
+  });
+
+  testWidgets('pinch-zooming updates the zoom buttons', (tester) async {
+    await _pumpGame(tester);
+    final viewer = find.byType(InteractiveViewer);
+    final center = tester.getCenter(viewer);
+    final g1 = await tester.startGesture(center - const Offset(20, 0));
+    final g2 = await tester.startGesture(center + const Offset(20, 0));
+    await tester.pump();
+    await g1.moveBy(const Offset(-40, 0));
+    await g2.moveBy(const Offset(40, 0));
+    await tester.pump();
+    await g1.up();
+    await g2.up();
+    await _settle(tester, 100);
+    final scale = tester
+        .widget<InteractiveViewer>(viewer)
+        .transformationController!
+        .value
+        .getMaxScaleOnAxis();
+    expect(scale, greaterThan(1.0));
+  });
+
   testWidgets('restart button starts the same puzzle over', (tester) async {
     final container = await _pumpGame(tester);
     final notifier = container.read(gameProvider(1).notifier);
@@ -642,6 +701,12 @@ void main() {
   });
 
   group('keyboard shortcuts (web build on a laptop)', () {
+    double scale(WidgetTester tester) => tester
+        .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+        .transformationController!
+        .value
+        .getMaxScaleOnAxis();
+
     testWidgets('H asks for a hint', (tester) async {
       final container = await _pumpGame(tester);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyH);
@@ -652,6 +717,21 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.keyH);
       await _settle(tester, 100);
       expect(container.read(gameProvider(1)).hintsLeft, 2);
+    });
+
+    testWidgets('+ and - zoom the board within bounds', (tester) async {
+      await _pumpGame(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.equal);
+      await _settle(tester, 50);
+      expect(scale(tester), closeTo(kZoomStep, 1e-6));
+      await tester.sendKeyEvent(LogicalKeyboardKey.numpadAdd);
+      await _settle(tester, 50);
+      expect(scale(tester), closeTo(kZoomStep * kZoomStep, 1e-6));
+      for (var i = 0; i < 8; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.minus);
+        await _settle(tester, 50);
+      }
+      expect(scale(tester), closeTo(kMinZoom, 1e-6));
     });
 
     testWidgets('space pauses and resumes; P too', (tester) async {
@@ -710,6 +790,7 @@ void main() {
       await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
       await _settle(tester, 100);
       expect(container.read(gameProvider(1)).hintsLeft, 3);
+      expect(scale(tester), 1.0);
     });
 
     testWidgets('an unrelated key does nothing', (tester) async {
@@ -720,15 +801,14 @@ void main() {
       expect(container.read(gameProvider(1)).hintsLeft, 3);
     });
 
-    test('shortcutFor maps the game keys', () {
+    test('shortcutFor maps both keyboard rows', () {
       KeyEvent press(LogicalKeyboardKey key) => KeyDownEvent(
             physicalKey: PhysicalKeyboardKey.keyA,
             logicalKey: key,
             timeStamp: Duration.zero,
           );
-      expect(shortcutFor(press(LogicalKeyboardKey.keyH)), GameShortcut.hint);
-      expect(shortcutFor(press(LogicalKeyboardKey.keyG)), GameShortcut.grid);
-      expect(shortcutFor(press(LogicalKeyboardKey.keyP)), GameShortcut.pause);
+      expect(shortcutFor(press(LogicalKeyboardKey.add)), GameShortcut.zoomIn);
+      expect(shortcutFor(press(LogicalKeyboardKey.numpadSubtract)), GameShortcut.zoomOut);
       expect(shortcutFor(press(LogicalKeyboardKey.keyA)), isNull);
     });
   });

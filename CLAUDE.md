@@ -8,17 +8,13 @@ A playful cross-platform (Android + iOS) **arrow exit puzzle** built with
 Flutter (in the spirit of "Arrow Exit Puzzle"). Bent arrow pieces sit on a
 grid; tapping one slides it along its own path, the way its head points, until
 it leaves the board. An arrow whose exit path runs into another arrow bumps
-back and costs a life. 60 fixed, procedurally generated levels, **every one
-of them sized to fit the screen** — the board is capped at 12×18, the
-biggest grid that still draws a finger-sized cell on a phone, so there is no
-zooming and no panning and an arrow that blocks your move is never off
-screen. The curve runs 5 arrows on 5×6 → 12 on 8×11 by level 20 → 20 on
-11×17 by level 40 → 28 on 12×18, and the axis that matters is how many
-arrows are playable at once: two for most of the game, **one** from level 41
-on. Drawn in a single ink like a printed puzzle, 3 lives per level (spend
-them all and a card offers "Keep going", which buys one more mistake and
-then asks again, or a fresh start), a clock on every level ("Time's up" →
-replay the same level), 3 hints per level, a grid-lines toggle earned after
+back and costs a life. 60 fixed, procedurally generated levels on a steep
+curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50 by level
+20 → 224 on 42×63 by level 40 → 304 on 47×73), drawn in a
+single ink like a printed puzzle, 3 lives per level (spend them all and a
+card offers "Keep going", which buys one more mistake and then asks again,
+or a fresh start), a clock on every level ("Time's up" → replay the same
+level), 3 hints per level, zoom in/out, a grid-lines toggle earned after
 level 4 and on by default from there, 1–3 stars per clear, local progress,
 light/dark theme, haptic feedback.
 
@@ -34,7 +30,7 @@ tool/coverage.sh 92             # coverage gate (fails under threshold)
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
 node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-viewport screenshots -> shots/
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
-node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys KeyG,KeyH  # desktop layout + keyboard
+node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + keyboard
 node tool/screenshot.mjs --levels 1 --crash 2,4                     # a bump mid-crash (fake clock): jolt + red flash
 
 flutter run                     # debug build = "Arrow Testing", all levels unlocked
@@ -202,31 +198,30 @@ Key patterns:
   the same DAG rule, and the fullest, then (`holdsChoice`) one within
   `startSlack`/`widestSlack` of `openMoves` at the first move and at its
   widest, then lowest-`meanOpenMoves`, of `candidatesFor(arrows)` boards
-  is kept (`kMinCandidates` = 5 on the big boards). **The tie-break is
-  nearest `openMoves`, not lowest**: a board that leaves the player no choice
-  at all is as wrong for an early level as a spread one is for a late level.
-  Selecting for the lowest made every level fully forced from level 1 — a
-  treadmill. Fill is 86–99%; the level table is sized at roughly eight cells
-  per arrow so every level gets its full count, the early levels offer ~2
-  taps at a typical moment and the last twenty offer ~1
-  (`test/engine/puzzle_generator_test.dart` pins both).
+  is kept (`kMinCandidates` = 5 on the big boards). Fill is ~85–95%; the level table
+  is sized at roughly ten cells per arrow so every level gets its full
+  count, and the levels open with ≤ 5 free arrows and offer ~2 taps at a
+  typical moment (`test/engine/puzzle_generator_test.dart` pins that).
   `puzzleForLevel(spec)` seeds `Random` from `LevelSpec.seed`, so each
   level is a fixed puzzle. It runs on a background isolate
-  (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web it
-  runs inline, and on the capped boards that is now well under a tenth of a
-  second even for the finale. `dart run tool/level_report.dart
+  (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
+  it runs inline (~0.4 s for level 20, about 2.5 s for the finale). `dart run tool/level_report.dart
   [level] [extraSeeds]` prints arrows placed vs asked, fill, depth,
   free-at-start, open moves (mean/max vs the cap), `Puzzle.openTapRisk` and
   timing — run it after touching the table or the generator.
 - **`Puzzle.openTapRisk`** is the fat-finger number: the share of a playable
   arrow's own cells that touch an arrow which cannot move yet, averaged over
-  a greedy solve. It is measured, reported by `tool/level_report.dart` and
-  deliberately *not* selected on. It mattered when a cell drew at 9 px and
-  every tap was a gamble; the board cap answers it directly — at ~29 pt a
-  cell is bigger than the part of a fingertip that lands, so a neighbouring
-  arrow is not one slip away whatever the risk number says. Density was
-  never the right lever for mis-taps, and neither was input handling: it was
-  cell size.
+  a greedy solve. It sits near 0.49 from level 12 on — half the cells of the
+  arrow you want are one slipped finger from a lost life. It is measured but
+  deliberately *not* selected on. Candidates vary (0.41–0.60 at level 18),
+  but the kind boards are the loose, shallow ones: picking the lowest risk
+  outright took level 1 from depth 5 to 3, level 10 from 41 to 28 and level
+  18's opening from 2 free arrows to 5, while choosing only among boards the
+  curve cannot tell apart won nothing (level 18 came back identical), and on
+  levels 20 and 40 the lowest-risk candidate is already the one the existing
+  keys pick. Playable arrows also already average ~8 free cells of margin
+  (~40% of their perimeter), so an "apron" pass has nothing to add. Density
+  is the wrong lever for mis-taps; input handling is.
 - **Game loop:** `GameNotifier` owns the phase machine
   (`loading → playing ⇄ paused → cleared | outOfLives | timeUp`). `tapArrow` updates
   state instantly; `PuzzleBoard` animates the slide-out / bump purely
@@ -266,19 +261,10 @@ Key patterns:
   `Settings.gridLinesOn` (persisted) but the toggle is earned:
   `ProgressNotifier.gridLinesUnlocked` (clear level `kGridLinesUnlockAfterLevel`
   = 4; always on in the testing build).
-- **No zoom, by design.** There was a `InteractiveViewer` with pinch and two
-  toolbar buttons, and it was the game's worst problem rather than a
-  feature. The board viewport on a phone is about 352×546 (360×800) to
-  382×590 (390×844) logical pixels; a fingertip needs a cell near 30. On the
-  old 42×63 board a cell drew at 9 px, so reaching finger size meant zooming
-  5× — at which point **4% of the board was visible**, and the arrow
-  blocking your move was usually off screen. There was no zoom at which you
-  could both see an arrow's exit path and hit it. Every mechanic that might
-  have papered over that (a peek gesture, tap magnetism, a minimap) was an
-  apology for a board that did not fit. So the board is capped instead:
-  12×18 keeps a cell at ~29 pt on a 360×800 phone and ~32 pt on a 390×844
-  one, the whole puzzle is always on screen, and zoom is gone — along with
-  its two buttons, its `+`/`-` shortcuts and the pinch-vs-tap ambiguity.
+- **Zoom:** `InteractiveViewer` (pinch) + toolbar buttons, from `kMinZoom` to
+  `maxZoomFor(cellPx)` — `kMaxZoom` (4×), or as much more as it takes to bring
+  a cell up to `kFingerCellPx` (46). A flat 4× left a level-40 cell at 33 px,
+  so the last levels had no zoom at which a target was finger-sized.
 - **Taps the player didn't mean** (`widgets/puzzle_board.dart`): a tap is
   dropped while the board is still moving from the last one (the whole bump,
   the first `kSettleFraction` of a slide — keyed off the animation
@@ -366,27 +352,22 @@ Key patterns:
   the web icons (`web/favicon.png`, `web/icons/*.png` — flutter_launcher_icons
   is Android + iOS only); then `dart run flutter_launcher_icons`.
 - **Difficulty:** every knob is in `data/level_specs.dart` — size, arrow
-  count, lengths, clock and `openMoves` (how many taps the generator leaves
-  available at once: **2 on levels 1–40, 1 from 41**); the tests in
+  count, lengths, clock and `openMoves` (3 on levels 1–3, 2 from level 4:
+  how many taps the generator leaves available at once); the tests in
   `test/data/level_specs_test.dart` and `test/engine/puzzle_generator_test.dart`
-  pin the curve (sizes never shrink and never pass the 12×18 cap, the choice
-  never widens, no more than three levels in a row repeat a size and count,
-  every level generates its full arrow count, solvable, tight, later levels
-  more tangled, the last twenty down to one move at a time). Tune numbers
-  there; keep the generator test green — it is what guarantees a level is
-  playable.
-
-  **The board is capped, so difficulty is the puzzle, not the acreage.**
-  Levels 1–40 sit at `openMoves` 2, so there is usually a choice and a
-  beginner is never stuck hunting; from 41 it is 1 and the board stops
-  offering options — the dependency chain runs most of the length of the
-  board (depth ~22 of 28 arrows; level 41 comes out a single forced chain of
-  21) and every move is the only move there is. Arrows lengthen from 2–5
-  cells to 4–12, so late boards are long snakes crossing many exit paths.
-  The clock *loosens* as the choice narrows — ~4 s an arrow at the start,
-  ~8 s by the finale, because finding the only move takes longer than
-  picking one of three — and a level runs 28 s to just over four minutes: a
-  bite, not a sitting.
+  pin the curve (sizes never shrink, the cap never widens, every level
+  generates its full arrow count, solvable, tight, later levels more
+  tangled). Tune numbers there; keep the generator test green — it is what
+  guarantees a level is playable. The clock is brisk: ~1.8 s an arrow on
+  levels 1–4, 2.2 s on 5–9 and 2.6 s from 10 (plus ~18 s) — 27 s on level
+  1, ten minutes on level 40, 13½ on the finale — so a level is a sprint of
+  quick reads. **Levels 41–60** keep climbing four arrows a level (228 →
+  304) while the board barely grows (42×64 → 47×73): the cells an arrow
+  fall from ~11.8 to ~11.3 and the fill rises to ~0.90, so the endgame is a
+  tighter board rather than a bigger one, with the longest runs reaching 14
+  cells. The pace per arrow never slackens; the last levels are long only
+  because there are 300 arrows to read, and the saved-game slot means such a
+  board can be put down and picked up.
 - **Lives / stars:** `models/level_progress.dart`. `maxLives` is 3 on every
   level and `starsForMistakes(mistakes)` is the plain rule (flawless three,
   one slip two, two slips one). Spending the allowance is not the end of the
