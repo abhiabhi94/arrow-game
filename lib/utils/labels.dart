@@ -4,7 +4,7 @@ library;
 
 import '../l10n/app_localizations.dart';
 
-/// The playful title of 1-based [level] (1..40).
+/// The playful title of 1-based [level] (1..60).
 String levelName(AppLocalizations l10n, int level) => switch (level) {
       1 => l10n.levelName1,
       2 => l10n.levelName2,
@@ -45,5 +45,25 @@ String levelName(AppLocalizations l10n, int level) => switch (level) {
       37 => l10n.levelName37,
       38 => l10n.levelName38,
       39 => l10n.levelName39,
-      _ => l10n.levelName40,
+      40 => l10n.levelName40,
+      41 => l10n.levelName41,
+      42 => l10n.levelName42,
+      43 => l10n.levelName43,
+      44 => l10n.levelName44,
+      45 => l10n.levelName45,
+      46 => l10n.levelName46,
+      47 => l10n.levelName47,
+      48 => l10n.levelName48,
+      49 => l10n.levelName49,
+      50 => l10n.levelName50,
+      51 => l10n.levelName51,
+      52 => l10n.levelName52,
+      53 => l10n.levelName53,
+      54 => l10n.levelName54,
+      55 => l10n.levelName55,
+      56 => l10n.levelName56,
+      57 => l10n.levelName57,
+      58 => l10n.levelName58,
+      59 => l10n.levelName59,
+      _ => l10n.levelName60,
     };

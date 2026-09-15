@@ -8,9 +8,9 @@ A playful cross-platform (Android + iOS) **arrow exit puzzle** built with
 Flutter (in the spirit of "Arrow Exit Puzzle"). Bent arrow pieces sit on a
 grid; tapping one slides it along its own path, the way its head points, until
 it leaves the board. An arrow whose exit path runs into another arrow bumps
-back and costs a life. 40 fixed, procedurally generated levels on a steep
+back and costs a life. 60 fixed, procedurally generated levels on a steep
 curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50 by level
-20 → 224 on 42×63), drawn in a
+20 → 224 on 42×63 by level 40 → 304 on 47×73), drawn in a
 single ink like a printed puzzle, 3 lives per level (spend them all and a
 card offers "Keep going", which buys one more mistake and then asks again,
 or a fresh start), a clock on every level ("Time's up" → replay the same
@@ -155,7 +155,7 @@ lib/
     arrow_piece.dart     ArrowPiece: cells tail→head + heading; exitRay()
     puzzle.dart          Puzzle: occupancy, blockers, canExit, solvingOrder, hintFor, difficultyScore
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N
-  data/level_specs.dart  the 40 levels (board size, arrow count, length range, clock)
+  data/level_specs.dart  the 60 levels (board size, arrow count, length range, clock)
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider,
@@ -205,7 +205,7 @@ Key patterns:
   `puzzleForLevel(spec)` seeds `Random` from `LevelSpec.seed`, so each
   level is a fixed puzzle. It runs on a background isolate
   (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
-  it runs inline (~0.4 s for level 20, about 2 s for the finale). `dart run tool/level_report.dart
+  it runs inline (~0.4 s for level 20, about 2.5 s for the finale). `dart run tool/level_report.dart
   [level] [extraSeeds]` prints arrows placed vs asked, fill, depth,
   free-at-start, open moves (mean/max vs the cap), `Puzzle.openTapRisk` and
   timing — run it after touching the table or the generator.
@@ -360,7 +360,14 @@ Key patterns:
   tangled). Tune numbers there; keep the generator test green — it is what
   guarantees a level is playable. The clock is brisk: ~1.8 s an arrow on
   levels 1–4, 2.2 s on 5–9 and 2.6 s from 10 (plus ~18 s) — 27 s on level
-  1, ten minutes on the finale — so a level is a sprint of quick reads.
+  1, ten minutes on level 40, 13½ on the finale — so a level is a sprint of
+  quick reads. **Levels 41–60** keep climbing four arrows a level (228 →
+  304) while the board barely grows (42×64 → 47×73): the cells an arrow
+  fall from ~11.8 to ~11.3 and the fill rises to ~0.90, so the endgame is a
+  tighter board rather than a bigger one, with the longest runs reaching 14
+  cells. The pace per arrow never slackens; the last levels are long only
+  because there are 300 arrows to read, and the saved-game slot means such a
+  board can be put down and picked up.
 - **Lives / stars:** `models/level_progress.dart`. `maxLives` is 3 on every
   level and `starsForMistakes(mistakes)` is the plain rule (flawless three,
   one slip two, two slips one). Spending the allowance is not the end of the

@@ -80,6 +80,7 @@ void main() {
     expect(candidatesFor(60), 10);
     expect(candidatesFor(170), kMinCandidates);
     expect(candidatesFor(224), kMinCandidates);
+    expect(candidatesFor(304), kMinCandidates);
   });
 
   test('a board that holds the choice beats a tighter one that spreads', () {

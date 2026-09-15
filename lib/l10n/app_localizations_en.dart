@@ -175,7 +175,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName19 => 'Escape Artist';
 
   @override
-  String get levelName20 => 'Halfway Out';
+  String get levelName20 => 'Deep End';
 
   @override
   String get levelName21 => 'Undertow';
@@ -205,7 +205,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName29 => 'Whirlpool';
 
   @override
-  String get levelName30 => 'Ant Farm';
+  String get levelName30 => 'Halfway Out';
 
   @override
   String get levelName31 => 'Circuit Board';
@@ -235,7 +235,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName39 => 'Point of No Return';
 
   @override
-  String get levelName40 => 'Grand Exit';
+  String get levelName40 => 'The Gauntlet';
+
+  @override
+  String get levelName41 => 'Overgrowth';
+
+  @override
+  String get levelName42 => 'Chain Reaction';
+
+  @override
+  String get levelName43 => 'Logjam';
+
+  @override
+  String get levelName44 => 'Bramble';
+
+  @override
+  String get levelName45 => 'Crosshatch';
+
+  @override
+  String get levelName46 => 'Nested Dolls';
+
+  @override
+  String get levelName47 => 'Deadlock';
+
+  @override
+  String get levelName48 => 'Iron Maze';
+
+  @override
+  String get levelName49 => 'Loose Threads';
+
+  @override
+  String get levelName50 => 'Dead Reckoning';
+
+  @override
+  String get levelName51 => 'Fever Dream';
+
+  @override
+  String get levelName52 => 'Cross Purposes';
+
+  @override
+  String get levelName53 => 'Ant Farm';
+
+  @override
+  String get levelName54 => 'Ravel';
+
+  @override
+  String get levelName55 => 'Last Resort';
+
+  @override
+  String get levelName56 => 'Vanishing Point';
+
+  @override
+  String get levelName57 => 'Endgame';
+
+  @override
+  String get levelName58 => 'The Long Haul';
+
+  @override
+  String get levelName59 => 'Final Approach';
+
+  @override
+  String get levelName60 => 'Grand Exit';
 
   @override
   String get tutorialTap => 'Tap an arrow to slide it out the way it points.';
