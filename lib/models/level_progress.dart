@@ -1,11 +1,14 @@
 /// Per-level progress: completion, stars, best time and play count. Pure Dart.
 library;
 
-/// Lives per level; each mistake costs one.
+/// Lives per level; each mistake costs one. The same three on every level:
+/// the dense late boards briefly had four and five, but a short allowance is
+/// what makes a board worth reading before you touch it.
 const int maxLives = 3;
 
 /// Stars earned for clearing a level with [mistakes] slips: flawless is three,
-/// one slip is two, two slips is one. (Three slips never clears the level.)
+/// one slip is two, two slips is one. Spending all three ends the attempt
+/// unless the player carries on (see `GameState.continues`).
 int starsForMistakes(int mistakes) => (maxLives - mistakes).clamp(0, 3);
 
 class LevelProgress {

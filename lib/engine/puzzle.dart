@@ -8,6 +8,7 @@ library;
 
 import 'arrow_piece.dart';
 import 'cell.dart';
+import 'direction.dart';
 
 class Puzzle {
   Puzzle({required this.width, required this.height, required List<ArrowPiece> arrows})
@@ -154,6 +155,48 @@ class Puzzle {
     final profile = openMoveProfile();
     if (profile.isEmpty) return 0;
     return profile.fold<int>(0, (s, n) => s + n) / profile.length;
+  }
+
+  /// How exposed the arrows a player can actually play are, averaged over a
+  /// greedy solve: the fraction of a playable arrow's own cells that touch
+  /// an arrow which cannot move yet.
+  ///
+  /// This is the fat-finger number. On a late board a cell is drawn at about
+  /// a dozen pixels, a quarter of a fingertip, so a tap aimed at a playable
+  /// arrow can easily land one cell off. Where that neighbour is a blocked
+  /// arrow it costs a life; where it is empty or another playable arrow it
+  /// costs nothing. Lower is kinder, and it varies a lot between boards that
+  /// are otherwise equally tight, so the generator picks on it.
+  double get openTapRisk {
+    final removed = <int>{};
+    var considered = 0;
+    var risk = 0.0;
+    while (removed.length < arrows.length) {
+      final open = removable(removed);
+      if (open.isEmpty) break;
+      for (final id in open) {
+        final own = arrows[id].cells.toSet();
+        var exposed = 0;
+        for (final c in own) {
+          for (final d in Direction.values) {
+            final n = c.step(d);
+            if (!n.isInside(width, height) || own.contains(n)) continue;
+            final other = _occupancy[n];
+            if (other != null &&
+                other != id &&
+                !removed.contains(other) &&
+                !canExit(other, removed)) {
+              exposed++;
+              break;
+            }
+          }
+        }
+        risk += exposed / own.length;
+        considered++;
+      }
+      removed.add(open.first);
+    }
+    return considered == 0 ? 0 : risk / considered;
   }
 
   /// A rough "how tangled is this" number used to pick the most interesting

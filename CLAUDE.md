@@ -11,10 +11,12 @@ it leaves the board. An arrow whose exit path runs into another arrow bumps
 back and costs a life. 40 fixed, procedurally generated levels on a steep
 curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50 by level
 20 → 224 on 42×63), drawn in a
-single ink like a printed puzzle, 3 lives per level (losing all three resets the level behind a
-"Retry" screen), a clock on every level ("Time's up" → replay the same level),
-3 hints per level, zoom in/out, an earned grid-lines toggle (after level 4),
-1–3 stars per clear, local progress, light/dark theme, haptic feedback.
+single ink like a printed puzzle, 3 lives per level (spend them all and a
+card offers "Keep going", which buys one more mistake and then asks again,
+or a fresh start), a clock on every level ("Time's up" → replay the same
+level), 3 hints per level, zoom in/out, a grid-lines toggle earned after
+level 4 and on by default from there, 1–3 stars per clear, local progress,
+light/dark theme, haptic feedback.
 
 ## Build & Development Commands
 
@@ -192,8 +194,21 @@ Key patterns:
   (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
   it runs inline (~0.4 s for level 20, about 2 s for the finale). `dart run tool/level_report.dart
   [level] [extraSeeds]` prints arrows placed vs asked, fill, depth,
-  free-at-start, open moves (mean/max vs the cap) and timing — run it after
-  touching the table or the generator.
+  free-at-start, open moves (mean/max vs the cap), `Puzzle.openTapRisk` and
+  timing — run it after touching the table or the generator.
+- **`Puzzle.openTapRisk`** is the fat-finger number: the share of a playable
+  arrow's own cells that touch an arrow which cannot move yet, averaged over
+  a greedy solve. It sits near 0.49 from level 12 on — half the cells of the
+  arrow you want are one slipped finger from a lost life. It is measured but
+  deliberately *not* selected on. Candidates vary (0.41–0.60 at level 18),
+  but the kind boards are the loose, shallow ones: picking the lowest risk
+  outright took level 1 from depth 5 to 3, level 10 from 41 to 28 and level
+  18's opening from 2 free arrows to 5, while choosing only among boards the
+  curve cannot tell apart won nothing (level 18 came back identical), and on
+  levels 20 and 40 the lowest-risk candidate is already the one the existing
+  keys pick. Playable arrows also already average ~8 free cells of margin
+  (~40% of their perimeter), so an "apron" pass has nothing to add. Density
+  is the wrong lever for mis-taps; input handling is.
 - **Game loop:** `GameNotifier` owns the phase machine
   (`loading → playing ⇄ paused → cleared | outOfLives | timeUp`). `tapArrow` updates
   state instantly; `PuzzleBoard` animates the slide-out / bump purely
@@ -233,8 +248,29 @@ Key patterns:
   `Settings.gridLinesOn` (persisted) but the toggle is earned:
   `ProgressNotifier.gridLinesUnlocked` (clear level `kGridLinesUnlockAfterLevel`
   = 4; always on in the testing build).
-- **Zoom:** `InteractiveViewer` (pinch) + toolbar buttons, `kMinZoom`..`kMaxZoom`
-  (1×–4×; the late boards are 30+ cells wide, so zoom is how you tap them).
+- **Zoom:** `InteractiveViewer` (pinch) + toolbar buttons, from `kMinZoom` to
+  `maxZoomFor(cellPx)` — `kMaxZoom` (4×), or as much more as it takes to bring
+  a cell up to `kFingerCellPx` (46). A flat 4× left a level-40 cell at 33 px,
+  so the last levels had no zoom at which a target was finger-sized.
+- **Taps the player didn't mean** (`widgets/puzzle_board.dart`): a tap is
+  dropped while the board is still moving from the last one (the whole bump,
+  the first `kSettleFraction` of a slide — keyed off the animation
+  controllers, so the engine stays pure), and when the gesture had more than
+  one finger down (a pinch below the pan slop used to end as a tap). A tap on
+  an empty cell takes the nearest arrow within `kTouchSlopPx` on screen,
+  capped at 1.5 cells; an occupied cell always wins, so slop never overrides
+  a deliberate hit. The board's `zoom` keeps the slop a fixed size on screen.
+  The HUD and toolbar keep the side gutter and the board runs edge to edge,
+  which is ~9% more cell on the dense levels.
+- **Endings react** (`models/reaction_motion.dart`, pure Dart like
+  `bump_motion.dart`): a cleared level makes the whole play column **hop**
+  (`hopScaleX/Y` — a squash, a spring past normal, a settle; the board itself
+  is empty by then, so the celebration has to be the screen), and a spent
+  allowance or a run-out clock makes every arrow left on the board **slump**
+  (`slumpDropFor`/`slumpTiltFor` droop and tilt each arrow by its own amount,
+  jittered from its id so the board sags raggedly rather than sliding as one
+  block). `ResultCard.mood` gives the card's emoji the matching manner:
+  `cheer` over-spins and boings in, `sulk` flops down and shakes its head.
 - **Board look:** one ink (`palette.arrowInk`), thin strokes (≤5 px), small
   heads, no frame — the arrows sit straight on the page. The hint glow and
   the blocked flash are the only colour on the board. Slide-out and bump are
@@ -242,7 +278,10 @@ Key patterns:
   in and 480 ms back). Strokes cap at
   3 px and heads at 8 px so the small early boards read as pen lines.
 - **Sound effects:** `SfxService` (`services/sfx_service.dart`, injectable
-  `SfxBackend`, a pool of low-latency players) plays `assets/audio/whoosh.wav`
+  `SfxBackend`, a pool of low-latency players built once behind a single
+  `_building` future — `play` is fire-and-forget, so an unguarded
+  `if (_pool.isEmpty)` let two quick taps each fill the pool — and warmed up
+  from `main.dart` at launch, never while effects are off) plays `assets/audio/whoosh.wav`
   on every exit — the pitch climbs a notch per quick successive exit and
   resets after 1.5 s — and `assets/audio/bump.wav` (a knock) on a blocked
   tap, which also ends the streak. Both WAVs are synthesised by
@@ -250,11 +289,46 @@ Key patterns:
   noise (no tone — a chirp reads as a laser), the bump a sharp crack over a
   sagging thump and a low rumble with a lighter rebound knock — half a
   second and near full scale, since it announces a lost life.
-  `Settings.sfxOn` gates both (on by default).
+  It also plays `assets/audio/win.wav` when a level is cleared (four plucked
+  notes up a major triad — the one moment the game sings) and
+  `assets/audio/lose.wav` on a spent allowance or a run-out clock (a comic
+  deflation: a note sagging a minor sixth with a wobble, onto a small flat
+  thud). On a life-losing bump the sting waits `kEndingStingMs` after the
+  knock so the two read as two things. `Settings.sfxOn` gates all four (on by
+  default).
 - **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
   "Game" by The_Mountain (Pixabay Content License, `assets/audio/game.mp3`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
   settings once on launch, on every change, and pauses on background.
+  **Audio focus:** every audioplayers player carries its own Android focus
+  request, and the default is `AUDIOFOCUS_GAIN` — which Android grants by
+  taking focus *off the music player in the same app*, whereupon the plugin
+  pauses it (`WrappedPlayer.onLoss`). That is why the music died on the first
+  arrow of a level. The effect players are therefore built with
+  `AndroidAudioFocus.none`, which `FocusManager` grants without asking
+  anyone. Music keeps `gain` so it still yields to calls and other apps.
+  `AudioBackend.interruptions` reports any stop the service did not ask for,
+  and `AudioService._recover` restarts the loop (via `loop`, not `resume` —
+  a *stopped* player cannot resume), capped at `kMaxMusicRecoveries` per
+  settings/foreground change so a platform that is refusing to play is not
+  asked forever. Without that feedback the service's `_playing` flag drifted
+  from reality and one lost focus meant silence for the rest of the session.
+- **Autoplay on the web:** a browser will not start audio before the page has
+  been touched — `audioplayers_web` builds an `AudioContext` that is created
+  `suspended` — and it refuses *quietly*: the call to play resolves normally,
+  or never completes at all, and the plugin's own `AudioPlayer.state` is
+  intent rather than evidence. So `main.dart` wraps the app in a `Listener`
+  whose `onPointerDown` calls `AudioService.nudge()`, and `nudge` asks
+  `AudioBackend.isPlaying` — implemented as "has the playhead moved",
+  the only honest signal — before deciding there is nothing to do. It then
+  goes back through `loop`, because a player that never started cannot be
+  resumed. Nothing may latch for the duration of a start attempt: the web
+  plugin's future can hang forever, and a flag held across it blocked every
+  retry for the whole visit (a regression test in
+  `test/services/audio_service_test.dart` pins that). Verified in headless
+  Chromium with `--autoplay-policy=document-user-activation-required`: the
+  context starts suspended, and the first tap takes it to `running` with the
+  track playing.
 - **Onboarding:** `OnboardingScreen` — two tiny boards played for real
   (`tutorialPuzzleOne/Two`) plus a summary; `Settings.onboardingDone` gates
   it in `main.dart`; Settings → "How to play" replays it (`replay: true`).
@@ -274,8 +348,18 @@ Key patterns:
   guarantees a level is playable. The clock is brisk: ~1.8 s an arrow on
   levels 1–4, 2.2 s on 5–9 and 2.6 s from 10 (plus ~18 s) — 27 s on level
   1, ten minutes on the finale — so a level is a sprint of quick reads.
-- **Lives / stars:** `maxLives = 3` and `starsForMistakes` live in
-  `models/level_progress.dart`.
+- **Lives / stars:** `models/level_progress.dart`. `maxLives` is 3 on every
+  level and `starsForMistakes(mistakes)` is the plain rule (flawless three,
+  one slip two, two slips one). Spending the allowance is not the end of the
+  level: the "Out of lives" card offers **Keep going**
+  (`GameNotifier.keepGoing`), which plays on from where the board stood with
+  the clock where it was. The reprieve is **one mistake long** — the next
+  fresh bump ends the attempt and asks again — and `GameState.continues`
+  counts how many times it was taken. `GameState.stars` floors a clear at one
+  star, so a zero there only ever means "not cleared". A second run at an
+  arrow already in `GameState.bumped` is free: that lesson is paid for, and a
+  200-arrow board is too big to hold every dead end in your head. Both
+  `bumped` and `continues` travel in the saved game.
 
 ## Testing
 

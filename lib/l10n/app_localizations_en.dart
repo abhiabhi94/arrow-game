@@ -79,7 +79,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardTitle3 => 'That\'s the whole game';
 
   @override
-  String get onboardRuleLives => '3 lives per level — a bump costs one';
+  String get onboardRuleLives => '3 lives per level — a bump costs a life';
 
   @override
   String get onboardRuleClock =>
@@ -358,10 +358,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get outOfLivesBody =>
-      'Three blocked arrows and the level resets. Shake it off and go again?';
+      'That was the last one. Carry on and finish for a single star, or take the level from the top?';
 
   @override
-  String get outOfLivesRetry => 'Retry';
+  String get outOfLivesKeepGoing => 'Keep going';
+
+  @override
+  String get outOfLivesRetry => 'Start over';
 
   @override
   String get timeUpTitle => 'Time\'s up!';

@@ -150,7 +150,9 @@ const prefs = {
   'flutter.arrow_music_on': 'false',
   'flutter.arrow_haptics_on': 'false',
   'flutter.arrow_sfx_on': 'false',
-  'flutter.arrow_grid_lines': grid ? 'true' : 'false',
+  // Only forced on with --grid; otherwise left unset so a shot shows the
+  // app's own default (on, once the toggle has been earned).
+  ...(grid ? { 'flutter.arrow_grid_lines': 'true' } : {}),
   'flutter.arrow_theme': JSON.stringify(dark ? 'dark' : 'light'),
   // A string preference is stored JSON-encoded (quoted); the saved game is a
   // JSON document inside that string.

@@ -30,6 +30,11 @@ const Color _lAccentMint = Color(0xFF32D296);
 const Color _lSuccessGreen = Color(0xFF22C55E);
 const Color _lErrorRed = Color(0xFFEF4444);
 
+// Ink for text and icons sitting ON a bright accent (the amber hint badge).
+// The accents are bright in both palettes, so this ink is dark in both: the
+// dark palette's own text ink is near-white, which on amber is unreadable.
+const Color _lOnAccent = Color(0xFF2D2A4A);
+
 // Text
 const Color _lTextInk = Color(0xFF2D2A4A);
 const Color _lTextMuted = Color(0xFF6E6A8F);
@@ -39,8 +44,11 @@ const Color _lTextFaint = Color(0xFFA6A2C4);
 // from the page (~45 levels a channel) to survive a 1 px hairline on any
 // screen. The old 0xFFE4E0FF sat 16 levels off the page and vanished.
 const Color _lGridLine = Color(0xFFC8C3EC);
-const Color _lHintGlow = Color(0x66FFC53D);
+const Color _lHintGlow = Color(0xCCFFB300);
 const Color _lBlockedFlash = Color(0x80FF6B6B);
+// Laid over the board while a hint shows, so the hinted arrow is the only
+// thing still at full strength.
+const Color _lHintVeil = Color(0xB8F4F3FF);
 // One ink for every arrow, like a printed puzzle: colour would only shout.
 const Color _lArrowInk = Color(0xFF2D2A4A);
 
@@ -74,13 +82,16 @@ const Color _dAccentMint = Color(0xFF3FE0A6);
 const Color _dSuccessGreen = Color(0xFF34D058);
 const Color _dErrorRed = Color(0xFFFF6B6B);
 
+const Color _dOnAccent = Color(0xFF241F3B);
+
 const Color _dTextInk = Color(0xFFEAE7F7);
 const Color _dTextMuted = Color(0xFFA9A4CC);
 const Color _dTextFaint = Color(0xFF6E6A8F);
 
 const Color _dGridLine = Color(0xFF423D66);
-const Color _dHintGlow = Color(0x80FFCE52);
+const Color _dHintGlow = Color(0xD9FFCE52);
 const Color _dBlockedFlash = Color(0x99FF7B7B);
+const Color _dHintVeil = Color(0xC2131120);
 const Color _dArrowInk = Color(0xFFEAE7F7);
 
 const Color _dHeartFull = Color(0xFFFF7B7B);
@@ -111,11 +122,13 @@ class ArrowPalette {
     required this.accentMint,
     required this.successGreen,
     required this.errorRed,
+    required this.onAccent,
     required this.textInk,
     required this.textMuted,
     required this.textFaint,
     required this.gridLine,
     required this.hintGlow,
+    required this.hintVeil,
     required this.blockedFlash,
     required this.arrowInk,
     required this.heartFull,
@@ -140,11 +153,16 @@ class ArrowPalette {
   final Color accentMint;
   final Color successGreen;
   final Color errorRed;
+  /// Ink for text or icons drawn on one of the bright accent colours.
+  final Color onAccent;
   final Color textInk;
   final Color textMuted;
   final Color textFaint;
   final Color gridLine;
   final Color hintGlow;
+
+  /// Dims the rest of the board while a hint points at one arrow.
+  final Color hintVeil;
   final Color blockedFlash;
 
   /// The single ink every arrow is drawn in.
@@ -171,11 +189,13 @@ class ArrowPalette {
     accentMint: _lAccentMint,
     successGreen: _lSuccessGreen,
     errorRed: _lErrorRed,
+    onAccent: _lOnAccent,
     textInk: _lTextInk,
     textMuted: _lTextMuted,
     textFaint: _lTextFaint,
     gridLine: _lGridLine,
     hintGlow: _lHintGlow,
+    hintVeil: _lHintVeil,
     blockedFlash: _lBlockedFlash,
     arrowInk: _lArrowInk,
     heartFull: _lHeartFull,
@@ -201,11 +221,13 @@ class ArrowPalette {
     accentMint: _dAccentMint,
     successGreen: _dSuccessGreen,
     errorRed: _dErrorRed,
+    onAccent: _dOnAccent,
     textInk: _dTextInk,
     textMuted: _dTextMuted,
     textFaint: _dTextFaint,
     gridLine: _dGridLine,
     hintGlow: _dHintGlow,
+    hintVeil: _dHintVeil,
     blockedFlash: _dBlockedFlash,
     arrowInk: _dArrowInk,
     heartFull: _dHeartFull,

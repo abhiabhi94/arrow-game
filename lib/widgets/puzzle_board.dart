@@ -8,10 +8,25 @@ import '../engine/direction.dart';
 import '../engine/puzzle.dart';
 import '../models/bump_motion.dart';
 import '../models/game_state.dart';
+import '../models/reaction_motion.dart';
 import '../ui/colors.dart';
 
 /// How far the arrow that was hit is shoved along, in cells, at full jolt.
 const double kShoveDistance = 0.12;
+
+/// How far from a tap the board looks for an arrow when the finger lands on
+/// an empty cell, in logical pixels on screen. A late board draws a cell at
+/// about a dozen pixels — a quarter of a fingertip — so a tap that misses
+/// into a gap still gets the arrow it was plainly aimed at. A cell that *is*
+/// occupied always wins: slop never overrides a deliberate hit.
+const double kTouchSlopPx = 22;
+
+/// How far into a slide the board starts accepting taps again. The slide runs
+/// 240-600 ms, so this is the first 70-180 ms of it.
+const double kSettleFraction = 0.3;
+
+/// How long one ping of the hint ring takes.
+const Duration kHintPingPeriod = Duration(milliseconds: 1100);
 
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
 /// on its way out) in a single ink — thin lines with a small head, like a
@@ -27,11 +42,16 @@ class PuzzleBoard extends StatefulWidget {
     required this.state,
     required this.showGrid,
     required this.onTapArrow,
+    this.zoom = 1,
   });
 
   final GameState state;
   final bool showGrid;
   final ValueChanged<int> onTapArrow;
+
+  /// The scale the board is being viewed at, so touch slop stays the same
+  /// size on screen however far in the player has pinched.
+  final double zoom;
 
   @override
   State<PuzzleBoard> createState() => _PuzzleBoardState();
@@ -41,14 +61,38 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   /// Arrows sliding out: id → progress controller.
   final Map<int, AnimationController> _exits = <int, AnimationController>{};
 
+  /// Runs the slump when a level ends badly: every arrow still on the board
+  /// droops and tilts, like the puzzle giving up.
+  AnimationController? _slump;
+
+  /// Pointers on the board now, and the most this gesture has seen. A pinch
+  /// that never travels far enough to be read as a pan can end as a tap,
+  /// which would play an arrow the player was only zooming in on.
+  int _pointersDown = 0;
+  int _pointersInGesture = 0;
+
+  /// Drives the hint ring while a hint is showing. A late board is a hundred
+  /// arrows in one ink, and the eye does not find a static smudge among them
+  /// — it finds movement.
+  AnimationController? _hintPing;
+
   /// The arrow currently bumping, if any, and how it moves.
   int? _bumpId;
   BumpMotion? _bumpMotion;
   AnimationController? _bump;
 
   @override
+  void initState() {
+    super.initState();
+    _syncHintPing();
+    _syncSlump();
+  }
+
+  @override
   void didUpdateWidget(PuzzleBoard old) {
     super.didUpdateWidget(old);
+    _syncHintPing();
+    _syncSlump();
     final s = widget.state;
     if (s.puzzle != old.state.puzzle || s.moveToken < old.state.moveToken) {
       // A restart: forget every animation.
@@ -113,6 +157,40 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     });
   }
 
+  /// Starts the slump on a losing ending, and clears it on the way out of
+  /// one (a restart, or carrying on past a spent allowance).
+  void _syncSlump() {
+    final losing =
+        widget.state.phase == GamePhase.outOfLives || widget.state.phase == GamePhase.timeUp;
+    if (losing == (_slump != null)) return;
+    if (losing) {
+      _slump =
+          AnimationController(
+              vsync: this,
+              duration: const Duration(milliseconds: kSlumpMs),
+            )
+            ..addListener(() => setState(() {}))
+            ..forward();
+    } else {
+      _slump?.dispose();
+      _slump = null;
+    }
+  }
+
+  /// Runs the ping while a hint points somewhere, and stops it otherwise.
+  void _syncHintPing() {
+    final showing = widget.state.hintArrowId != null;
+    if (showing == (_hintPing != null)) return;
+    if (showing) {
+      _hintPing = AnimationController(vsync: this, duration: kHintPingPeriod)
+        ..addListener(() => setState(() {}))
+        ..repeat();
+    } else {
+      _hintPing?.dispose();
+      _hintPing = null;
+    }
+  }
+
   void _disposeAll() {
     for (final c in _exits.values) {
       c.dispose();
@@ -126,19 +204,77 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
 
   @override
   void dispose() {
+    _slump?.dispose();
+    _slump = null;
+    _hintPing?.dispose();
+    _hintPing = null;
     _disposeAll();
     super.dispose();
   }
 
-  void _onTapUp(TapUpDetails d, double cellSize) {
+  /// Whether the board is still reacting to the last tap. A bump throws the
+  /// whole screen sideways for two thirds of a second, and a slide is in
+  /// flight for up to another half: a tap that lands in that window is a
+  /// finger still finishing the last move, not a new decision.
+  bool get _settling {
+    if (_bump != null) return true;
+    for (final c in _exits.values) {
+      if (c.value < kSettleFraction) return true;
+    }
+    return false;
+  }
+
+  void _onPointerDown() {
+    _pointersDown++;
+    if (_pointersDown > _pointersInGesture) _pointersInGesture = _pointersDown;
+  }
+
+  void _onPointerUp() {
+    _pointersDown--;
+    if (_pointersDown <= 0) {
+      _pointersDown = 0;
+      _pointersInGesture = 0;
+    }
+  }
+
+  /// The arrow a touch at [p] means: the one under the finger, or — when that
+  /// cell is empty — the nearest arrow still on the board within
+  /// [kTouchSlopPx] of it. Null when the finger is over open space.
+  int? _arrowFor(Offset p, double cellSize) {
     final puzzle = widget.state.puzzle!;
-    final x = (d.localPosition.dx / cellSize).floor();
-    final y = (d.localPosition.dy / cellSize).floor();
-    final cell = Cell(x, y);
-    if (!cell.isInside(puzzle.width, puzzle.height)) return;
-    final id = puzzle.arrowAt(cell);
-    if (id == null || widget.state.removed.contains(id)) return;
-    widget.onTapArrow(id);
+    final cell = Cell((p.dx / cellSize).floor(), (p.dy / cellSize).floor());
+    if (cell.isInside(puzzle.width, puzzle.height)) {
+      final under = puzzle.arrowAt(cell);
+      if (under != null && !widget.state.removed.contains(under)) return under;
+    }
+    // Capped in cells as well, so on the small early boards — where a cell is
+    // already far bigger than a finger — slop never reaches a neighbour.
+    final slop = min(kTouchSlopPx / widget.zoom, cellSize * 1.5);
+    final reach = (slop / cellSize).ceil();
+    int? best;
+    var nearest = slop;
+    for (var dy = -reach; dy <= reach; dy++) {
+      for (var dx = -reach; dx <= reach; dx++) {
+        final c = Cell(cell.x + dx, cell.y + dy);
+        if (!c.isInside(puzzle.width, puzzle.height)) continue;
+        final id = puzzle.arrowAt(c);
+        if (id == null || widget.state.removed.contains(id)) continue;
+        final d = (_BoardPainter._center(c, cellSize) - p).distance;
+        if (d < nearest) {
+          nearest = d;
+          best = id;
+        }
+      }
+    }
+    return best;
+  }
+
+  void _onTapUp(TapUpDetails d, double cellSize) {
+    // Taps the player never meant: one finger of a pinch, or a stutter while
+    // the board is still moving from the last one.
+    if (_pointersInGesture > 1 || _settling) return;
+    final id = _arrowFor(d.localPosition, cellSize);
+    if (id != null) widget.onTapArrow(id);
   }
 
   @override
@@ -155,21 +291,26 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
         return Center(
           child: Semantics(
             label: 'Puzzle board ${puzzle.width} by ${puzzle.height}',
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapUp: (d) => _onTapUp(d, cellSize),
-              child: CustomPaint(
-                size: size,
-                painter: _BoardPainter(
-                  state: widget.state,
-                  palette: p,
-                  showGrid: widget.showGrid,
-                  exits: <int, double>{
-                    for (final e in _exits.entries) e.key: e.value.value,
-                  },
-                  bumpId: _bumpId,
-                  bump: _bump?.value,
-                  bumpMotion: _bumpMotion,
+            child: Listener(
+              onPointerDown: (_) => _onPointerDown(),
+              onPointerUp: (_) => _onPointerUp(),
+              onPointerCancel: (_) => _onPointerUp(),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: (d) => _onTapUp(d, cellSize),
+                child: CustomPaint(
+                  size: size,
+                  painter: _BoardPainter(
+                    state: widget.state,
+                    palette: p,
+                    showGrid: widget.showGrid,
+                    exits: <int, double>{for (final e in _exits.entries) e.key: e.value.value},
+                    hintPing: _hintPing?.value,
+                    slump: _slump?.value,
+                    bumpId: _bumpId,
+                    bump: _bump?.value,
+                    bumpMotion: _bumpMotion,
+                  ),
                 ),
               ),
             ),
@@ -186,6 +327,8 @@ class _BoardPainter extends CustomPainter {
     required this.palette,
     required this.showGrid,
     required this.exits,
+    required this.hintPing,
+    required this.slump,
     required this.bumpId,
     required this.bump,
     required this.bumpMotion,
@@ -197,6 +340,12 @@ class _BoardPainter extends CustomPainter {
 
   /// Slide-out progress (0..1) per exiting arrow.
   final Map<int, double> exits;
+
+  /// The hint ring's progress (0..1), or null when no hint is showing.
+  final double? hintPing;
+
+  /// The slump's progress (0..1) on a losing ending, else null.
+  final double? slump;
 
   /// The bumping arrow, its progress (0..1) and its motion.
   final int? bumpId;
@@ -235,7 +384,8 @@ class _BoardPainter extends CustomPainter {
     final blocked = state.blockedCell;
     final bumpT = bump;
     final motion = bumpMotion;
-    final bumping = blocked != null && bumpT != null && motion != null && bumpId == state.lastMoveId;
+    final bumping =
+        blocked != null && bumpT != null && motion != null && bumpId == state.lastMoveId;
     final flash = bumping ? motion.flashAt(bumpT) : 0.0;
     final shove = bumping ? motion.shoveAt(bumpT) : 0.0;
     final hitId = bumping ? puzzle.arrowAt(blocked) : null;
@@ -267,10 +417,50 @@ class _BoardPainter extends CustomPainter {
         canvas.save();
         canvas.translate(push.dx, push.dy);
       }
-      _paintArrow(canvas, arrow, cs, offset, arrow.id == state.hintArrowId && exiting == null);
+      // The slump: each arrow droops and leans by its own amount, about its
+      // own middle, so a lost level sags raggedly instead of sliding as one
+      // block.
+      final slumping = slump != null && !state.removed.contains(arrow.id);
+      if (slumping) {
+        final pivot = _center(arrow.cells[arrow.length ~/ 2], cs);
+        canvas.save();
+        canvas.translate(pivot.dx, pivot.dy + slumpDropFor(arrow.id, slump!) * cs);
+        canvas.rotate(slumpTiltFor(arrow.id, slump!));
+        canvas.translate(-pivot.dx, -pivot.dy);
+      }
+      _paintArrow(canvas, arrow, cs, offset, false);
+      if (slumping) canvas.restore();
       if (shoved) canvas.restore();
     }
+    _paintHint(canvas, size, cs);
     canvas.restore();
+  }
+
+  /// The hint, drawn over the finished board: everything else dims behind a
+  /// veil, the hinted arrow is redrawn at full strength on top of it, and a
+  /// ring swells out of its head and fades, over and over. A late board is a
+  /// hundred arrows in one ink — the eye does not find a static smudge among
+  /// them, it finds the one thing still bright, and it finds movement.
+  void _paintHint(Canvas canvas, Size size, double cs) {
+    final id = state.hintArrowId;
+    if (id == null || state.removed.contains(id)) return;
+    final arrow = puzzle.arrows[id];
+    canvas.drawRect(Offset.zero & size, Paint()..color = palette.hintVeil);
+    _paintArrow(canvas, arrow, cs, 0, true);
+
+    final ping = hintPing;
+    if (ping == null) return;
+    final t = Curves.easeOutCubic.transform(ping);
+    final from = min(cs * 0.9, 20.0);
+    final to = max(from + 6, min(cs * 2.6, 56.0));
+    canvas.drawCircle(
+      _center(arrow.head, cs),
+      from + (to - from) * t,
+      Paint()
+        ..color = palette.hintGlow.withValues(alpha: 0.95 - 0.7 * t)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2.5, min(cs * 0.26, 5.0)),
+    );
   }
 
   /// Draws [arrow] shifted [offset] cells forward along its own track (its
@@ -314,14 +504,20 @@ class _BoardPainter extends CustomPainter {
     }
 
     if (hinted) {
+      // The ink is capped at 3 px, so a halo proportional to it is a hair on
+      // a dense board: it gets its own floor in pixels.
       final glow = Paint()
         ..color = palette.hintGlow
         ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke * 2.4
+        ..strokeWidth = max(stroke * 2.4, min(cs * 0.6, 6.0))
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
       canvas.drawPath(path, glow);
-      canvas.drawCircle(head, headLen * 1.1, Paint()..color = palette.hintGlow);
+      canvas.drawCircle(
+        head,
+        max(headLen * 1.1, min(cs * 0.55, 10.0)),
+        Paint()..color = palette.hintGlow,
+      );
     }
 
     final paint = Paint()
@@ -375,6 +571,8 @@ class _BoardPainter extends CustomPainter {
       old.state.puzzle != state.puzzle ||
       old.state.removed != state.removed ||
       old.state.hintArrowId != state.hintArrowId ||
+      old.hintPing != hintPing ||
+      old.slump != slump ||
       old.state.blockedCell != state.blockedCell ||
       old.state.moveToken != state.moveToken ||
       old.showGrid != showGrid ||
@@ -391,4 +589,3 @@ class _BoardPainter extends CustomPainter {
     return true;
   }
 }
-

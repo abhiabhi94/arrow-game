@@ -10,6 +10,7 @@ import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/audio_service.dart';
+import 'services/sfx_service.dart';
 import 'ui/layout.dart';
 import 'ui/theme.dart';
 
@@ -42,6 +43,10 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(audioServiceProvider).apply(ref.read(settingsProvider));
+      // Build the effect players now rather than on the first tap of a
+      // level: creating them is the moment the plugin gets busy, and the
+      // first arrow of a level is a bad time for that.
+      ref.read(sfxProvider).warmUp();
     });
   }
 
@@ -64,21 +69,28 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
       ref.read(audioServiceProvider).apply(next);
     });
     final settings = ref.watch(settingsProvider);
-    return MaterialApp(
-      title: 'Arrow',
-      debugShowCheckedModeBanner: false,
-      scrollBehavior: const AppScrollBehavior(),
-      theme: buildLightTheme(),
-      darkTheme: buildDarkTheme(),
-      themeMode: themeModeFor(settings.themeChoice),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
+    // Browsers will not start audio until the page has been touched, and say
+    // nothing when they refuse, so the first tap anywhere is the cue to try
+    // the music again. Harmless everywhere else: a nudge is a no-op once the
+    // loop is audible.
+    return Listener(
+      onPointerDown: (_) => ref.read(audioServiceProvider).nudge(),
+      child: MaterialApp(
+        title: 'Arrow',
+        debugShowCheckedModeBanner: false,
+        scrollBehavior: const AppScrollBehavior(),
+        theme: buildLightTheme(),
+        darkTheme: buildDarkTheme(),
+        themeMode: themeModeFor(settings.themeChoice),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
+      ),
     );
   }
 }

@@ -26,7 +26,10 @@ void main() {
       now = now.add(const Duration(milliseconds: 100));
     }
     expect(s.streak, kWhooshStreakMax);
-    expect(backend.calls.last, '$kWhooshSound@${(1 + kWhooshStreakMax * kWhooshStreakStep).toStringAsFixed(2)}');
+    expect(
+      backend.calls.last,
+      '$kWhooshSound@${(1 + kWhooshStreakMax * kWhooshStreakStep).toStringAsFixed(2)}',
+    );
     now = now.add(kWhooshStreakWindow + const Duration(milliseconds: 1));
     s.whoosh();
     expect(s.streak, 0);
@@ -60,5 +63,17 @@ void main() {
     s.bump();
     s.whoosh();
     expect(backend.calls, isEmpty);
+  });
+
+  test('warmUp builds the players up front, but only when effects are on', () async {
+    final b = RecordingSfxBackend();
+    var on = false;
+    final s = SfxService(() => on, backend: b);
+    await s.warmUp();
+    expect(b.calls, isEmpty, reason: 'effects off: never touch the plugin');
+
+    on = true;
+    await s.warmUp();
+    expect(b.calls, ['warmUp']);
   });
 }

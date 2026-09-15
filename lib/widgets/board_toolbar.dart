@@ -137,7 +137,10 @@ class _ToolButton extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
-                            color: p.textInk,
+                            // The badge is amber in both palettes, so its ink
+                            // is the dark one: textInk goes near-white in the
+                            // dark theme and the count disappeared.
+                            color: enabled ? p.onAccent : p.textMuted,
                           ),
                         ),
                       ),

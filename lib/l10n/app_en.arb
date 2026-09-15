@@ -27,7 +27,7 @@
   "onboardBumped2": "Bumped! In a real level that costs a life. Clear the top one first, then the other.",
   "onboardDone2": "Order matters — you've got it.",
   "onboardTitle3": "That's the whole game",
-  "onboardRuleLives": "3 lives per level — a bump costs one",
+  "onboardRuleLives": "3 lives per level — a bump costs a life",
   "onboardRuleClock": "Beat the clock — plenty of time, but it ticks",
   "onboardRuleHints": "Stuck? 3 hints per level light up a free arrow",
   "onboardRuleZoom": "Big boards later — pinch or tap to zoom",
@@ -128,8 +128,9 @@
   "clearedAllDone": "You beat every level. Legend!",
 
   "outOfLivesTitle": "Out of lives",
-  "outOfLivesBody": "Three blocked arrows and the level resets. Shake it off and go again?",
-  "outOfLivesRetry": "Retry",
+  "outOfLivesBody": "That was the last one. Carry on and finish for a single star, or take the level from the top?",
+  "outOfLivesKeepGoing": "Keep going",
+  "outOfLivesRetry": "Start over",
 
   "timeUpTitle": "Time's up!",
   "timeUpBody": "So close — {out} of {total} arrows out. One more go?",
