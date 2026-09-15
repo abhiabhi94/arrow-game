@@ -93,6 +93,46 @@ void main() {
       expect(p.meanOpenMoves, closeTo(5 / 3, 1e-9));
     });
 
+    test('openTapRisk counts the playable arrows crowded by blocked ones', () {
+      // A wall of three cells with an arrow pressed against each side of it:
+      //   0: (2,0)(2,1)(2,2) down, free — and every one of its cells touches
+      //      one of 1, 2, 3, which are all blocked by it.
+      //   1..3: (0,y)(1,y) right, each blocked by 0.
+      final p = Puzzle(
+        width: 5,
+        height: 5,
+        arrows: [
+          ArrowPiece(
+            id: 0,
+            cells: const [Cell(2, 0), Cell(2, 1), Cell(2, 2)],
+            heading: Direction.down,
+          ),
+          ArrowPiece(id: 1, cells: const [Cell(0, 0), Cell(1, 0)], heading: Direction.right),
+          ArrowPiece(id: 2, cells: const [Cell(0, 1), Cell(1, 1)], heading: Direction.right),
+          ArrowPiece(id: 3, cells: const [Cell(0, 2), Cell(1, 2)], heading: Direction.right),
+        ],
+      );
+      // Step one offers only arrow 0, and all three of its cells sit against
+      // a blocked arrow: aiming anywhere on it risks a life. Once it leaves,
+      // 1, 2 and 3 are all playable and only touch each other, so nothing
+      // after that is risky — 7 playable arrows over the solve, one exposed.
+      expect(p.openTapRisk, closeTo(1 / 7, 1e-9));
+    });
+
+    test('openTapRisk is zero when nothing crowds the playable arrows', () {
+      final p = Puzzle(
+        width: 4,
+        height: 4,
+        arrows: [
+          ArrowPiece(id: 0, cells: const [Cell(0, 0), Cell(1, 0)], heading: Direction.right),
+          ArrowPiece(id: 1, cells: const [Cell(0, 3), Cell(1, 3)], heading: Direction.right),
+        ],
+      );
+      // Both can go at once and neither touches the other.
+      expect(p.removable(const {}), [0, 1]);
+      expect(p.openTapRisk, 0);
+    });
+
     test('an unsolvable board has an empty open-move profile', () {
       final p = Puzzle(
         width: 3,
