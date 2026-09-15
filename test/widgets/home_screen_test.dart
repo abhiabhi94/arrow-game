@@ -134,7 +134,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('PICK UP WHERE YOU LEFT OFF'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
-    expect(find.text('2 of 12 arrows out · 0:30 on the clock'), findsOneWidget);
+    expect(find.text('2 of 6 arrows out · 0:30 on the clock'), findsOneWidget);
     expect(find.text('NEXT UP'), findsNothing);
     expect(find.text('Level 3'), findsOneWidget);
 

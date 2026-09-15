@@ -15,10 +15,10 @@ import '../ui/colors.dart';
 const double kShoveDistance = 0.12;
 
 /// How far from a tap the board looks for an arrow when the finger lands on
-/// an empty cell, in logical pixels on screen. A late board draws a cell at
-/// about a dozen pixels — a quarter of a fingertip — so a tap that misses
-/// into a gap still gets the arrow it was plainly aimed at. A cell that *is*
-/// occupied always wins: slop never overrides a deliberate hit.
+/// an empty cell, in logical pixels. Boards are capped so a cell is about
+/// two thirds of a fingertip, so a tap that misses into a gap still gets the
+/// arrow it was plainly aimed at. A cell that *is* occupied always wins:
+/// slop never overrides a deliberate hit.
 const double kTouchSlopPx = 22;
 
 /// How far into a slide the board starts accepting taps again. The slide runs
@@ -42,16 +42,11 @@ class PuzzleBoard extends StatefulWidget {
     required this.state,
     required this.showGrid,
     required this.onTapArrow,
-    this.zoom = 1,
   });
 
   final GameState state;
   final bool showGrid;
   final ValueChanged<int> onTapArrow;
-
-  /// The scale the board is being viewed at, so touch slop stays the same
-  /// size on screen however far in the player has pinched.
-  final double zoom;
 
   @override
   State<PuzzleBoard> createState() => _PuzzleBoardState();
@@ -65,9 +60,8 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   /// droops and tilts, like the puzzle giving up.
   AnimationController? _slump;
 
-  /// Pointers on the board now, and the most this gesture has seen. A pinch
-  /// that never travels far enough to be read as a pan can end as a tap,
-  /// which would play an arrow the player was only zooming in on.
+  /// Pointers on the board now, and the most this gesture has seen. A second
+  /// finger resting on the board should never turn a stray touch into a move.
   int _pointersDown = 0;
   int _pointersInGesture = 0;
 
@@ -249,7 +243,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     }
     // Capped in cells as well, so on the small early boards — where a cell is
     // already far bigger than a finger — slop never reaches a neighbour.
-    final slop = min(kTouchSlopPx / widget.zoom, cellSize * 1.5);
+    final slop = min(kTouchSlopPx, cellSize * 1.5);
     final reach = (slop / cellSize).ceil();
     int? best;
     var nearest = slop;

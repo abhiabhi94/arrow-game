@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
@@ -24,23 +23,12 @@ import '../widgets/result_card.dart';
 import '../widgets/stars_row.dart';
 import '../widgets/timer_bar.dart';
 
-/// Zoom steps for the board (pinch works too, within the same bounds).
-const double kMinZoom = 1.0;
-const double kMaxZoom = 4.0;
-const double kZoomStep = 1.35;
-
-/// How big a cell should be able to get, in logical pixels — about a
-/// fingertip. A 42x63 board draws a cell at 8 px, so a flat 4x ceiling left
-/// the last levels with no zoom at which a cell was finger-sized at all.
-const double kFingerCellPx = 46;
-
-/// The zoom ceiling for a board whose cells are [cellPx] across at 1x:
-/// [kMaxZoom], or enough to bring a cell up to [kFingerCellPx].
-double maxZoomFor(double cellPx) =>
-    cellPx <= 0 ? kMaxZoom : max(kMaxZoom, kFingerCellPx / cellPx).clamp(kMaxZoom, 8.0);
-
-/// The gameplay screen: HUD (clock, arrows out, lives), the zoomable board,
-/// the toolbar (hint / grid / zoom), and the pause/result overlays.
+/// The gameplay screen: HUD (clock, arrows out, lives), the board, the
+/// toolbar (hint / grid) and the pause/result overlays.
+///
+/// There is no zoom and no panning: every level's board is capped at a size
+/// that draws a finger-sized cell on a phone (see `data/level_specs.dart`),
+/// so the whole puzzle is on screen and a tap lands where it looks.
 class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key, required this.level});
 
@@ -76,9 +64,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     vsync: this,
     duration: const Duration(milliseconds: kHopMs),
   );
-  final TransformationController _zoom = TransformationController();
-  double _scale = 1;
-  Size _viewport = Size.zero;
 
   /// Whether the clear being shown beat the previous best (read once, before
   /// the progress notifier records the new time).
@@ -99,7 +84,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _crash.dispose();
     _hop.dispose();
     _confetti.dispose();
-    _zoom.dispose();
     super.dispose();
   }
 
@@ -119,30 +103,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
     ).pushReplacement(MaterialPageRoute<void>(builder: (_) => GameScreen(level: level)));
   }
 
-  /// The zoom ceiling for the level on screen, from how small a cell is
-  /// drawn in the viewport the board actually has.
-  double get _maxZoom {
-    if (_viewport.isEmpty) return kMaxZoom;
-    final spec = specForLevel(widget.level);
-    return maxZoomFor(min(_viewport.width / spec.width, _viewport.height / spec.height));
-  }
-
-  /// Zooms about the centre of the board viewport.
-  void _setZoom(double scale) {
-    final s = scale.clamp(kMinZoom, _maxZoom);
-    final dx = _viewport.width * (1 - s) / 2;
-    final dy = _viewport.height * (1 - s) / 2;
-    setState(() {
-      _scale = s;
-      _zoom.value = Matrix4.identity()
-        ..translateByDouble(dx, dy, 0, 1)
-        ..scaleByDouble(s, s, 1, 1);
-    });
-  }
-
   /// Keyboard shortcuts for the web build, played on a laptop via GitHub
-  /// Pages: H asks for a hint, + / - zoom, G toggles the grid lines (once
-  /// earned) and Space or P pauses and resumes. Taps stay on the mouse — the
+  /// Pages: H asks for a hint, G toggles the grid lines (once earned) and
+  /// Space or P pauses and resumes. Taps stay on the mouse — the
   /// arrows are drawn on a canvas, not focusable widgets. Anything with a
   /// modifier held is left alone so the browser keeps its own shortcuts.
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
@@ -159,10 +122,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
         return KeyEventResult.ignored;
       case GameShortcut.hint:
         notifier.useHint(); // no-op unless playing with a hint to spare
-      case GameShortcut.zoomIn:
-        _setZoom(_scale * kZoomStep);
-      case GameShortcut.zoomOut:
-        _setZoom(_scale / kZoomStep);
       case GameShortcut.grid:
         if (ref.read(progressProvider.notifier).gridLinesUnlocked) {
           final settings = ref.read(settingsProvider.notifier);
@@ -281,34 +240,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
                         ),
                         const SizedBox(height: 12),
                         Expanded(
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              _viewport = constraints.biggest;
-                              return ClipRect(
-                                child: InteractiveViewer(
-                                  transformationController: _zoom,
-                                  minScale: kMinZoom,
-                                  maxScale: _maxZoom,
-                                  onInteractionEnd: (_) {
-                                    final s = _zoom.value.getMaxScaleOnAxis();
-                                    if (s != _scale) setState(() => _scale = s);
-                                  },
-                                  child: SizedBox.expand(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(4),
-                                      child: state.isLoading
-                                          ? _LoadingView(message: l10n.gameLoading)
-                                          : PuzzleBoard(
-                                              state: state,
-                                              showGrid: gridUnlocked && settings.gridLinesOn,
-                                              onTapArrow: notifier.tapArrow,
-                                              zoom: _scale,
-                                            ),
-                                    ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: state.isLoading
+                                ? _LoadingView(message: l10n.gameLoading)
+                                : PuzzleBoard(
+                                    state: state,
+                                    showGrid: gridUnlocked && settings.gridLinesOn,
+                                    onTapArrow: notifier.tapArrow,
                                   ),
-                                ),
-                              );
-                            },
                           ),
                         ),
                         if (widget.level <= 2)
@@ -333,10 +273,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
                             onToggleGrid: () => ref
                                 .read(settingsProvider.notifier)
                                 .setGridLines(!settings.gridLinesOn),
-                            onZoomIn: () => _setZoom(_scale * kZoomStep),
-                            onZoomOut: () => _setZoom(_scale / kZoomStep),
-                            canZoomIn: _scale < _maxZoom - 0.001,
-                            canZoomOut: _scale > kMinZoom + 0.001,
                           ),
                         ),
                       ],
@@ -506,18 +442,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
 }
 
 /// What a key press on the game screen does.
-enum GameShortcut { hint, zoomIn, zoomOut, grid, pause }
+enum GameShortcut { hint, grid, pause }
 
-/// The shortcut a key press means, or null when it isn't one. Zoom answers
-/// both the main row and the numeric keypad, and `=` stands in for `+` so it
-/// works without Shift on a US layout.
+/// The shortcut a key press means, or null when it isn't one.
 @visibleForTesting
 GameShortcut? shortcutFor(KeyEvent event) => switch (event.logicalKey) {
   LogicalKeyboardKey.keyH => GameShortcut.hint,
-  LogicalKeyboardKey.equal ||
-  LogicalKeyboardKey.add ||
-  LogicalKeyboardKey.numpadAdd => GameShortcut.zoomIn,
-  LogicalKeyboardKey.minus || LogicalKeyboardKey.numpadSubtract => GameShortcut.zoomOut,
   LogicalKeyboardKey.keyG => GameShortcut.grid,
   LogicalKeyboardKey.space || LogicalKeyboardKey.keyP => GameShortcut.pause,
   _ => null,

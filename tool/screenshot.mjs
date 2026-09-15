@@ -8,7 +8,7 @@
 //   node tool/screenshot.mjs [--levels 1,7,20] [--out shots] [--dark] [--hint] [--grid] [--resume]
 //                            [--settings] [--onboarding] [--dump] [--no-strict]
 //                            [--build-dir build/web] [--scale 2] [--port 0]
-//                            [--viewport 1440x900] [--keys Equal,KeyH] [--crash 2,4]
+//                            [--viewport 1440x900] [--keys KeyG,KeyH] [--crash 2,4]
 //
 //   --levels  opens each level and captures its board (level-NN-*.png)
 //   --hint    also taps the hint button and captures the glowing arrow
@@ -20,7 +20,7 @@
 //             is also served on GitHub Pages, where people play it on a laptop);
 //             non-phone shots carry the size in their filename
 //   --keys    Playwright key names pressed on each opened level, then captured
-//             (level-NN-keys-*.png): e.g. Equal zooms in, KeyH asks for a hint
+//             (level-NN-keys-*.png): e.g. KeyG toggles grid lines, KeyH asks for a hint
 //   --crash x,y  taps grid cell (x, y) on the first level and captures the
 //             moment after impact (level-NN-crash-*.png): the screen jolt and
 //             the red flash of a bump. On level 1, cell 2,4 is a blocked head.
@@ -74,7 +74,7 @@ const strict = !args['no-strict'];
 const viewport = parseViewport(args.viewport);
 const isPhone = viewport.width < 600;
 // Keys to press on each opened level, so keyboard shortcuts can be smoke-tested
-// the same way taps are (e.g. `--keys Equal,Equal,KeyH`).
+// the same way taps are (e.g. `--keys KeyG,KeyH`).
 const keys = String(args.keys ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const crash = parseCell(args.crash);
 

@@ -90,7 +90,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Stuck? 3 hints per level light up a free arrow';
 
   @override
-  String get onboardRuleZoom => 'Big boards later — pinch or tap to zoom';
+  String get onboardRuleFits =>
+      'Every board fits the screen — no zooming, no scrolling';
 
   @override
   String homeStars(int count, int total) {
@@ -370,12 +371,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String toolGridLocked(int level) {
     return 'Grid lines unlock after level $level';
   }
-
-  @override
-  String get toolZoomIn => 'Zoom in';
-
-  @override
-  String get toolZoomOut => 'Zoom out';
 
   @override
   String get gridUnlockedToast =>

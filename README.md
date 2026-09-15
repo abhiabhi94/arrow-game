@@ -7,7 +7,7 @@ Flutter.
 build, deployed from `main` by GitHub Actions; installable as a PWA). Every
 pull request gets its own playable preview and a debug APK — see
 [Reviewing a pull request](#reviewing-a-pull-request). On a
-laptop the keyboard helps: **H** hint, **+ / -** zoom, **G** grid lines,
+laptop the keyboard helps: **H** hint, **G** grid lines,
 **Space** pause.
 
 ## How it plays
@@ -18,18 +18,18 @@ the way its head points, until it leaves the board. Get every arrow out.
 - **Blocked arrows cost a life.** If an arrow's exit path runs into another
   arrow it bumps back. **3 lives per level** — lose all three and the level
   resets behind an "Out of lives / Retry" screen.
-- **A clock on every level** (half a minute to learn on, up to thirteen and
-  a half minutes for the finale, growing with the board — brisk on purpose).
-  Run out and it's "Time's up" — replay the same level.
+- **A clock on every level** (half a minute to learn on, just over four
+  minutes for the finale, growing with the board — brisk on purpose). Run
+  out and it's "Time's up" — replay the same level.
+- **Every board fits the screen.** No zooming, no scrolling, nothing to
+  hunt for off-screen: boards are capped at 12×18, the biggest grid that
+  still draws a finger-sized cell on a phone. Tap what you see.
 - **60 levels**, each a fixed, procedurally generated board that is solvable
-  by construction. The curve is steep: 5 arrows on a 5×6 board to learn on,
-  59 arrows on 19×26 by level 8, 144 arrows on 32×50 by level 20,
-  224 arrows on 42×63 by level 40, 304 arrows on 47×73 for the finale — and
-  the "who must go before whom" chains get longer all the way. The last
-  twenty levels pack more arrows onto a board that hardly grows, so the
-  endgame gets tighter, not just wider.
+  by construction. 5 arrows on a 5×6 board to learn on, up to 28 on 12×18 —
+  but the count is not the difficulty. What climbs is how few arrows can
+  move at once: for most of the game there are a couple of choices, and from
+  level 41 the board offers exactly one. Finding it is the puzzle.
 - **3 hints per level** light up an arrow that can go right now.
-- **Zoom** in/out (buttons or pinch, up to 4×) — the late boards need it.
 - **One ink.** Arrows are thin dark lines like a printed puzzle; only the
   hint glow and a blocked bump add colour.
 - **Grid lines** are an earned toggle: clear level 4 to unlock them.

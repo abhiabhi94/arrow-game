@@ -23,9 +23,9 @@ void main() {
           reason: 'level ${spec.level} $a',
         );
       }
-      // Dense like a printed puzzle: at least four cells in five are used.
+      // Dense like a printed puzzle: at least five cells in six are used.
       final used = p.arrows.fold<int>(0, (n, a) => n + a.length);
-      expect(used / spec.cellCount, greaterThanOrEqualTo(0.8), reason: 'level ${spec.level} fill');
+      expect(used / spec.cellCount, greaterThanOrEqualTo(0.84), reason: 'level ${spec.level} fill');
       expect(sw.elapsedMilliseconds, lessThan(6000), reason: 'level ${spec.level} too slow');
     }
   });
@@ -42,8 +42,29 @@ void main() {
   test('later levels are more tangled than the first', () {
     final first = puzzleForLevel(specForLevel(1));
     final last = puzzleForLevel(specForLevel(totalLevels));
-    expect(last.dependencyDepth, greaterThan(first.dependencyDepth));
-    expect(last.difficultyScore, greaterThan(first.difficultyScore * 10));
+    expect(last.dependencyDepth, greaterThan(first.dependencyDepth * 3));
+    expect(last.difficultyScore, greaterThan(first.difficultyScore * 4));
+  });
+
+  test('the endgame takes the choice away: one move at a time', () {
+    // Levels 1-40 leave a choice; from 41 the board offers one move and the
+    // dependency chain runs most of its length. That step is the endgame.
+    for (final spec in levelSpecs.where((s) => s.level >= 45)) {
+      final p = puzzleForLevel(spec);
+      expect(p.meanOpenMoves, lessThanOrEqualTo(1.6), reason: 'level ${spec.level} mean');
+      expect(p.dependencyDepth / p.arrowCount, greaterThan(0.5), reason: 'level ${spec.level}');
+    }
+    final mid = puzzleForLevel(specForLevel(20));
+    expect(mid.meanOpenMoves, greaterThan(1.4));
+  });
+
+  test('every board fits a phone screen with no zoom', () {
+    // The cap that makes the game tappable: 12x18 keeps a cell near 29 pt on
+    // a 360x800 phone, so the whole puzzle is visible and a tap lands where
+    // it looks. Nothing in the table may outgrow it.
+    for (final spec in levelSpecs) {
+      expect(spec.width * spec.height, lessThanOrEqualTo(12 * 18), reason: 'level ${spec.level}');
+    }
   });
 
   test('no level is trivially free: some arrow must wait its turn', () {
@@ -80,7 +101,6 @@ void main() {
     expect(candidatesFor(60), 10);
     expect(candidatesFor(170), kMinCandidates);
     expect(candidatesFor(224), kMinCandidates);
-    expect(candidatesFor(304), kMinCandidates);
   });
 
   test('a board that holds the choice beats a tighter one that spreads', () {

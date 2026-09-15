@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../ui/colors.dart';
 
-/// The row under the board: hint (with hints-left badge), grid-lines toggle
-/// (locked until earned), zoom in and zoom out.
+/// The row under the board: hint (with hints-left badge) and the grid-lines
+/// toggle (locked until earned). There is no zoom — every board fits the
+/// screen.
 class BoardToolbar extends StatelessWidget {
   const BoardToolbar({
     super.key,
@@ -15,10 +16,6 @@ class BoardToolbar extends StatelessWidget {
     required this.gridUnlockLevel,
     required this.gridOn,
     required this.onToggleGrid,
-    required this.onZoomIn,
-    required this.onZoomOut,
-    required this.canZoomIn,
-    required this.canZoomOut,
   });
 
   final int hintsLeft;
@@ -30,10 +27,6 @@ class BoardToolbar extends StatelessWidget {
   final int gridUnlockLevel;
   final bool gridOn;
   final VoidCallback? onToggleGrid;
-  final VoidCallback? onZoomIn;
-  final VoidCallback? onZoomOut;
-  final bool canZoomIn;
-  final bool canZoomOut;
 
   @override
   Widget build(BuildContext context) {
@@ -55,18 +48,6 @@ class BoardToolbar extends StatelessWidget {
           icon: gridUnlocked ? Icons.grid_4x4_rounded : Icons.lock_rounded,
           active: gridUnlocked && gridOn,
           onPressed: gridUnlocked ? onToggleGrid : null,
-        ),
-        const SizedBox(width: 12),
-        _ToolButton(
-          tooltip: l10n.toolZoomIn,
-          icon: Icons.zoom_in_rounded,
-          onPressed: canZoomIn ? onZoomIn : null,
-        ),
-        const SizedBox(width: 12),
-        _ToolButton(
-          tooltip: l10n.toolZoomOut,
-          icon: Icons.zoom_out_rounded,
-          onPressed: canZoomOut ? onZoomOut : null,
         ),
       ],
     );

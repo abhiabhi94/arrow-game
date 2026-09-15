@@ -58,7 +58,7 @@ const LevelSpec _tutorialSpec = LevelSpec(
 
 /// The one-time walkthrough: three steps, the first two played for real on
 /// tiny boards (tap an arrow out; feel a blocked one bump), the third a
-/// glance at lives, clock, hints and zoom. Minimal, and hard to get wrong.
+/// glance at lives, clock and hints. Minimal, and hard to get wrong.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key, this.replay = false});
 
@@ -310,7 +310,7 @@ class _SummaryStep extends StatelessWidget {
       ('❤️', l10n.onboardRuleLives),
       ('⏱️', l10n.onboardRuleClock),
       ('💡', l10n.onboardRuleHints),
-      ('🔍', l10n.onboardRuleZoom),
+      ('📱', l10n.onboardRuleFits),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

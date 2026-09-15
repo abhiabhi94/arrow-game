@@ -244,11 +244,11 @@ abstract class AppLocalizations {
   /// **'Stuck? 3 hints per level light up a free arrow'**
   String get onboardRuleHints;
 
-  /// No description provided for @onboardRuleZoom.
+  /// No description provided for @onboardRuleFits.
   ///
   /// In en, this message translates to:
-  /// **'Big boards later — pinch or tap to zoom'**
-  String get onboardRuleZoom;
+  /// **'Every board fits the screen — no zooming, no scrolling'**
+  String get onboardRuleFits;
 
   /// No description provided for @homeStars.
   ///
@@ -771,18 +771,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Grid lines unlock after level {level}'**
   String toolGridLocked(int level);
-
-  /// No description provided for @toolZoomIn.
-  ///
-  /// In en, this message translates to:
-  /// **'Zoom in'**
-  String get toolZoomIn;
-
-  /// No description provided for @toolZoomOut.
-  ///
-  /// In en, this message translates to:
-  /// **'Zoom out'**
-  String get toolZoomOut;
 
   /// No description provided for @gridUnlockedToast.
   ///
