@@ -35,7 +35,7 @@ class GameState {
     required this.blockedCell,
     required this.moveToken,
     this.resumeOffered = false,
-    this.continuedAfterLoss = false,
+    this.continues = 0,
   });
 
   /// The board is still being generated.
@@ -109,17 +109,15 @@ class GameState {
   /// player to choose between picking it up and starting over.
   final bool resumeOffered;
 
-  /// True once the player has spent every life and chosen to carry on rather
-  /// than replay. Further blocked taps cost nothing — there is nothing left
-  /// to take — and the clear is worth one star.
-  final bool continuedAfterLoss;
+  /// How many times the player has spent the allowance and chosen to carry
+  /// on rather than replay. Each is asked for separately: carrying on buys
+  /// exactly one more mistake, and the next one asks again.
+  final int continues;
 
   int get level => spec.level;
   int get arrowsOut => removed.length;
   int get arrowsTotal => puzzle?.arrowCount ?? spec.arrows;
-  /// Lives this level grants; the denser late boards grant more.
-  int get lives => livesForLevel(level);
-  int get livesLeft => (lives - mistakes).clamp(0, lives);
+  int get livesLeft => (maxLives - mistakes).clamp(0, maxLives);
   int get remainingMs =>
       (spec.timeLimitMs - elapsedMs).clamp(0, spec.timeLimitMs);
 
@@ -140,7 +138,7 @@ class GameState {
   /// is always worth at least one, even on an allowance the player blew and
   /// played on past, so a zero here only ever means "not cleared".
   int get stars => phase == GamePhase.cleared
-      ? max(1, starsForMistakes(mistakes, level))
+      ? max(1, starsForMistakes(mistakes))
       : 0;
 
   GameState copyWith({
@@ -158,7 +156,7 @@ class GameState {
     bool clearBlocked = false,
     int? moveToken,
     bool? resumeOffered,
-    bool? continuedAfterLoss,
+    int? continues,
   }) =>
       GameState(
         spec: spec,
@@ -175,6 +173,6 @@ class GameState {
         blockedCell: clearBlocked ? null : (blockedCell ?? this.blockedCell),
         moveToken: moveToken ?? this.moveToken,
         resumeOffered: resumeOffered ?? this.resumeOffered,
-        continuedAfterLoss: continuedAfterLoss ?? this.continuedAfterLoss,
+        continues: continues ?? this.continues,
       );
 }

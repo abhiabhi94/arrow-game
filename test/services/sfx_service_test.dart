@@ -26,7 +26,10 @@ void main() {
       now = now.add(const Duration(milliseconds: 100));
     }
     expect(s.streak, kWhooshStreakMax);
-    expect(backend.calls.last, '$kWhooshSound@${(1 + kWhooshStreakMax * kWhooshStreakStep).toStringAsFixed(2)}');
+    expect(
+      backend.calls.last,
+      '$kWhooshSound@${(1 + kWhooshStreakMax * kWhooshStreakStep).toStringAsFixed(2)}',
+    );
     now = now.add(kWhooshStreakWindow + const Duration(milliseconds: 1));
     s.whoosh();
     expect(s.streak, 0);

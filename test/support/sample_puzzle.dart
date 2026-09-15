@@ -41,23 +41,27 @@ LevelSpec sampleSpecFor(int level) => LevelSpec(
   timeLimitMs: 30000,
 );
 
-/// A 5x5 board with three separately blocked arrows, for the rules that need
-/// more than one dead end — running out of lives, and the forgiveness that
-/// makes a *second* run at the same arrow free:
-///   0: (2,0)(2,1)(2,2) ↓ down, ray (2,3),(2,4): free, and the wall the
-///      others run into.
-///   1: (0,0)(1,0) → right, ray (2,0)…: blocked by 0.
-///   2: (0,1)(1,1) → right, ray (2,1)…: blocked by 0.
-///   3: (0,2)(1,2) → right, ray (2,2)…: blocked by 0.
-/// Solve: 0, then 1, 2 and 3 in any order.
+/// A 5x5 board with four separately blocked arrows, for the rules that need
+/// more than one dead end — running out of lives, the forgiveness that makes
+/// a *second* run at the same arrow free, and carrying on past a spent
+/// allowance only to be asked again:
+///   0: (2,0)(2,1)(2,2)(2,3) ↓ down, ray (2,4): free, and the wall the rest
+///      run into.
+///   1..4: (0,y)(1,y) → right for y = 0..3, each blocked by 0.
+/// Solve: 0, then 1, 2, 3 and 4 in any order.
 Puzzle blockedPuzzle() => Puzzle(
   width: 5,
   height: 5,
   arrows: [
-    ArrowPiece(id: 0, cells: const [Cell(2, 0), Cell(2, 1), Cell(2, 2)], heading: Direction.down),
+    ArrowPiece(
+      id: 0,
+      cells: const [Cell(2, 0), Cell(2, 1), Cell(2, 2), Cell(2, 3)],
+      heading: Direction.down,
+    ),
     ArrowPiece(id: 1, cells: const [Cell(0, 0), Cell(1, 0)], heading: Direction.right),
     ArrowPiece(id: 2, cells: const [Cell(0, 1), Cell(1, 1)], heading: Direction.right),
     ArrowPiece(id: 3, cells: const [Cell(0, 2), Cell(1, 2)], heading: Direction.right),
+    ArrowPiece(id: 4, cells: const [Cell(0, 3), Cell(1, 3)], heading: Direction.right),
   ],
 );
 
@@ -66,8 +70,8 @@ LevelSpec blockedSpecFor(int level) => LevelSpec(
   level: level,
   width: 5,
   height: 5,
-  arrows: 4,
+  arrows: 5,
   minLength: 2,
-  maxLength: 3,
+  maxLength: 4,
   timeLimitMs: 30000,
 );

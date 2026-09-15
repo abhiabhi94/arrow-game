@@ -9,6 +9,7 @@ import '../data/level_specs.dart';
 import '../l10n/app_localizations.dart';
 import '../models/bump_motion.dart';
 import '../models/game_state.dart';
+import '../models/reaction_motion.dart';
 import '../providers/game_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/settings_provider.dart';
@@ -58,7 +59,7 @@ const double kCrashJoltPx = 7;
 const EdgeInsets _gutter = EdgeInsets.symmetric(horizontal: 16);
 
 class _GameScreenState extends ConsumerState<GameScreen>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   late final ConfettiController _confetti = ConfettiController(
     duration: const Duration(seconds: 2),
   );
@@ -67,6 +68,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// [BumpMotion] as the board so the jolt and the red flash land on impact.
   late final AnimationController _crash = AnimationController(vsync: this);
   BumpMotion? _crashMotion;
+
+  /// The hop a cleared level does: the whole play column squashes, springs and
+  /// settles. By then the board is empty — every arrow has left — so the
+  /// celebration has to be the screen rather than the arrows.
+  late final AnimationController _hop = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: kHopMs),
+  );
   final TransformationController _zoom = TransformationController();
   double _scale = 1;
   Size _viewport = Size.zero;
@@ -88,6 +97,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _crash.dispose();
+    _hop.dispose();
     _confetti.dispose();
     _zoom.dispose();
     super.dispose();
@@ -179,6 +189,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
           ..forward(from: 0);
       }
       if (next.phase == GamePhase.cleared && prev?.phase != GamePhase.cleared) {
+        _hop.forward(from: 0);
         _newBest = progress.progressFor(widget.level).isNewBest(next.elapsedMs);
         _gridJustUnlocked =
             widget.level == kGridLinesUnlockAfterLevel &&
@@ -237,10 +248,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
               // levels are taller than wide, so the window's height is what
               // sizes them there.
               AnimatedBuilder(
-                animation: _crash,
+                animation: Listenable.merge([_crash, _hop]),
                 builder: (context, child) => Transform.translate(
                   offset: Offset((_crashMotion?.joltAt(_crash.value) ?? 0) * kCrashJoltPx, 0),
-                  child: child,
+                  child: Transform.scale(
+                    scaleX: _hop.isAnimating ? hopScaleX(_hop.value) : 1,
+                    scaleY: _hop.isAnimating ? hopScaleY(_hop.value) : 1,
+                    child: child,
+                  ),
                 ),
                 child: ContentColumn(
                   child: Padding(
@@ -260,7 +275,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                 ),
                               ),
                               const SizedBox(width: 14),
-                              LivesIndicator(livesLeft: state.livesLeft, lives: state.lives),
+                              LivesIndicator(livesLeft: state.livesLeft),
                             ],
                           ),
                         ),
@@ -393,6 +408,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   ],
                 ),
                 GamePhase.cleared => ResultCard(
+                  mood: EmojiMood.cheer,
                   emoji: state.stars == 3 ? '🏆' : '🎉',
                   title: l10n.clearedTitle,
                   body: switch (state.stars) {
@@ -447,6 +463,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   ],
                 ),
                 GamePhase.outOfLives => ResultCard(
+                  mood: EmojiMood.sulk,
                   emoji: '💔',
                   title: l10n.outOfLivesTitle,
                   body: l10n.outOfLivesBody,
@@ -466,6 +483,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   ],
                 ),
                 GamePhase.timeUp => ResultCard(
+                  mood: EmojiMood.sulk,
                   emoji: '⏰',
                   title: l10n.timeUpTitle,
                   body: l10n.timeUpBody(state.arrowsOut, state.arrowsTotal),

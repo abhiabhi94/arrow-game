@@ -14,7 +14,7 @@ class SavedGame {
     required this.hintsLeft,
     required this.elapsedMs,
     this.bumped = const <int>[],
-    this.continuedAfterLoss = false,
+    this.continues = 0,
   });
 
   /// A snapshot of [state], which must have its board and be mid-level.
@@ -25,7 +25,7 @@ class SavedGame {
         mistakes: state.mistakes,
         hintsLeft: state.hintsLeft,
         elapsedMs: state.elapsedMs,
-        continuedAfterLoss: state.continuedAfterLoss,
+        continues: state.continues,
       );
 
   /// Rebuilds a snapshot from [toJson]; null when the map is not one.
@@ -55,7 +55,12 @@ class SavedGame {
       mistakes: mistakes,
       hintsLeft: hintsLeft,
       elapsedMs: elapsedMs,
-      continuedAfterLoss: json['continuedAfterLoss'] == true,
+      continues: switch (json['continues']) {
+        final int n when n >= 0 => n,
+        // The flag this replaced, from a snapshot written before the count.
+        true => 1,
+        _ => 0,
+      },
     );
   }
 
@@ -68,8 +73,8 @@ class SavedGame {
   /// cost a life.
   final List<int> bumped;
 
-  /// Whether the player spent the allowance and chose to play on.
-  final bool continuedAfterLoss;
+  /// How many times the player spent the allowance and chose to play on.
+  final int continues;
   final int mistakes;
   final int hintsLeft;
   final int elapsedMs;
@@ -86,7 +91,7 @@ class SavedGame {
         'mistakes': mistakes,
         'hintsLeft': hintsLeft,
         'elapsedMs': elapsedMs,
-        'continuedAfterLoss': continuedAfterLoss,
+        'continues': continues,
       };
 
   @override
@@ -96,7 +101,7 @@ class SavedGame {
       other.mistakes == mistakes &&
       other.hintsLeft == hintsLeft &&
       other.elapsedMs == elapsedMs &&
-      other.continuedAfterLoss == continuedAfterLoss &&
+      other.continues == continues &&
       other.removed.length == removed.length &&
       other.removed.every(removed.contains) &&
       other.bumped.length == bumped.length &&
@@ -110,7 +115,7 @@ class SavedGame {
         elapsedMs,
         removed.length,
         bumped.length,
-        continuedAfterLoss,
+        continues,
       );
 
   @override

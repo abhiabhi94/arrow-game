@@ -5,18 +5,11 @@ import '../l10n/app_localizations.dart';
 import '../models/level_progress.dart';
 import '../ui/colors.dart';
 
-/// Hearts for the lives left; a lost heart shrinks and greys out. [lives] is
-/// how many the level grants — the later, denser boards grant more, and the
-/// hearts shrink so the row still fits beside the clock on a narrow phone.
+/// Hearts for the lives left; a lost heart shrinks and greys out.
 class LivesIndicator extends StatelessWidget {
-  const LivesIndicator({
-    super.key,
-    required this.livesLeft,
-    this.lives = maxLives,
-  });
+  const LivesIndicator({super.key, required this.livesLeft});
 
   final int livesLeft;
-  final int lives;
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +19,13 @@ class LivesIndicator extends StatelessWidget {
       label: l10n.hudLives(livesLeft),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: List<Widget>.generate(lives, (i) {
+        children: List<Widget>.generate(maxLives, (i) {
           final alive = i < livesLeft;
           final heart = Padding(
-            padding: EdgeInsets.symmetric(horizontal: lives > 3 ? 1 : 2),
+            padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Icon(
               alive ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-              size: switch (lives) { <= 3 => 26.0, 4 => 23.0, _ => 20.0 },
+              size: 26,
               color: alive ? p.heartFull : p.heartEmpty,
             ),
           );

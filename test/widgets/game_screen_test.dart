@@ -166,29 +166,26 @@ void main() {
     await _settle(tester, 400);
     expect(notifier.state.phase, GamePhase.playing);
     expect(find.text('Out of lives'), findsNothing);
-    // The arrows already out stay out, and no heart comes back.
+    // No heart comes back, and the arrows already out stay out.
     expect(find.bySemanticsLabel('0 lives left'), findsOneWidget);
 
-    // Clearing from here is still a clear, worth one star.
+    // The reprieve is one mistake long: a fresh dead end asks again.
+    await _tapCell(tester, const Cell(1, 3), width: 5); // arrow 4
+    await _settle(tester, 1200);
+    expect(find.text('Out of lives'), findsOneWidget);
+    await tester.tap(find.text('Keep going'));
+    await _settle(tester, 400);
+    expect(notifier.state.continues, 2);
+
+    // Clearing from here is still a clear.
     await _tapCell(tester, const Cell(2, 0), width: 5); // arrow 0, the wall
     await _tapCell(tester, const Cell(1, 0), width: 5);
     await _tapCell(tester, const Cell(1, 1), width: 5);
     await _tapCell(tester, const Cell(1, 2), width: 5);
+    await _tapCell(tester, const Cell(1, 3), width: 5);
     await _settle(tester, 1500);
     expect(notifier.state.phase, GamePhase.cleared);
-    expect(notifier.state.stars, 1);
-    expect(container.read(progressProvider.notifier).progressFor(1).stars, 1);
-  });
-
-  testWidgets('the late levels show their extra hearts beside the clock', (tester) async {
-    final container = await _pumpGame(tester, level: 26);
-    expect(find.byIcon(Icons.favorite_rounded), findsNWidgets(5));
-    expect(find.bySemanticsLabel('5 lives left'), findsOneWidget);
-
-    container.read(gameProvider(26).notifier).tapArrow(2); // blocked
-    await _settle(tester, 1000);
-    expect(find.byIcon(Icons.favorite_rounded), findsNWidgets(4));
-    expect(find.byIcon(Icons.favorite_border_rounded), findsOneWidget);
+    expect(container.read(progressProvider.notifier).progressFor(1).completed, isTrue);
   });
 
   test('the zoom ceiling stretches until a cell can reach a fingertip', () {
@@ -636,6 +633,7 @@ void main() {
     notifier.tapArrow(1);
     notifier.tapArrow(2);
     notifier.tapArrow(3);
+    notifier.tapArrow(4);
     await _settle(tester, 1500);
     expect(find.text('Made it! Fewer slips next time for more stars.'), findsOneWidget);
     expect(find.text('Tap an arrow to slide it out the way it points.'), findsNothing);

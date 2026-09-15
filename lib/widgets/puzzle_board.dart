@@ -8,6 +8,7 @@ import '../engine/direction.dart';
 import '../engine/puzzle.dart';
 import '../models/bump_motion.dart';
 import '../models/game_state.dart';
+import '../models/reaction_motion.dart';
 import '../ui/colors.dart';
 
 /// How far the arrow that was hit is shoved along, in cells, at full jolt.
@@ -60,6 +61,10 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   /// Arrows sliding out: id → progress controller.
   final Map<int, AnimationController> _exits = <int, AnimationController>{};
 
+  /// Runs the slump when a level ends badly: every arrow still on the board
+  /// droops and tilts, like the puzzle giving up.
+  AnimationController? _slump;
+
   /// Pointers on the board now, and the most this gesture has seen. A pinch
   /// that never travels far enough to be read as a pan can end as a tap,
   /// which would play an arrow the player was only zooming in on.
@@ -80,12 +85,14 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   void initState() {
     super.initState();
     _syncHintPing();
+    _syncSlump();
   }
 
   @override
   void didUpdateWidget(PuzzleBoard old) {
     super.didUpdateWidget(old);
     _syncHintPing();
+    _syncSlump();
     final s = widget.state;
     if (s.puzzle != old.state.puzzle || s.moveToken < old.state.moveToken) {
       // A restart: forget every animation.
@@ -150,6 +157,26 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     });
   }
 
+  /// Starts the slump on a losing ending, and clears it on the way out of
+  /// one (a restart, or carrying on past a spent allowance).
+  void _syncSlump() {
+    final losing =
+        widget.state.phase == GamePhase.outOfLives || widget.state.phase == GamePhase.timeUp;
+    if (losing == (_slump != null)) return;
+    if (losing) {
+      _slump =
+          AnimationController(
+              vsync: this,
+              duration: const Duration(milliseconds: kSlumpMs),
+            )
+            ..addListener(() => setState(() {}))
+            ..forward();
+    } else {
+      _slump?.dispose();
+      _slump = null;
+    }
+  }
+
   /// Runs the ping while a hint points somewhere, and stops it otherwise.
   void _syncHintPing() {
     final showing = widget.state.hintArrowId != null;
@@ -177,6 +204,8 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
 
   @override
   void dispose() {
+    _slump?.dispose();
+    _slump = null;
     _hintPing?.dispose();
     _hintPing = null;
     _disposeAll();
@@ -277,6 +306,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
                     showGrid: widget.showGrid,
                     exits: <int, double>{for (final e in _exits.entries) e.key: e.value.value},
                     hintPing: _hintPing?.value,
+                    slump: _slump?.value,
                     bumpId: _bumpId,
                     bump: _bump?.value,
                     bumpMotion: _bumpMotion,
@@ -298,6 +328,7 @@ class _BoardPainter extends CustomPainter {
     required this.showGrid,
     required this.exits,
     required this.hintPing,
+    required this.slump,
     required this.bumpId,
     required this.bump,
     required this.bumpMotion,
@@ -312,6 +343,9 @@ class _BoardPainter extends CustomPainter {
 
   /// The hint ring's progress (0..1), or null when no hint is showing.
   final double? hintPing;
+
+  /// The slump's progress (0..1) on a losing ending, else null.
+  final double? slump;
 
   /// The bumping arrow, its progress (0..1) and its motion.
   final int? bumpId;
@@ -383,7 +417,19 @@ class _BoardPainter extends CustomPainter {
         canvas.save();
         canvas.translate(push.dx, push.dy);
       }
+      // The slump: each arrow droops and leans by its own amount, about its
+      // own middle, so a lost level sags raggedly instead of sliding as one
+      // block.
+      final slumping = slump != null && !state.removed.contains(arrow.id);
+      if (slumping) {
+        final pivot = _center(arrow.cells[arrow.length ~/ 2], cs);
+        canvas.save();
+        canvas.translate(pivot.dx, pivot.dy + slumpDropFor(arrow.id, slump!) * cs);
+        canvas.rotate(slumpTiltFor(arrow.id, slump!));
+        canvas.translate(-pivot.dx, -pivot.dy);
+      }
       _paintArrow(canvas, arrow, cs, offset, false);
+      if (slumping) canvas.restore();
       if (shoved) canvas.restore();
     }
     _paintHint(canvas, size, cs);
@@ -526,6 +572,7 @@ class _BoardPainter extends CustomPainter {
       old.state.removed != state.removed ||
       old.state.hintArrowId != state.hintArrowId ||
       old.hintPing != hintPing ||
+      old.slump != slump ||
       old.state.blockedCell != state.blockedCell ||
       old.state.moveToken != state.moveToken ||
       old.showGrid != showGrid ||

@@ -79,8 +79,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardTitle3 => 'That\'s the whole game';
 
   @override
-  String get onboardRuleLives =>
-      'A bump costs a life — three to start, more on the big boards';
+  String get onboardRuleLives => '3 lives per level — a bump costs a life';
 
   @override
   String get onboardRuleClock =>

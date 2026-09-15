@@ -229,7 +229,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardRuleLives.
   ///
   /// In en, this message translates to:
-  /// **'A bump costs a life — three to start, more on the big boards'**
+  /// **'3 lives per level — a bump costs a life'**
   String get onboardRuleLives;
 
   /// No description provided for @onboardRuleClock.

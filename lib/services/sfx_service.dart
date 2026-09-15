@@ -9,10 +9,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/settings_provider.dart';
 
-/// The exit whoosh and the blocked knock, relative to `assets/` (see
-/// `tool/make_sfx.py`).
+/// The exit whoosh, the blocked knock and the two endings, relative to
+/// `assets/` (see `tool/make_sfx.py`).
 const String kWhooshSound = 'audio/whoosh.wav';
 const String kBumpSound = 'audio/bump.wav';
+const String kWinSound = 'audio/win.wav';
+const String kLoseSound = 'audio/lose.wav';
 
 /// Consecutive exits within this window pitch the swoosh up a notch each,
 /// so a quick run of taps climbs in pitch.
@@ -83,11 +85,8 @@ class AudioPlayersSfxBackend implements SfxBackend {
 // coverage:ignore-end
 
 class SfxService {
-  SfxService(
-    this._enabled, {
-    required this.backend,
-    DateTime Function()? now,
-  }) : _now = now ?? DateTime.now;
+  SfxService(this._enabled, {required this.backend, DateTime Function()? now})
+    : _now = now ?? DateTime.now;
 
   final bool Function() _enabled;
   final SfxBackend backend;
@@ -129,13 +128,29 @@ class SfxService {
     if (!_enabled()) return;
     backend.play(kBumpSound, rate: 1.0);
   }
+
+  /// The level cleared.
+  void win() {
+    _endStreak();
+    if (!_enabled()) return;
+    backend.play(kWinSound, rate: 1.0);
+  }
+
+  /// The allowance spent, or the clock run out.
+  void lose() {
+    _endStreak();
+    if (!_enabled()) return;
+    backend.play(kLoseSound, rate: 1.0);
+  }
+
+  void _endStreak() {
+    _streak = 0;
+    _lastZip = null;
+  }
 }
 
 // coverage:ignore-start
 final sfxProvider = Provider<SfxService>(
-  (ref) => SfxService(
-    () => ref.read(settingsProvider).sfxOn,
-    backend: AudioPlayersSfxBackend(),
-  ),
+  (ref) => SfxService(() => ref.read(settingsProvider).sfxOn, backend: AudioPlayersSfxBackend()),
 );
 // coverage:ignore-end

@@ -27,7 +27,7 @@
   "onboardBumped2": "Bumped! In a real level that costs a life. Clear the top one first, then the other.",
   "onboardDone2": "Order matters — you've got it.",
   "onboardTitle3": "That's the whole game",
-  "onboardRuleLives": "A bump costs a life — three to start, more on the big boards",
+  "onboardRuleLives": "3 lives per level — a bump costs a life",
   "onboardRuleClock": "Beat the clock — plenty of time, but it ticks",
   "onboardRuleHints": "Stuck? 3 hints per level light up a free arrow",
   "onboardRuleZoom": "Big boards later — pinch or tap to zoom",

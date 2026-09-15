@@ -14,6 +14,15 @@ bump.wav — the crash of an arrow running into another: a sharp crack of
 noise over a heavy thump whose pitch sags as it dies, then a lighter second
 knock as the arrow springs back, all with a touch of saturation for crunch.
 
+win.wav — the level cleared: three plucked notes up a major triad with a
+fourth on top, each ringing over the last, ending on a soft shimmer. Tonal
+on purpose — this is the one moment the game is allowed to sing.
+
+lose.wav — the allowance spent, or the clock run out: a comic deflation. A
+sagging note bends down a minor sixth with a wobble in its tail, over a
+puff of air, and lands on a small flat thud. Silly rather than harsh: the
+level is not over, and nobody needs punishing.
+
 WAV (16-bit mono, 44.1 kHz) plays everywhere audioplayers does, iOS included.
 """
 import math
@@ -101,6 +110,76 @@ def bump_sound(seconds=0.5):
     return [s / peak * 0.98 for s in out]
 
 
+def pluck(phase0, freq, t, decay):
+    """One plucked note: a sine with two quiet harmonics and a fast decay,
+    which on a phone speaker reads as a marimba-ish pluck."""
+    env = math.exp(-t * decay)
+    return env * (
+        math.sin(phase0 + 2 * math.pi * freq * t)
+        + 0.35 * math.sin(phase0 + 2 * math.pi * freq * 2 * t) * math.exp(-t * 3.0)
+        + 0.12 * math.sin(phase0 + 2 * math.pi * freq * 3 * t) * math.exp(-t * 6.0)
+    )
+
+
+def win_sound(seconds=1.15):
+    """Cleared: C-E-G-C plucked up the triad, 90 ms apart, each ringing on
+    over the next, with a breath of shimmer over the top."""
+    n = int(RATE * seconds)
+    # C5, E5, G5, C6 — a plain major arpeggio; anything cleverer reads as a
+    # ringtone.
+    notes = [(523.25, 0.00), (659.25, 0.09), (783.99, 0.18), (1046.50, 0.27)]
+    random.seed(23)
+    air = BandPass(q=1.5)
+    out = []
+    for i in range(n):
+        t = i / RATE
+        s = 0.0
+        for freq, start in notes:
+            dt = t - start
+            if dt >= 0:
+                # The last note rings longest: it is the one left hanging.
+                decay = 3.4 if start < 0.27 else 2.2
+                s += pluck(0.0, freq, dt, decay) * min(1.0, dt / 0.004)
+        # A quiet high shimmer that fades in under the last note and out.
+        sparkle = air.tick(random.uniform(-1.0, 1.0), 5_200.0)
+        s += 0.18 * sparkle * math.exp(-abs(t - 0.42) * 4.0)
+        out.append(math.tanh(0.9 * s))
+    peak = max(abs(v) for v in out)
+    return [v / peak * 0.9 for v in out]
+
+
+def lose_sound(seconds=0.95):
+    """Out of lives, or out of time: a deflating slide down a minor sixth
+    with a wobble, a puff of air, and a small flat thud at the bottom."""
+    random.seed(29)
+    n = int(RATE * seconds)
+    air = BandPass(q=1.1)
+    out = []
+    phase = 0.0
+    thud_at = 0.62
+    for i in range(n):
+        t = i / RATE
+        u = min(1.0, t / thud_at)
+        # A4 sagging to C4 — a minor sixth down — easing as it goes, with a
+        # slow wobble that gets wider as it sinks. That wobble is the joke.
+        freq = 440.0 * (261.63 / 440.0) ** (u ** 0.8)
+        freq *= 1.0 + 0.02 * u * math.sin(2 * math.pi * 5.5 * t)
+        phase += 2 * math.pi * freq / RATE
+        # Soft attack, then it thins out as it falls.
+        env = min(1.0, t / 0.02) * math.exp(-t * 1.6) * (1.0 - 0.35 * u)
+        tone = math.sin(phase) * env
+        # The puff: quiet air sliding down with the note.
+        puff = 0.22 * air.tick(random.uniform(-1.0, 1.0), 900.0 - 500.0 * u) * env
+        # The landing: a short, dull, deliberately unimpressive thud.
+        dt = t - thud_at
+        thud = 0.0
+        if dt >= 0:
+            thud = 0.8 * math.sin(2 * math.pi * 92.0 * dt) * math.exp(-dt * 24.0)
+        out.append(math.tanh(1.4 * (tone + puff + thud)))
+    peak = max(abs(v) for v in out)
+    return [v / peak * 0.92 for v in out]
+
+
 def write(path, samples):
     path.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(path), "wb") as w:
@@ -115,3 +194,5 @@ if __name__ == "__main__":
     root = Path(__file__).resolve().parent.parent
     write(root / "assets" / "audio" / "whoosh.wav", whoosh_sound())
     write(root / "assets" / "audio" / "bump.wav", bump_sound())
+    write(root / "assets" / "audio" / "win.wav", win_sound())
+    write(root / "assets" / "audio" / "lose.wav", lose_sound())

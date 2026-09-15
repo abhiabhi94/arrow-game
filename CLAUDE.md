@@ -11,13 +11,12 @@ it leaves the board. An arrow whose exit path runs into another arrow bumps
 back and costs a life. 40 fixed, procedurally generated levels on a steep
 curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50 by level
 20 → 224 on 42×63), drawn in a
-single ink like a printed puzzle, 3 lives per level — 4 from level 16 and 5
-from level 26, where a cell is drawn at barely a dozen pixels (spend them all
-and a card offers "Keep going" for a one-star clear, or a fresh start), a
-clock on every level ("Time's up" → replay the same level), 3 hints per
-level, zoom in/out, a grid-lines toggle earned after level 4 and on by
-default from there, 1–3 stars per clear, local progress, light/dark theme,
-haptic feedback.
+single ink like a printed puzzle, 3 lives per level (spend them all and a
+card offers "Keep going", which buys one more mistake and then asks again,
+or a fresh start), a clock on every level ("Time's up" → replay the same
+level), 3 hints per level, zoom in/out, a grid-lines toggle earned after
+level 4 and on by default from there, 1–3 stars per clear, local progress,
+light/dark theme, haptic feedback.
 
 ## Build & Development Commands
 
@@ -263,6 +262,15 @@ Key patterns:
   a deliberate hit. The board's `zoom` keeps the slop a fixed size on screen.
   The HUD and toolbar keep the side gutter and the board runs edge to edge,
   which is ~9% more cell on the dense levels.
+- **Endings react** (`models/reaction_motion.dart`, pure Dart like
+  `bump_motion.dart`): a cleared level makes the whole play column **hop**
+  (`hopScaleX/Y` — a squash, a spring past normal, a settle; the board itself
+  is empty by then, so the celebration has to be the screen), and a spent
+  allowance or a run-out clock makes every arrow left on the board **slump**
+  (`slumpDropFor`/`slumpTiltFor` droop and tilt each arrow by its own amount,
+  jittered from its id so the board sags raggedly rather than sliding as one
+  block). `ResultCard.mood` gives the card's emoji the matching manner:
+  `cheer` over-spins and boings in, `sulk` flops down and shakes its head.
 - **Board look:** one ink (`palette.arrowInk`), thin strokes (≤5 px), small
   heads, no frame — the arrows sit straight on the page. The hint glow and
   the blocked flash are the only colour on the board. Slide-out and bump are
@@ -281,7 +289,13 @@ Key patterns:
   noise (no tone — a chirp reads as a laser), the bump a sharp crack over a
   sagging thump and a low rumble with a lighter rebound knock — half a
   second and near full scale, since it announces a lost life.
-  `Settings.sfxOn` gates both (on by default).
+  It also plays `assets/audio/win.wav` when a level is cleared (four plucked
+  notes up a major triad — the one moment the game sings) and
+  `assets/audio/lose.wav` on a spent allowance or a run-out clock (a comic
+  deflation: a note sagging a minor sixth with a wobble, onto a small flat
+  thud). On a life-losing bump the sting waits `kEndingStingMs` after the
+  knock so the two read as two things. `Settings.sfxOn` gates all four (on by
+  default).
 - **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
   "Game" by The_Mountain (Pixabay Content License, `assets/audio/game.mp3`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
@@ -318,21 +332,18 @@ Key patterns:
   guarantees a level is playable. The clock is brisk: ~1.8 s an arrow on
   levels 1–4, 2.2 s on 5–9 and 2.6 s from 10 (plus ~18 s) — 27 s on level
   1, ten minutes on the finale — so a level is a sprint of quick reads.
-- **Lives / stars:** `models/level_progress.dart`. `livesForLevel` grants
-  `maxLives` (3), then 4 past `kFourthLifeAfterLevel` (15) and 5 past
-  `kFifthLifeAfterLevel` (25) — the late boards are tapped at ~12 px a cell,
-  so a slip there is as often the finger's fault as the player's.
-  `starsForMistakes(mistakes, level)` splits the level's allowance: flawless
-  is always three stars, the better half of the rest two, the remainder one,
-  which leaves the three-life levels rated exactly as before. Spending the
-  allowance is no longer the end of the level: the "Out of lives" card offers
-  **Keep going** (`GameNotifier.keepGoing`), which plays on with
-  `GameState.continuedAfterLoss` set — further bumps cost nothing, the clock
-  keeps running so time is still a real ending, and the clear is worth one
-  star (`GameState.stars` floors a clear at one, so a zero only ever means
-  "not cleared"). A second run at an arrow already in `GameState.bumped` is
-  free too: that lesson is paid for, and a 200-arrow board is too big to
-  hold every dead end in your head. Both travel in the saved game.
+- **Lives / stars:** `models/level_progress.dart`. `maxLives` is 3 on every
+  level and `starsForMistakes(mistakes)` is the plain rule (flawless three,
+  one slip two, two slips one). Spending the allowance is not the end of the
+  level: the "Out of lives" card offers **Keep going**
+  (`GameNotifier.keepGoing`), which plays on from where the board stood with
+  the clock where it was. The reprieve is **one mistake long** — the next
+  fresh bump ends the attempt and asks again — and `GameState.continues`
+  counts how many times it was taken. `GameState.stars` floors a clear at one
+  star, so a zero there only ever means "not cleared". A second run at an
+  arrow already in `GameState.bumped` is free: that lesson is paid for, and a
+  200-arrow board is too big to hold every dead end in your head. Both
+  `bumped` and `continues` travel in the saved game.
 
 ## Testing
 

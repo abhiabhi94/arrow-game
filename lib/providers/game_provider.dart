@@ -31,6 +31,10 @@ typedef SnapshotCallback = void Function(GameState state);
 /// The clock's resolution.
 const int kTickMs = 100;
 
+/// How long after the knock of a life-losing bump the ending sting plays, so
+/// the two read as two things rather than one muddle.
+const int kEndingStingMs = 320;
+
 /// Builds a level's board; the default runs on a background isolate so the
 /// big late boards never freeze the UI (on web it runs inline).
 typedef PuzzleBuilder = Future<Puzzle> Function(LevelSpec spec);
@@ -73,6 +77,7 @@ class GameNotifier extends StateNotifier<GameState> {
   final SavedGame? savedGame;
   Timer? _timer;
   Timer? _impact;
+  Timer? _sting;
   final Completer<void> _ready = Completer<void>();
 
   /// Completes once the board is on screen (useful in tests).
@@ -97,7 +102,7 @@ class GameNotifier extends StateNotifier<GameState> {
         hintsLeft: saved.hintsLeft,
         elapsedMs: saved.elapsedMs,
         resumeOffered: true,
-        continuedAfterLoss: saved.continuedAfterLoss,
+        continues: saved.continues,
       );
     } else {
       state = GameState.fresh(spec, puzzle);
@@ -112,7 +117,7 @@ class GameNotifier extends StateNotifier<GameState> {
       saved.hasProgress &&
       saved.removed.length < puzzle.arrowCount &&
       saved.removed.every((id) => id >= 0 && id < puzzle.arrowCount) &&
-      (saved.continuedAfterLoss || saved.mistakes < livesForLevel(spec.level)) &&
+      (saved.continues > 0 || saved.mistakes < maxLives) &&
       saved.hintsLeft >= 0 &&
       saved.hintsLeft <= maxHints &&
       saved.elapsedMs >= 0 &&
@@ -141,6 +146,7 @@ class GameNotifier extends StateNotifier<GameState> {
       );
       sfx?.whoosh();
       if (cleared) {
+        sfx?.win();
         haptics?.victory();
         onCleared?.call(spec.level, state.elapsedMs, state.stars);
       } else {
@@ -149,13 +155,14 @@ class GameNotifier extends StateNotifier<GameState> {
       _snapshot();
       return;
     }
-    // Two bumps the board does not charge for: a second run at an arrow that
-    // has already bumped (that lesson is paid for, and a 200-arrow board is
-    // far too big to hold every dead end in your head), and any bump at all
-    // once the player has spent the allowance and chosen to play on.
-    final free = state.bumped.contains(id) || state.continuedAfterLoss;
+    // One bump the board does not charge for: a second run at an arrow that
+    // has already bumped. That lesson is paid for, and a 200-arrow board is
+    // far too big to hold every dead end in your head.
+    final free = state.bumped.contains(id);
     final mistakes = free ? state.mistakes : state.mistakes + 1;
-    final lost = !state.continuedAfterLoss && mistakes >= state.lives;
+    // Past the allowance every fresh mistake asks again — carrying on buys
+    // exactly one more, never an open licence.
+    final lost = !free && mistakes >= maxLives;
     if (lost) _stopTimer();
     final blockedCell = puzzle.firstBlockedCell(id, state.removed)!;
     state = state.copyWith(
@@ -177,6 +184,12 @@ class GameNotifier extends StateNotifier<GameState> {
       _impact = null;
       sfx?.bump();
       if (lost) {
+        // The knock first, then the deflation a beat later.
+        _sting?.cancel();
+        _sting = Timer(const Duration(milliseconds: kEndingStingMs), () {
+          _sting = null;
+          sfx?.lose();
+        });
         haptics?.fail();
       } else if (free) {
         // No life lost: answer the finger, but don't punch.
@@ -207,19 +220,22 @@ class GameNotifier extends StateNotifier<GameState> {
     if (puzzle == null) return;
     _impact?.cancel();
     _impact = null;
+    _sting?.cancel();
+    _sting = null;
     state = GameState.fresh(spec, puzzle);
     _startTimer();
     _snapshot();
   }
 
-  /// Carries on from [GamePhase.outOfLives] instead of replaying: the board
-  /// and the clock are where they were, blocked taps stop costing anything,
-  /// and the clear will be worth one star. Losing a level's worth of correct
-  /// taps to a slipped finger is the worst thing the game does; running out
-  /// of time is still a real ending.
+  /// Carries on from [GamePhase.outOfLives] instead of replaying, with the
+  /// board and the clock where they were. Losing a level's worth of correct
+  /// taps to a slipped finger is the worst thing the game does — but the
+  /// reprieve is one mistake long: the next fresh bump ends the attempt and
+  /// asks again, and every continue costs stars. Running out of time is
+  /// still a real ending.
   void keepGoing() {
     if (state.phase != GamePhase.outOfLives) return;
-    state = state.copyWith(phase: GamePhase.playing, continuedAfterLoss: true);
+    state = state.copyWith(phase: GamePhase.playing, continues: state.continues + 1);
     _startTimer();
     _snapshot();
   }
@@ -247,6 +263,7 @@ class GameNotifier extends StateNotifier<GameState> {
     if (elapsed >= spec.timeLimitMs) {
       _stopTimer();
       state = state.copyWith(elapsedMs: spec.timeLimitMs, phase: GamePhase.timeUp);
+      sfx?.lose();
       haptics?.fail();
       _snapshot();
       return;
@@ -258,10 +275,7 @@ class GameNotifier extends StateNotifier<GameState> {
     _stopTimer();
     // coverage:ignore-start
     if (autoTick) {
-      _timer = Timer.periodic(
-        const Duration(milliseconds: kTickMs),
-        (_) => tick(kTickMs),
-      );
+      _timer = Timer.periodic(const Duration(milliseconds: kTickMs), (_) => tick(kTickMs));
     }
     // coverage:ignore-end
   }
@@ -275,6 +289,7 @@ class GameNotifier extends StateNotifier<GameState> {
   void dispose() {
     _stopTimer();
     _impact?.cancel();
+    _sting?.cancel();
     // Leaving the screen (back, quit, next level) is the moment to remember
     // where the level stood.
     _snapshot();
@@ -285,8 +300,10 @@ class GameNotifier extends StateNotifier<GameState> {
 /// One notifier per level, thrown away when the game screen closes. A level
 /// with a saved game comes back where it was left, paused, with the choice
 /// to continue or start over.
-final gameProvider = StateNotifierProvider.autoDispose
-    .family<GameNotifier, GameState, int>((ref, level) {
+final gameProvider = StateNotifierProvider.autoDispose.family<GameNotifier, GameState, int>((
+  ref,
+  level,
+) {
   final saves = ref.read(savedGameProvider.notifier);
   return GameNotifier(
     specForLevel(level),

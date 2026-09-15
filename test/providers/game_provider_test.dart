@@ -37,15 +37,14 @@ GameNotifier _notifier({
       autoTick: false,
     );
 
-/// A notifier on [blockedPuzzle], where arrows 1, 2 and 3 are each blocked by
+/// A notifier on [blockedPuzzle], where arrows 1 to 4 are each blocked by
 /// arrow 0 — the board for the rules about spending an allowance.
 GameNotifier _blockedNotifier({
   HapticsService? haptics,
   SnapshotCallback? onSnapshot,
-  int level = 1,
 }) =>
     GameNotifier(
-      blockedSpecFor(level),
+      blockedSpecFor(1),
       puzzle: blockedPuzzle(),
       haptics: haptics,
       onSnapshot: onSnapshot,
@@ -117,10 +116,11 @@ void main() {
     expect(n.state.isOver, isTrue);
     expect(cleared, [(1, 1200, 3)]);
     expect(engine.calls, ['light', 'light', 'medium']);
-    // Every exit whooshes, the streak climbing.
-    expect(sfxBackend.calls, hasLength(3));
+    // Every exit whooshes, the streak climbing, and the clear sings.
+    expect(sfxBackend.calls, hasLength(4));
     expect(sfxBackend.calls.first, '$kWhooshSound@1.00');
-    expect(sfxBackend.calls.last, '$kWhooshSound@1.12');
+    expect(sfxBackend.calls[2], '$kWhooshSound@1.12');
+    expect(sfxBackend.calls.last, '$kWinSound@1.00');
 
     // Nothing moves after the end.
     n.tick(1000);
@@ -179,18 +179,6 @@ void main() {
     });
   });
 
-  test('the denser late levels grant a fourth life', () {
-    // Three distinct dead ends on a level-16 board leave one life standing.
-    final n = _blockedNotifier(level: 16);
-    expect(n.state.lives, 4);
-    n.tapArrow(1);
-    n.tapArrow(2);
-    n.tapArrow(3);
-    expect(n.state.phase, GamePhase.playing);
-    expect(n.state.livesLeft, 1);
-    n.dispose();
-  });
-
   test('a second run at the same arrow is free', () {
     final n = _blockedNotifier();
     n.tapArrow(1);
@@ -210,41 +198,53 @@ void main() {
     n.dispose();
   });
 
-  test('keepGoing plays on past a spent allowance, for a single star', () {
+  test('keepGoing buys one more mistake, then asks again', () {
     final n = _blockedNotifier();
     n.tick(4000);
     n.tapArrow(1);
     n.tapArrow(2);
     n.tapArrow(3);
     expect(n.state.phase, GamePhase.outOfLives);
+    expect(n.state.continues, 0);
 
     n.keepGoing();
     expect(n.state.phase, GamePhase.playing);
-    expect(n.state.continuedAfterLoss, isTrue);
+    expect(n.state.continues, 1);
     expect(n.state.elapsedMs, 4000); // the clock picks up where it stopped
-    // Nothing left to take, and no second out-of-lives card.
+    expect(n.state.livesLeft, 0);
+
+    // A dead end already paid for stays free, and asks nothing.
     n.tapArrow(2);
     expect(n.state.mistakes, 3);
-    expect(n.state.livesLeft, 0);
     expect(n.state.phase, GamePhase.playing);
+
+    // A fresh one ends the attempt again, and asks again.
+    n.tapArrow(4);
+    expect(n.state.mistakes, 4);
+    expect(n.state.phase, GamePhase.outOfLives);
+    n.keepGoing();
+    expect(n.state.continues, 2);
+    expect(n.state.phase, GamePhase.playing);
+
     // The clock is still a real ending.
     n.tick(30000);
     expect(n.state.phase, GamePhase.timeUp);
     n.dispose();
   });
 
-  test('a clear after playing on is worth one star, never zero', () {
+  test('a clear after playing on still counts as a clear', () {
     final n = _blockedNotifier();
     n.tapArrow(1);
     n.tapArrow(2);
     n.tapArrow(3);
     n.keepGoing();
-    n.tapArrow(0);
+    n.tapArrow(0); // the wall goes, freeing the rest
     n.tapArrow(1);
     n.tapArrow(2);
     n.tapArrow(3);
+    n.tapArrow(4);
     expect(n.state.phase, GamePhase.cleared);
-    expect(n.state.stars, 1);
+    expect(n.state.stars, greaterThan(0));
     n.dispose();
   });
 
@@ -252,7 +252,7 @@ void main() {
     final n = _blockedNotifier();
     n.keepGoing();
     expect(n.state.phase, GamePhase.playing);
-    expect(n.state.continuedAfterLoss, isFalse);
+    expect(n.state.continues, 0);
     n.dispose();
   });
 
