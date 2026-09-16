@@ -12,6 +12,7 @@ import '../models/game_state.dart';
 import '../models/reaction_motion.dart';
 import '../providers/game_provider.dart';
 import '../providers/progress_provider.dart';
+import '../providers/riddle_provider.dart';
 import '../providers/settings_provider.dart';
 import '../ui/colors.dart';
 import '../ui/layout.dart';
@@ -21,6 +22,7 @@ import '../widgets/board_toolbar.dart';
 import '../widgets/lives_indicator.dart';
 import '../widgets/puzzle_board.dart';
 import '../widgets/result_card.dart';
+import '../widgets/riddle_card.dart';
 import '../widgets/stars_row.dart';
 import '../widgets/timer_bar.dart';
 
@@ -87,10 +89,39 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// Whether this clear just earned the grid-lines toggle.
   bool _gridJustUnlocked = false;
 
+  /// True while the bump that spent the last life is still playing. The
+  /// ending card would otherwise drop its scrim over the board in the same
+  /// frame as the tap, and the player would never see the crash that cost
+  /// them the level — only the card telling them about it.
+  bool _endingHeld = false;
+
+  /// The riddle standing between a spent allowance and one more life, or
+  /// null while the ending card itself is up. Held here rather than in the
+  /// game state: the board is none the wiser, and a rebuild must not deal a
+  /// different riddle mid-thought.
+  int? _riddleId;
+
+  /// Deals a riddle (a fresh one on every ask, including a swap).
+  void _dealRiddle() {
+    setState(() => _riddleId = ref.read(riddleDeckProvider.notifier).draw());
+  }
+
+  /// Answered: bank the badge, hand back the life, put the card away.
+  void _riddleSolved() {
+    ref.read(riddleDeckProvider.notifier).recordSolved();
+    ref.read(gameProvider(widget.level).notifier).keepGoing();
+    setState(() => _riddleId = null);
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _crash.addStatusListener((status) {
+      if (status == AnimationStatus.completed && _endingHeld && mounted) {
+        setState(() => _endingHeld = false);
+      }
+    });
   }
 
   @override
@@ -151,6 +182,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
     if (keyboard.isControlPressed || keyboard.isMetaPressed || keyboard.isAltPressed) {
       return KeyEventResult.ignored;
     }
+    // While a riddle is on the table the keyboard is for typing the answer:
+    // "shadow" must not spend a hint on its h and pause on its space.
+    if (_riddleId != null) return KeyEventResult.ignored;
     final provider = gameProvider(widget.level);
     final state = ref.read(provider);
     final notifier = ref.read(provider.notifier);
@@ -187,6 +221,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _crash
           ..duration = Duration(milliseconds: motion.totalMs)
           ..forward(from: 0);
+        // The bump that ends the attempt gets to play out first.
+        _endingHeld = next.phase == GamePhase.outOfLives;
+      }
+      // Restarting (or any other way out of the ending) takes the riddle
+      // with it, so backing out never leaves a card floating over the board.
+      if (next.phase != GamePhase.outOfLives && _riddleId != null) {
+        setState(() => _riddleId = null);
       }
       if (next.phase == GamePhase.cleared && prev?.phase != GamePhase.cleared) {
         _hop.forward(from: 0);
@@ -462,18 +503,29 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     ),
                   ],
                 ),
+                // Nothing over the board until the crash has been seen.
+                GamePhase.outOfLives when _endingHeld => const SizedBox.shrink(),
+                // A spent allowance is not the end of the level, but it is
+                // no longer free either: carrying on is earned by cracking a
+                // riddle, so a board is never lost to a slipped finger and
+                // lives are never spent thoughtlessly.
+                GamePhase.outOfLives when _riddleId != null => RiddleChallenge(
+                  key: ValueKey<int>(_riddleId!),
+                  riddleId: _riddleId!,
+                  solvedCount: ref.watch(riddleDeckProvider).solved,
+                  onSolved: _riddleSolved,
+                  onSwap: _dealRiddle,
+                  onDismiss: () => setState(() => _riddleId = null),
+                ),
                 GamePhase.outOfLives => ResultCard(
                   mood: EmojiMood.sulk,
                   emoji: '💔',
                   title: l10n.outOfLivesTitle,
                   body: l10n.outOfLivesBody,
                   actions: [
-                    // Carrying on is the default: a level's worth of correct
-                    // taps is too much to lose to a slipped finger. The clock
-                    // keeps running, so there is still a real ending.
                     FilledButton(
-                      onPressed: notifier.keepGoing,
-                      child: Text(l10n.outOfLivesKeepGoing),
+                      onPressed: _dealRiddle,
+                      child: Text(l10n.outOfLivesSolveRiddle),
                     ),
                     OutlinedButton(onPressed: notifier.restart, child: Text(l10n.outOfLivesRetry)),
                     TextButton(

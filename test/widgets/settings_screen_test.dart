@@ -1,5 +1,6 @@
 import 'package:arrow_game/models/settings.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
+import 'package:arrow_game/providers/riddle_provider.dart';
 import 'package:arrow_game/providers/saved_game_provider.dart';
 import 'package:arrow_game/providers/settings_provider.dart';
 import 'package:arrow_game/screens/credits_screen.dart';
@@ -41,6 +42,21 @@ void main() {
     expect(container.read(settingsProvider).themeChoice, ThemeChoice.dark);
   });
 
+  testWidgets('picks a language, with the device as the default', (tester) async {
+    await usePhoneSurface(tester);
+    final container = await pumpApp(tester, const SettingsScreen());
+    expect(container.read(settingsProvider).languageChoice, LanguageChoice.system);
+    expect(find.text('Language'), findsOneWidget);
+
+    await tester.tap(find.text('हिन्दी'));
+    await tester.pump();
+    expect(container.read(settingsProvider).languageChoice, LanguageChoice.hindi);
+
+    await tester.tap(find.text('English'));
+    await tester.pump();
+    expect(container.read(settingsProvider).languageChoice, LanguageChoice.english);
+  });
+
   testWidgets('opens the credits and the walkthrough', (tester) async {
     await usePhoneSurface(tester);
     await pumpApp(tester, const SettingsScreen());
@@ -64,11 +80,13 @@ void main() {
       seed: <String, Object>{
         'arrow_level_1_done': true,
         'arrow_level_1_stars': 3,
+        RiddleDeckRepository.solvedKey: 5,
         SavedGameRepository.key: '{"level":2,"removed":[1],"mistakes":0,"hintsLeft":3,"elapsedMs":10}',
       },
     );
     final progress = container.read(progressProvider.notifier);
     expect(progress.totalStars, 3);
+    expect(container.read(riddleDeckProvider).solved, 5);
     expect(container.read(savedGameProvider)?.level, 2);
 
     await tester.tap(find.text('Reset progress'));
@@ -83,6 +101,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(progress.totalStars, 0);
     expect(container.read(savedGameProvider), isNull);
+    // The riddle tally is progress too.
+    expect(container.read(riddleDeckProvider).solved, 0);
   });
 
   testWidgets('a desktop window keeps the cards phone-wide and centred', (tester) async {

@@ -1,10 +1,10 @@
 {
   "@@locale": "en",
-
   "appTitle": "Arrow",
-  "@appTitle": { "description": "Application title." },
+  "@appTitle": {
+    "description": "Application title."
+  },
   "appTagline": "Slide every arrow out",
-
   "homeSettings": "Settings",
   "homeNextUp": "Next up",
   "homePlay": "Play",
@@ -13,9 +13,20 @@
   "homeContinue": "Continue",
   "homeResumeEyebrow": "Pick up where you left off",
   "homeResumeProgress": "{out} of {total} arrows out · {time} on the clock",
-  "@homeResumeProgress": { "placeholders": { "out": { "type": "int" }, "total": { "type": "int" }, "time": { "type": "String" } } },
+  "@homeResumeProgress": {
+    "placeholders": {
+      "out": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "homeJourney": "Your journey",
-
   "onboardSkip": "Skip",
   "onboardNext": "Next",
   "onboardStart": "Let's play!",
@@ -31,17 +42,37 @@
   "onboardRuleClock": "Beat the clock — plenty of time, but it ticks",
   "onboardRuleHints": "Stuck? 3 hints per level light up a free arrow",
   "onboardRuleZoom": "Big boards later — pinch or tap to zoom",
+  "onboardRuleRiddle": "Lives all gone? Crack a riddle and carry on",
   "homeStars": "{count} of {total} stars",
-  "@homeStars": { "placeholders": { "count": { "type": "int" }, "total": { "type": "int" } } },
+  "@homeStars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "homeLevels": "Levels",
   "homeLevelsHint": "Clear a level to unlock the next one. Three stars for a flawless run.",
-
   "levelNumber": "Level {number}",
-  "@levelNumber": { "placeholders": { "number": { "type": "int" } } },
+  "@levelNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "levelShort": "Lv.{number}",
-  "@levelShort": { "placeholders": { "number": { "type": "int" } } },
+  "@levelShort": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "levelLocked": "Locked",
-
   "levelName1": "First Steps",
   "levelName2": "Two Ways Out",
   "levelName3": "Tight Corners",
@@ -102,10 +133,8 @@
   "levelName58": "The Long Haul",
   "levelName59": "Final Approach",
   "levelName60": "Grand Exit",
-
   "tutorialTap": "Tap an arrow to slide it out the way it points.",
   "tutorialBlocked": "An arrow in the way costs a life — find the free ones first.",
-
   "gameLoading": "Laying out the arrows…",
   "gamePause": "Pause",
   "gameResume": "Resume",
@@ -114,49 +143,187 @@
   "gameQuit": "Quit level",
   "resumeTitle": "Welcome back",
   "resumeBody": "You left this level with {out} of {total} arrows out and {time} on the clock.",
-  "@resumeBody": { "placeholders": { "out": { "type": "int" }, "total": { "type": "int" }, "time": { "type": "String" } } },
+  "@resumeBody": {
+    "placeholders": {
+      "out": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "resumeContinue": "Continue",
   "resumeStartOver": "Start over",
   "gameRestart": "Restart level",
   "gameBack": "Back",
   "hudArrows": "{out}/{total}",
-  "@hudArrows": { "placeholders": { "out": { "type": "int" }, "total": { "type": "int" } } },
+  "@hudArrows": {
+    "placeholders": {
+      "out": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "hudLives": "{lives} lives left",
-  "@hudLives": { "placeholders": { "lives": { "type": "int" } } },
-
+  "@hudLives": {
+    "placeholders": {
+      "lives": {
+        "type": "int"
+      }
+    }
+  },
   "toolHint": "Hint",
   "toolHintLeft": "{count} hints left",
-  "@toolHintLeft": { "placeholders": { "count": { "type": "int" } } },
+  "@toolHintLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "toolHintNone": "No hints left",
   "toolGrid": "Grid lines",
   "toolGridLocked": "Grid lines unlock after level {level}",
-  "@toolGridLocked": { "placeholders": { "level": { "type": "int" } } },
+  "@toolGridLocked": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "toolZoomIn": "Zoom in",
   "toolZoomOut": "Zoom out",
   "gridUnlockedToast": "Grid lines unlocked! Find the toggle under the board.",
-
   "clearedTitle": "Level cleared!",
   "clearedFlawless": "Flawless run — three stars!",
   "clearedGood": "Nice! One slip, two stars.",
   "clearedOkay": "Made it! Fewer slips next time for more stars.",
   "clearedTime": "Time {time}",
-  "@clearedTime": { "placeholders": { "time": { "type": "String" } } },
+  "@clearedTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "clearedNewBest": "New best time!",
   "clearedNext": "Next level",
   "clearedReplay": "Play again",
   "clearedHome": "Home",
   "clearedAllDone": "You beat every level. Legend!",
-
   "outOfLivesTitle": "Out of lives",
-  "outOfLivesBody": "That was the last one. Carry on and finish for a single star, or restart the level?",
-  "outOfLivesKeepGoing": "Keep going",
+  "outOfLivesBody": "That was the last one. Crack a riddle and you can carry on from right here for a single star — or start the level over?",
+  "outOfLivesSolveRiddle": "Solve a riddle",
   "outOfLivesRetry": "Start over",
-
+  "riddleTitle": "Riddle me this",
+  "riddleIntro": "Answer it and you are back on the board with one more life.",
+  "riddleField": "Your answer",
+  "riddleSubmit": "That's my answer",
+  "riddleHintAction": "Give me a hint",
+  "riddleHintMore": "One more nudge",
+  "riddleFirstLetter": "It starts with “{letter}”",
+  "@riddleFirstLetter": {
+    "placeholders": {
+      "letter": {
+        "type": "String"
+      }
+    }
+  },
+  "riddleLetters": "{count} letters",
+  "@riddleLetters": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "riddleWords": "{count} words",
+  "@riddleWords": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "riddleWrong1": "Nope. Not even close enough for “close enough”.",
+  "riddleWrong2": "Still no. The riddle is unmoved.",
+  "riddleWrong3": "Bold. Confident. Wrong — but very confident.",
+  "riddleWrong4": "We could do this all day. The riddle certainly can.",
+  "riddleWrong5": "The arrows have stopped watching. Probably for the best.",
+  "riddleWrong6": "That is a word, yes. Not the word, but a word.",
+  "riddleWrong7": "Interesting theory. Wrong, but interesting.",
+  "riddleWrong8": "The riddle heard you, and then unheard you.",
+  "riddleWrong9": "Not it — but points for commitment.",
+  "riddleWrong10": "Somewhere, a dictionary just flinched.",
+  "riddleWrong11": "So close! (It was not close.)",
+  "riddleWrong12": "Your answer and the right one have never met.",
+  "riddleWrong13": "No. The riddle is taking notes.",
+  "riddleWrong14": "A confident no from the judges.",
+  "riddleWrong15": "Wrong, but delivered with real authority.",
+  "riddleWrong16": "That is one of the words of all time.",
+  "riddleWrong17": "No. But keep that energy.",
+  "riddleWrong18": "The riddle has asked for a moment alone.",
+  "riddleWrong19": "Not near, not far — just comprehensively wrong.",
+  "riddleWrong20": "Declined. Politely, but firmly.",
+  "riddleWrong21": "Excellent spelling. Wrong word.",
+  "riddleWrong22": "You may be answering a different riddle entirely.",
+  "riddleWrong23": "The riddle suspects you are guessing now.",
+  "riddleWrong24": "No. And the riddle rather enjoyed that one.",
+  "riddleWrong25": "Try the one your first instinct said.",
+  "riddleWrong26": "Swing and a miss. Lovely form, though.",
+  "riddleWrong27": "That is a no from the riddle, and the riddle is in charge here.",
+  "riddleWrong28": "The riddle is smiling. That is not a good sign.",
+  "riddleWrong29": "Wrong — but wholeheartedly wrong.",
+  "riddleWrong30": "Not this time. Maybe the next one. Or the one after.",
+  "riddleCloseTitle": "Close enough!",
+  "riddleClose": "Not quite the word we had — it was {answer} — but near enough. One more life is yours.",
+  "@riddleClose": {
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
+  "riddleCorrect": "Spot on!",
+  "riddleCorrectBody": "The answer was {answer}. One more life, and the board is where you left it.",
+  "@riddleCorrectBody": {
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
+  "riddleBackToBoard": "Back to the arrows",
+  "riddleSwap": "Try a different riddle",
+  "riddleGiveUp": "Never mind",
+  "riddleSolvedCount": "{count, plural, =0{Your first riddle} =1{1 riddle cracked so far} other{{count} riddles cracked so far}}",
+  "@riddleSolvedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "timeUpTitle": "Time's up!",
   "timeUpBody": "So close — {out} of {total} arrows out. One more go?",
-  "@timeUpBody": { "placeholders": { "out": { "type": "int" }, "total": { "type": "int" } } },
+  "@timeUpBody": {
+    "placeholders": {
+      "out": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "timeUpRetry": "Try again",
-
   "settingsTitle": "Settings",
   "settingsMusic": "Music",
   "settingsMusicSubtitle": "A calm loop while you play",
@@ -164,6 +331,10 @@
   "settingsSfxSubtitle": "The little sounds as you play",
   "settingsHaptics": "Haptic feedback",
   "settingsHapticsSubtitle": "A tick on every slide, a buzz on a bump",
+  "settingsLanguage": "Language",
+  "languageSystem": "System",
+  "languageEnglish": "English",
+  "languageHindi": "हिन्दी",
   "settingsTheme": "Theme",
   "themeSystem": "System",
   "themeLight": "Light",
@@ -173,7 +344,13 @@
   "settingsCredits": "Music credits",
   "creditsTitle": "Credits",
   "creditsBy": "by {artist}",
-  "@creditsBy": { "placeholders": { "artist": { "type": "String" } } },
+  "@creditsBy": {
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
   "settingsResetProgress": "Reset progress",
   "settingsResetProgressSubtitle": "Lock every level again and clear all stars",
   "settingsResetConfirmTitle": "Reset all progress?",

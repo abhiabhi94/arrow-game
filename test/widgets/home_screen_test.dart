@@ -159,6 +159,29 @@ void main() {
     expect(find.bySemanticsLabel('${totalLevels * 3} of ${totalLevels * 3} stars'), findsOneWidget);
   });
 
+  testWidgets('the stars and the gear stay put while the trail scrolls', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(tester, const HomeScreen(), seed: <String, Object>{
+      'arrow_level_1_done': true,
+      'arrow_level_1_stars': 3,
+    });
+    expect(find.text('Slide every arrow out'), findsOneWidget);
+    final gear = find.byTooltip('Settings');
+    final stars = find.bySemanticsLabel(RegExp(r'^3 of 180 stars'));
+    // Sixty levels down the trail, both are still in the bar at the top —
+    // the bar slims and its contents recentre, but nothing scrolls away.
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -900));
+    await tester.pumpAndSettle();
+    expect(gear, findsOneWidget);
+    expect(stars, findsOneWidget);
+    expect(tester.getBottomRight(gear).dy, lessThanOrEqualTo(62));
+    expect(tester.getBottomRight(stars).dy, lessThanOrEqualTo(62));
+    // The header gave up its tagline to stay slim.
+    expect(find.text('Slide every arrow out'), findsNothing);
+    // And the trail really did move.
+    expect(find.text('Your journey'), findsNothing);
+  });
+
   testWidgets('settings button opens settings', (tester) async {
     await usePhoneSurface(tester);
     await pumpApp(tester, const HomeScreen());

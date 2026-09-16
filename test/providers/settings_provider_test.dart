@@ -28,6 +28,7 @@ void main() {
         themeChoice: ThemeChoice.dark,
         gridLinesOn: true,
         onboardingDone: true,
+        languageChoice: LanguageChoice.hindi,
       );
       await SettingsRepository(prefs).save(custom);
       expect(SettingsRepository(prefs).load(), custom);
@@ -36,6 +37,13 @@ void main() {
     test('unknown stored theme values fall back to system', () async {
       final repo = SettingsRepository(await _prefs(<String, Object>{'arrow_theme': 'chartreuse'}));
       expect(repo.load().themeChoice, ThemeChoice.system);
+    });
+
+    test('unknown stored language values fall back to the device', () async {
+      final repo = SettingsRepository(
+        await _prefs(<String, Object>{'arrow_language': 'klingon'}),
+      );
+      expect(repo.load().languageChoice, LanguageChoice.system);
     });
   });
 
@@ -55,6 +63,7 @@ void main() {
       notifier.setMusic(false);
       notifier.setMusicVolume(1.7); // clamped
       notifier.completeOnboarding();
+      notifier.setLanguageChoice(LanguageChoice.hindi);
       await Future<void>.delayed(Duration.zero);
 
       expect(
@@ -67,6 +76,7 @@ void main() {
           themeChoice: ThemeChoice.light,
           gridLinesOn: true,
           onboardingDone: true,
+          languageChoice: LanguageChoice.hindi,
         ),
       );
       expect(prefs.getBool('arrow_haptics_on'), isFalse);

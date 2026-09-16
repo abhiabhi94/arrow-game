@@ -12,13 +12,24 @@ void main() {
     // lattice first appears when the player clears the unlock level.
     expect(Settings.defaults.gridLinesOn, isTrue);
     expect(Settings.defaults.onboardingDone, isFalse);
+    // The device decides which language the app opens in until the player
+    // says otherwise.
+    expect(Settings.defaults.languageChoice, LanguageChoice.system);
   });
 
   test('copyWith and equality', () {
     final dark = Settings.defaults.copyWith(themeChoice: ThemeChoice.dark);
     expect(dark.themeChoice, ThemeChoice.dark);
     expect(dark.hapticsOn, isTrue);
-    final grid = dark.copyWith(hapticsOn: false, sfxOn: false, gridLinesOn: true, musicOn: false, musicVolume: 0.2, onboardingDone: true);
+    final grid = dark.copyWith(
+      hapticsOn: false,
+      sfxOn: false,
+      gridLinesOn: true,
+      musicOn: false,
+      musicVolume: 0.2,
+      onboardingDone: true,
+      languageChoice: LanguageChoice.hindi,
+    );
     const expected = Settings(
       musicOn: false,
       musicVolume: 0.2,
@@ -27,6 +38,7 @@ void main() {
       themeChoice: ThemeChoice.dark,
       gridLinesOn: true,
       onboardingDone: true,
+      languageChoice: LanguageChoice.hindi,
     );
     expect(grid, expected);
     expect(grid.hashCode, expected.hashCode);

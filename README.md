@@ -16,10 +16,19 @@ Bent arrow pieces sit on a grid. Tap one and it slides along its own path,
 the way its head points, until it leaves the board. Get every arrow out.
 
 - **Blocked arrows cost a life.** If an arrow's exit path runs into another
-  arrow it bumps back. **3 lives per level** — lose all three and the level
-  resets behind an "Out of lives / Retry" screen.
-- **A clock on every level** (half a minute to learn on, up to thirteen and
-  a half minutes for the finale, growing with the board — brisk on purpose).
+  arrow it bumps back. **3 lives per level** — spend all three and the
+  "Out of lives" card asks for a riddle before it lets you carry on.
+- **Carrying on is earned, not free.** Out of lives, you can pick the level
+  up exactly where it stands — for a single star — by cracking a riddle
+  ("I follow you all day long and vanish when the lights go out"). Every
+  riddle has a 💡 that gives a clue and then the first letter, and the
+  answer only has to be *close*: a plural, a tense or a typo is waved
+  through with a "close enough". **50 riddles per language**, dealt in a
+  shuffled order so the whole pack comes round before any of them repeats.
+  The next fresh mistake asks again, so lives are never spent thoughtlessly.
+- **A clock on every level** (26 seconds to learn on, up to just under
+  thirteen minutes for the finale, growing with the board — brisk on
+  purpose).
   Run out and it's "Time's up" — replay the same level.
 - **60 levels**, each a fixed, procedurally generated board that is solvable
   by construction. The curve is steep: 5 arrows on a 5×6 board to learn on,
@@ -46,8 +55,10 @@ the way its head points, until it leaves the board. Get every arrow out.
 - Background music ("Game" by The_Mountain, Pixabay Content License, credited
   in-app), sound effects (a whoosh on every exit, a crash on a bump) and
   haptics, all on by default and configurable; confetti; pause
-  (also on backgrounding); light/dark/system theme; locked progression (all
-  levels open in the debug build); Google Sans Flex throughout.
+  (also on backgrounding); light/dark/system theme; **English and हिन्दी**
+  (Settings → Language, following the device by default — riddles and all);
+  locked progression (all levels open in the debug build); Google Sans Flex
+  throughout.
 
 ## Architecture
 

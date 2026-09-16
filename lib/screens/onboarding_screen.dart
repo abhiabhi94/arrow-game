@@ -311,6 +311,7 @@ class _SummaryStep extends StatelessWidget {
       ('⏱️', l10n.onboardRuleClock),
       ('💡', l10n.onboardRuleHints),
       ('🔍', l10n.onboardRuleZoom),
+      ('🧩', l10n.onboardRuleRiddle),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
