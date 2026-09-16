@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../models/settings.dart';
 import '../providers/progress_provider.dart';
+import '../providers/riddle_provider.dart';
 import '../providers/saved_game_provider.dart';
 import '../providers/settings_provider.dart';
 import '../ui/colors.dart';
@@ -11,8 +12,9 @@ import '../ui/layout.dart';
 import 'credits_screen.dart';
 import 'onboarding_screen.dart';
 
-/// Settings: music (on/off + volume), sound effects, haptic feedback, theme, the walkthrough
-/// again, music credits, and a progress reset.
+/// Settings: music (on/off + volume), sound effects, haptic feedback,
+/// language, theme, the walkthrough again, music credits, and a progress
+/// reset.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -38,6 +40,7 @@ class SettingsScreen extends ConsumerWidget {
     if (confirmed ?? false) {
       ref.read(progressProvider.notifier).resetAll();
       ref.read(savedGameProvider.notifier).clear();
+      ref.read(riddleDeckProvider.notifier).reset();
     }
   }
 
@@ -114,45 +117,44 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             _SettingCard(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text('🌗', style: TextStyle(fontSize: 24)),
-                        const SizedBox(width: 12),
-                        Text(
-                          l10n.settingsTheme,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
+              child: _ChoiceCard(
+                emoji: '🌐',
+                title: l10n.settingsLanguage,
+                child: SegmentedButton<LanguageChoice>(
+                  showSelectedIcon: false,
+                  segments: <ButtonSegment<LanguageChoice>>[
+                    ButtonSegment(
+                      value: LanguageChoice.system,
+                      label: Text(l10n.languageSystem),
                     ),
-                    const SizedBox(height: 12),
-                    SegmentedButton<ThemeChoice>(
-                      segments: <ButtonSegment<ThemeChoice>>[
-                        ButtonSegment(
-                          value: ThemeChoice.system,
-                          label: Text(l10n.themeSystem),
-                        ),
-                        ButtonSegment(
-                          value: ThemeChoice.light,
-                          label: Text(l10n.themeLight),
-                        ),
-                        ButtonSegment(
-                          value: ThemeChoice.dark,
-                          label: Text(l10n.themeDark),
-                        ),
-                      ],
-                      selected: {settings.themeChoice},
-                      onSelectionChanged: (sel) =>
-                          notifier.setThemeChoice(sel.first),
+                    ButtonSegment(
+                      value: LanguageChoice.english,
+                      label: Text(l10n.languageEnglish),
+                    ),
+                    ButtonSegment(
+                      value: LanguageChoice.hindi,
+                      label: Text(l10n.languageHindi),
                     ),
                   ],
+                  selected: {settings.languageChoice},
+                  onSelectionChanged: (sel) => notifier.setLanguageChoice(sel.first),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _SettingCard(
+              child: _ChoiceCard(
+                emoji: '🌗',
+                title: l10n.settingsTheme,
+                child: SegmentedButton<ThemeChoice>(
+                  showSelectedIcon: false,
+                  segments: <ButtonSegment<ThemeChoice>>[
+                    ButtonSegment(value: ThemeChoice.system, label: Text(l10n.themeSystem)),
+                    ButtonSegment(value: ThemeChoice.light, label: Text(l10n.themeLight)),
+                    ButtonSegment(value: ThemeChoice.dark, label: Text(l10n.themeDark)),
+                  ],
+                  selected: {settings.themeChoice},
+                  onSelectionChanged: (sel) => notifier.setThemeChoice(sel.first),
                 ),
               ),
             ),
@@ -196,6 +198,38 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// A setting that is a choice rather than a switch: an emoji, a heading and
+/// the row of options under it (language, theme).
+class _ChoiceCard extends StatelessWidget {
+  const _ChoiceCard({required this.emoji, required this.title, required this.child});
+
+  final String emoji;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
+      );
 }
 
 class _SettingCard extends StatelessWidget {

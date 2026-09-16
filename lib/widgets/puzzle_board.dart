@@ -92,23 +92,28 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   void didUpdateWidget(PuzzleBoard old) {
     super.didUpdateWidget(old);
     _syncHintPing();
-    _syncSlump();
     final s = widget.state;
     if (s.puzzle != old.state.puzzle || s.moveToken < old.state.moveToken) {
       // A restart: forget every animation.
       _disposeAll();
+      _syncSlump();
       return;
     }
-    if (s.moveToken == old.state.moveToken || s.lastMoveId == null) return;
-    final id = s.lastMoveId!;
-    switch (s.lastOutcome) {
-      case MoveOutcome.exited:
-        _startExit(id);
-      case MoveOutcome.blocked:
-        _startBump(id);
-      case MoveOutcome.none:
-        break;
+    final moved = s.moveToken != old.state.moveToken && s.lastMoveId != null;
+    if (moved) {
+      final id = s.lastMoveId!;
+      switch (s.lastOutcome) {
+        case MoveOutcome.exited:
+          _startExit(id);
+        case MoveOutcome.blocked:
+          _startBump(id);
+        case MoveOutcome.none:
+          break;
+      }
     }
+    // After the move, not before: the bump that spends the last life has to
+    // have started before the slump can know to wait for it.
+    _syncSlump();
   }
 
   void _startExit(int id) {
@@ -154,14 +159,20 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
         }
         controller.dispose();
       });
+      // The last life is spent by a bump like any other, and the board only
+      // gives up once the player has seen it happen.
+      _syncSlump();
     });
   }
 
   /// Starts the slump on a losing ending, and clears it on the way out of
-  /// one (a restart, or carrying on past a spent allowance).
+  /// one (a restart, or carrying on past a spent allowance). A bump still
+  /// playing holds it off: the arrow that spent the last life must be seen
+  /// to hit before the board droops around it.
   void _syncSlump() {
-    final losing =
+    final ending =
         widget.state.phase == GamePhase.outOfLives || widget.state.phase == GamePhase.timeUp;
+    final losing = ending && _bump == null;
     if (losing == (_slump != null)) return;
     if (losing) {
       _slump =

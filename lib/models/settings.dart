@@ -7,6 +7,12 @@ library;
 /// stays pure; mapped to Flutter's ThemeMode in main.dart.
 enum ThemeChoice { system, light, dark }
 
+/// The language the app speaks. [system] (default) follows the device
+/// locale — a phone set to Hindi opens in Hindi — and the other values pin
+/// one language regardless. A plain Dart enum, mapped to a Flutter Locale in
+/// main.dart.
+enum LanguageChoice { system, english, hindi }
+
 class Settings {
   const Settings({
     required this.musicOn,
@@ -16,6 +22,7 @@ class Settings {
     required this.themeChoice,
     required this.gridLinesOn,
     required this.onboardingDone,
+    required this.languageChoice,
   });
 
   /// Background music on/off (on by default).
@@ -42,6 +49,10 @@ class Settings {
   /// Whether the one-time "how to play" walkthrough has been seen.
   final bool onboardingDone;
 
+  /// Which language the app speaks; [LanguageChoice.system] follows the
+  /// device.
+  final LanguageChoice languageChoice;
+
   static const Settings defaults = Settings(
     musicOn: true,
     musicVolume: 0.6,
@@ -50,6 +61,7 @@ class Settings {
     themeChoice: ThemeChoice.system,
     gridLinesOn: true,
     onboardingDone: false,
+    languageChoice: LanguageChoice.system,
   );
 
   Settings copyWith({
@@ -60,6 +72,7 @@ class Settings {
     ThemeChoice? themeChoice,
     bool? gridLinesOn,
     bool? onboardingDone,
+    LanguageChoice? languageChoice,
   }) =>
       Settings(
         musicOn: musicOn ?? this.musicOn,
@@ -69,6 +82,7 @@ class Settings {
         themeChoice: themeChoice ?? this.themeChoice,
         gridLinesOn: gridLinesOn ?? this.gridLinesOn,
         onboardingDone: onboardingDone ?? this.onboardingDone,
+        languageChoice: languageChoice ?? this.languageChoice,
       );
 
   @override
@@ -80,7 +94,8 @@ class Settings {
       other.sfxOn == sfxOn &&
       other.themeChoice == themeChoice &&
       other.gridLinesOn == gridLinesOn &&
-      other.onboardingDone == onboardingDone;
+      other.onboardingDone == onboardingDone &&
+      other.languageChoice == languageChoice;
 
   @override
   int get hashCode => Object.hash(
@@ -91,5 +106,6 @@ class Settings {
         themeChoice,
         gridLinesOn,
         onboardingDone,
+        languageChoice,
       );
 }

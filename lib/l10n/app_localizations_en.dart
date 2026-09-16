@@ -93,6 +93,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardRuleZoom => 'Big boards later — pinch or tap to zoom';
 
   @override
+  String get onboardRuleRiddle => 'Lives all gone? Crack a riddle and carry on';
+
+  @override
   String homeStars(int count, int total) {
     return '$count of $total stars';
   }
@@ -418,13 +421,179 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get outOfLivesBody =>
-      'That was the last one. Carry on and finish for a single star, or restart the level?';
+      'That was the last one. Crack a riddle and you can carry on from right here for a single star — or start the level over?';
 
   @override
-  String get outOfLivesKeepGoing => 'Keep going';
+  String get outOfLivesSolveRiddle => 'Solve a riddle';
 
   @override
   String get outOfLivesRetry => 'Start over';
+
+  @override
+  String get riddleTitle => 'Riddle me this';
+
+  @override
+  String get riddleIntro =>
+      'Answer it and you are back on the board with one more life.';
+
+  @override
+  String get riddleField => 'Your answer';
+
+  @override
+  String get riddleSubmit => 'That\'s my answer';
+
+  @override
+  String get riddleHintAction => 'Give me a hint';
+
+  @override
+  String get riddleHintMore => 'One more nudge';
+
+  @override
+  String riddleFirstLetter(String letter) {
+    return 'It starts with “$letter”';
+  }
+
+  @override
+  String riddleLetters(int count) {
+    return '$count letters';
+  }
+
+  @override
+  String riddleWords(int count) {
+    return '$count words';
+  }
+
+  @override
+  String get riddleWrong1 => 'Nope. Not even close enough for “close enough”.';
+
+  @override
+  String get riddleWrong2 => 'Still no. The riddle is unmoved.';
+
+  @override
+  String get riddleWrong3 => 'Bold. Confident. Wrong — but very confident.';
+
+  @override
+  String get riddleWrong4 =>
+      'We could do this all day. The riddle certainly can.';
+
+  @override
+  String get riddleWrong5 =>
+      'The arrows have stopped watching. Probably for the best.';
+
+  @override
+  String get riddleWrong6 => 'That is a word, yes. Not the word, but a word.';
+
+  @override
+  String get riddleWrong7 => 'Interesting theory. Wrong, but interesting.';
+
+  @override
+  String get riddleWrong8 => 'The riddle heard you, and then unheard you.';
+
+  @override
+  String get riddleWrong9 => 'Not it — but points for commitment.';
+
+  @override
+  String get riddleWrong10 => 'Somewhere, a dictionary just flinched.';
+
+  @override
+  String get riddleWrong11 => 'So close! (It was not close.)';
+
+  @override
+  String get riddleWrong12 => 'Your answer and the right one have never met.';
+
+  @override
+  String get riddleWrong13 => 'No. The riddle is taking notes.';
+
+  @override
+  String get riddleWrong14 => 'A confident no from the judges.';
+
+  @override
+  String get riddleWrong15 => 'Wrong, but delivered with real authority.';
+
+  @override
+  String get riddleWrong16 => 'That is one of the words of all time.';
+
+  @override
+  String get riddleWrong17 => 'No. But keep that energy.';
+
+  @override
+  String get riddleWrong18 => 'The riddle has asked for a moment alone.';
+
+  @override
+  String get riddleWrong19 => 'Not near, not far — just comprehensively wrong.';
+
+  @override
+  String get riddleWrong20 => 'Declined. Politely, but firmly.';
+
+  @override
+  String get riddleWrong21 => 'Excellent spelling. Wrong word.';
+
+  @override
+  String get riddleWrong22 =>
+      'You may be answering a different riddle entirely.';
+
+  @override
+  String get riddleWrong23 => 'The riddle suspects you are guessing now.';
+
+  @override
+  String get riddleWrong24 => 'No. And the riddle rather enjoyed that one.';
+
+  @override
+  String get riddleWrong25 => 'Try the one your first instinct said.';
+
+  @override
+  String get riddleWrong26 => 'Swing and a miss. Lovely form, though.';
+
+  @override
+  String get riddleWrong27 =>
+      'That is a no from the riddle, and the riddle is in charge here.';
+
+  @override
+  String get riddleWrong28 => 'The riddle is smiling. That is not a good sign.';
+
+  @override
+  String get riddleWrong29 => 'Wrong — but wholeheartedly wrong.';
+
+  @override
+  String get riddleWrong30 =>
+      'Not this time. Maybe the next one. Or the one after.';
+
+  @override
+  String get riddleCloseTitle => 'Close enough!';
+
+  @override
+  String riddleClose(String answer) {
+    return 'Not quite the word we had — it was $answer — but near enough. One more life is yours.';
+  }
+
+  @override
+  String get riddleCorrect => 'Spot on!';
+
+  @override
+  String riddleCorrectBody(String answer) {
+    return 'The answer was $answer. One more life, and the board is where you left it.';
+  }
+
+  @override
+  String get riddleBackToBoard => 'Back to the arrows';
+
+  @override
+  String get riddleSwap => 'Try a different riddle';
+
+  @override
+  String get riddleGiveUp => 'Never mind';
+
+  @override
+  String riddleSolvedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count riddles cracked so far',
+      one: '1 riddle cracked so far',
+      zero: 'Your first riddle',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get timeUpTitle => 'Time\'s up!';
@@ -458,6 +627,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsHapticsSubtitle =>
       'A tick on every slide, a buzz on a bump';
+
+  @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get languageSystem => 'System';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageHindi => 'हिन्दी';
 
   @override
   String get settingsTheme => 'Theme';

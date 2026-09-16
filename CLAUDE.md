@@ -12,11 +12,12 @@ back and costs a life. 60 fixed, procedurally generated levels on a steep
 curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50 by level
 20 → 224 on 42×63 by level 40 → 304 on 47×73), drawn in a
 single ink like a printed puzzle, 3 lives per level (spend them all and a
-card offers "Keep going", which buys one more mistake and then asks again,
-or a fresh start), a clock on every level ("Time's up" → replay the same
-level), 3 hints per level, zoom in/out, a grid-lines toggle earned after
-level 4 and on by default from there, 1–3 stars per clear, local progress,
-light/dark theme, haptic feedback.
+card asks for a riddle: crack it and the level carries on for one more
+mistake, then asks again — or start fresh), a clock on every level ("Time's
+up" → replay the same level), 3 hints per level, zoom in/out, a grid-lines
+toggle earned after level 4 and on by default from there, 1–3 stars per
+clear, local progress, light/dark theme, English and हिन्दी (following the
+device by default), haptic feedback.
 
 ## Build & Development Commands
 
@@ -32,6 +33,8 @@ node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-view
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
 node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + keyboard
 node tool/screenshot.mjs --levels 1 --crash 2,4                     # a bump mid-crash (fake clock): jolt + red flash
+node tool/screenshot.mjs --levels 1 --riddle 2,4,2,3,2,2            # spend all 3 lives -> Out of lives, the riddle, its hint, solved
+node tool/screenshot.mjs --lang hi --settings --levels 1 --riddle 2,4,2,3,2,2 --riddle-answer aam  # the same in Hindi
 
 flutter run                     # debug build = "Arrow Testing", all levels unlocked
 flutter run --release           # release build = "Arrow", locked progression
@@ -54,7 +57,13 @@ laptop via GitHub Pages); `--crash x,y` taps a grid cell on the first level
 and captures the bump 260 ms in on Playwright's fake clock (a screenshot
 takes longer than the bump), with the semantics layer made pointer-transparent
 for the tap — a click on the board's accessibility node would otherwise be a
-semantic tap at the board's centre. It exits 1 on any Flutter exception, so it doubles
+semantic tap at the board's centre. `--riddle x,y,…` spends every life on
+three different blocked heads (level 1: `2,4,2,3,2,2`) and captures the
+"Out of lives" card, the riddle behind it, the riddle with its hint out and
+the answer accepted — it seeds an unshuffled pack so the riddle is always the
+first in the bank (`--riddle-answer`, default `shadow`). `--lang en|hi` seeds
+the language setting; the driver finds widgets by their accessible name, so
+it keeps a small table of those names per language. It exits 1 on any Flutter exception, so it doubles
 as the CI smoke test (`.github/actions/web-smoke`, job "Web smoke &
 screenshots"). See `.claude/skills/run/SKILL.md` and `docs/cloud-dev.md`.
 The SessionStart hook in `.claude/hooks/session-start.sh` installs the SDK
@@ -164,11 +173,14 @@ lib/
     arrow_piece.dart     ArrowPiece: cells tail→head + heading; exitRay()
     puzzle.dart          Puzzle: occupancy, blockers, canExit, solvingOrder, hintFor, difficultyScore
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N
+    answer_match.dart    judging a typed riddle answer (exact / close / wrong)
   data/level_specs.dart  the 60 levels (board size, arrow count, length range, clock)
+  data/riddle_bank.dart  50 riddles in English + 50 पहेलियाँ in Hindi
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
-                       bump_motion (the blocked-tap animation), saved_game (resume snapshot)
+                       bump_motion (the blocked-tap animation), saved_game (resume snapshot),
+                       riddle (question, answers, hint)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider,
-                       saved_game_provider (the one level in progress)
+                       saved_game_provider (the one level in progress), riddle_provider (the deck)
   services/            haptics_service (injectable HapticEngine), sfx_service (whoosh + bump),
                        audio_service (looping music)
   data/audio_credits.dart  attribution for the bundled track
@@ -177,7 +189,7 @@ lib/
   ui/                  colors.dart (light+dark ArrowPalette), theme.dart (Material 3 + Google Sans Flex),
                        layout.dart (phone-width column + mouse-drag scrolling for the desktop browser)
   widgets/             puzzle_board (painter + slide/bump animations), board_toolbar,
-                       lives_indicator, timer_bar, stars_row, result_card
+                       lives_indicator, timer_bar, stars_row, result_card, riddle_card
   utils/               format.dart, labels.dart (level names)
   l10n/                app_en.arb (+ generated app_localizations*.dart)
 ```
@@ -244,7 +256,13 @@ Key patterns:
   the same motion in its own controller to throw the whole screen sideways
   (`joltAt` × `kCrashJoltPx`) and bloom a red edge over it (`flashAt` on a
   radial gradient of `blockedFlash`), so a lost life registers even when
-  the eye was nowhere near the arrow. The provider fires the crash sound
+  the eye was nowhere near the arrow. **The ending waits for all of it:**
+  `_endingHeld` on the game screen holds the "Out of lives" card back until
+  the crash animation completes — a scrim dropping in the same frame as the
+  tap means the player never sees the bump that cost them the level — and
+  `PuzzleBoard._syncSlump` holds the slump the same way, so the board droops
+  after the arrow has visibly hit rather than around it in mid-air.
+  The provider fires the crash sound
   and `HapticsService.miss` (`HapticEngine.crash`: a hard hit plus a
   rumble — an Android waveform, heavy + vibrate elsewhere) on a `Timer` at
   `forwardMs` so they land on impact (a light tick answers the finger at
@@ -356,7 +374,17 @@ Key patterns:
   it in `main.dart`; Settings → "How to play" replays it (`replay: true`).
 - **Home:** a gradient "Next up" hero card and a winding trail of level
   nodes (`_Trail` + `_TrailPainter`), locked/current/cleared states with
-  stars and best time.
+  stars and best time. The header (`_HomeHeader`, a
+  `SliverPersistentHeaderDelegate`) is **pinned**: the trail is sixty levels
+  long, and the star count and the way into Settings should not be sixty
+  levels back up the page. It shrinks 96 → 62 as the page scrolls — the
+  title comes down to a heading and the tagline folds away, and out of the
+  widget tree, so it is not read out either — while the pill and the gear
+  stay put. Two things it has to get right: the delegate fills its extent
+  (`SizedBox.expand`; a child that measures shorter paints less than it lays
+  out, which asserts), and it is a sliver of the scroll view itself rather
+  than one of the `SliverMainAxisGroup` below, where a pinned header hits
+  that same assert.
 - **Icon:** `tool/make_icon.py` (Pillow) renders `assets/icon/*.png` and
   the web icons (`web/favicon.png`, `web/icons/*.png` — flutter_launcher_icons
   is Android + iOS only); then `dart run flutter_launcher_icons`.
@@ -367,10 +395,12 @@ Key patterns:
   pin the curve (sizes never shrink, the cap never widens, every level
   generates its full arrow count, solvable, tight, later levels more
   tangled). Tune numbers there; keep the generator test green — it is what
-  guarantees a level is playable. The clock is brisk: ~1.8 s an arrow on
-  levels 1–4, 2.2 s on 5–9 and 2.6 s from 10 (plus ~18 s) — 27 s on level
-  1, ten minutes on level 40, 13½ on the finale — so a level is a sprint of
-  quick reads. **Levels 41–60** keep climbing four arrows a level (228 →
+  guarantees a level is playable. The clock is brisk: ~1.7 s an arrow on
+  levels 1–4, 2.1 s on 5–9 and 2.5 s from 10 (plus ~17 s) — 26 s on level
+  1, 9½ minutes on level 40, just under 13 on the finale — so a level is a
+  sprint of quick reads. Those are the numbers the curve was drawn with,
+  less 5%: every level's clock was tightened by that much in one pass, so
+  the shape is unchanged and the whole game is that much brisker. **Levels 41–60** keep climbing four arrows a level (228 →
   304) while the board barely grows (42×64 → 47×73): the cells an arrow
   fall from ~11.8 to ~11.3 and the fill rises to ~0.90, so the endgame is a
   tighter board rather than a bigger one, with the longest runs reaching 14
@@ -380,15 +410,80 @@ Key patterns:
 - **Lives / stars:** `models/level_progress.dart`. `maxLives` is 3 on every
   level and `starsForMistakes(mistakes)` is the plain rule (flawless three,
   one slip two, two slips one). Spending the allowance is not the end of the
-  level: the "Out of lives" card offers **Keep going**
-  (`GameNotifier.keepGoing`), which plays on from where the board stood with
-  the clock where it was. The reprieve is **one mistake long** — the next
+  level: the "Out of lives" card offers to carry on — but only through a
+  **riddle** (see below), which is what calls `GameNotifier.keepGoing`. It
+  plays on from where the board stood with the clock where it was. The reprieve is **one mistake long** — the next
   fresh bump ends the attempt and asks again — and `GameState.continues`
   counts how many times it was taken. `GameState.stars` floors a clear at one
   star, so a zero there only ever means "not cleared". A second run at an
   arrow already in `GameState.bumped` is free: that lesson is paid for, and a
   200-arrow board is too big to hold every dead end in your head. Both
   `bumped` and `continues` travel in the saved game.
+- **The riddle gate** (`data/riddle_bank.dart`, `engine/answer_match.dart`,
+  `providers/riddle_provider.dart`, `widgets/riddle_card.dart`): carrying on
+  past a spent allowance is earned rather than tapped through, so lives are
+  never spent thoughtlessly and a 300-arrow board is still never lost to one
+  slipped finger. Each language has its own bank of `kRiddleCount` (50)
+  riddles — the Hindi ones are written as पहेलियाँ, not translated, since a
+  pun rarely survives the crossing — and `RiddleDeckNotifier` deals a
+  *shuffled pack* rather than rolling a die: every riddle comes up before any
+  repeats, the order and position are persisted (`arrow_riddle_order`,
+  `arrow_riddle_cursor`, `arrow_riddles_solved`), and a reshuffle never opens
+  on the riddle the last pack closed with. `judgeAnswer` is deliberately
+  generous — it compares the typed word, the word with its inflections peeled
+  off (English plurals/tenses, Hindi case endings) and the word within a typo
+  or two (Damerau, so a transposition costs one, not two) — and reports
+  anything but a direct hit as `AnswerVerdict.close`, which the card
+  celebrates ("close enough") and lets through. The 💡 gives a clue on the
+  first press and the first letter on the second, and it is a **chip in the
+  row that already says how long the answer is**, not a button (filled with
+  `accentSun` and lettered in `onAccent`, the pairing the toolbar's hint badge
+  uses and `test/ui/theme_test.dart` pins at 4.5:1). **A wash never carries
+  its own tint as text** — that is how both pills first shipped and why their
+  labels all but vanished, amber on pale amber in the light theme and the
+  primary at 3.4:1 on its own wash in the dark one. The quiet pills take
+  `ArrowPalette.chipInk`, which steps away from the wash in each palette
+  (darker on light, lighter on dark): a card with a
+  column of buttons at its foot should not have a second one loose in its
+  middle, and the hint opens directly under the chip that gave it. A
+  different riddle is offered after two misses; a wrong answer costs nothing
+  but a wobble and a joke at the guess's expense — `kRiddleQuips` (30) of
+  them per language, dealt from a pack shuffled when the card is built
+  rather than sampled at random, because a random pick repeats itself within
+  a handful of guesses and the same line twice reads as a bug rather than as
+  ribbing. They never mention the 💡 (it may be spent) or count the misses
+  (they arrive in a shuffled order), and they are at the guess's expense,
+  never the player's: the gate is meant to be the fun part of losing, not a
+  second punishment. The
+  card wears `kRiddleAskingEmoji` while it asks: **every riddle's emoji is a
+  picture of its answer**, so the riddle's own emoji is held back and arrives
+  as the reveal on the solved card. `_keepTyping` puts the keyboard back in
+  the field after anything else on the card is pressed, and it has to do it
+  in a post-frame callback — whatever was tapped takes the focus as part of
+  handling that tap, *after* the callback runs, so asking from inside the
+  callback is asking too early and on the web the next thing typed goes
+  nowhere. (Widget tests do not catch this; the screenshot harness does,
+  because it types into the real thing.) Every Hindi
+  answer also lists its **romanized** spellings ('paani', 'jal'), because a
+  phone set to Hindi very often has no Devanagari keyboard on it, and the
+  field says so; `test/data/riddle_bank_test.dart` pins that every one of
+  them has at least one.
+  `test/data/riddle_bank_test.dart` pins that no riddle in a bank accepts
+  another riddle's answer, which is what keeps that generosity honest; when
+  two words collide (धुआँ is one letter from कुआँ), the bank gives way rather
+  than the matcher getting stricter. The banks also barely share a *subject*:
+  the Hindi one is about गन्ना, मेहँदी, कुआँ and रेलगाड़ी, not about whatever
+  the English riddle with the same id happens to be. The gate is UI-level state
+  (`_riddleId` on the game screen): the engine and `GameState` know nothing
+  about riddles.
+- **Language:** `Settings.languageChoice` (`arrow_language`, default
+  `LanguageChoice.system`) → `localeFor` in `main.dart` →
+  `MaterialApp.locale`, where **null is the point**: it hands the choice back
+  to Flutter, which resolves the device locale against `supportedLocales`, so
+  a phone set to Hindi opens in Hindi. Settings → Language pins one instead.
+  The riddle card reads `Localizations.localeOf(context).languageCode` to
+  pick its bank, so the riddles follow the app's language rather than a
+  stored copy of it.
 
 ## Testing
 
@@ -471,9 +566,12 @@ composite action check the `uses:` inside it too.
 
 ## Pending follow-ups
 
-- **Localization:** only English is authored (`lib/l10n/app_en.arb`); the
-  l10n pipeline is wired, so adding a language is a second `.arb` file plus a
-  language picker in Settings.
+- **Localization:** English and Hindi are authored (`lib/l10n/app_en.arb`,
+  `app_hi.arb`) and Settings has the picker, so a third language is a third
+  `.arb` file, a `LanguageChoice` value, and a bank of 50 riddles in
+  `data/riddle_bank.dart` (plus whatever `engine/answer_match.dart` needs to
+  peel that language's endings off — it handles English and Devanagari today,
+  and falls back to plain typo distance for anything else).
 - **Sound effects:** exit whoosh and blocked bump exist; any further sound
   is another synth in `tool/make_sfx.py` (never `.ogg` — iOS can't decode
   Vorbis via audioplayers) and a method on `SfxService`.

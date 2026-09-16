@@ -82,6 +82,9 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
         theme: buildLightTheme(),
         darkTheme: buildDarkTheme(),
         themeMode: themeModeFor(settings.themeChoice),
+        // Null lets Flutter resolve the device locale against
+        // supportedLocales — a phone set to Hindi opens in Hindi.
+        locale: localeFor(settings.languageChoice),
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
@@ -94,6 +97,14 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
     );
   }
 }
+
+/// Maps the persisted [LanguageChoice] to a [Locale], or null for
+/// [LanguageChoice.system] — which hands the choice back to the device.
+Locale? localeFor(LanguageChoice choice) => switch (choice) {
+      LanguageChoice.system => null,
+      LanguageChoice.english => const Locale('en'),
+      LanguageChoice.hindi => const Locale('hi'),
+    };
 
 /// Maps the persisted [ThemeChoice] to Flutter's [ThemeMode].
 ThemeMode themeModeFor(ThemeChoice choice) => switch (choice) {

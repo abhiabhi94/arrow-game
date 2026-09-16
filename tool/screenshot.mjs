@@ -9,8 +9,11 @@
 //                            [--settings] [--onboarding] [--dump] [--no-strict]
 //                            [--build-dir build/web] [--scale 2] [--port 0]
 //                            [--viewport 1440x900] [--keys Equal,KeyH] [--crash 2,4]
+//                            [--riddle 2,4,2,3,2,2] [--riddle-answer shadow] [--lang hi]
 //
-//   --levels  opens each level and captures its board (level-NN-*.png)
+//   --levels  opens each level and captures its board (level-NN-*.png); the
+//             first one that has to be scrolled to also captures home with
+//             its pinned header collapsed (home-scrolled-*.png)
 //   --hint    also taps the hint button and captures the glowing arrow
 //             (level-NN-hint-*.png)
 //   --grid    seeds the grid-lines preference on (the lattice under the arrows)
@@ -21,6 +24,17 @@
 //             non-phone shots carry the size in their filename
 //   --keys    Playwright key names pressed on each opened level, then captured
 //             (level-NN-keys-*.png): e.g. Equal zooms in, KeyH asks for a hint
+//   --riddle x,y,...  spends every life on the first level by tapping the
+//             given blocked cells (level 1: 2,4,2,3,2,2 are three different
+//             blocked heads), then captures the "Out of lives" card, the
+//             riddle behind it, the riddle with its clue out, the riddle with
+//             its first letter out too, and the answer accepted
+//             (level-NN-riddle-*.png). The pack is seeded in order,
+//             so the riddle is always the first in the bank and
+//             --riddle-answer (default "shadow") is its answer.
+//   --lang    seeds the language setting ('en' or 'hi'), so the shots show the
+//             app in that language whatever the browser's locale is; the
+//             language lands in the filename
 //   --crash x,y  taps grid cell (x, y) on the first level and captures the
 //             moment after impact (level-NN-crash-*.png): the screen jolt and
 //             the red flash of a bump. On level 1, cell 2,4 is a blocked head.
@@ -77,6 +91,32 @@ const isPhone = viewport.width < 600;
 // the same way taps are (e.g. `--keys Equal,Equal,KeyH`).
 const keys = String(args.keys ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const crash = parseCell(args.crash);
+const riddleCells = parseCells(args.riddle);
+const riddleAnswer = typeof args['riddle-answer'] === 'string' ? args['riddle-answer'] : 'shadow';
+const lang = parseLang(args.lang);
+// The driver finds widgets by their accessible name, which is localized, so
+// a --lang run needs that language's names.
+const labels = lang === 'hindi'
+  ? {
+      settings: /^सेटिंग्स/,
+      level: (n) => new RegExp(`^लेवल ${n}(\\s|$)`),
+      hint: /^संकेत/,
+      back: /^(वापस|back)/i,
+      solveRiddle: /पहेली बूझें$/,
+      riddleHint: /थोड़ा संकेत दीजिए$/,
+      riddleNudge: /एक और इशारा$/,
+      riddleSubmit: /यही मेरा जवाब है$/,
+    }
+  : {
+      settings: /^settings/i,
+      level: (n) => new RegExp(`^Level ${n}(\\s|$)`),
+      hint: /^Hint/,
+      back: /^back/i,
+      solveRiddle: /Solve a riddle$/,
+      riddleHint: /Give me a hint$/,
+      riddleNudge: /One more nudge$/,
+      riddleSubmit: /That's my answer$/,
+    };
 
 if (!fs.existsSync(path.join(buildDir, 'index.html'))) {
   console.error(`No web build at ${buildDir}. Run: flutter build web --debug --no-web-resources-cdn`);
@@ -154,8 +194,20 @@ const prefs = {
   // app's own default (on, once the toggle has been earned).
   ...(grid ? { 'flutter.arrow_grid_lines': 'true' } : {}),
   'flutter.arrow_theme': JSON.stringify(dark ? 'dark' : 'light'),
+  // Unset by default, which is the app's own default: follow the device.
+  ...(lang ? { 'flutter.arrow_language': JSON.stringify(lang) } : {}),
   // A string preference is stored JSON-encoded (quoted); the saved game is a
   // JSON document inside that string.
+  // An unshuffled pack starting at the top, so the riddle in the shot is
+  // always the same one (and --riddle-answer is its answer).
+  ...(riddleCells
+    ? {
+        'flutter.arrow_riddle_order': JSON.stringify(
+          Array.from({ length: 50 }, (_, i) => String(i + 1)),
+        ),
+        'flutter.arrow_riddle_cursor': '0',
+      }
+    : {}),
   ...(resume && levels.length
     ? { 'flutter.arrow_saved_game': JSON.stringify(JSON.stringify({ level: levels[0], removed: [0, 1], mistakes: 1, hintsLeft: 2, elapsedMs: 30_000 })) }
     : {}),
@@ -201,11 +253,11 @@ try {
   // Non-phone runs carry their size in the filename so a desktop run doesn't
   // overwrite the phone shot of the same screen.
   const size = isPhone ? '' : `-${viewport.width}x${viewport.height}`;
-  const tag = `${dark ? 'dark' : 'light'}${grid ? '-grid' : ''}${resume ? '-resume' : ''}${size}`;
+  const tag = `${dark ? 'dark' : 'light'}${grid ? '-grid' : ''}${resume ? '-resume' : ''}${lang ? `-${args.lang}` : ''}${size}`;
   await shoot(page, `${args.onboarding ? 'onboarding' : 'home'}-${tag}`);
 
   if (args.settings) {
-    await page.getByRole('button', { name: /^settings/i }).first().click();
+    await page.getByRole('button', { name: labels.settings }).first().click();
     await settle(page, 800);
     await shoot(page, `settings-${tag}`);
     await goBack(page);
@@ -214,21 +266,31 @@ try {
   // The journey trail is a long scroll view. Playwright cannot scroll a
   // Flutter scroll view through the semantics tree, and a single big wheel
   // delta is clamped, so nudge the wheel until the node's box is in view.
+  // The home header is pinned, so the first level that needs scrolling to
+  // reach also shows the header in its collapsed state — worth a shot, and
+  // worth the smoke test seeing it laid out.
+  let shotScrolledHome = false;
   for (const level of levels) {
     // The accessible name of a node is "Level N" + its digit (and the "Next
     // up" card is "Level N <name>"), so anchor only the start and take the
     // trail node, which comes after the card in the tree.
-    const name = new RegExp(`^Level ${level}(\\s|$)`);
+    const name = labels.level(level);
     const tile = page.getByRole('button', { name }).last();
     await page.mouse.move(195, 500);
     // A node that is not yet in the semantics tree (Flutter builds it lazily
     // for the visible part of the list) has no box; ask briefly and keep
     // nudging rather than sit through Playwright's 30 s default per probe.
+    let nudged = false;
     for (let i = 0; i < 120; i++) {
       const box = await tile.boundingBox({ timeout: 500 }).catch(() => null);
       if (box && box.y > 120 && box.y + box.height < 720) break;
       await page.mouse.wheel(0, box && box.y <= 120 ? -180 : 180);
       await settle(page, 150);
+      nudged = true;
+    }
+    if (nudged && !shotScrolledHome) {
+      shotScrolledHome = true;
+      await shoot(page, `home-scrolled-${tag}`);
     }
     await tile.click();
     await settle(page, 1200);
@@ -245,8 +307,31 @@ try {
       await page.clock.runFor(900);
       await page.clock.resume();
     }
+    if (riddleCells && level === levels[0]) {
+      // Three different blocked arrows: the same one twice is free.
+      for (const cell of riddleCells) {
+        await tapCell(page, cell);
+        await settle(page, 1200); // the whole bump, or the tap is dropped
+      }
+      await shoot(page, `level-${id}-outoflives-${tag}`);
+      await page.getByRole('button', { name: labels.solveRiddle }).first().click();
+      await settle(page, 700);
+      await shoot(page, `level-${id}-riddle-${tag}`);
+      await page.getByRole('button', { name: labels.riddleHint }).first().click();
+      await settle(page, 600);
+      await shoot(page, `level-${id}-riddle-hint-${tag}`);
+      // The second nudge gives the first letter: the fullest the card gets.
+      await page.getByRole('button', { name: labels.riddleNudge }).first().click();
+      await settle(page, 600);
+      await shoot(page, `level-${id}-riddle-letter-${tag}`);
+      await page.keyboard.type(riddleAnswer);
+      await settle(page, 300);
+      await page.getByRole('button', { name: labels.riddleSubmit }).first().click();
+      await settle(page, 900);
+      await shoot(page, `level-${id}-riddle-solved-${tag}`);
+    }
     if (hint) {
-      await page.getByRole('button', { name: /^Hint/ }).first().click();
+      await page.getByRole('button', { name: labels.hint }).first().click();
       await settle(page, 500);
       await shoot(page, `level-${id}-hint-${tag}`);
     }
@@ -300,7 +385,7 @@ async function dumpSemantics(page) {
 }
 
 async function goBack(page) {
-  const back = page.getByRole('button', { name: /^back/i }).first();
+  const back = page.getByRole('button', { name: labels.back }).first();
   if (await back.count()) await back.click(); else await page.goBack();
   await settle(page, 800);
 }
@@ -341,6 +426,29 @@ function parseCell(value) {
   const m = /^(\d+),(\d+)$/.exec(String(value));
   if (!m) { console.error(`Bad --crash ${value}; expected a grid cell, e.g. 2,4`); process.exit(2); }
   return { x: Number(m[1]), y: Number(m[2]) };
+}
+
+/// `--lang hi` -> the LanguageChoice name the app persists; nothing when the
+/// flag is absent (the app then follows the device).
+function parseLang(value) {
+  if (!value || value === true) return null;
+  const names = { en: 'english', hi: 'hindi' };
+  const name = names[String(value)];
+  if (!name) { console.error(`Bad --lang ${value}; expected en or hi`); process.exit(2); }
+  return name;
+}
+
+/// `--riddle 2,4,2,3` -> [{x, y}, {x, y}]; nothing when the flag is absent.
+function parseCells(value) {
+  if (!value || value === true) return null;
+  const parts = String(value).split(',').map((n) => n.trim());
+  if (parts.length < 2 || parts.length % 2 || parts.some((n) => !/^\d+$/.test(n))) {
+    console.error(`Bad --riddle ${value}; expected grid cells, e.g. 2,4,2,3,2,2`);
+    process.exit(2);
+  }
+  const cells = [];
+  for (let i = 0; i < parts.length; i += 2) cells.push({ x: Number(parts[i]), y: Number(parts[i + 1]) });
+  return cells;
 }
 
 /// `--viewport 1440x900` -> { width, height }; defaults to a phone.

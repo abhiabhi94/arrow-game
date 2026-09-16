@@ -31,8 +31,9 @@ void main() {
       );
     }
     for (final s in levelSpecs) {
-      // Half a minute at least, never past fourteen; at least 1.5 s an arrow.
-      expect(s.timeLimitMs, inInclusiveRange(25000, 810000), reason: 'level ${s.level}');
+      // Twenty-odd seconds at least, never past thirteen minutes; at least
+      // 1.5 s an arrow.
+      expect(s.timeLimitMs, inInclusiveRange(24000, 780000), reason: 'level ${s.level}');
       expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(1500), reason: 'level ${s.level}');
     }
     // The curve is steep: a handful to learn on, dozens by level 8, well
@@ -49,15 +50,16 @@ void main() {
     expect(specForLevel(4).openMoves, 2);
     expect(specForLevel(totalLevels).openMoves, 2);
     // The clock is brisk but never a lottery: from level 10 on at least
-    // 2.5 s an arrow, and the finale is exactly thirteen and a half minutes.
+    // 2.4 s an arrow (it was 2.5 before every level lost 5% of its clock),
+    // and the finale is a shade under thirteen minutes.
     for (final s in levelSpecs.where((s) => s.level >= 10)) {
-      expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(2500), reason: 'level ${s.level}');
+      expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(2400), reason: 'level ${s.level}');
     }
-    expect(specForLevel(totalLevels).timeLimitMs, 810000);
+    expect(specForLevel(totalLevels).timeLimitMs, 770000);
   });
 
   test('seed and toString', () {
     expect(specForLevel(1).seed, isNot(specForLevel(2).seed));
-    expect(specForLevel(1).toString(), 'LevelSpec(1: 5x6, 5 arrows, 27000ms)');
+    expect(specForLevel(1).toString(), 'LevelSpec(1: 5x6, 5 arrows, 26000ms)');
   });
 }

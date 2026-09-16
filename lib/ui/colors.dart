@@ -35,6 +35,13 @@ const Color _lErrorRed = Color(0xFFEF4444);
 // dark palette's own text ink is near-white, which on amber is unreadable.
 const Color _lOnAccent = Color(0xFF2D2A4A);
 
+// Ink for a label on a *wash* of the primary (the pills on the riddle card).
+// A tint cannot carry its own tint as text: the plain primary sits at 4.0:1
+// on its own 14% wash in the light palette and 3.4:1 in the dark one, which
+// is how "6 letters" came out barely there on the dark theme. Both palettes
+// step away from the wash instead — darker on light, lighter on dark.
+const Color _lChipInk = Color(0xFF5647C4);
+
 // Text
 const Color _lTextInk = Color(0xFF2D2A4A);
 const Color _lTextMuted = Color(0xFF6E6A8F);
@@ -84,6 +91,8 @@ const Color _dErrorRed = Color(0xFFFF6B6B);
 
 const Color _dOnAccent = Color(0xFF241F3B);
 
+const Color _dChipInk = Color(0xFFB7AEFF);
+
 const Color _dTextInk = Color(0xFFEAE7F7);
 const Color _dTextMuted = Color(0xFFA9A4CC);
 const Color _dTextFaint = Color(0xFF6E6A8F);
@@ -123,6 +132,7 @@ class ArrowPalette {
     required this.successGreen,
     required this.errorRed,
     required this.onAccent,
+    required this.chipInk,
     required this.textInk,
     required this.textMuted,
     required this.textFaint,
@@ -155,6 +165,8 @@ class ArrowPalette {
   final Color errorRed;
   /// Ink for text or icons drawn on one of the bright accent colours.
   final Color onAccent;
+  /// Ink for a label on a wash of [primary] — see [_lChipInk].
+  final Color chipInk;
   final Color textInk;
   final Color textMuted;
   final Color textFaint;
@@ -190,6 +202,7 @@ class ArrowPalette {
     successGreen: _lSuccessGreen,
     errorRed: _lErrorRed,
     onAccent: _lOnAccent,
+    chipInk: _lChipInk,
     textInk: _lTextInk,
     textMuted: _lTextMuted,
     textFaint: _lTextFaint,
@@ -222,6 +235,7 @@ class ArrowPalette {
     successGreen: _dSuccessGreen,
     errorRed: _dErrorRed,
     onAccent: _dOnAccent,
+    chipInk: _dChipInk,
     textInk: _dTextInk,
     textMuted: _dTextMuted,
     textFaint: _dTextFaint,

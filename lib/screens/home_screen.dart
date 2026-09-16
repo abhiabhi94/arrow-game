@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -45,51 +46,29 @@ class HomeScreen extends ConsumerWidget {
         child: LayoutBuilder(
           builder: (context, constraints) => CustomScrollView(
             slivers: [
+              // The header is a sliver of the scroll view itself, not one of
+              // the group below: a pinned header inside a SliverMainAxisGroup
+              // paints less than it lays out, which trips the geometry assert.
+              SliverPadding(
+                padding: contentGutter(constraints.maxWidth),
+                sliver: SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _HomeHeader(
+                    title: l10n.appTitle,
+                    tagline: l10n.appTagline,
+                    stars: notifier.totalStars,
+                    palette: p,
+                    settingsTooltip: l10n.homeSettings,
+                    onSettings: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+                    ),
+                  ),
+                ),
+              ),
               SliverPadding(
                 padding: contentGutter(constraints.maxWidth),
                 sliver: SliverMainAxisGroup(
                   slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    l10n.appTitle,
-                                    style: TextStyle(
-                                      fontSize: 36,
-                                      fontWeight: FontWeight.w800,
-                                      color: p.textInk,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  Text(
-                                    l10n.appTagline,
-                                    style: TextStyle(color: p.textMuted, fontSize: 15),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            _StarsPill(stars: notifier.totalStars, total: totalLevels * 3),
-                            const SizedBox(width: 8),
-                            IconButton.filledTonal(
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => const SettingsScreen(),
-                                ),
-                              ),
-                              icon: const Icon(Icons.settings_rounded),
-                              tooltip: l10n.homeSettings,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
@@ -136,6 +115,105 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The home screen's header, pinned to the top of the trail: the trail is
+/// sixty levels long, and the star count and the way into Settings should not
+/// be sixty levels back up the page. It shrinks as the page scrolls — the
+/// title comes down to a heading and the tagline folds away — while the stars
+/// and the gear stay put, and stay the same size.
+class _HomeHeader extends SliverPersistentHeaderDelegate {
+  const _HomeHeader({
+    required this.title,
+    required this.tagline,
+    required this.stars,
+    required this.palette,
+    required this.settingsTooltip,
+    required this.onSettings,
+  });
+
+  final String title;
+  final String tagline;
+  final int stars;
+  final ArrowPalette palette;
+  final String settingsTooltip;
+  final VoidCallback onSettings;
+
+  @override
+  double get maxExtent => 96;
+
+  @override
+  double get minExtent => 62;
+
+  @override
+  bool shouldRebuild(_HomeHeader old) =>
+      old.stars != stars ||
+      old.palette != palette ||
+      old.title != title ||
+      old.tagline != tagline;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final t = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    // Filling the extent is not optional: a child that measures shorter than
+    // the extent leaves the sliver painting less than it lays out, which is
+    // an assert rather than a gap.
+    return SizedBox.expand(
+      // Opaque, because the trail scrolls underneath it.
+      child: Material(
+        color: palette.backgroundSoft,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 16, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: lerpDouble(36, 24, t),
+                        fontWeight: FontWeight.w800,
+                        color: palette.textInk,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    // heightFactor folds the line away rather than cutting
+                    // it; once folded it leaves the tree altogether, so a
+                    // screen reader is not still reading it out.
+                    if (t < 1)
+                      Align(
+                        alignment: Alignment.topLeft,
+                        heightFactor: 1 - t,
+                        child: Opacity(
+                          opacity: 1 - t,
+                          child: Text(
+                            tagline,
+                            maxLines: 1,
+                            style: TextStyle(color: palette.textMuted, fontSize: 15),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              _StarsPill(stars: stars, total: totalLevels * 3),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                onPressed: onSettings,
+                icon: const Icon(Icons.settings_rounded),
+                tooltip: settingsTooltip,
               ),
             ],
           ),

@@ -20,6 +20,7 @@ class SettingsRepository {
   static const _kTheme = 'arrow_theme';
   static const _kGridLines = 'arrow_grid_lines';
   static const _kOnboarding = 'arrow_onboarding_done';
+  static const _kLanguage = 'arrow_language';
 
   Settings load() {
     const d = Settings.defaults;
@@ -31,6 +32,7 @@ class SettingsRepository {
       themeChoice: _parseTheme(_prefs.getString(_kTheme), d.themeChoice),
       gridLinesOn: _prefs.getBool(_kGridLines) ?? d.gridLinesOn,
       onboardingDone: _prefs.getBool(_kOnboarding) ?? d.onboardingDone,
+      languageChoice: _parseLanguage(_prefs.getString(_kLanguage), d.languageChoice),
     );
   }
 
@@ -42,6 +44,16 @@ class SettingsRepository {
     await _prefs.setString(_kTheme, s.themeChoice.name);
     await _prefs.setBool(_kGridLines, s.gridLinesOn);
     await _prefs.setBool(_kOnboarding, s.onboardingDone);
+    await _prefs.setString(_kLanguage, s.languageChoice.name);
+  }
+
+  /// Maps a stored language name back to [LanguageChoice], falling back to
+  /// [fallback] for missing or unrecognised values.
+  static LanguageChoice _parseLanguage(String? name, LanguageChoice fallback) {
+    for (final choice in LanguageChoice.values) {
+      if (choice.name == name) return choice;
+    }
+    return fallback;
   }
 
   /// Maps a stored theme name back to [ThemeChoice], falling back to
@@ -67,6 +79,9 @@ class SettingsNotifier extends StateNotifier<Settings> {
 
   void setThemeChoice(ThemeChoice choice) =>
       _update(state.copyWith(themeChoice: choice));
+
+  void setLanguageChoice(LanguageChoice choice) =>
+      _update(state.copyWith(languageChoice: choice));
 
   void setGridLines(bool on) => _update(state.copyWith(gridLinesOn: on));
 

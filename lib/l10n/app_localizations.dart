@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
+import 'app_localizations_hi.dart';
 
 // ignore_for_file: type=lint
 
@@ -92,7 +93,10 @@ abstract class AppLocalizations {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('hi'),
+  ];
 
   /// Application title.
   ///
@@ -249,6 +253,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Big boards later — pinch or tap to zoom'**
   String get onboardRuleZoom;
+
+  /// No description provided for @onboardRuleRiddle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lives all gone? Crack a riddle and carry on'**
+  String get onboardRuleRiddle;
 
   /// No description provided for @homeStars.
   ///
@@ -859,20 +869,302 @@ abstract class AppLocalizations {
   /// No description provided for @outOfLivesBody.
   ///
   /// In en, this message translates to:
-  /// **'That was the last one. Carry on and finish for a single star, or restart the level?'**
+  /// **'That was the last one. Crack a riddle and you can carry on from right here for a single star — or start the level over?'**
   String get outOfLivesBody;
 
-  /// No description provided for @outOfLivesKeepGoing.
+  /// No description provided for @outOfLivesSolveRiddle.
   ///
   /// In en, this message translates to:
-  /// **'Keep going'**
-  String get outOfLivesKeepGoing;
+  /// **'Solve a riddle'**
+  String get outOfLivesSolveRiddle;
 
   /// No description provided for @outOfLivesRetry.
   ///
   /// In en, this message translates to:
   /// **'Start over'**
   String get outOfLivesRetry;
+
+  /// No description provided for @riddleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Riddle me this'**
+  String get riddleTitle;
+
+  /// No description provided for @riddleIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer it and you are back on the board with one more life.'**
+  String get riddleIntro;
+
+  /// No description provided for @riddleField.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer'**
+  String get riddleField;
+
+  /// No description provided for @riddleSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s my answer'**
+  String get riddleSubmit;
+
+  /// No description provided for @riddleHintAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Give me a hint'**
+  String get riddleHintAction;
+
+  /// No description provided for @riddleHintMore.
+  ///
+  /// In en, this message translates to:
+  /// **'One more nudge'**
+  String get riddleHintMore;
+
+  /// No description provided for @riddleFirstLetter.
+  ///
+  /// In en, this message translates to:
+  /// **'It starts with “{letter}”'**
+  String riddleFirstLetter(String letter);
+
+  /// No description provided for @riddleLetters.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} letters'**
+  String riddleLetters(int count);
+
+  /// No description provided for @riddleWords.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} words'**
+  String riddleWords(int count);
+
+  /// No description provided for @riddleWrong1.
+  ///
+  /// In en, this message translates to:
+  /// **'Nope. Not even close enough for “close enough”.'**
+  String get riddleWrong1;
+
+  /// No description provided for @riddleWrong2.
+  ///
+  /// In en, this message translates to:
+  /// **'Still no. The riddle is unmoved.'**
+  String get riddleWrong2;
+
+  /// No description provided for @riddleWrong3.
+  ///
+  /// In en, this message translates to:
+  /// **'Bold. Confident. Wrong — but very confident.'**
+  String get riddleWrong3;
+
+  /// No description provided for @riddleWrong4.
+  ///
+  /// In en, this message translates to:
+  /// **'We could do this all day. The riddle certainly can.'**
+  String get riddleWrong4;
+
+  /// No description provided for @riddleWrong5.
+  ///
+  /// In en, this message translates to:
+  /// **'The arrows have stopped watching. Probably for the best.'**
+  String get riddleWrong5;
+
+  /// No description provided for @riddleWrong6.
+  ///
+  /// In en, this message translates to:
+  /// **'That is a word, yes. Not the word, but a word.'**
+  String get riddleWrong6;
+
+  /// No description provided for @riddleWrong7.
+  ///
+  /// In en, this message translates to:
+  /// **'Interesting theory. Wrong, but interesting.'**
+  String get riddleWrong7;
+
+  /// No description provided for @riddleWrong8.
+  ///
+  /// In en, this message translates to:
+  /// **'The riddle heard you, and then unheard you.'**
+  String get riddleWrong8;
+
+  /// No description provided for @riddleWrong9.
+  ///
+  /// In en, this message translates to:
+  /// **'Not it — but points for commitment.'**
+  String get riddleWrong9;
+
+  /// No description provided for @riddleWrong10.
+  ///
+  /// In en, this message translates to:
+  /// **'Somewhere, a dictionary just flinched.'**
+  String get riddleWrong10;
+
+  /// No description provided for @riddleWrong11.
+  ///
+  /// In en, this message translates to:
+  /// **'So close! (It was not close.)'**
+  String get riddleWrong11;
+
+  /// No description provided for @riddleWrong12.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer and the right one have never met.'**
+  String get riddleWrong12;
+
+  /// No description provided for @riddleWrong13.
+  ///
+  /// In en, this message translates to:
+  /// **'No. The riddle is taking notes.'**
+  String get riddleWrong13;
+
+  /// No description provided for @riddleWrong14.
+  ///
+  /// In en, this message translates to:
+  /// **'A confident no from the judges.'**
+  String get riddleWrong14;
+
+  /// No description provided for @riddleWrong15.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong, but delivered with real authority.'**
+  String get riddleWrong15;
+
+  /// No description provided for @riddleWrong16.
+  ///
+  /// In en, this message translates to:
+  /// **'That is one of the words of all time.'**
+  String get riddleWrong16;
+
+  /// No description provided for @riddleWrong17.
+  ///
+  /// In en, this message translates to:
+  /// **'No. But keep that energy.'**
+  String get riddleWrong17;
+
+  /// No description provided for @riddleWrong18.
+  ///
+  /// In en, this message translates to:
+  /// **'The riddle has asked for a moment alone.'**
+  String get riddleWrong18;
+
+  /// No description provided for @riddleWrong19.
+  ///
+  /// In en, this message translates to:
+  /// **'Not near, not far — just comprehensively wrong.'**
+  String get riddleWrong19;
+
+  /// No description provided for @riddleWrong20.
+  ///
+  /// In en, this message translates to:
+  /// **'Declined. Politely, but firmly.'**
+  String get riddleWrong20;
+
+  /// No description provided for @riddleWrong21.
+  ///
+  /// In en, this message translates to:
+  /// **'Excellent spelling. Wrong word.'**
+  String get riddleWrong21;
+
+  /// No description provided for @riddleWrong22.
+  ///
+  /// In en, this message translates to:
+  /// **'You may be answering a different riddle entirely.'**
+  String get riddleWrong22;
+
+  /// No description provided for @riddleWrong23.
+  ///
+  /// In en, this message translates to:
+  /// **'The riddle suspects you are guessing now.'**
+  String get riddleWrong23;
+
+  /// No description provided for @riddleWrong24.
+  ///
+  /// In en, this message translates to:
+  /// **'No. And the riddle rather enjoyed that one.'**
+  String get riddleWrong24;
+
+  /// No description provided for @riddleWrong25.
+  ///
+  /// In en, this message translates to:
+  /// **'Try the one your first instinct said.'**
+  String get riddleWrong25;
+
+  /// No description provided for @riddleWrong26.
+  ///
+  /// In en, this message translates to:
+  /// **'Swing and a miss. Lovely form, though.'**
+  String get riddleWrong26;
+
+  /// No description provided for @riddleWrong27.
+  ///
+  /// In en, this message translates to:
+  /// **'That is a no from the riddle, and the riddle is in charge here.'**
+  String get riddleWrong27;
+
+  /// No description provided for @riddleWrong28.
+  ///
+  /// In en, this message translates to:
+  /// **'The riddle is smiling. That is not a good sign.'**
+  String get riddleWrong28;
+
+  /// No description provided for @riddleWrong29.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong — but wholeheartedly wrong.'**
+  String get riddleWrong29;
+
+  /// No description provided for @riddleWrong30.
+  ///
+  /// In en, this message translates to:
+  /// **'Not this time. Maybe the next one. Or the one after.'**
+  String get riddleWrong30;
+
+  /// No description provided for @riddleCloseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Close enough!'**
+  String get riddleCloseTitle;
+
+  /// No description provided for @riddleClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Not quite the word we had — it was {answer} — but near enough. One more life is yours.'**
+  String riddleClose(String answer);
+
+  /// No description provided for @riddleCorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'Spot on!'**
+  String get riddleCorrect;
+
+  /// No description provided for @riddleCorrectBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The answer was {answer}. One more life, and the board is where you left it.'**
+  String riddleCorrectBody(String answer);
+
+  /// No description provided for @riddleBackToBoard.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the arrows'**
+  String get riddleBackToBoard;
+
+  /// No description provided for @riddleSwap.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different riddle'**
+  String get riddleSwap;
+
+  /// No description provided for @riddleGiveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Never mind'**
+  String get riddleGiveUp;
+
+  /// No description provided for @riddleSolvedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Your first riddle} =1{1 riddle cracked so far} other{{count} riddles cracked so far}}'**
+  String riddleSolvedCount(int count);
 
   /// No description provided for @timeUpTitle.
   ///
@@ -933,6 +1225,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A tick on every slide, a buzz on a bump'**
   String get settingsHapticsSubtitle;
+
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsLanguage;
+
+  /// No description provided for @languageSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get languageSystem;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @languageHindi.
+  ///
+  /// In en, this message translates to:
+  /// **'हिन्दी'**
+  String get languageHindi;
 
   /// No description provided for @settingsTheme.
   ///
@@ -1036,7 +1352,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en'].contains(locale.languageCode);
+      <String>['en', 'hi'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -1047,6 +1363,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
+    case 'hi':
+      return AppLocalizationsHi();
   }
 
   throw FlutterError(

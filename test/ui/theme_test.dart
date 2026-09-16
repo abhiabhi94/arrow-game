@@ -78,6 +78,28 @@ void main() {
     }
   });
 
+  test('a pill label is readable on its own wash in both palettes', () {
+    // The riddle card's chips are a 14% wash of the primary. Lettering them
+    // in the primary itself put "6 letters" at 4.0:1 on the light theme and
+    // 3.4:1 on the dark one, where it was barely there; chipInk steps away
+    // from the wash in each palette instead.
+    for (final palette in [ArrowPalette.light, ArrowPalette.dark]) {
+      final wash = Color.alphaBlend(
+        palette.primary.withValues(alpha: 0.14),
+        palette.surface,
+      );
+      expect(
+        _contrast(palette.chipInk, wash),
+        greaterThanOrEqualTo(4.5),
+        reason: 'chipInk on its wash',
+      );
+      expect(
+        _contrast(palette.chipInk, wash),
+        greaterThan(_contrast(palette.primary, wash)),
+      );
+    }
+  });
+
   test('themeModeFor maps every choice', () {
     expect(themeModeFor(ThemeChoice.system), ThemeMode.system);
     expect(themeModeFor(ThemeChoice.light), ThemeMode.light);

@@ -2,13 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:arrow_game/data/level_specs.dart';
+import 'package:arrow_game/data/riddle_bank.dart';
 import 'package:arrow_game/engine/puzzle.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
 import 'package:arrow_game/models/game_state.dart';
+import 'package:arrow_game/models/riddle.dart';
 import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
+import 'package:arrow_game/providers/riddle_provider.dart';
 import 'package:arrow_game/providers/saved_game_provider.dart';
 import 'package:arrow_game/providers/settings_provider.dart';
 import 'package:arrow_game/screens/game_screen.dart';
@@ -43,6 +46,8 @@ List<Override> _overrides({bool unlockAll = true, bool blocked = false}) => [
           unlockAllLevels: unlockAll,
         ),
       ),
+      // The riddle card plays a sound and buzzes on every answer.
+      ...silentFeedback(),
     ];
 
 Future<ProviderContainer> _pumpGame(
@@ -74,6 +79,24 @@ Future<ProviderContainer> _pumpGame(
 Future<void> _settle(WidgetTester tester, int ms) async {
   await tester.pump();
   await tester.pump(Duration(milliseconds: ms));
+}
+
+/// The riddle the card is showing: the last one the deck dealt.
+Riddle _riddleOnScreen(ProviderContainer container) {
+  final deck = container.read(riddleDeckProvider);
+  return riddleFor('en', deck.order[deck.cursor - 1]);
+}
+
+/// Answers the riddle standing between the player and one more life, from
+/// the ending card all the way back to the board.
+Future<void> _crackRiddle(WidgetTester tester, ProviderContainer container) async {
+  await tester.tap(find.text('Solve a riddle'));
+  await _settle(tester, 400);
+  await tester.enterText(find.byType(TextField), _riddleOnScreen(container).answer);
+  await tester.tap(find.text("That's my answer"));
+  await _settle(tester, 600);
+  await tester.tap(find.text('Back to the arrows'));
+  await _settle(tester, 400);
 }
 
 /// Taps the centre of grid [cell] on a [width]-column board.
@@ -154,7 +177,7 @@ void main() {
     expect(find.byIcon(Icons.favorite_rounded), findsNWidgets(3));
   });
 
-  testWidgets('"Keep going" carries the level on instead of replaying it', (tester) async {
+  testWidgets('carrying on is earned: a riddle hands the life back', (tester) async {
     final container = await _pumpGame(tester, blocked: true);
     final notifier = container.read(gameProvider(1).notifier);
     await _tapCell(tester, const Cell(1, 0), width: 5);
@@ -162,20 +185,49 @@ void main() {
     await _tapCell(tester, const Cell(1, 2), width: 5);
     expect(find.text('Out of lives'), findsOneWidget);
 
-    await tester.tap(find.text('Keep going'));
+    // The ending card no longer just waves the player through.
+    await tester.tap(find.text('Solve a riddle'));
     await _settle(tester, 400);
+    expect(find.text('Riddle me this'), findsOneWidget);
+    expect(notifier.state.phase, GamePhase.outOfLives);
+
+    // A wrong answer is not a way back onto the board.
+    await tester.enterText(find.byType(TextField), 'definitely not it');
+    await tester.tap(find.text("That's my answer"));
+    await _settle(tester, 600);
+    expect(notifier.state.phase, GamePhase.outOfLives);
+    expect(container.read(riddleDeckProvider).solved, 0);
+
+    // The keyboard belongs to the answer field while the card is up: the h
+    // of "shadow" must not spend a hint, nor its space pause the level.
+    final hintsBefore = notifier.state.hintsLeft;
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyH);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await _settle(tester, 100);
+    expect(notifier.state.hintsLeft, hintsBefore);
+    expect(notifier.state.phase, GamePhase.outOfLives);
+
+    // Backing out goes to the ending card, not onto the board.
+    await tester.tap(find.text('Never mind'));
+    await _settle(tester, 400);
+    expect(find.text('Out of lives'), findsOneWidget);
+
+    await _crackRiddle(tester, container);
     expect(notifier.state.phase, GamePhase.playing);
+    expect(notifier.state.continues, 1);
+    expect(container.read(riddleDeckProvider).solved, 1);
     expect(find.text('Out of lives'), findsNothing);
     // No heart comes back, and the arrows already out stay out.
     expect(find.bySemanticsLabel('0 lives left'), findsOneWidget);
 
-    // The reprieve is one mistake long: a fresh dead end asks again.
+    // The reprieve is one mistake long: a fresh dead end asks again, and
+    // asks for another riddle.
     await _tapCell(tester, const Cell(1, 3), width: 5); // arrow 4
     await _settle(tester, 1200);
     expect(find.text('Out of lives'), findsOneWidget);
-    await tester.tap(find.text('Keep going'));
-    await _settle(tester, 400);
+    await _crackRiddle(tester, container);
     expect(notifier.state.continues, 2);
+    expect(container.read(riddleDeckProvider).solved, 2);
 
     // Clearing from here is still a clear.
     await _tapCell(tester, const Cell(2, 0), width: 5); // arrow 0, the wall
@@ -186,6 +238,61 @@ void main() {
     await _settle(tester, 1500);
     expect(notifier.state.phase, GamePhase.cleared);
     expect(container.read(progressProvider.notifier).progressFor(1).completed, isTrue);
+  });
+
+  testWidgets('the crash that spends the last life is seen before the card', (tester) async {
+    final container = await _pumpGame(tester, blocked: true);
+    final notifier = container.read(gameProvider(1).notifier);
+    await _tapCell(tester, const Cell(1, 0), width: 5);
+    await _tapCell(tester, const Cell(1, 1), width: 5);
+
+    // The third bump ends the attempt in the same frame as the tap — but the
+    // card would then cover the board before the arrow had visibly hit
+    // anything, and the player would never see what cost them the level.
+    final board = find.descendant(
+      of: find.byType(PuzzleBoard),
+      matching: find.byType(CustomPaint),
+    );
+    final rect = tester.getRect(board);
+    final cell = rect.width / 5;
+    await tester.tapAt(rect.topLeft + Offset(1.5 * cell, 2.5 * cell));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(notifier.state.phase, GamePhase.outOfLives);
+    expect(find.text('Out of lives'), findsNothing);
+
+    // Past impact (a short run hits around 210 ms) the crash is plainly on
+    // screen — the red edge is up — and the card still is not.
+    await tester.pump(const Duration(milliseconds: 200));
+    final flash = tester.widget<Opacity>(find.byKey(const ValueKey<String>('crash-flash')));
+    expect(flash.opacity, greaterThan(0));
+    expect(find.text('Out of lives'), findsNothing);
+
+    // Once it has played out, the card arrives.
+    await tester.pump(const Duration(milliseconds: 1200));
+    expect(find.text('Out of lives'), findsOneWidget);
+    await _settle(tester, 400); // the card's own entrance
+  });
+
+  testWidgets('a second riddle is a different riddle', (tester) async {
+    final container = await _pumpGame(tester, blocked: true);
+    await _tapCell(tester, const Cell(1, 0), width: 5);
+    await _tapCell(tester, const Cell(1, 1), width: 5);
+    await _tapCell(tester, const Cell(1, 2), width: 5);
+    await tester.tap(find.text('Solve a riddle'));
+    await _settle(tester, 400);
+    final first = _riddleOnScreen(container);
+
+    // Two misses put a different riddle on the table.
+    for (var i = 0; i < 2; i++) {
+      await tester.enterText(find.byType(TextField), 'nope');
+      await tester.tap(find.text("That's my answer"));
+      await _settle(tester, 600);
+    }
+    await tester.tap(find.text('Try a different riddle'));
+    await _settle(tester, 400);
+    expect(_riddleOnScreen(container).id, isNot(first.id));
+    expect(find.text(_riddleOnScreen(container).question), findsOneWidget);
   });
 
   test('the zoom ceiling stretches until a cell can reach a fingertip', () {
