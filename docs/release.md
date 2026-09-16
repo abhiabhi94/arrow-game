@@ -76,25 +76,33 @@ re-set `ANDROID_UPLOAD_KEYSTORE_BASE64` and `ANDROID_UPLOAD_KEYSTORE_PASSWORD`.
 From an up-to-date `main`, one command does the whole thing:
 
 ```bash
-tool/bump_version.sh --push     # 1.0.0+3 -> 1.0.1+4, commit, tag v1.0.1, push
-tool/bump_version.sh            # the same, but stops before pushing anything
+tool/bump_version.sh            # 1.2.1+4 -> 1.2.2+5, commit, tag v1.2.2+5, offer to push
+tool/bump_version.sh --push     # the same, but unattended runs push too
 ```
 
 It rewrites `version:` in `pubspec.yaml`, commits ("Bump version to
 1.0.1+4"), makes an annotated `v1.0.1` tag — and then **prints the commit,
 patch and all**, so the change can be read before it goes anywhere.
 
-Pushing is opt-in and asked for a piece at a time:
+Pushing is always offered, never assumed, and asked for a piece at a time:
+once for the branch, then again for the tag — the tag being the one that
+actually starts a release. Declining either stops there and prints what is
+left to run, alongside the one-line undo, so the bump can sit until it looks
+right.
 
-- without `--push` nothing leaves the machine; the script prints the two
-  push commands and the one-line undo, so the bump can sit until it looks
-  right;
-- with `--push` it asks once for the branch and again for the tag — the tag
-  being the one that actually starts a release. Declining either stops
-  there and prints what is left to run.
+`--push` is for the runs with nobody to ask. Under `-y`, or with no
+terminal, the two questions cannot be put to anyone, so `--push` answers
+them: without it such a run commits and tags but publishes nothing. That is
+the only thing the flag does — interactively you are still asked either way.
 
-`--dry-run` prints the plan and stops before even the commit; `-y` answers
-every prompt yes (for a script or a CI job).
+| Invocation                     | What it pushes                          |
+|--------------------------------|-----------------------------------------|
+| `tool/bump_version.sh`         | asks for each; whatever you say yes to  |
+| `tool/bump_version.sh --push`  | same — you are still asked              |
+| `… -y`                         | nothing                                 |
+| `… -y --push`                  | branch and tag, no prompts              |
+
+`--dry-run` prints the plan and stops before even the commit.
 
 ### Where "the current version" comes from
 

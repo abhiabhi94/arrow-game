@@ -141,7 +141,7 @@ Cutting one is a single command from an up-to-date `main` — it bumps
 
 ```bash
 tool/bump_version.sh                  # v1.2.0 -> 1.2.1+4, tag v1.2.1+4, local only
-tool/bump_version.sh --push           # ... and push, asking for branch and tag separately
+tool/bump_version.sh --push           # ... and let an unattended run (-y) push too
 tool/bump_version.sh minor --dry-run  # also major | build | an explicit X.Y.Z
 ```
 
@@ -153,8 +153,11 @@ already uploaded. A new tag is `v` + the whole version, code included
 (`v1.3.0+4`), so tag and pubspec mirror each other exactly; the Release
 workflow refuses a tag that disagrees.
 
-Pushing is opt-in: without `--push` the bump stays on the machine and the
-script prints the push commands and the undo. `--help` lists the rest
+Pushing is always offered and asked for a piece at a time — once for the
+branch, once for the tag — and declining prints the commands and the undo.
+`--push` matters only when there is nobody to ask: under `-y` or with no
+terminal it answers those questions, so a script never publishes by
+accident. `--help` lists the rest
 (`--check`, `--no-tag`, `--tag NAME`, `--any-branch`, `-y`).
 
 Locally, release builds are signed with the same upload key read from a

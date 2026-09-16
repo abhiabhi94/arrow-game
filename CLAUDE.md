@@ -151,10 +151,12 @@ Identity is tied to the **build type**, not a product flavor:
   carry only a name and are still read correctly. The argument
   (`patch` default, `minor`, `major`, `build`, or an explicit `X.Y.Z`) moves
   the name; the `+N` code always increments, because Play needs it strictly
-  higher than any uploaded build. **Pushing is opt-in** — `--push`, which
-  then asks separately for the branch and for the tag (the tag push is what
-  runs the workflow); without it the bump stays local and the script prints
-  the push and undo commands. It prints the plan and asks before the commit
+  higher than any uploaded build. **Pushing is always offered, never assumed** — it
+  asks separately for the branch and for the tag (the tag push is what runs
+  the workflow), and declining prints the push and undo commands. `--push`
+  only answers those two questions for a run with nobody to ask (`-y`, or no
+  terminal), so an unattended run without it commits and tags but publishes
+  nothing. It prints the plan and asks before the commit
   too, and refuses a dirty tree, a non-`main` branch, a branch behind
   `origin` or an existing tag (`--dry-run`, `-y`, `--check`, `--no-tag`,
   `--tag NAME`, `--any-branch`, `--no-fetch`).

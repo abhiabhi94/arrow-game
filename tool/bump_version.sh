@@ -4,10 +4,11 @@
 # and the tag push is what fires the Release workflow
 # (.github/workflows/release.yml). See docs/release.md.
 #
-# Nothing leaves the machine without --push: the commit and tag are made
-# locally, the commit is printed for review, and the branch push and the tag
-# push are each confirmed on their own — so a bump can be read (and undone)
-# before any of it is public.
+# The commit and tag are made locally and the commit is printed for review;
+# only then does it offer to push, asking for the branch and the tag on their
+# own — so a bump can be read (and undone) before any of it is public. An
+# unattended run (-y, or no terminal) pushes only with --push, so a script
+# can never publish by accident.
 #
 # WHERE THE CURRENT VERSION COMES FROM. The released version *name* lives in
 # the newest `v*` tag, not necessarily in pubspec.yaml — this repo shipped
@@ -33,9 +34,9 @@
 # they are still read correctly.
 #
 # Options:
-#       --push        push the branch and the tag to origin (asks for each);
-#                     without it the bump stays local
-#   -y, --yes         answer every prompt yes
+#       --push        answer the two push questions yes — what an unattended
+#                     run needs to push; interactively you are still asked
+#   -y, --yes         answer every prompt yes (pushes only with --push)
 #   -n, --dry-run     print the plan and change nothing
 #       --check       run `flutter analyze --fatal-infos` + `flutter test` first
 #       --no-tag      commit the bump only, no tag
@@ -60,6 +61,17 @@ confirm() {
   case "$reply" in [yY]|[yY][eE][sS]) return 0 ;; *) return 1 ;; esac
 }
 usage() { awk 'NR == 1 {next} !/^#/ {exit} {sub(/^# ?/, ""); print}' "$0"; }
+# Pushing is always offered, never assumed. With nobody to ask — -y, or no
+# terminal — the answer is --push, so an unattended run cannot publish unless
+# it said so outright.
+push_confirm() {
+  if [ "$yes" -eq 1 ] || [ ! -t 0 ]; then
+    if [ "$push" -eq 1 ]; then return 0; else return 1; fi
+  fi
+  local reply
+  read -r -p "$1 [y/N] " reply
+  case "$reply" in [yY]|[yY][eE][sS]) return 0 ;; *) return 1 ;; esac
+}
 
 # Sortable key, so 1.10.0 beats 1.9.0.
 version_key() { local a b c; IFS=. read -r a b c <<<"$1"; printf '%05d%05d%05d' "$a" "$b" "$c"; }
@@ -224,10 +236,15 @@ if [ "$tag" -eq 1 ]; then
 else
   echo "  tag       (skipped)"
 fi
-if [ "$push" -eq 1 ]; then
-  echo "  push      origin $branch$([ "$tag" -eq 1 ] && echo ", then $tag_name") (asked for separately)"
+push_targets="origin $branch$([ "$tag" -eq 1 ] && echo ", then $tag_name")"
+if [ "$yes" -eq 1 ] || [ ! -t 0 ]; then
+  if [ "$push" -eq 1 ]; then
+    echo "  push      $push_targets (--push, unattended)"
+  else
+    echo "  push      no — unattended without --push"
+  fi
 else
-  echo "  push      no — stays local (--push pushes)"
+  echo "  push      $push_targets (asked for separately, after the commit)"
 fi
 
 if [ "$dry_run" -eq 1 ]; then
@@ -273,13 +290,7 @@ push_commands() {
   echo "    (undo instead: $undo)"
 }
 
-if [ "$push" -eq 0 ]; then
-  echo "bump_version: nothing pushed. When it looks right:"
-  push_commands
-  exit 0
-fi
-
-if ! confirm "Push $branch to origin?"; then
+if ! push_confirm "Push $branch to origin?"; then
   echo "bump_version: nothing pushed. When it looks right:"
   push_commands
   exit 0
@@ -294,7 +305,7 @@ echo "bump_version: pushed $branch"
 [ "$tag" -eq 1 ] || exit 0
 
 # The tag is asked separately because it is the one that starts a release.
-if ! confirm "Push $tag_name to origin? (this starts the Release workflow)"; then
+if ! push_confirm "Push $tag_name to origin? (this starts the Release workflow)"; then
   echo "bump_version: tag $tag_name is local only. Push it with:"
   echo "    git push origin $tag_name"
   exit 0
