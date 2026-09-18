@@ -473,7 +473,7 @@ abstract class AppLocalizations {
   /// No description provided for @levelName30.
   ///
   /// In en, this message translates to:
-  /// **'Halfway Out'**
+  /// **'The Gauntlet'**
   String get levelName30;
 
   /// No description provided for @levelName31.
@@ -533,7 +533,7 @@ abstract class AppLocalizations {
   /// No description provided for @levelName40.
   ///
   /// In en, this message translates to:
-  /// **'The Gauntlet'**
+  /// **'Halfway Out'**
   String get levelName40;
 
   /// No description provided for @levelName41.
@@ -635,7 +635,7 @@ abstract class AppLocalizations {
   /// No description provided for @levelName57.
   ///
   /// In en, this message translates to:
-  /// **'Endgame'**
+  /// **'Tightrope'**
   String get levelName57;
 
   /// No description provided for @levelName58.
@@ -647,13 +647,13 @@ abstract class AppLocalizations {
   /// No description provided for @levelName59.
   ///
   /// In en, this message translates to:
-  /// **'Final Approach'**
+  /// **'Steep Climb'**
   String get levelName59;
 
   /// No description provided for @levelName60.
   ///
   /// In en, this message translates to:
-  /// **'Grand Exit'**
+  /// **'Turning Point'**
   String get levelName60;
 
   /// No description provided for @levelName61.

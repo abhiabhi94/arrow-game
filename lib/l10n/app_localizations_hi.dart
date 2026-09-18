@@ -208,7 +208,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName29 => 'भँवर';
 
   @override
-  String get levelName30 => 'आधा सफ़र';
+  String get levelName30 => 'अग्निपरीक्षा';
 
   @override
   String get levelName31 => 'परिपथ';
@@ -238,7 +238,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName39 => 'वापसी नहीं';
 
   @override
-  String get levelName40 => 'अग्निपरीक्षा';
+  String get levelName40 => 'आधा सफ़र';
 
   @override
   String get levelName41 => 'घनी बेलें';
@@ -289,16 +289,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName56 => 'ओझल बिंदु';
 
   @override
-  String get levelName57 => 'आख़िरी चाल';
+  String get levelName57 => 'कसी रस्सी';
 
   @override
   String get levelName58 => 'लंबा सफ़र';
 
   @override
-  String get levelName59 => 'अंतिम पड़ाव';
+  String get levelName59 => 'खड़ी चढ़ाई';
 
   @override
-  String get levelName60 => 'भव्य निकास';
+  String get levelName60 => 'निर्णायक मोड़';
 
   @override
   String get levelName61 => 'दूसरी साँस';

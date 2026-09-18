@@ -208,7 +208,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName29 => 'Whirlpool';
 
   @override
-  String get levelName30 => 'Halfway Out';
+  String get levelName30 => 'The Gauntlet';
 
   @override
   String get levelName31 => 'Circuit Board';
@@ -238,7 +238,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName39 => 'Point of No Return';
 
   @override
-  String get levelName40 => 'The Gauntlet';
+  String get levelName40 => 'Halfway Out';
 
   @override
   String get levelName41 => 'Overgrowth';
@@ -289,16 +289,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName56 => 'Vanishing Point';
 
   @override
-  String get levelName57 => 'Endgame';
+  String get levelName57 => 'Tightrope';
 
   @override
   String get levelName58 => 'The Long Haul';
 
   @override
-  String get levelName59 => 'Final Approach';
+  String get levelName59 => 'Steep Climb';
 
   @override
-  String get levelName60 => 'Grand Exit';
+  String get levelName60 => 'Turning Point';
 
   @override
   String get levelName61 => 'Second Wind';
