@@ -8,6 +8,8 @@
 /// grin rather than rejected on a technicality.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -103,9 +105,9 @@ class RiddleChallenge extends ConsumerStatefulWidget {
 class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
   final TextEditingController _typed = TextEditingController();
 
-  /// The answer field keeps the keyboard: tapping a button on this card
-  /// (the hint, a wrong answer) takes the focus with it on a desktop
-  /// browser, and the next thing typed would go nowhere.
+  /// The answer field keeps the keyboard: with accessibility on, tapping a
+  /// chip or button on this card takes the focus with it in a browser, and
+  /// the next thing typed would go nowhere. See [_keepTyping].
   final FocusNode _field = FocusNode();
 
   /// Wrong guesses so far — they cost nothing but they do change the tone.
@@ -127,6 +129,17 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
   bool get _solved => _verdict != null && _verdict!.accepted;
 
   @override
+  void initState() {
+    super.initState();
+    // Not `autofocus`: that only applies while nothing in the scope has ever
+    // held the focus, and the game screen's own `Focus` (the keyboard
+    // shortcuts) always has, so when the "Solve a riddle" button goes the
+    // focus falls back to that rather than forward to the field. The card
+    // asks outright.
+    _focusField();
+  }
+
+  @override
   void dispose() {
     _typed.dispose();
     _field.dispose();
@@ -137,12 +150,53 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
       riddleFor(Localizations.localeOf(context).languageCode, widget.riddleId);
 
   /// Puts the keyboard back in the answer field after something else on the
-  /// card has been pressed. It has to wait for the frame: whatever was
-  /// tapped takes the focus as part of handling that tap, *after* the
-  /// callback runs, so asking for it back from inside the callback is asking
-  /// too early — on the web that left the next thing typed going nowhere.
+  /// card has been pressed.
+  ///
+  /// Off the web a chip never takes the focus and this is a no-op, so the
+  /// soft keyboard never blinks. The shape of it is dictated by the web with
+  /// accessibility on (a screen reader, or the screenshot harness, which
+  /// turns semantics on to find widgets by name). There a chip is a DOM
+  /// element that takes the browser's focus on mousedown: the field's DOM
+  /// input blurs, the engine shuts its text-editing strategy down and
+  /// *schedules a deferred blur* of that input on a zero-delay timer of its
+  /// own, and the framework's focus follows to the chip. The engine only
+  /// wakes the field again on a semantics update in which its focus has
+  /// changed to on, and that has to land *after* the engine's timer: a
+  /// refocus that lands first is undone by it, and the typing goes nowhere.
+  ///
+  /// So two things. The refocus is asked for from [_focusField]'s own
+  /// zero-delay timer, queued from the tap, which sits behind the engine's
+  /// in the same queue. And nothing may hand the field the focus sooner:
+  /// a chip that vanishes on the press (the 💡 after the first letter)
+  /// would, because a removed focus node passes the focus to the scope's
+  /// previously focused child — the field — inside the frame that removes
+  /// it, ahead of the timer. So whatever has the focus is first parked on the
+  /// enclosing `Focus` (the game screen's shortcuts, which has no semantics
+  /// node and so moves nothing in the browser), and the chip goes without
+  /// having anything to hand on. The chips and buttons keep their focus
+  /// nodes: a chip that could not take the focus would still steal the
+  /// browser's, and with nothing changing on the framework's side the field
+  /// would look focused to Flutter and be dead to the browser.
   void _keepTyping() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    final FocusNode? holder = FocusManager.instance.primaryFocus;
+    if (holder != null && holder != _field) {
+      // Asking a *scope* for the focus would only hand it back to the chip,
+      // so with no enclosing `Focus` the holder is unfocused instead.
+      final FocusNode? parking = Focus.maybeOf(context);
+      if (parking != null) {
+        parking.requestFocus();
+      } else {
+        holder.unfocus();
+      }
+    }
+    _focusField();
+  }
+
+  /// Asks for the field's focus from a zero-delay timer — behind whatever the
+  /// engine has already queued (see [_keepTyping]), and after the first
+  /// frame when the card opens.
+  void _focusField() {
+    Timer.run(() {
       if (mounted) _field.requestFocus();
     });
   }
@@ -293,7 +347,6 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
                   TextField(
                     controller: _typed,
                     focusNode: _field,
-                    autofocus: true,
                     textInputAction: TextInputAction.done,
                     textAlign: TextAlign.center,
                     textCapitalization: TextCapitalization.none,
