@@ -10,6 +10,7 @@
 //                            [--build-dir build/web] [--scale 2] [--port 0]
 //                            [--viewport 1440x900] [--keys Equal,KeyH] [--crash 2,4]
 //                            [--riddle 2,4,2,3,2,2] [--riddle-answer shadow] [--lang hi]
+//                            [--riddle-hint 2,4]
 //
 //   --levels  opens each level and captures its board (level-NN-*.png); the
 //             first one that has to be scrolled to also captures home with
@@ -35,6 +36,14 @@
 //             is a problem (exit 1) unless the solved card appears: the
 //             answer is typed with the keyboard, so this is what checks
 //             that the field still had it after the chips were pressed.
+//   --riddle-hint x,y  spends the first level's free hints (a hint, then a
+//             tap on the given blocked cell to clear it, three times; level
+//             1: 2,4) and presses the hint button once more, which now asks
+//             a riddle for one: captures the toolbar with its riddle button
+//             (level-NN-hints-spent-*.png), the riddle over the paused board
+//             (level-NN-hint-riddle-*.png), the answer accepted and the
+//             arrow it lit (level-NN-hint-earned-*.png). Seeds the pack and
+//             checks the solved card the way --riddle does.
 //   --lang    seeds the language setting ('en' or 'hi'), so the shots show the
 //             app in that language whatever the browser's locale is; the
 //             language lands in the filename
@@ -95,6 +104,7 @@ const isPhone = viewport.width < 600;
 const keys = String(args.keys ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const crash = parseCell(args.crash);
 const riddleCells = parseCells(args.riddle);
+const riddleHintCell = parseCell(args['riddle-hint']);
 const riddleAnswer = typeof args['riddle-answer'] === 'string' ? args['riddle-answer'] : 'shadow';
 const lang = parseLang(args.lang);
 // The driver finds widgets by their accessible name, which is localized, so
@@ -206,7 +216,7 @@ const prefs = {
   // 0, so it fits a level that has not been re-dealt (level 3 has not).
   // An unshuffled pack starting at the top, so the riddle in the shot is
   // always the same one (and --riddle-answer is its answer).
-  ...(riddleCells
+  ...(riddleCells || riddleHintCell
     ? {
         'flutter.arrow_riddle_order': JSON.stringify(
           Array.from({ length: 100 }, (_, i) => String(i + 1)),
@@ -286,11 +296,14 @@ try {
     // A node that is not yet in the semantics tree (Flutter builds it lazily
     // for the visible part of the list) has no box; ask briefly and keep
     // nudging rather than sit through Playwright's 30 s default per probe.
+    // While the node has no box yet the tile is still far down the page, so
+    // take bigger strides; the budget grows with the level, since the finale
+    // is eighty levels down the trail.
     let nudged = false;
-    for (let i = 0; i < 120; i++) {
-      const box = await tile.boundingBox({ timeout: 500 }).catch(() => null);
+    for (let i = 0; i < 60 + level * 3; i++) {
+      const box = await tile.boundingBox({ timeout: 300 }).catch(() => null);
       if (box && box.y > 120 && box.y + box.height < 720) break;
-      await page.mouse.wheel(0, box && box.y <= 120 ? -180 : 180);
+      await page.mouse.wheel(0, box ? (box.y <= 120 ? -180 : 180) : 600);
       await settle(page, 150);
       nudged = true;
     }
@@ -350,6 +363,33 @@ try {
       await page.getByRole('button', { name: labels.hint }).first().click();
       await settle(page, 500);
       await shoot(page, `level-${id}-hint-${tag}`);
+    }
+    if (riddleHintCell && level === levels[0]) {
+      // Three free hints, each cleared by a tap on a blocked arrow (the
+      // first bump costs a life, the same arrow again is free).
+      for (let i = 0; i < 3; i++) {
+        await page.getByRole('button', { name: labels.hint }).first().click();
+        await settle(page, 400);
+        await tapCell(page, riddleHintCell);
+        await settle(page, 1200); // the whole bump, or the tap is dropped
+      }
+      await shoot(page, `level-${id}-hints-spent-${tag}`);
+      await page.getByRole('button', { name: labels.hint }).first().click();
+      await settle(page, 700);
+      await shoot(page, `level-${id}-hint-riddle-${tag}`);
+      await page.keyboard.type(riddleAnswer);
+      await settle(page, 300);
+      await page.getByRole('button', { name: labels.riddleSubmit }).first().click();
+      const solved = page.getByRole('button', { name: labels.riddleSolved }).first();
+      const answered = await solved.waitFor({ state: 'attached', timeout: 5000 }).then(() => true, () => false);
+      if (!answered) {
+        problems.push(`Riddle for a hint not solved: typed "${riddleAnswer}" and submitted, but no "${labels.riddleSolved.source}" button appeared`);
+      }
+      await settle(page, 900);
+      await shoot(page, `level-${id}-hint-riddle-solved-${tag}`);
+      await solved.click();
+      await settle(page, 600);
+      await shoot(page, `level-${id}-hint-earned-${tag}`);
     }
     if (keys.length) {
       for (const key of keys) {

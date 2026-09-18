@@ -102,7 +102,7 @@
   "levelName27": "Hairball",
   "levelName28": "Clockwork",
   "levelName29": "Whirlpool",
-  "levelName30": "Halfway Out",
+  "levelName30": "The Gauntlet",
   "levelName31": "Circuit Board",
   "levelName32": "Briar Patch",
   "levelName33": "Root System",
@@ -112,7 +112,7 @@
   "levelName37": "Eye of the Needle",
   "levelName38": "Pandemonium",
   "levelName39": "Point of No Return",
-  "levelName40": "The Gauntlet",
+  "levelName40": "Halfway Out",
   "levelName41": "Overgrowth",
   "levelName42": "Chain Reaction",
   "levelName43": "Logjam",
@@ -129,10 +129,30 @@
   "levelName54": "Ravel",
   "levelName55": "Last Resort",
   "levelName56": "Vanishing Point",
-  "levelName57": "Endgame",
+  "levelName57": "Tightrope",
   "levelName58": "The Long Haul",
-  "levelName59": "Final Approach",
-  "levelName60": "Grand Exit",
+  "levelName59": "Steep Climb",
+  "levelName60": "Turning Point",
+  "levelName61": "Second Wind",
+  "levelName62": "Uncharted",
+  "levelName63": "Wire Nest",
+  "levelName64": "Riptide",
+  "levelName65": "Wildwood",
+  "levelName66": "Ironclad",
+  "levelName67": "Catacombs",
+  "levelName68": "Tangled Web",
+  "levelName69": "Crush Depth",
+  "levelName70": "No Way Out",
+  "levelName71": "Thunderhead",
+  "levelName72": "Knot of Knots",
+  "levelName73": "The Crucible",
+  "levelName74": "Blackout",
+  "levelName75": "Vertigo",
+  "levelName76": "Razor's Edge",
+  "levelName77": "Event Horizon",
+  "levelName78": "The Abyss",
+  "levelName79": "Last Light",
+  "levelName80": "Beyond the Edge",
   "tutorialTap": "Tap an arrow to slide it out the way it points.",
   "tutorialBlocked": "An arrow in the way costs a life — find the free ones first.",
   "gameLoading": "Laying out the arrows…",
@@ -188,7 +208,7 @@
       }
     }
   },
-  "toolHintNone": "No hints left",
+  "toolHintRiddle": "Solve a riddle for one",
   "toolGrid": "Grid lines",
   "toolGridLocked": "Grid lines unlock after level {level}",
   "@toolGridLocked": {
@@ -224,6 +244,7 @@
   "outOfLivesRetry": "Start over",
   "riddleTitle": "Riddle me this",
   "riddleIntro": "Answer it and you are back on the board with one more life.",
+  "riddleIntroHint": "Answer it and an arrow that can go lights up.",
   "riddleField": "Your answer",
   "riddleSubmit": "That's my answer",
   "riddleHintAction": "Give me a hint",
@@ -291,9 +312,25 @@
       }
     }
   },
+  "riddleCloseHint": "Not quite the word we had — it was {answer} — but near enough. Your hint is on the board.",
+  "@riddleCloseHint": {
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
   "riddleCorrect": "Spot on!",
   "riddleCorrectBody": "The answer was {answer}. One more life, and the board is where you left it.",
   "@riddleCorrectBody": {
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
+  "riddleCorrectBodyHint": "The answer was {answer}. An arrow that can go is lit up on the board.",
+  "@riddleCorrectBodyHint": {
     "placeholders": {
       "answer": {
         "type": "String"

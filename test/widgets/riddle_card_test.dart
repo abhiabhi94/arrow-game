@@ -22,6 +22,7 @@ Future<_Calls> _pumpRiddle(
   int id = 1,
   int solvedCount = 0,
   Locale? locale,
+  RiddlePrize prize = RiddlePrize.life,
 }) async {
   final calls = _Calls();
   await usePhoneSurface(tester);
@@ -33,6 +34,7 @@ Future<_Calls> _pumpRiddle(
           RiddleChallenge(
             riddleId: id,
             solvedCount: solvedCount,
+            prize: prize,
             onSolved: () => calls.solved++,
             onSwap: () => calls.swapped++,
             onDismiss: () => calls.dismissed++,
@@ -72,6 +74,25 @@ Future<void> _answer(WidgetTester tester, String guess) async {
 }
 
 void main() {
+  testWidgets('asked for a hint, the card promises an arrow rather than a life', (tester) async {
+    final calls = await _pumpRiddle(tester, prize: RiddlePrize.hint);
+    expect(find.text('Answer it and an arrow that can go lights up.'), findsOneWidget);
+    expect(find.text('Answer it and you are back on the board with one more life.'), findsNothing);
+    await _answer(tester, _en.answer);
+    expect(find.text('Spot on!'), findsOneWidget);
+    expect(find.textContaining('An arrow that can go is lit up on the board.'), findsOneWidget);
+    expect(find.textContaining('One more life'), findsNothing);
+    await tester.tap(find.text('Back to the arrows'));
+    expect(calls.solved, 1);
+  });
+
+  testWidgets('a near miss for a hint is waved through too', (tester) async {
+    await _pumpRiddle(tester, prize: RiddlePrize.hint);
+    await _answer(tester, '${_en.answer}s');
+    expect(find.text('Close enough!'), findsOneWidget);
+    expect(find.textContaining('Your hint is on the board.'), findsOneWidget);
+  });
+
   testWidgets('asks the riddle, and says how long the answer is', (tester) async {
     await _pumpRiddle(tester);
     expect(find.text('Riddle me this'), findsOneWidget);

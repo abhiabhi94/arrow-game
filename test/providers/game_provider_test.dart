@@ -319,6 +319,31 @@ void main() {
     n.dispose();
   });
 
+  test('a hint earned with a riddle lights an arrow without touching the allowance', () {
+    final n = _notifier();
+    n.useHint();
+    n.tapArrow(0);
+    n.useHint();
+    n.tapArrow(1);
+    n.useHint();
+    expect(n.state.hintsLeft, 0);
+    n.earnHint(); // a hint is already showing
+    expect(n.state.hintArrowId, 2);
+    n.tapArrow(2);
+    expect(n.state.phase, GamePhase.cleared);
+    n.earnHint(); // not playing
+    expect(n.state.hintArrowId, isNull);
+
+    final m = _notifier();
+    m.pause();
+    m.earnHint(); // paused: the screen resumes first
+    expect(m.state.hintArrowId, isNull);
+    m.resume();
+    m.earnHint();
+    expect(m.state.hintArrowId, 0);
+    expect(m.state.hintsLeft, 3);
+  });
+
   test('a hint is a no-op when nothing can move', () {
     final n = _notifier();
     n.tapArrow(0);

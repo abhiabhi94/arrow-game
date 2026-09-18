@@ -1,4 +1,4 @@
-/// The 60 levels. Difficulty climbs on four axes: board size, arrow count,
+/// The 80 levels. Difficulty climbs on four axes: board size, arrow count,
 /// arrow length (long runs cross many exit paths) and how few arrows are
 /// playable at once (`openMoves` — the generator keeps the choice that
 /// narrow, so from the middle of the game on the player has to hunt for the
@@ -31,20 +31,32 @@
 ///   prints a level's variants; `test/engine/puzzle_generator_test.dart`
 ///   pins the descent.
 ///
+/// Levels 61–80 are the last act, and the clock is the thing that makes it
+/// one. The count keeps climbing four a level to 384 on the 52×84 finale,
+/// the board keeps pace with it (~11.2–11.4 cells an arrow throughout, so
+/// the fill stays at 0.9), the longest runs stretch to 16 cells, and
+/// every level is dealt from its tightest variant as before. But the pace
+/// per arrow, which the endgame had eased from 2.54 s to 2.30 s, falls on
+/// from 2.29 s at level 61 to 2.00 s at 80: the finale gives 12 minutes
+/// 48 seconds for 384 arrows where level 60 gave 11 minutes 40 seconds for
+/// 304 — eighty more arrows, barely a minute more. The clock no longer
+/// keeps up with the board; it is the fifth axis.
+///
 /// The clock scales with the arrow count: about 1.7 s an arrow on the
 /// learning levels, 2.1 s in the middle and 2.5 s from level 10 (plus ~17 s
 /// of slack) — brisk on purpose, so a level is a sprint of quick reads
 /// rather than a long sit. Every level's clock was cut by 5% after the
 /// curve was first drawn, so the numbers here are 95% of the ones the
 /// shape was worked out with. The last levels are long in absolute terms
-/// (11 minutes 40 seconds on the finale) simply because there are 300
-/// arrows to read; the pace per arrow never slackens, and the saved-game
-/// slot means a long board can be put down and picked up.
+/// (11 minutes 40 seconds on level 60, 12 minutes 48 on the finale) simply
+/// because there are 300–400 arrows to read; the pace per arrow never
+/// slackens, and the saved-game slot means a long board can be put down and
+/// picked up.
 library;
 
 import '../models/level_spec.dart';
 
-const int totalLevels = 60;
+const int totalLevels = 80;
 
 const List<LevelSpec> levelSpecs = <LevelSpec>[
   LevelSpec(level: 1, width: 5, height: 6, arrows: 5, minLength: 2, maxLength: 5, timeLimitMs: 26000, openMoves: 3),
@@ -107,6 +119,26 @@ const List<LevelSpec> levelSpecs = <LevelSpec>[
   LevelSpec(level: 58, width: 46, height: 71, arrows: 296, minLength: 4, maxLength: 14, timeLimitMs: 688000, openMoves: 2, variant: 3),
   LevelSpec(level: 59, width: 47, height: 72, arrows: 300, minLength: 4, maxLength: 14, timeLimitMs: 694000, openMoves: 2, variant: 5),
   LevelSpec(level: 60, width: 47, height: 73, arrows: 304, minLength: 4, maxLength: 14, timeLimitMs: 700000, openMoves: 2, variant: 55),
+  LevelSpec(level: 61, width: 47, height: 74, arrows: 308, minLength: 4, maxLength: 14, timeLimitMs: 704000, openMoves: 2, variant: 10),
+  LevelSpec(level: 62, width: 48, height: 74, arrows: 312, minLength: 4, maxLength: 14, timeLimitMs: 708000, openMoves: 2, variant: 374),
+  LevelSpec(level: 63, width: 48, height: 74, arrows: 316, minLength: 4, maxLength: 14, timeLimitMs: 713000, openMoves: 2, variant: 72),
+  LevelSpec(level: 64, width: 48, height: 75, arrows: 320, minLength: 4, maxLength: 14, timeLimitMs: 717000, openMoves: 2, variant: 171),
+  LevelSpec(level: 65, width: 49, height: 75, arrows: 324, minLength: 4, maxLength: 15, timeLimitMs: 721000, openMoves: 2, variant: 54),
+  LevelSpec(level: 66, width: 49, height: 75, arrows: 328, minLength: 4, maxLength: 15, timeLimitMs: 725000, openMoves: 2, variant: 25),
+  LevelSpec(level: 67, width: 49, height: 76, arrows: 332, minLength: 4, maxLength: 15, timeLimitMs: 729000, openMoves: 2, variant: 106),
+  LevelSpec(level: 68, width: 50, height: 76, arrows: 336, minLength: 4, maxLength: 15, timeLimitMs: 732000, openMoves: 2, variant: 268),
+  LevelSpec(level: 69, width: 50, height: 76, arrows: 340, minLength: 4, maxLength: 15, timeLimitMs: 736000, openMoves: 2, variant: 156),
+  LevelSpec(level: 70, width: 50, height: 77, arrows: 344, minLength: 4, maxLength: 15, timeLimitMs: 740000, openMoves: 2, variant: 324),
+  LevelSpec(level: 71, width: 51, height: 77, arrows: 348, minLength: 4, maxLength: 15, timeLimitMs: 743000, openMoves: 2, variant: 7),
+  LevelSpec(level: 72, width: 51, height: 77, arrows: 352, minLength: 4, maxLength: 15, timeLimitMs: 746000, openMoves: 2, variant: 110),
+  LevelSpec(level: 73, width: 51, height: 78, arrows: 356, minLength: 4, maxLength: 16, timeLimitMs: 749000, openMoves: 2, variant: 10),
+  LevelSpec(level: 74, width: 52, height: 78, arrows: 360, minLength: 4, maxLength: 16, timeLimitMs: 752000, openMoves: 2, variant: 103),
+  LevelSpec(level: 75, width: 52, height: 79, arrows: 364, minLength: 4, maxLength: 16, timeLimitMs: 755000, openMoves: 2, variant: 93),
+  LevelSpec(level: 76, width: 52, height: 80, arrows: 368, minLength: 4, maxLength: 16, timeLimitMs: 758000, openMoves: 2, variant: 247),
+  LevelSpec(level: 77, width: 52, height: 81, arrows: 372, minLength: 4, maxLength: 16, timeLimitMs: 761000, openMoves: 2, variant: 607),
+  LevelSpec(level: 78, width: 52, height: 82, arrows: 376, minLength: 4, maxLength: 16, timeLimitMs: 763000, openMoves: 2, variant: 143),
+  LevelSpec(level: 79, width: 52, height: 83, arrows: 380, minLength: 4, maxLength: 16, timeLimitMs: 766000, openMoves: 2, variant: 123),
+  LevelSpec(level: 80, width: 52, height: 84, arrows: 384, minLength: 4, maxLength: 16, timeLimitMs: 768000, openMoves: 2, variant: 377),
 ];
 
 /// The spec for 1-based [level]; throws for a level outside 1..[totalLevels].

@@ -217,6 +217,21 @@ class GameNotifier extends StateNotifier<GameState> {
     _snapshot();
   }
 
+  /// A hint bought with a riddle once the allowance is spent (the game
+  /// screen's riddle gate): points at an arrow that can go now without
+  /// touching [GameState.hintsLeft], which stays at zero so the next one
+  /// costs a riddle too. No-op while a hint is already showing or outside
+  /// play — the screen resumes the level first, since the riddle was asked
+  /// with the clock paused.
+  void earnHint() {
+    if (!state.isPlaying || state.hintArrowId != null) return;
+    final id = state.puzzle!.hintFor(state.removed);
+    if (id == null) return;
+    state = state.copyWith(hintArrowId: id);
+    haptics?.tap();
+    _snapshot();
+  }
+
   /// Throws the attempt away and starts the same puzzle again.
   void restart() {
     final puzzle = state.puzzle;

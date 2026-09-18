@@ -67,7 +67,7 @@ void main() {
   });
 
   test('the endgame tightens level by level', () {
-    // Levels 41–60 are each dealt from the variant whose board came out
+    // Levels 41–80 are each dealt from the variant whose board came out
     // tightest, so that the hunt for the next move — arrows on the board
     // for every one that can go — never eases from one level to the next,
     // and no level opens with more than three arrows to tap (the general
@@ -82,8 +82,9 @@ void main() {
       hunt = p.arrowsPerOpenMove;
     }
     // And the finale is a markedly harder find than the level before the
-    // endgame began.
+    // endgame began, and than the end of the first sixty.
     expect(hunt, greaterThan(puzzleForLevel(specForLevel(40)).arrowsPerOpenMove * 1.15));
+    expect(hunt, greaterThan(puzzleForLevel(specForLevel(60)).arrowsPerOpenMove * 1.15));
   });
 
   test('an arrow may point straight at another as long as nothing cycles', () {
@@ -101,6 +102,7 @@ void main() {
     expect(candidatesFor(170), kMinCandidates);
     expect(candidatesFor(224), kMinCandidates);
     expect(candidatesFor(304), kMinCandidates);
+    expect(candidatesFor(384), kMinCandidates);
   });
 
   test('a board that holds the choice beats a tighter one that spreads', () {

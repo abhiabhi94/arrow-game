@@ -208,7 +208,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName29 => 'भँवर';
 
   @override
-  String get levelName30 => 'आधा सफ़र';
+  String get levelName30 => 'अग्निपरीक्षा';
 
   @override
   String get levelName31 => 'परिपथ';
@@ -238,7 +238,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName39 => 'वापसी नहीं';
 
   @override
-  String get levelName40 => 'अग्निपरीक्षा';
+  String get levelName40 => 'आधा सफ़र';
 
   @override
   String get levelName41 => 'घनी बेलें';
@@ -289,16 +289,76 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName56 => 'ओझल बिंदु';
 
   @override
-  String get levelName57 => 'आख़िरी चाल';
+  String get levelName57 => 'कसी रस्सी';
 
   @override
   String get levelName58 => 'लंबा सफ़र';
 
   @override
-  String get levelName59 => 'अंतिम पड़ाव';
+  String get levelName59 => 'खड़ी चढ़ाई';
 
   @override
-  String get levelName60 => 'भव्य निकास';
+  String get levelName60 => 'निर्णायक मोड़';
+
+  @override
+  String get levelName61 => 'दूसरी साँस';
+
+  @override
+  String get levelName62 => 'अनजान राह';
+
+  @override
+  String get levelName63 => 'तारों का घोंसला';
+
+  @override
+  String get levelName64 => 'उलटी लहर';
+
+  @override
+  String get levelName65 => 'घना जंगल';
+
+  @override
+  String get levelName66 => 'लोहे का कवच';
+
+  @override
+  String get levelName67 => 'तहख़ाने की गलियाँ';
+
+  @override
+  String get levelName68 => 'उलझा जाल';
+
+  @override
+  String get levelName69 => 'गहरी डूब';
+
+  @override
+  String get levelName70 => 'कोई रास्ता नहीं';
+
+  @override
+  String get levelName71 => 'तूफ़ानी बादल';
+
+  @override
+  String get levelName72 => 'गाँठों की गाँठ';
+
+  @override
+  String get levelName73 => 'कसौटी';
+
+  @override
+  String get levelName74 => 'घुप्प अँधेरा';
+
+  @override
+  String get levelName75 => 'चक्कर';
+
+  @override
+  String get levelName76 => 'छुरी की धार';
+
+  @override
+  String get levelName77 => 'बिना वापसी की रेखा';
+
+  @override
+  String get levelName78 => 'अथाह खाई';
+
+  @override
+  String get levelName79 => 'आख़िरी रोशनी';
+
+  @override
+  String get levelName80 => 'किनारे के पार';
 
   @override
   String get tutorialTap =>
@@ -365,7 +425,7 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get toolHintNone => 'कोई संकेत नहीं बचा';
+  String get toolHintRiddle => 'एक के लिए पहेली बूझो';
 
   @override
   String get toolGrid => 'ग्रिड लाइनें';
@@ -435,6 +495,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get riddleIntro => 'सही जवाब दीजिए और एक और जान के साथ बोर्ड पर वापस।';
+
+  @override
+  String get riddleIntroHint => 'सही जवाब दीजिए और एक खुला तीर जगमगा उठेगा।';
 
   @override
   String get riddleField => 'आपका जवाब (हिन्दी या रोमन में)';
@@ -565,11 +628,21 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String riddleCloseHint(String answer) {
+    return 'शब्द बिल्कुल यही नहीं था — जवाब था $answer — पर काफ़ी क़रीब। संकेत बोर्ड पर है।';
+  }
+
+  @override
   String get riddleCorrect => 'एकदम सही!';
 
   @override
   String riddleCorrectBody(String answer) {
     return 'जवाब था $answer। एक और जान हाज़िर, बोर्ड वहीं का वहीं है।';
+  }
+
+  @override
+  String riddleCorrectBodyHint(String answer) {
+    return 'जवाब था $answer। बोर्ड पर एक खुला तीर जगमगा रहा है।';
   }
 
   @override

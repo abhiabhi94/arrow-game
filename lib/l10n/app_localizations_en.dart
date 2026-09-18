@@ -208,7 +208,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName29 => 'Whirlpool';
 
   @override
-  String get levelName30 => 'Halfway Out';
+  String get levelName30 => 'The Gauntlet';
 
   @override
   String get levelName31 => 'Circuit Board';
@@ -238,7 +238,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName39 => 'Point of No Return';
 
   @override
-  String get levelName40 => 'The Gauntlet';
+  String get levelName40 => 'Halfway Out';
 
   @override
   String get levelName41 => 'Overgrowth';
@@ -289,16 +289,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName56 => 'Vanishing Point';
 
   @override
-  String get levelName57 => 'Endgame';
+  String get levelName57 => 'Tightrope';
 
   @override
   String get levelName58 => 'The Long Haul';
 
   @override
-  String get levelName59 => 'Final Approach';
+  String get levelName59 => 'Steep Climb';
 
   @override
-  String get levelName60 => 'Grand Exit';
+  String get levelName60 => 'Turning Point';
+
+  @override
+  String get levelName61 => 'Second Wind';
+
+  @override
+  String get levelName62 => 'Uncharted';
+
+  @override
+  String get levelName63 => 'Wire Nest';
+
+  @override
+  String get levelName64 => 'Riptide';
+
+  @override
+  String get levelName65 => 'Wildwood';
+
+  @override
+  String get levelName66 => 'Ironclad';
+
+  @override
+  String get levelName67 => 'Catacombs';
+
+  @override
+  String get levelName68 => 'Tangled Web';
+
+  @override
+  String get levelName69 => 'Crush Depth';
+
+  @override
+  String get levelName70 => 'No Way Out';
+
+  @override
+  String get levelName71 => 'Thunderhead';
+
+  @override
+  String get levelName72 => 'Knot of Knots';
+
+  @override
+  String get levelName73 => 'The Crucible';
+
+  @override
+  String get levelName74 => 'Blackout';
+
+  @override
+  String get levelName75 => 'Vertigo';
+
+  @override
+  String get levelName76 => 'Razor\'s Edge';
+
+  @override
+  String get levelName77 => 'Event Horizon';
+
+  @override
+  String get levelName78 => 'The Abyss';
+
+  @override
+  String get levelName79 => 'Last Light';
+
+  @override
+  String get levelName80 => 'Beyond the Edge';
 
   @override
   String get tutorialTap => 'Tap an arrow to slide it out the way it points.';
@@ -364,7 +424,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get toolHintNone => 'No hints left';
+  String get toolHintRiddle => 'Solve a riddle for one';
 
   @override
   String get toolGrid => 'Grid lines';
@@ -435,6 +495,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get riddleIntro =>
       'Answer it and you are back on the board with one more life.';
+
+  @override
+  String get riddleIntroHint => 'Answer it and an arrow that can go lights up.';
 
   @override
   String get riddleField => 'Your answer';
@@ -567,11 +630,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String riddleCloseHint(String answer) {
+    return 'Not quite the word we had — it was $answer — but near enough. Your hint is on the board.';
+  }
+
+  @override
   String get riddleCorrect => 'Spot on!';
 
   @override
   String riddleCorrectBody(String answer) {
     return 'The answer was $answer. One more life, and the board is where you left it.';
+  }
+
+  @override
+  String riddleCorrectBodyHint(String answer) {
+    return 'The answer was $answer. An arrow that can go is lit up on the board.';
   }
 
   @override

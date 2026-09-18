@@ -96,20 +96,68 @@ class _GameScreenState extends ConsumerState<GameScreen>
   bool _endingHeld = false;
 
   /// The riddle standing between a spent allowance and one more life, or
-  /// null while the ending card itself is up. Held here rather than in the
-  /// game state: the board is none the wiser, and a rebuild must not deal a
-  /// different riddle mid-thought.
+  /// between a spent hint allowance and one more hint — null while no card
+  /// is up. Held here rather than in the game state: the board is none the
+  /// wiser, and a rebuild must not deal a different riddle mid-thought.
   int? _riddleId;
+
+  /// What the riddle on the table is for. A life is asked for over the
+  /// "Out of lives" card; a hint pauses the level and asks over the board,
+  /// so the clock is not running while the player thinks.
+  RiddlePrize _riddlePrize = RiddlePrize.life;
+
+  /// The phase a riddle for [prize] is asked in; leaving it takes the card
+  /// away.
+  static GamePhase _phaseOf(RiddlePrize prize) => switch (prize) {
+        RiddlePrize.life => GamePhase.outOfLives,
+        RiddlePrize.hint => GamePhase.paused,
+      };
 
   /// Deals a riddle (a fresh one on every ask, including a swap).
   void _dealRiddle() {
     setState(() => _riddleId = ref.read(riddleDeckProvider.notifier).draw());
   }
 
-  /// Answered: bank the badge, hand back the life, put the card away.
+  /// Asks a riddle for [prize].
+  void _askRiddle(RiddlePrize prize) {
+    _riddlePrize = prize;
+    _dealRiddle();
+  }
+
+  /// The hint button: a hint while there are free ones, a riddle for one
+  /// after that. The level pauses under the riddle so the clock waits.
+  void _onHint() {
+    final notifier = ref.read(gameProvider(widget.level).notifier);
+    final state = ref.read(gameProvider(widget.level));
+    if (!state.isPlaying || state.hintArrowId != null) return;
+    if (state.hintsLeft > 0) {
+      notifier.useHint();
+      return;
+    }
+    notifier.pause();
+    _askRiddle(RiddlePrize.hint);
+  }
+
+  /// Answered: bank the badge, hand over the prize, put the card away.
   void _riddleSolved() {
     ref.read(riddleDeckProvider.notifier).recordSolved();
-    ref.read(gameProvider(widget.level).notifier).keepGoing();
+    final notifier = ref.read(gameProvider(widget.level).notifier);
+    switch (_riddlePrize) {
+      case RiddlePrize.life:
+        notifier.keepGoing();
+      case RiddlePrize.hint:
+        notifier.resume();
+        notifier.earnHint();
+    }
+    setState(() => _riddleId = null);
+  }
+
+  /// Backed out without an answer: back to the ending card, or back to the
+  /// board with the clock running again.
+  void _riddleDismissed() {
+    if (_riddlePrize == RiddlePrize.hint) {
+      ref.read(gameProvider(widget.level).notifier).resume();
+    }
     setState(() => _riddleId = null);
   }
 
@@ -192,7 +240,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       case null:
         return KeyEventResult.ignored;
       case GameShortcut.hint:
-        notifier.useHint(); // no-op unless playing with a hint to spare
+        _onHint(); // no-op unless playing with no hint showing
       case GameShortcut.zoomIn:
         _setZoom(_scale * kZoomStep);
       case GameShortcut.zoomOut:
@@ -224,9 +272,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
         // The bump that ends the attempt gets to play out first.
         _endingHeld = next.phase == GamePhase.outOfLives;
       }
-      // Restarting (or any other way out of the ending) takes the riddle
-      // with it, so backing out never leaves a card floating over the board.
-      if (next.phase != GamePhase.outOfLives && _riddleId != null) {
+      // Restarting (or any other way out of the phase the riddle was asked
+      // in) takes the riddle with it, so backing out never leaves a card
+      // floating over the board.
+      if (_riddleId != null && next.phase != _phaseOf(_riddlePrize)) {
         setState(() => _riddleId = null);
       }
       if (next.phase == GamePhase.cleared && prev?.phase != GamePhase.cleared) {
@@ -367,7 +416,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                           child: BoardToolbar(
                             hintsLeft: state.hintsLeft,
                             hintActive: state.hintArrowId != null,
-                            onHint: state.isPlaying ? notifier.useHint : null,
+                            onHint: state.isPlaying ? _onHint : null,
                             gridUnlocked: gridUnlocked,
                             gridUnlockLevel: kGridLinesUnlockAfterLevel,
                             gridOn: settings.gridLinesOn,
@@ -419,6 +468,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 ),
               ),
               switch (state.phase) {
+                // The free hints are spent and the player wants another: the
+                // level waits, paused, while the riddle is cracked.
+                GamePhase.paused when _riddleId != null => RiddleChallenge(
+                  key: ValueKey<int>(_riddleId!),
+                  riddleId: _riddleId!,
+                  prize: RiddlePrize.hint,
+                  solvedCount: ref.watch(riddleDeckProvider).solved,
+                  onSolved: _riddleSolved,
+                  onSwap: _dealRiddle,
+                  onDismiss: _riddleDismissed,
+                ),
                 GamePhase.paused when state.resumeOffered => ResultCard(
                   emoji: '👋',
                   title: l10n.resumeTitle,
@@ -512,10 +572,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 GamePhase.outOfLives when _riddleId != null => RiddleChallenge(
                   key: ValueKey<int>(_riddleId!),
                   riddleId: _riddleId!,
+                  prize: RiddlePrize.life,
                   solvedCount: ref.watch(riddleDeckProvider).solved,
                   onSolved: _riddleSolved,
                   onSwap: _dealRiddle,
-                  onDismiss: () => setState(() => _riddleId = null),
+                  onDismiss: _riddleDismissed,
                 ),
                 GamePhase.outOfLives => ResultCard(
                   mood: EmojiMood.sulk,
@@ -524,7 +585,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   body: l10n.outOfLivesBody,
                   actions: [
                     FilledButton(
-                      onPressed: _dealRiddle,
+                      onPressed: () => _askRiddle(RiddlePrize.life),
                       child: Text(l10n.outOfLivesSolveRiddle),
                     ),
                     OutlinedButton(onPressed: notifier.restart, child: Text(l10n.outOfLivesRetry)),

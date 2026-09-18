@@ -586,7 +586,85 @@ void main() {
     await _tapCell(tester, const Cell(3, 3));
     await tester.tap(find.byTooltip('Hint · 1 hints left'));
     await _settle(tester, 300);
-    expect(find.byTooltip('Hint · No hints left'), findsOneWidget);
+    // The free ones are gone: the button now asks for a riddle instead.
+    expect(find.byTooltip('Hint · Solve a riddle for one'), findsOneWidget);
+    expect(find.byIcon(kRiddleHintIcon), findsOneWidget);
+    expect(find.descendant(of: find.byType(BoardToolbar), matching: find.text('?')), findsOneWidget);
+  });
+
+  testWidgets('out of free hints, a riddle buys one — with the clock stopped', (tester) async {
+    final container = await _pumpGame(
+      tester,
+      seed: <String, Object>{
+        'arrow_saved_game': jsonEncode({
+          'level': 1,
+          'seed': sampleSeed,
+          'removed': <int>[],
+          'mistakes': 0,
+          'hintsLeft': 0,
+          'elapsedMs': 5000,
+        }),
+      },
+    );
+    final notifier = container.read(gameProvider(1).notifier);
+    await tester.tap(find.text('Continue'));
+    await _settle(tester, 300);
+    expect(notifier.state.isPlaying, isTrue);
+    expect(find.byIcon(kRiddleHintIcon), findsOneWidget);
+    expect(find.byIcon(Icons.lightbulb_rounded), findsNothing);
+
+    // The press pauses the level under the riddle, so the clock waits.
+    await tester.tap(find.byTooltip('Hint · Solve a riddle for one'));
+    await _settle(tester, 400);
+    expect(notifier.state.phase, GamePhase.paused);
+    expect(find.text('Riddle me this'), findsOneWidget);
+    expect(find.text('Answer it and an arrow that can go lights up.'), findsOneWidget);
+    notifier.tick(2000);
+    expect(notifier.state.elapsedMs, 5000);
+    // The keyboard is the riddle's: H does not ask for another.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyH);
+    await _settle(tester, 100);
+    expect(find.text('Riddle me this'), findsOneWidget);
+
+    // Backing out is back to the board, no hint, clock running again.
+    await tester.tap(find.text('Never mind'));
+    await _settle(tester, 400);
+    expect(notifier.state.isPlaying, isTrue);
+    expect(notifier.state.hintArrowId, isNull);
+    expect(find.text('Riddle me this'), findsNothing);
+    notifier.tick(1000);
+    expect(notifier.state.elapsedMs, 6000);
+
+    // The keyboard shortcut asks the same way the button does.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyH);
+    await _settle(tester, 400);
+    expect(notifier.state.phase, GamePhase.paused);
+    await tester.enterText(find.byType(TextField), _riddleOnScreen(container).answer);
+    await tester.tap(find.text("That's my answer"));
+    await _settle(tester, 600);
+    expect(find.text('Spot on!'), findsOneWidget);
+    expect(find.textContaining('An arrow that can go is lit up on the board.'), findsOneWidget);
+    await tester.tap(find.text('Back to the arrows'));
+    await _settle(tester, 400);
+    // Cracked: the level is playing again with an arrow lit, the allowance
+    // still spent (the next hint costs another riddle), the badge banked.
+    expect(notifier.state.isPlaying, isTrue);
+    expect(notifier.state.hintArrowId, 0);
+    expect(notifier.state.hintsLeft, 0);
+    expect(container.read(riddleDeckProvider).solved, 1);
+    expect(find.byTooltip('Hint · Solve a riddle for one'), findsOneWidget);
+
+    // Quitting from under a riddle takes the card with it: any way out of
+    // the paused phase does.
+    await _tapCell(tester, const Cell(1, 1)); // clears the hint
+    await tester.tap(find.byTooltip('Hint · Solve a riddle for one'));
+    await _settle(tester, 400);
+    expect(find.text('Riddle me this'), findsOneWidget);
+    notifier.restart();
+    await _settle(tester, 400);
+    expect(find.text('Riddle me this'), findsNothing);
+    expect(notifier.state.isPlaying, isTrue);
+    expect(find.byTooltip('Hint · 3 hints left'), findsOneWidget);
   });
 
   testWidgets('grid lines are locked until level 4 is cleared, then toggle', (tester) async {
@@ -758,7 +836,7 @@ void main() {
       themeMode: ThemeMode.dark,
     );
     await _settle(tester, 300);
-    expect(find.text('Grand Exit'), findsOneWidget);
+    expect(find.text('Beyond the Edge'), findsOneWidget);
     expect(find.byType(PuzzleBoard), findsOneWidget);
   });
 
