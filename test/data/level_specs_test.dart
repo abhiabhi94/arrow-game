@@ -19,6 +19,7 @@ void main() {
       final cur = specForLevel(level);
       expect(cur.cellCount, greaterThanOrEqualTo(prev.cellCount), reason: 'level $level');
       expect(cur.arrows, greaterThanOrEqualTo(prev.arrows), reason: 'level $level');
+      expect(cur.minLength, greaterThanOrEqualTo(prev.minLength), reason: 'level $level');
       expect(cur.maxLength, greaterThanOrEqualTo(prev.maxLength), reason: 'level $level');
       expect(cur.timeLimitMs, greaterThanOrEqualTo(prev.timeLimitMs), reason: 'level $level');
       // The choice only ever narrows.
@@ -50,16 +51,45 @@ void main() {
     expect(specForLevel(4).openMoves, 2);
     expect(specForLevel(totalLevels).openMoves, 2);
     // The clock is brisk but never a lottery: from level 10 on at least
-    // 2.4 s an arrow (it was 2.5 before every level lost 5% of its clock),
-    // and the finale is a shade under thirteen minutes.
-    for (final s in levelSpecs.where((s) => s.level >= 10)) {
+    // 2.4 s an arrow (it was 2.5 before every level lost 5% of its clock).
+    for (final s in levelSpecs.where((s) => s.level >= 10 && s.level <= 40)) {
       expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(2400), reason: 'level ${s.level}');
     }
-    expect(specForLevel(totalLevels).timeLimitMs, 770000);
+    // The endgame tightens the pace a little every level, from ~2.54 s an
+    // arrow at 41 down to 2.30 s on the finale — never under, and never
+    // more than a few hundredths of a second a level, so the limits still
+    // grow with the count: 11 minutes 40 seconds on the finale.
+    for (var level = 41; level <= totalLevels; level++) {
+      final pace = specForLevel(level).timeLimitMs / specForLevel(level).arrows;
+      expect(pace, greaterThanOrEqualTo(2300), reason: 'level $level');
+      if (level > 41) {
+        final before = specForLevel(level - 1).timeLimitMs / specForLevel(level - 1).arrows;
+        expect(pace, lessThan(before), reason: 'level $level');
+        expect(before - pace, lessThan(30), reason: 'level $level');
+      }
+    }
+    expect(specForLevel(41).timeLimitMs, 580000);
+    expect(specForLevel(totalLevels).timeLimitMs, 700000);
+  });
+
+  test('the endgame has no short arrows and is dealt from a chosen variant', () {
+    for (var level = 1; level <= 40; level++) {
+      expect(specForLevel(level).variant, 0, reason: 'level $level keeps its first board');
+    }
+    for (var level = 41; level <= totalLevels; level++) {
+      expect(specForLevel(level).minLength, 4, reason: 'level $level');
+    }
   });
 
   test('seed and toString', () {
     expect(specForLevel(1).seed, isNot(specForLevel(2).seed));
+    // Seeds are distinct across every level and variant the table could use.
+    final seeds = <int>{};
+    for (final s in levelSpecs) {
+      for (var v = 0; v < 64; v++) {
+        expect(seeds.add(s.seed + v * 1_000_003), isTrue, reason: 'level ${s.level} variant $v');
+      }
+    }
     expect(specForLevel(1).toString(), 'LevelSpec(1: 5x6, 5 arrows, 26000ms)');
   });
 }

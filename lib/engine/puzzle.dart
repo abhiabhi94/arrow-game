@@ -157,6 +157,19 @@ class Puzzle {
     return profile.fold<int>(0, (s, n) => s + n) / profile.length;
   }
 
+  /// The haystack: how many arrows the board holds for every one that can
+  /// go at a typical moment — [arrowCount] over [meanOpenMoves]. This is
+  /// what the hunt for the next move costs the player, and it is the number
+  /// that keeps climbing on the late levels: [meanOpenMoves] on its own
+  /// drifts *up* with board size in this generator (2.2 on a 228-arrow board
+  /// is the tightest it deals, 2.8 on a 304-arrow one), so two open moves
+  /// among three hundred arrows is a harder find than two among two hundred
+  /// even though the count is the same. Zero for an unsolvable board.
+  double get arrowsPerOpenMove {
+    final open = meanOpenMoves;
+    return open == 0 ? 0 : arrows.length / open;
+  }
+
   /// How exposed the arrows a player can actually play are, averaged over a
   /// greedy solve: the fraction of a playable arrow's own cells that touch
   /// an arrow which cannot move yet.

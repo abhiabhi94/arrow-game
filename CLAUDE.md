@@ -177,7 +177,7 @@ lib/
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N
     answer_match.dart    judging a typed riddle answer (exact / close / wrong)
   data/level_specs.dart  the 60 levels (board size, arrow count, length range, clock)
-  data/riddle_bank.dart  50 riddles in English + 50 पहेलियाँ in Hindi
+  data/riddle_bank.dart  100 riddles in English + 100 पहेलियाँ in Hindi
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot),
                        riddle (question, answers, hint)
@@ -270,8 +270,10 @@ Key patterns:
   `forwardMs` so they land on impact (a light tick answers the finger at
   once). Tests use `fakeAsync` for that timer.
 - **Saved game:** one slot (`models/saved_game.dart`, prefs key
-  `arrow_saved_game`, JSON: level, arrows out, slips, hints, clock — the
-  board itself is rebuilt from the seed). `GameNotifier.onSnapshot` fires
+  `arrow_saved_game`, JSON: level, the board's seed, arrows out, slips,
+  hints, clock — the board itself is rebuilt from the seed, and the seed is
+  stored because a level can be re-dealt (`LevelSpec.variant`): a snapshot
+  from another board, or one without a seed, is not resumed). `GameNotifier.onSnapshot` fires
   after every move/hint/pause/restart/ending and in `dispose` (back, quit,
   next level); `SavedGameNotifier.record` saves a level with progress,
   clears on an ending, and clears an untouched/restarted visit of the same
@@ -399,16 +401,35 @@ Key patterns:
   tangled). Tune numbers there; keep the generator test green — it is what
   guarantees a level is playable. The clock is brisk: ~1.7 s an arrow on
   levels 1–4, 2.1 s on 5–9 and 2.5 s from 10 (plus ~17 s) — 26 s on level
-  1, 9½ minutes on level 40, just under 13 on the finale — so a level is a
+  1, 9½ minutes on level 40, about 11½ on the finale — so a level is a
   sprint of quick reads. Those are the numbers the curve was drawn with,
   less 5%: every level's clock was tightened by that much in one pass, so
-  the shape is unchanged and the whole game is that much brisker. **Levels 41–60** keep climbing four arrows a level (228 →
-  304) while the board barely grows (42×64 → 47×73): the cells an arrow
-  fall from ~11.8 to ~11.3 and the fill rises to ~0.90, so the endgame is a
-  tighter board rather than a bigger one, with the longest runs reaching 14
-  cells. The pace per arrow never slackens; the last levels are long only
-  because there are 300 arrows to read, and the saved-game slot means such a
-  board can be put down and picked up.
+  the shape is unchanged and the whole game is that much brisker.
+  **Levels 41–60** keep climbing four arrows a level (228 → 304) while the
+  board barely grows (42×64 → 47×73), and the count is not the only thing
+  that climbs — it was, once, and the last twenty levels felt like one
+  level played twenty times. Three more things move: the shortest arrow is
+  4 cells rather than 3 (the generator cannot place the full count at 5 on
+  those boards, and `openMoves: 1` makes boards *looser*, since every closer
+  it places is itself a new open arrow), the clock tightens from ~2.54 s an
+  arrow at level 41 to 2.30 s at 60 (the limits still grow, just slower
+  than the arrow count), and each level is dealt from the **variant**
+  (`LevelSpec.variant`, folded into the seed) whose board is the tightest
+  the generator offered, chosen so the moves open at a typical moment fall
+  level by level (about 2.5 at 41 to about 2.1 at 60, against 2.4–3.0 on
+  levels 20–40) and no level opens with more than three arrows to tap. The
+  generator's own tightness plateaus from about level 20 — its candidate
+  pool is only `kMinCandidates` boards on the big levels, and among them
+  the mean open moves scatter between ~2.1 and ~3.2 — so re-dealing is
+  where the endgame's tightness comes from; `dart run
+  tool/level_report.dart <level> <n>` prints a level's next n variants.
+  `test/engine/puzzle_generator_test.dart` pins the descent, so a generator
+  change that loosens a late level means re-picking its variant, not
+  loosening the test. The saved game records the board's seed and a
+  snapshot from another board (a re-dealt level, or one written before the
+  seed was stored) is not resumed. The last levels are long only because
+  there are 300 arrows to read, and the saved-game slot means such a board
+  can be put down and picked up.
 - **Lives / stars:** `models/level_progress.dart`. `maxLives` is 3 on every
   level and `starsForMistakes(mistakes)` is the plain rule (flawless three,
   one slip two, two slips one). Spending the allowance is not the end of the
@@ -425,8 +446,10 @@ Key patterns:
   `providers/riddle_provider.dart`, `widgets/riddle_card.dart`): carrying on
   past a spent allowance is earned rather than tapped through, so lives are
   never spent thoughtlessly and a 300-arrow board is still never lost to one
-  slipped finger. Each language has its own bank of `kRiddleCount` (50)
-  riddles — the Hindi ones are written as पहेलियाँ, not translated, since a
+  slipped finger. Each language has its own bank of `kRiddleCount` (100)
+  riddles — ids 51–100 a shade more lateral than the first fifty, since the
+  first fifty read as too easy, though the answer is still one everyday word
+  and the gate is still not a crossword — the Hindi ones are written as पहेलियाँ, not translated, since a
   pun rarely survives the crossing — and `RiddleDeckNotifier` deals a
   *shuffled pack* rather than rolling a die: every riddle comes up before any
   repeats, the order and position are persisted (`arrow_riddle_order`,
@@ -570,7 +593,7 @@ composite action check the `uses:` inside it too.
 
 - **Localization:** English and Hindi are authored (`lib/l10n/app_en.arb`,
   `app_hi.arb`) and Settings has the picker, so a third language is a third
-  `.arb` file, a `LanguageChoice` value, and a bank of 50 riddles in
+  `.arb` file, a `LanguageChoice` value, and a bank of 100 riddles in
   `data/riddle_bank.dart` (plus whatever `engine/answer_match.dart` needs to
   peel that language's endings off — it handles English and Devanagari today,
   and falls back to plain typo distance for anything else).

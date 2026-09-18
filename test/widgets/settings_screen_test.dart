@@ -81,7 +81,7 @@ void main() {
         'arrow_level_1_done': true,
         'arrow_level_1_stars': 3,
         RiddleDeckRepository.solvedKey: 5,
-        SavedGameRepository.key: '{"level":2,"removed":[1],"mistakes":0,"hintsLeft":3,"elapsedMs":10}',
+        SavedGameRepository.key: '{"level":2,"seed":15855,"removed":[1],"mistakes":0,"hintsLeft":3,"elapsedMs":10}',
       },
     );
     final progress = container.read(progressProvider.notifier);

@@ -11,8 +11,10 @@ class LevelSpec {
     required this.maxLength,
     required this.timeLimitMs,
     this.openMoves = 2,
+    this.variant = 0,
   })  : assert(level >= 1),
         assert(openMoves >= 1),
+        assert(variant >= 0),
         assert(width >= 3 && height >= 3),
         assert(arrows >= 1),
         assert(minLength >= 2 && maxLength >= minLength),
@@ -40,8 +42,15 @@ class LevelSpec {
   /// leave plenty of obvious taps. A soft target, not a guarantee.
   final int openMoves;
 
-  /// Seed for the level's fixed puzzle.
-  int get seed => level * 7919 + 17;
+  /// Which of the level's boards is dealt. The generator is seeded from the
+  /// level and this, so a level can be re-dealt — when its first board came
+  /// out looser than the curve wants — without moving any other level's.
+  /// `tool/level_report.dart <level> <extra>` shows how the variants compare.
+  final int variant;
+
+  /// Seed for the level's fixed puzzle. Variant 0 is the seed the levels were
+  /// first cut with, so a level keeps its board unless it is re-dealt.
+  int get seed => level * 7919 + 17 + variant * 1_000_003;
 
   int get cellCount => width * height;
 

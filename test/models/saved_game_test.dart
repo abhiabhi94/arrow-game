@@ -14,6 +14,7 @@ void main() {
     );
     final saved = SavedGame.fromState(state);
     expect(saved.level, 1);
+    expect(saved.seed, sampleSpec.seed);
     expect(saved.removed, [0, 2]);
     expect(saved.arrowsOut, 2);
     expect(saved.mistakes, 1);
@@ -36,13 +37,20 @@ void main() {
     expect(SavedGame.fromJson(const {}), isNull);
     expect(SavedGame.fromJson(const {'level': '1', 'removed': [], 'mistakes': 0, 'hintsLeft': 3, 'elapsedMs': 0}), isNull);
     expect(SavedGame.fromJson(const {'level': 1, 'removed': ['a'], 'mistakes': 0, 'hintsLeft': 3, 'elapsedMs': 0}), isNull);
-    expect(SavedGame.fromJson(const {'level': 1, 'removed': [], 'mistakes': 0, 'hintsLeft': 3, 'elapsedMs': 0}), isNotNull);
+    expect(SavedGame.fromJson(const {'level': 1, 'removed': [], 'mistakes': 0, 'hintsLeft': 3, 'elapsedMs': 0}), isNull);
+    expect(SavedGame.fromJson(const {'level': 1, 'seed': 7936, 'removed': [], 'mistakes': 0, 'hintsLeft': 3, 'elapsedMs': 0}), isNotNull);
+  });
+
+  test('a snapshot without a seed is one written before a level could be re-dealt, and is not trusted', () {
+    // Its arrows out may belong to a board the level no longer deals.
+    final legacy = SavedGame.fromState(GameState.fresh(sampleSpec, samplePuzzle())).toJson()..remove('seed');
+    expect(SavedGame.fromJson(legacy), isNull);
   });
 
   test('equality looks at the arrows out as a set', () {
-    const a = SavedGame(level: 2, removed: [1, 3], mistakes: 0, hintsLeft: 3, elapsedMs: 10);
-    const b = SavedGame(level: 2, removed: [3, 1], mistakes: 0, hintsLeft: 3, elapsedMs: 10);
-    const c = SavedGame(level: 2, removed: [3], mistakes: 0, hintsLeft: 3, elapsedMs: 10);
+    const a = SavedGame(level: 2, seed: 15855, removed: [1, 3], mistakes: 0, hintsLeft: 3, elapsedMs: 10);
+    const b = SavedGame(level: 2, seed: 15855, removed: [3, 1], mistakes: 0, hintsLeft: 3, elapsedMs: 10);
+    const c = SavedGame(level: 2, seed: 15855, removed: [3], mistakes: 0, hintsLeft: 3, elapsedMs: 10);
     expect(a, b);
     expect(a, isNot(c));
   });
@@ -50,5 +58,5 @@ void main() {
 
 extension on SavedGame {
   SavedGame copyWithHint() =>
-      SavedGame(level: level, removed: removed, mistakes: mistakes, hintsLeft: hintsLeft - 1, elapsedMs: elapsedMs);
+      SavedGame(level: level, seed: seed, removed: removed, mistakes: mistakes, hintsLeft: hintsLeft - 1, elapsedMs: elapsedMs);
 }

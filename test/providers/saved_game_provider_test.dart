@@ -20,7 +20,7 @@ Future<ProviderContainer> _container(Map<String, Object> seed) async {
   return container;
 }
 
-const _saved = SavedGame(level: 3, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 4000);
+const _saved = SavedGame(level: 3, seed: 23774, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 4000);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

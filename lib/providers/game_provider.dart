@@ -114,6 +114,9 @@ class GameNotifier extends StateNotifier<GameState> {
   /// Whether [saved] describes a moment this level can still be in.
   bool _fits(SavedGame saved, Puzzle puzzle) =>
       saved.level == spec.level &&
+      // The same board, not just the same level number: a re-dealt level's
+      // arrows are not the ones the snapshot took out.
+      saved.seed == spec.seed &&
       saved.hasProgress &&
       saved.removed.length < puzzle.arrowCount &&
       saved.removed.every((id) => id >= 0 && id < puzzle.arrowCount) &&
