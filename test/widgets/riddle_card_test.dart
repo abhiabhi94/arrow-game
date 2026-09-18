@@ -145,6 +145,94 @@ void main() {
     expect(focused(), isTrue);
   });
 
+  testWidgets('the answer field takes the keyboard when the card opens', (tester) async {
+    // On the game screen the card replaces the "Out of lives" card inside a
+    // scope whose keyboard-shortcut Focus has held the focus before: the
+    // field's autofocus never applies there (it yields to whatever the scope
+    // last focused), so the card has to ask outright.
+    final shortcuts = FocusNode();
+    addTearDown(shortcuts.dispose);
+    final button = FocusNode();
+    addTearDown(button.dispose);
+    var asking = false;
+    late StateSetter setScreen;
+    await usePhoneSurface(tester);
+    await pumpApp(
+      tester,
+      Scaffold(
+        body: StatefulBuilder(
+          builder: (context, setState) {
+            setScreen = setState;
+            return Focus(
+              focusNode: shortcuts,
+              autofocus: true,
+              child: Stack(
+                children: [
+                  if (asking)
+                    RiddleChallenge(
+                      riddleId: 1,
+                      solvedCount: 0,
+                      onSolved: () {},
+                      onSwap: () {},
+                      onDismiss: () {},
+                    )
+                  else
+                    Center(
+                      child: FilledButton(
+                        focusNode: button,
+                        onPressed: () {},
+                        child: const Text('Solve a riddle'),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+      extraOverrides: silentFeedback(),
+    );
+    await tester.pump();
+    button.requestFocus();
+    await tester.pump();
+    expect(button.hasFocus, isTrue);
+
+    setScreen(() => asking = true);
+    await _settle(tester);
+    final field = tester.widget<TextField>(find.byType(TextField)).focusNode!;
+    expect(field.hasFocus, isTrue);
+  });
+
+  testWidgets('a chip that vanishes does not hand the focus back early', (tester) async {
+    // On the web with accessibility on, a chip takes the focus when it is
+    // pressed. The second 💡 press removes the chip, and a removed focus
+    // node passes the focus to the scope's previously focused child — the
+    // field — in the frame that removes it. That is too soon: the browser
+    // engine only wakes the field on a refocus that lands after its own
+    // deferred blur, so the field must get the focus back from
+    // `_keepTyping`'s timer and from nothing else.
+    await _pumpRiddle(tester);
+    final field = tester.widget<TextField>(find.byType(TextField)).focusNode!;
+    await tester.tap(find.text('Give me a hint'));
+    await _settle(tester);
+
+    // The chip takes the focus, as it does on the web.
+    Focus.of(tester.element(find.text('One more nudge'))).requestFocus();
+    await tester.pump();
+    expect(field.hasFocus, isFalse);
+
+    await tester.tap(find.text('One more nudge'));
+    // The frame that removes the chip: the field must not have the focus
+    // yet (a removed node would otherwise pass it straight back).
+    await tester.pump();
+    expect(find.text('One more nudge'), findsNothing);
+    expect(field.hasFocus, isFalse);
+
+    // The timer, and the field has the keyboard again.
+    await _settle(tester);
+    expect(field.hasFocus, isTrue);
+  });
+
   testWidgets('the ribbing keeps changing, and never repeats itself', (tester) async {
     await _pumpRiddle(tester);
     final seen = <String>{};

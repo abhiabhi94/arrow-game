@@ -31,7 +31,10 @@
 //             its first letter out too, and the answer accepted
 //             (level-NN-riddle-*.png). The pack is seeded in order,
 //             so the riddle is always the first in the bank and
-//             --riddle-answer (default "shadow") is its answer.
+//             --riddle-answer (default "shadow") is its answer. The run
+//             is a problem (exit 1) unless the solved card appears: the
+//             answer is typed with the keyboard, so this is what checks
+//             that the field still had it after the chips were pressed.
 //   --lang    seeds the language setting ('en' or 'hi'), so the shots show the
 //             app in that language whatever the browser's locale is; the
 //             language lands in the filename
@@ -106,6 +109,7 @@ const labels = lang === 'hindi'
       riddleHint: /थोड़ा संकेत दीजिए$/,
       riddleNudge: /एक और इशारा$/,
       riddleSubmit: /यही मेरा जवाब है$/,
+      riddleSolved: /तीरों पर वापस$/,
     }
   : {
       settings: /^settings/i,
@@ -116,6 +120,7 @@ const labels = lang === 'hindi'
       riddleHint: /Give me a hint$/,
       riddleNudge: /One more nudge$/,
       riddleSubmit: /That's my answer$/,
+      riddleSolved: /Back to the arrows$/,
     };
 
 if (!fs.existsSync(path.join(buildDir, 'index.html'))) {
@@ -328,6 +333,16 @@ try {
       await page.keyboard.type(riddleAnswer);
       await settle(page, 300);
       await page.getByRole('button', { name: labels.riddleSubmit }).first().click();
+      // The answer was typed into whatever had the keyboard. If that was not
+      // the field, the card is still asking, with an empty guess judged
+      // wrong under it — and a screenshot of that is a passing run only if
+      // nobody looks. So the run waits for the solved card's button by name
+      // and counts its absence as a problem, the way a Flutter exception is.
+      const solved = page.getByRole('button', { name: labels.riddleSolved }).first();
+      const answered = await solved.waitFor({ state: 'attached', timeout: 5000 }).then(() => true, () => false);
+      if (!answered) {
+        problems.push(`Riddle not solved: typed "${riddleAnswer}" and submitted, but no "${labels.riddleSolved.source}" button appeared (the answer field lost the keyboard?)`);
+      }
       await settle(page, 900);
       await shoot(page, `level-${id}-riddle-solved-${tag}`);
     }

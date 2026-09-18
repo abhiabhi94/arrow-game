@@ -482,13 +482,43 @@ Key patterns:
   second punishment. The
   card wears `kRiddleAskingEmoji` while it asks: **every riddle's emoji is a
   picture of its answer**, so the riddle's own emoji is held back and arrives
-  as the reveal on the solved card. `_keepTyping` puts the keyboard back in
-  the field after anything else on the card is pressed, and it has to do it
-  in a post-frame callback — whatever was tapped takes the focus as part of
-  handling that tap, *after* the callback runs, so asking from inside the
-  callback is asking too early and on the web the next thing typed goes
-  nowhere. (Widget tests do not catch this; the screenshot harness does,
-  because it types into the real thing.) Every Hindi
+  as the reveal on the solved card. The card asks for the answer field's
+  focus outright — from `initState`, not `autofocus`, which only applies
+  while nothing in the scope has ever held the focus, and the game screen's
+  keyboard-shortcut `Focus` always has — and `_keepTyping` puts the keyboard
+  back after anything else on the card is pressed. Off the web a chip never
+  takes the focus and that is a no-op; the shape of it is dictated by the web
+  with accessibility on (a screen reader, or the screenshot harness, which
+  enables semantics to find widgets by name). There a chip is a DOM element
+  that takes the browser's focus on mousedown: the field's DOM input blurs,
+  the engine shuts its text-editing strategy down and *schedules a deferred
+  blur* of that input on a zero-delay timer of its own, and the framework's
+  focus follows to the chip. The engine wakes the field again only on a
+  semantics update in which its focus has changed to on, and that has to land
+  **after the engine's timer**: a refocus that lands first is undone by it
+  (the stale blur finds the input focused and moves the focus to the view
+  root), and the typing goes nowhere. What shipped first was a post-frame
+  callback, which ran inside the frame — and Chromium runs frames ahead of
+  pending timers, so on a slow build it always lost. Two things fix it. The
+  refocus is asked for from a zero-delay `Timer` queued from the tap, which
+  sits behind the engine's in the same queue. And nothing may hand the field
+  the focus sooner: a chip that vanishes on the press (the 💡 after the
+  first letter) would, because a removed focus node passes the focus to the
+  scope's previously focused child — the field — inside the frame that
+  removes it, ahead of the timer; so `_keepTyping` first parks whatever
+  holds the focus on the enclosing `Focus` (the game screen's shortcuts,
+  which has no semantics node and so moves nothing in the browser). The
+  chips and buttons **keep their focus nodes**: a chip that could not take
+  the focus would still steal the browser's, and with nothing changing on
+  the framework's side the field would look focused to Flutter and be dead
+  to the browser. (An unfocus-and-refocus toggle does not work either: the
+  engine also defers the `SemanticsAction.focus` it induces during a frame,
+  so a stale one lands right after the unfocus and the toggle completes
+  within one frame, invisible to semantics.)
+  `test/widgets/riddle_card_test.dart` pins the open-time focus and that a
+  vanishing chip hands nothing back; the harness is the regression test for
+  the rest: `--riddle` types the answer with the real keyboard and exits 1
+  unless the solved card's button (`riddleBackToBoard`) appears. Every Hindi
   answer also lists its **romanized** spellings ('paani', 'jal'), because a
   phone set to Hindi very often has no Devanagari keyboard on it, and the
   field says so; `test/data/riddle_bank_test.dart` pins that every one of
