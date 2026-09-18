@@ -66,6 +66,26 @@ void main() {
     }
   });
 
+  test('the endgame tightens level by level', () {
+    // Levels 41–60 are each dealt from the variant whose board came out
+    // tightest, so that the hunt for the next move — arrows on the board
+    // for every one that can go — never eases from one level to the next,
+    // and no level opens with more than three arrows to tap (the general
+    // rule allows five). If a generator change fails this, re-pick the
+    // level's variant with `dart run tool/level_report.dart <level> <n>`
+    // rather than loosening the line.
+    var hunt = puzzleForLevel(specForLevel(40)).arrowsPerOpenMove;
+    for (final spec in levelSpecs.where((s) => s.level >= 41)) {
+      final p = puzzleForLevel(spec);
+      expect(p.removable(const {}).length, lessThanOrEqualTo(3), reason: 'level ${spec.level} opening');
+      expect(p.arrowsPerOpenMove, greaterThanOrEqualTo(hunt), reason: 'level ${spec.level} hunt');
+      hunt = p.arrowsPerOpenMove;
+    }
+    // And the finale is a markedly harder find than the level before the
+    // endgame began.
+    expect(hunt, greaterThan(puzzleForLevel(specForLevel(40)).arrowsPerOpenMove * 1.15));
+  });
+
   test('an arrow may point straight at another as long as nothing cycles', () {
     // Level 10 and up are full of arrows that wait for a neighbour; every one
     // of them still leaves in the greedy order.

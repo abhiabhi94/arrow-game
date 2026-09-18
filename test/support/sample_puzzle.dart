@@ -19,6 +19,9 @@ Puzzle samplePuzzle() => Puzzle(
   ],
 );
 
+/// [sampleSpec]'s seed, as a constant for saved-game literals.
+const int sampleSeed = 1 * 7919 + 17;
+
 /// A spec matching [samplePuzzle] with a 30 s clock.
 const LevelSpec sampleSpec = LevelSpec(
   level: 1,

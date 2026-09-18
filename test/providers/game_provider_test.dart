@@ -401,7 +401,7 @@ void main() {
   });
 
   test('a fitting saved game comes back paused with the resume offer', () {
-    const saved = SavedGame(level: 1, removed: [1], mistakes: 1, hintsLeft: 2, elapsedMs: 7000);
+    const saved = SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 1, hintsLeft: 2, elapsedMs: 7000);
     final n = _notifier(savedGame: saved);
     expect(n.state.phase, GamePhase.paused);
     expect(n.state.resumeOffered, isTrue);
@@ -420,7 +420,7 @@ void main() {
   });
 
   test('"start over" from the offer is a plain restart', () {
-    const saved = SavedGame(level: 1, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 7000);
+    const saved = SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 7000);
     final n = _notifier(savedGame: saved);
     n.restart();
     expect(n.state.phase, GamePhase.playing);
@@ -432,13 +432,14 @@ void main() {
 
   test('a saved game that does not fit is ignored', () {
     const cases = <SavedGame>[
-      SavedGame(level: 2, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // other level
-      SavedGame(level: 1, removed: [], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // nothing done
-      SavedGame(level: 1, removed: [7], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // no such arrow
-      SavedGame(level: 1, removed: [0, 1, 2], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // already cleared
-      SavedGame(level: 1, removed: [1], mistakes: 3, hintsLeft: 3, elapsedMs: 10), // out of lives
-      SavedGame(level: 1, removed: [1], mistakes: 0, hintsLeft: 4, elapsedMs: 10), // too many hints
-      SavedGame(level: 1, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 30000), // time up
+      SavedGame(level: 2, seed: 15855, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // other level
+      SavedGame(level: 1, seed: sampleSeed + 1, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // this level, re-dealt
+      SavedGame(level: 1, seed: sampleSeed, removed: [], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // nothing done
+      SavedGame(level: 1, seed: sampleSeed, removed: [7], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // no such arrow
+      SavedGame(level: 1, seed: sampleSeed, removed: [0, 1, 2], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // already cleared
+      SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 3, hintsLeft: 3, elapsedMs: 10), // out of lives
+      SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 0, hintsLeft: 4, elapsedMs: 10), // too many hints
+      SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 30000), // time up
     ];
     for (final saved in cases) {
       final n = _notifier(savedGame: saved);
@@ -449,7 +450,7 @@ void main() {
   });
 
   test('a saved game is applied once the board lands', () async {
-    const saved = SavedGame(level: 1, removed: [0], mistakes: 0, hintsLeft: 3, elapsedMs: 100);
+    const saved = SavedGame(level: 1, seed: sampleSeed, removed: [0], mistakes: 0, hintsLeft: 3, elapsedMs: 100);
     final completer = Completer<Puzzle>();
     final n = GameNotifier(
       sampleSpec,

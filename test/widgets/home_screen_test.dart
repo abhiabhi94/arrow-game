@@ -123,6 +123,7 @@ void main() {
       seed: <String, Object>{
         SavedGameRepository.key: jsonEncode(const {
           'level': 3,
+          'seed': 3 * 7919 + 17,
           'removed': [0, 1],
           'mistakes': 0,
           'hintsLeft': 3,

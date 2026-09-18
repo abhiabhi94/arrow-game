@@ -91,6 +91,8 @@ void main() {
       // 0 and 1 are playable at first; taking 0 frees 2; then only 2 is left.
       expect(p.openMoveProfile(), [2, 2, 1]);
       expect(p.meanOpenMoves, closeTo(5 / 3, 1e-9));
+      // Three arrows for five thirds of a move: the hunt is 1.8 arrows a move.
+      expect(p.arrowsPerOpenMove, closeTo(1.8, 1e-9));
     });
 
     test('openTapRisk counts the playable arrows crowded by blocked ones', () {
@@ -147,6 +149,7 @@ void main() {
       expect(p.isSolvable, isFalse);
       expect(p.openMoveProfile(), isEmpty);
       expect(p.meanOpenMoves, 0);
+      expect(p.arrowsPerOpenMove, 0);
     });
 
     test('a deadlock is unsolvable', () {

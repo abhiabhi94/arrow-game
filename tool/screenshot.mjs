@@ -197,19 +197,20 @@ const prefs = {
   // Unset by default, which is the app's own default: follow the device.
   ...(lang ? { 'flutter.arrow_language': JSON.stringify(lang) } : {}),
   // A string preference is stored JSON-encoded (quoted); the saved game is a
-  // JSON document inside that string.
+  // JSON document inside that string. Its seed is LevelSpec.seed for variant
+  // 0, so it fits a level that has not been re-dealt (level 3 has not).
   // An unshuffled pack starting at the top, so the riddle in the shot is
   // always the same one (and --riddle-answer is its answer).
   ...(riddleCells
     ? {
         'flutter.arrow_riddle_order': JSON.stringify(
-          Array.from({ length: 50 }, (_, i) => String(i + 1)),
+          Array.from({ length: 100 }, (_, i) => String(i + 1)),
         ),
         'flutter.arrow_riddle_cursor': '0',
       }
     : {}),
   ...(resume && levels.length
-    ? { 'flutter.arrow_saved_game': JSON.stringify(JSON.stringify({ level: levels[0], removed: [0, 1], mistakes: 1, hintsLeft: 2, elapsedMs: 30_000 })) }
+    ? { 'flutter.arrow_saved_game': JSON.stringify(JSON.stringify({ level: levels[0], seed: levels[0] * 7919 + 17, removed: [0, 1], mistakes: 1, hintsLeft: 2, elapsedMs: 30_000 })) }
     : {}),
 };
 

@@ -23,20 +23,23 @@ the way its head points, until it leaves the board. Get every arrow out.
   ("I follow you all day long and vanish when the lights go out"). Every
   riddle has a 💡 that gives a clue and then the first letter, and the
   answer only has to be *close*: a plural, a tense or a typo is waved
-  through with a "close enough". **50 riddles per language**, dealt in a
-  shuffled order so the whole pack comes round before any of them repeats.
+  through with a "close enough". **100 riddles per language** — the second
+  fifty a shade more lateral than the first, still one everyday word each —
+  dealt in a shuffled order so the whole pack comes round before any of
+  them repeats.
   The next fresh mistake asks again, so lives are never spent thoughtlessly.
-- **A clock on every level** (26 seconds to learn on, up to just under
-  thirteen minutes for the finale, growing with the board — brisk on
-  purpose).
+- **A clock on every level** (26 seconds to learn on, up to about eleven
+  and a half minutes for the finale, growing with the board — brisk on
+  purpose, and a shade brisker per arrow through the last twenty levels).
   Run out and it's "Time's up" — replay the same level.
 - **60 levels**, each a fixed, procedurally generated board that is solvable
   by construction. The curve is steep: 5 arrows on a 5×6 board to learn on,
   59 arrows on 19×26 by level 8, 144 arrows on 32×50 by level 20,
   224 arrows on 42×63 by level 40, 304 arrows on 47×73 for the finale — and
   the "who must go before whom" chains get longer all the way. The last
-  twenty levels pack more arrows onto a board that hardly grows, so the
-  endgame gets tighter, not just wider.
+  twenty levels pack more arrows onto a board that hardly grows, with longer
+  arrows, fewer playable at any moment and a little less time per arrow, so
+  the endgame gets tighter level by level, not just wider.
 - **3 hints per level** light up an arrow that can go right now.
 - **Zoom** in/out (buttons or pinch, up to 4×) — the late boards need it.
 - **One ink.** Arrows are thin dark lines like a printed puzzle; only the

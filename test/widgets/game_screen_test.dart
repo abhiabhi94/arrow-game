@@ -455,6 +455,7 @@ void main() {
       seed: {
         SavedGameRepository.key: jsonEncode(const {
           'level': 1,
+          'seed': 1 * 7919 + 17,
           'removed': [0],
           'mistakes': 1,
           'hintsLeft': 2,
@@ -488,6 +489,7 @@ void main() {
       seed: {
         SavedGameRepository.key: jsonEncode(const {
           'level': 1,
+          'seed': 1 * 7919 + 17,
           'removed': [0],
           'mistakes': 0,
           'hintsLeft': 3,
@@ -859,6 +861,7 @@ void main() {
         seed: <String, Object>{
           'arrow_saved_game': jsonEncode({
             'level': 1,
+            'seed': 1 * 7919 + 17,
             'removed': [0],
             'mistakes': 0,
             'hintsLeft': 3,
