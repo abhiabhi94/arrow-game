@@ -425,7 +425,7 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get toolHintNone => 'कोई संकेत नहीं बचा';
+  String get toolHintRiddle => 'एक के लिए पहेली बूझो';
 
   @override
   String get toolGrid => 'ग्रिड लाइनें';
@@ -495,6 +495,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get riddleIntro => 'सही जवाब दीजिए और एक और जान के साथ बोर्ड पर वापस।';
+
+  @override
+  String get riddleIntroHint => 'सही जवाब दीजिए और एक खुला तीर जगमगा उठेगा।';
 
   @override
   String get riddleField => 'आपका जवाब (हिन्दी या रोमन में)';
@@ -625,11 +628,21 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String riddleCloseHint(String answer) {
+    return 'शब्द बिल्कुल यही नहीं था — जवाब था $answer — पर काफ़ी क़रीब। संकेत बोर्ड पर है।';
+  }
+
+  @override
   String get riddleCorrect => 'एकदम सही!';
 
   @override
   String riddleCorrectBody(String answer) {
     return 'जवाब था $answer। एक और जान हाज़िर, बोर्ड वहीं का वहीं है।';
+  }
+
+  @override
+  String riddleCorrectBodyHint(String answer) {
+    return 'जवाब था $answer। बोर्ड पर एक खुला तीर जगमगा रहा है।';
   }
 
   @override

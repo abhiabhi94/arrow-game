@@ -424,7 +424,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get toolHintNone => 'No hints left';
+  String get toolHintRiddle => 'Solve a riddle for one';
 
   @override
   String get toolGrid => 'Grid lines';
@@ -495,6 +495,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get riddleIntro =>
       'Answer it and you are back on the board with one more life.';
+
+  @override
+  String get riddleIntroHint => 'Answer it and an arrow that can go lights up.';
 
   @override
   String get riddleField => 'Your answer';
@@ -627,11 +630,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String riddleCloseHint(String answer) {
+    return 'Not quite the word we had — it was $answer — but near enough. Your hint is on the board.';
+  }
+
+  @override
   String get riddleCorrect => 'Spot on!';
 
   @override
   String riddleCorrectBody(String answer) {
     return 'The answer was $answer. One more life, and the board is where you left it.';
+  }
+
+  @override
+  String riddleCorrectBodyHint(String answer) {
+    return 'The answer was $answer. An arrow that can go is lit up on the board.';
   }
 
   @override

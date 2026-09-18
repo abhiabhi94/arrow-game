@@ -5,6 +5,15 @@ import '../ui/colors.dart';
 
 /// The row under the board: hint (with hints-left badge), grid-lines toggle
 /// (locked until earned), zoom in and zoom out.
+///
+/// The hint button never runs out. Once the level's free hints are spent it
+/// turns into a riddle: the bulb becomes a thinking head with a question
+/// mark, the badge a "?", and a press hands the caller a riddle to gate the
+/// next hint behind — the same bargain the "Out of lives" card strikes.
+/// The hint button's face once the free hints are gone: a head with a
+/// question mark in it — a hint you have to think for.
+const IconData kRiddleHintIcon = Icons.psychology_alt_rounded;
+
 class BoardToolbar extends StatelessWidget {
   const BoardToolbar({
     super.key,
@@ -25,6 +34,9 @@ class BoardToolbar extends StatelessWidget {
 
   /// True while a hint is showing (the button rests until the next tap).
   final bool hintActive;
+
+  /// A press on the hint button: a hint while [hintsLeft] is above zero, a
+  /// riddle for one after that.
   final VoidCallback? onHint;
   final bool gridUnlocked;
   final int gridUnlockLevel;
@@ -38,16 +50,17 @@ class BoardToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final hintLabel = hintsLeft > 0 ? l10n.toolHintLeft(hintsLeft) : l10n.toolHintNone;
+    final riddle = hintsLeft <= 0;
+    final hintLabel = riddle ? l10n.toolHintRiddle : l10n.toolHintLeft(hintsLeft);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _ToolButton(
           tooltip: '${l10n.toolHint} · $hintLabel',
-          icon: Icons.lightbulb_rounded,
-          badge: '$hintsLeft',
+          icon: riddle ? kRiddleHintIcon : Icons.lightbulb_rounded,
+          badge: riddle ? '?' : '$hintsLeft',
           active: hintActive,
-          onPressed: hintsLeft > 0 && !hintActive ? onHint : null,
+          onPressed: hintActive ? null : onHint,
         ),
         const SizedBox(width: 12),
         _ToolButton(

@@ -884,11 +884,11 @@ abstract class AppLocalizations {
   /// **'{count} hints left'**
   String toolHintLeft(int count);
 
-  /// No description provided for @toolHintNone.
+  /// No description provided for @toolHintRiddle.
   ///
   /// In en, this message translates to:
-  /// **'No hints left'**
-  String get toolHintNone;
+  /// **'Solve a riddle for one'**
+  String get toolHintRiddle;
 
   /// No description provided for @toolGrid.
   ///
@@ -1015,6 +1015,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Answer it and you are back on the board with one more life.'**
   String get riddleIntro;
+
+  /// No description provided for @riddleIntroHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer it and an arrow that can go lights up.'**
+  String get riddleIntroHint;
 
   /// No description provided for @riddleField.
   ///
@@ -1250,6 +1256,12 @@ abstract class AppLocalizations {
   /// **'Not quite the word we had — it was {answer} — but near enough. One more life is yours.'**
   String riddleClose(String answer);
 
+  /// No description provided for @riddleCloseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Not quite the word we had — it was {answer} — but near enough. Your hint is on the board.'**
+  String riddleCloseHint(String answer);
+
   /// No description provided for @riddleCorrect.
   ///
   /// In en, this message translates to:
@@ -1261,6 +1273,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The answer was {answer}. One more life, and the board is where you left it.'**
   String riddleCorrectBody(String answer);
+
+  /// No description provided for @riddleCorrectBodyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The answer was {answer}. An arrow that can go is lit up on the board.'**
+  String riddleCorrectBodyHint(String answer);
 
   /// No description provided for @riddleBackToBoard.
   ///

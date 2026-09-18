@@ -208,7 +208,7 @@
       }
     }
   },
-  "toolHintNone": "No hints left",
+  "toolHintRiddle": "Solve a riddle for one",
   "toolGrid": "Grid lines",
   "toolGridLocked": "Grid lines unlock after level {level}",
   "@toolGridLocked": {
@@ -244,6 +244,7 @@
   "outOfLivesRetry": "Start over",
   "riddleTitle": "Riddle me this",
   "riddleIntro": "Answer it and you are back on the board with one more life.",
+  "riddleIntroHint": "Answer it and an arrow that can go lights up.",
   "riddleField": "Your answer",
   "riddleSubmit": "That's my answer",
   "riddleHintAction": "Give me a hint",
@@ -311,9 +312,25 @@
       }
     }
   },
+  "riddleCloseHint": "Not quite the word we had — it was {answer} — but near enough. Your hint is on the board.",
+  "@riddleCloseHint": {
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
   "riddleCorrect": "Spot on!",
   "riddleCorrectBody": "The answer was {answer}. One more life, and the board is where you left it.",
   "@riddleCorrectBody": {
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
+  "riddleCorrectBodyHint": "The answer was {answer}. An arrow that can go is lit up on the board.",
+  "@riddleCorrectBodyHint": {
     "placeholders": {
       "answer": {
         "type": "String"

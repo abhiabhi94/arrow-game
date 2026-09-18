@@ -1,5 +1,6 @@
 /// The riddle gate: the card that stands between a spent allowance and one
-/// more life.
+/// more life — or, once the level's free hints are gone, between the hint
+/// button and one more hint ([RiddlePrize]).
 ///
 /// The point is that it should be *fun* rather than a tax. So the question
 /// gets the big type, a wrong guess costs nothing but a wobble, the 💡 gives
@@ -73,6 +74,16 @@ const String kRiddleAskingEmoji = '🧩';
 /// enough to have tried; a third dead end should never feel like a wall.
 const int kSwapAfterMisses = 2;
 
+/// What cracking the riddle buys. The card's words change with it; the
+/// riddle, the judging and the jokes do not.
+enum RiddlePrize {
+  /// One more life, from the "Out of lives" card.
+  life,
+
+  /// One more hint, from the toolbar once the free ones are spent.
+  hint,
+}
+
 class RiddleChallenge extends ConsumerStatefulWidget {
   const RiddleChallenge({
     super.key,
@@ -81,15 +92,19 @@ class RiddleChallenge extends ConsumerStatefulWidget {
     required this.onSolved,
     required this.onSwap,
     required this.onDismiss,
+    this.prize = RiddlePrize.life,
   });
 
   /// Which riddle, in the bank of the language the app is speaking.
   final int riddleId;
 
+  /// What the answer earns — a life or a hint.
+  final RiddlePrize prize;
+
   /// Riddles cracked before this one — the card wears it as a badge.
   final int solvedCount;
 
-  /// Answered right: the caller hands back the life.
+  /// Answered right: the caller hands over the [prize].
   final VoidCallback onSolved;
 
   /// Deal a different riddle.
@@ -257,7 +272,12 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
         emoji: riddle.emoji,
         mood: EmojiMood.cheer,
         title: close ? l10n.riddleCloseTitle : l10n.riddleCorrect,
-        body: close ? l10n.riddleClose(answer) : l10n.riddleCorrectBody(answer),
+        body: switch ((widget.prize, close)) {
+          (RiddlePrize.life, true) => l10n.riddleClose(answer),
+          (RiddlePrize.life, false) => l10n.riddleCorrectBody(answer),
+          (RiddlePrize.hint, true) => l10n.riddleCloseHint(answer),
+          (RiddlePrize.hint, false) => l10n.riddleCorrectBodyHint(answer),
+        },
         scrollable: true,
         content: Text(
           l10n.riddleSolvedCount(widget.solvedCount + 1),
@@ -275,7 +295,10 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
     return ResultCard(
       emoji: kRiddleAskingEmoji,
       title: l10n.riddleTitle,
-      body: l10n.riddleIntro,
+      body: switch (widget.prize) {
+        RiddlePrize.life => l10n.riddleIntro,
+        RiddlePrize.hint => l10n.riddleIntroHint,
+      },
       scrollable: true,
       content:
           Column(

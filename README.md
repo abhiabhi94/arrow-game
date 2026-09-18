@@ -44,7 +44,9 @@ the way its head points, until it leaves the board. Get every arrow out.
   not just wider. Levels 61–80 keep all of that and turn the clock into the
   difficulty: the time per arrow falls from 2.3 s to 2.0 s, so the last act
   is a longer read on less time.
-- **3 hints per level** light up an arrow that can go right now.
+- **3 hints per level** light up an arrow that can go right now. Spent
+  them? The bulb turns into a riddle: crack one and you get another hint,
+  with the clock stopped while you think.
 - **Zoom** in/out (buttons or pinch, up to 4×) — the late boards need it.
 - **One ink.** Arrows are thin dark lines like a printed puzzle; only the
   hint glow and a blocked bump add colour.

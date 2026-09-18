@@ -35,6 +35,7 @@ node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # des
 node tool/screenshot.mjs --levels 1 --crash 2,4                     # a bump mid-crash (fake clock): jolt + red flash
 node tool/screenshot.mjs --levels 1 --riddle 2,4,2,3,2,2            # spend all 3 lives -> Out of lives, the riddle, its hint, solved
 node tool/screenshot.mjs --lang hi --settings --levels 1 --riddle 2,4,2,3,2,2 --riddle-answer aam  # the same in Hindi
+node tool/screenshot.mjs --levels 1 --riddle-hint 2,4                # spend the 3 hints -> the riddle button, its riddle, the hint it buys
 
 flutter run                     # debug build = "Arrow Testing", all levels unlocked
 flutter run --release           # release build = "Arrow", locked progression
@@ -284,7 +285,16 @@ Key patterns:
   over / Home). Home's hero card becomes "Pick up where you left off ·
   Continue" for that level. Reset progress clears the slot too.
 - **Hints:** `maxHints = 3` per attempt; `Puzzle.hintFor` picks the removable
-  arrow that frees the most others; any tap clears the highlight.
+  arrow that frees the most others; any tap clears the highlight. The
+  button never goes dead: once `hintsLeft` is zero it wears
+  `kRiddleHintIcon` (a head with a question mark) and a "?" badge, and a
+  press pauses the level and puts a riddle over the board
+  (`RiddlePrize.hint` on `RiddleChallenge`; the game screen's `_onHint`,
+  also behind the **H** key). Cracked, it resumes and calls
+  `GameNotifier.earnHint`, which lights an arrow without touching
+  `hintsLeft`, so the next one costs a riddle too; "Never mind" just
+  resumes. The clock is paused under the riddle because a level-1 clock
+  is 26 s and a riddle takes longer than that.
 - **Grid lines:** drawn through the cell centres (the lattice the arrows lie
   on), not between cells, so every arrow body sits on a line. They are a
   1 px hairline, so `gridLine` keeps ≥ 40 levels of contrast to the page in
@@ -460,7 +470,8 @@ Key patterns:
   `providers/riddle_provider.dart`, `widgets/riddle_card.dart`): carrying on
   past a spent allowance is earned rather than tapped through, so lives are
   never spent thoughtlessly and a 300-arrow board is still never lost to one
-  slipped finger. Each language has its own bank of `kRiddleCount` (100)
+  slipped finger; the same card, with `RiddlePrize.hint`, sells a fourth
+  hint and every one after it (see **Hints**). Each language has its own bank of `kRiddleCount` (100)
   riddles — ids 51–100 a shade more lateral than the first fifty, since the
   first fifty read as too easy, though the answer is still one everyday word
   and the gate is still not a crossword — the Hindi ones are written as पहेलियाँ, not translated, since a
