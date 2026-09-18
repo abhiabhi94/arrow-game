@@ -12,6 +12,8 @@ void main() {
     expect(levelName(l10n, 1), 'First Steps');
     expect(levelName(l10n, 30), 'Halfway Out');
     expect(levelName(l10n, 60), 'Grand Exit');
-    expect(levelName(l10n, 99), 'Grand Exit');
+    expect(levelName(l10n, 61), 'Second Wind');
+    expect(levelName(l10n, 80), 'Beyond the Edge');
+    expect(levelName(l10n, 99), 'Beyond the Edge');
   });
 }

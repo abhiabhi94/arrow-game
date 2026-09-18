@@ -125,8 +125,8 @@ class HomeScreen extends ConsumerWidget {
 }
 
 /// The home screen's header, pinned to the top of the trail: the trail is
-/// sixty levels long, and the star count and the way into Settings should not
-/// be sixty levels back up the page. It shrinks as the page scrolls — the
+/// eighty levels long, and the star count and the way into Settings should not
+/// be eighty levels back up the page. It shrinks as the page scrolls — the
 /// title comes down to a heading and the tagline folds away — while the stars
 /// and the gear stay put, and stay the same size.
 class _HomeHeader extends SliverPersistentHeaderDelegate {

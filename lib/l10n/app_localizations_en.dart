@@ -301,6 +301,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName60 => 'Grand Exit';
 
   @override
+  String get levelName61 => 'Second Wind';
+
+  @override
+  String get levelName62 => 'Uncharted';
+
+  @override
+  String get levelName63 => 'Wire Nest';
+
+  @override
+  String get levelName64 => 'Riptide';
+
+  @override
+  String get levelName65 => 'Wildwood';
+
+  @override
+  String get levelName66 => 'Ironclad';
+
+  @override
+  String get levelName67 => 'Catacombs';
+
+  @override
+  String get levelName68 => 'Tangled Web';
+
+  @override
+  String get levelName69 => 'Crush Depth';
+
+  @override
+  String get levelName70 => 'No Way Out';
+
+  @override
+  String get levelName71 => 'Thunderhead';
+
+  @override
+  String get levelName72 => 'Knot of Knots';
+
+  @override
+  String get levelName73 => 'The Crucible';
+
+  @override
+  String get levelName74 => 'Blackout';
+
+  @override
+  String get levelName75 => 'Vertigo';
+
+  @override
+  String get levelName76 => 'Razor\'s Edge';
+
+  @override
+  String get levelName77 => 'Event Horizon';
+
+  @override
+  String get levelName78 => 'The Abyss';
+
+  @override
+  String get levelName79 => 'Last Light';
+
+  @override
+  String get levelName80 => 'Beyond the Edge';
+
+  @override
   String get tutorialTap => 'Tap an arrow to slide it out the way it points.';
 
   @override

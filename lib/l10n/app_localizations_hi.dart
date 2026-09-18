@@ -301,6 +301,66 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName60 => 'भव्य निकास';
 
   @override
+  String get levelName61 => 'दूसरी साँस';
+
+  @override
+  String get levelName62 => 'अनजान राह';
+
+  @override
+  String get levelName63 => 'तारों का घोंसला';
+
+  @override
+  String get levelName64 => 'उलटी लहर';
+
+  @override
+  String get levelName65 => 'घना जंगल';
+
+  @override
+  String get levelName66 => 'लोहे का कवच';
+
+  @override
+  String get levelName67 => 'तहख़ाने की गलियाँ';
+
+  @override
+  String get levelName68 => 'उलझा जाल';
+
+  @override
+  String get levelName69 => 'गहरी डूब';
+
+  @override
+  String get levelName70 => 'कोई रास्ता नहीं';
+
+  @override
+  String get levelName71 => 'तूफ़ानी बादल';
+
+  @override
+  String get levelName72 => 'गाँठों की गाँठ';
+
+  @override
+  String get levelName73 => 'कसौटी';
+
+  @override
+  String get levelName74 => 'घुप्प अँधेरा';
+
+  @override
+  String get levelName75 => 'चक्कर';
+
+  @override
+  String get levelName76 => 'छुरी की धार';
+
+  @override
+  String get levelName77 => 'बिना वापसी की रेखा';
+
+  @override
+  String get levelName78 => 'अथाह खाई';
+
+  @override
+  String get levelName79 => 'आख़िरी रोशनी';
+
+  @override
+  String get levelName80 => 'किनारे के पार';
+
+  @override
   String get tutorialTap =>
       'किसी तीर पर टैप करो — वह अपनी दिशा में निकल जाएगा।';
 

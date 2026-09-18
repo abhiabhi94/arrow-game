@@ -286,11 +286,14 @@ try {
     // A node that is not yet in the semantics tree (Flutter builds it lazily
     // for the visible part of the list) has no box; ask briefly and keep
     // nudging rather than sit through Playwright's 30 s default per probe.
+    // While the node has no box yet the tile is still far down the page, so
+    // take bigger strides; the budget grows with the level, since the finale
+    // is eighty levels down the trail.
     let nudged = false;
-    for (let i = 0; i < 120; i++) {
-      const box = await tile.boundingBox({ timeout: 500 }).catch(() => null);
+    for (let i = 0; i < 60 + level * 3; i++) {
+      const box = await tile.boundingBox({ timeout: 300 }).catch(() => null);
       if (box && box.y > 120 && box.y + box.height < 720) break;
-      await page.mouse.wheel(0, box && box.y <= 120 ? -180 : 180);
+      await page.mouse.wheel(0, box ? (box.y <= 120 ? -180 : 180) : 600);
       await settle(page, 150);
       nudged = true;
     }

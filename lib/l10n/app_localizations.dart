@@ -656,6 +656,126 @@ abstract class AppLocalizations {
   /// **'Grand Exit'**
   String get levelName60;
 
+  /// No description provided for @levelName61.
+  ///
+  /// In en, this message translates to:
+  /// **'Second Wind'**
+  String get levelName61;
+
+  /// No description provided for @levelName62.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncharted'**
+  String get levelName62;
+
+  /// No description provided for @levelName63.
+  ///
+  /// In en, this message translates to:
+  /// **'Wire Nest'**
+  String get levelName63;
+
+  /// No description provided for @levelName64.
+  ///
+  /// In en, this message translates to:
+  /// **'Riptide'**
+  String get levelName64;
+
+  /// No description provided for @levelName65.
+  ///
+  /// In en, this message translates to:
+  /// **'Wildwood'**
+  String get levelName65;
+
+  /// No description provided for @levelName66.
+  ///
+  /// In en, this message translates to:
+  /// **'Ironclad'**
+  String get levelName66;
+
+  /// No description provided for @levelName67.
+  ///
+  /// In en, this message translates to:
+  /// **'Catacombs'**
+  String get levelName67;
+
+  /// No description provided for @levelName68.
+  ///
+  /// In en, this message translates to:
+  /// **'Tangled Web'**
+  String get levelName68;
+
+  /// No description provided for @levelName69.
+  ///
+  /// In en, this message translates to:
+  /// **'Crush Depth'**
+  String get levelName69;
+
+  /// No description provided for @levelName70.
+  ///
+  /// In en, this message translates to:
+  /// **'No Way Out'**
+  String get levelName70;
+
+  /// No description provided for @levelName71.
+  ///
+  /// In en, this message translates to:
+  /// **'Thunderhead'**
+  String get levelName71;
+
+  /// No description provided for @levelName72.
+  ///
+  /// In en, this message translates to:
+  /// **'Knot of Knots'**
+  String get levelName72;
+
+  /// No description provided for @levelName73.
+  ///
+  /// In en, this message translates to:
+  /// **'The Crucible'**
+  String get levelName73;
+
+  /// No description provided for @levelName74.
+  ///
+  /// In en, this message translates to:
+  /// **'Blackout'**
+  String get levelName74;
+
+  /// No description provided for @levelName75.
+  ///
+  /// In en, this message translates to:
+  /// **'Vertigo'**
+  String get levelName75;
+
+  /// No description provided for @levelName76.
+  ///
+  /// In en, this message translates to:
+  /// **'Razor\'s Edge'**
+  String get levelName76;
+
+  /// No description provided for @levelName77.
+  ///
+  /// In en, this message translates to:
+  /// **'Event Horizon'**
+  String get levelName77;
+
+  /// No description provided for @levelName78.
+  ///
+  /// In en, this message translates to:
+  /// **'The Abyss'**
+  String get levelName78;
+
+  /// No description provided for @levelName79.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Light'**
+  String get levelName79;
+
+  /// No description provided for @levelName80.
+  ///
+  /// In en, this message translates to:
+  /// **'Beyond the Edge'**
+  String get levelName80;
+
   /// No description provided for @tutorialTap.
   ///
   /// In en, this message translates to:

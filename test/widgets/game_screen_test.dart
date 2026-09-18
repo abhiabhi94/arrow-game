@@ -758,7 +758,7 @@ void main() {
       themeMode: ThemeMode.dark,
     );
     await _settle(tester, 300);
-    expect(find.text('Grand Exit'), findsOneWidget);
+    expect(find.text('Beyond the Edge'), findsOneWidget);
     expect(find.byType(PuzzleBoard), findsOneWidget);
   });
 
