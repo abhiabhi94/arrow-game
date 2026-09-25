@@ -29,11 +29,11 @@ the way its head points, until it leaves the board. Get every arrow out.
   of them repeats (and a pack already under way when the bank grew gets
   the new riddles shuffled into what it has left).
   The next fresh mistake asks again, so lives are never spent thoughtlessly.
-- **A clock on every level** (26 seconds to learn on, up to thirteen minutes
-  and twenty seconds for the finale, growing with the board — brisk
-  on purpose, and brisker per arrow through the last sixty levels: levels
-  61–80 get eighty more arrows for barely a minute more, and levels 81–100
-  eighty more again for half a minute more).
+- **A clock on every level** (26 seconds to learn on, up to about fifteen
+  minutes for the finale, growing with the board — brisk on purpose, and
+  brisker per arrow through levels 41–80: levels 61–80 get eighty more
+  arrows for barely a minute more, and levels 81–100 hold that pace of
+  about two seconds an arrow).
   Run out and it's "Time's up" — replay the same level.
 - **100 levels**, each a fixed, procedurally generated board that is solvable
   by construction. The curve is steep: 5 arrows on a 5×6 board to learn on,
@@ -45,8 +45,9 @@ the way its head points, until it leaves the board. Get every arrow out.
   little less time per arrow, so the endgame gets tighter level by level,
   not just wider. Levels 61–80 keep all of that and turn the clock into the
   difficulty: the time per arrow falls from 2.3 s to 2.0 s, so the last act
-  is a longer read on less time. Levels 81–100 squeeze it harder still —
-  1.98 s an arrow down to 1.72 s — with runs up to 18 cells long.
+  is a longer read on less time. Levels 81–100 hold that pace (2.00 s an
+  arrow easing to 1.96 s) on still bigger boards, with runs up to 18 cells
+  long.
 - **3 hints per level** light up an arrow that can go right now. Spent
   them? The bulb turns into a riddle: crack one and you get another hint,
   with the clock stopped while you think.

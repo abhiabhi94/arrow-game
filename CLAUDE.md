@@ -414,7 +414,7 @@ Key patterns:
   tangled). Tune numbers there; keep the generator test green — it is what
   guarantees a level is playable. The clock is brisk: ~1.7 s an arrow on
   levels 1–4, 2.1 s on 5–9 and 2.5 s from 10 (plus ~17 s) — 26 s on level
-  1, 9½ minutes on level 40, about 11½ on level 60, 12¾ on level 80, 13⅓ on
+  1, 9½ minutes on level 40, about 11½ on level 60, 12¾ on level 80, about 15 on
   the finale — so
   a level is a sprint of quick reads. Those are the numbers the curve was drawn with,
   less 5%: every level's clock was tightened by that much in one pass, so
@@ -465,10 +465,12 @@ Key patterns:
   level 80 was a lucky deal, and on these boards only about one deal in two
   hundred keeps every rule at all (`tool/level_report.dart <level> <n>`;
   the encore test in `test/engine/puzzle_generator_test.dart`), and a clock
-  that grows by only
-  1.6 s a level — 12:49.6 at 81 to 13:20 at 100, 1.98 → 1.72 s an arrow.
-  The spec test pins the 1.70 s floor and that the encore's clock grows by
-  under 5% while its count grows by a fifth. The minimum arrow length stays
+  that holds level 80's pace, 2.00 → 1.96 s an arrow (12:55.6 at 81 to
+  15:10 at 100). It was first squeezed to 1.72 s (13:20 on the finale), and
+  a real run of level 100 timed out at 437 of 464 arrows, level 88 likewise:
+  on boards this size the read is the difficulty, so don't tighten the
+  encore's clock again without playing it. The spec test pins the 1.95 s
+  floor and that the encore's clock still grows slower than its count. The minimum arrow length stays
   4: at 5 the generator cannot place the full count on these boards.
 - **Lives / stars:** `models/level_progress.dart`. `maxLives` is 3 on every
   level and `starsForMistakes(mistakes)` is the plain rule (flawless three,

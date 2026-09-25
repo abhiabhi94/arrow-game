@@ -32,9 +32,9 @@ void main() {
       );
     }
     for (final s in levelSpecs) {
-      // Twenty-odd seconds at least, never past thirteen and a half
-      // minutes; at least 1.5 s an arrow.
-      expect(s.timeLimitMs, inInclusiveRange(24000, 810000), reason: 'level ${s.level}');
+      // Twenty-odd seconds at least, never past a quarter of an hour; at
+      // least 1.5 s an arrow.
+      expect(s.timeLimitMs, inInclusiveRange(24000, 915000), reason: 'level ${s.level}');
       expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(1500), reason: 'level ${s.level}');
     }
     // The curve is steep: a handful to learn on, dozens by level 8, well
@@ -62,16 +62,17 @@ void main() {
     }
     // The endgame tightens the pace a little every level, from ~2.54 s an
     // arrow at 41 down to 2.30 s at 60, the last act keeps squeezing it to
-    // 2.00 s at 80 and the encore to about 1.72 s on the finale — never
-    // under each stretch's floor, and never more than a few hundredths of a
-    // second a level, so the limits still grow with the count, just slower
-    // and slower: 11 minutes 40 seconds on level 60, only 12 minutes 48
-    // seconds on level 80 for eighty more arrows, and 13 minutes 20 on the
-    // finale for eighty more again. The clock is part of the difficulty, not
-    // a match for it.
+    // 2.00 s at 80, and the encore holds it there, easing it only to 1.96 s
+    // on the finale — never under each stretch's floor, and never more than a
+    // few hundredths of a second a level, so the limits still grow with the
+    // count, just slower: 11 minutes 40 seconds on level 60, 12 minutes 48
+    // on level 80 and about 15 minutes 10 on the finale. (The encore was
+    // first squeezed to 1.72 s, and 464 arrows in 13:20 ran out with a few
+    // dozen still on the board: at that size the read, not the clock, is the
+    // difficulty.) The clock is part of the difficulty, not a match for it.
     for (var level = 41; level <= totalLevels; level++) {
       final pace = specForLevel(level).timeLimitMs / specForLevel(level).arrows;
-      expect(pace, greaterThanOrEqualTo(level <= 60 ? 2300 : (level <= 80 ? 2000 : 1700)), reason: 'level $level');
+      expect(pace, greaterThanOrEqualTo(level <= 60 ? 2300 : (level <= 80 ? 2000 : 1950)), reason: 'level $level');
       if (level > 41) {
         final before = specForLevel(level - 1).timeLimitMs / specForLevel(level - 1).arrows;
         expect(pace, lessThan(before), reason: 'level $level');
@@ -81,15 +82,17 @@ void main() {
     expect(specForLevel(41).timeLimitMs, 580000);
     expect(specForLevel(60).timeLimitMs, 700000);
     expect(specForLevel(80).timeLimitMs, 768000);
-    expect(specForLevel(totalLevels).timeLimitMs, 800000);
+    expect(specForLevel(totalLevels).timeLimitMs, 910000);
     // Eighty more arrows for barely a minute more: the last act's clock
     // grows by under a tenth while its arrow count grows by a quarter.
     expect(specForLevel(80).timeLimitMs / specForLevel(60).timeLimitMs, lessThan(1.1));
     expect(specForLevel(80).arrows / specForLevel(60).arrows, greaterThan(1.25));
-    // And the encore squeezes harder still: another eighty arrows for only
-    // half a minute more — the clock grows by under five per cent while the
-    // count grows by a fifth, down to about 1.72 s an arrow on the finale.
-    expect(specForLevel(100).timeLimitMs / specForLevel(80).timeLimitMs, lessThan(1.05));
+    // The encore keeps the pace: its clock still grows a little slower than
+    // its count, which grows by a fifth.
+    expect(
+      specForLevel(100).timeLimitMs / specForLevel(80).timeLimitMs,
+      lessThan(specForLevel(100).arrows / specForLevel(80).arrows),
+    );
     expect(specForLevel(100).arrows / specForLevel(80).arrows, greaterThan(1.2));
   });
 
