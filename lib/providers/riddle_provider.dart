@@ -5,6 +5,8 @@
 /// order, so every riddle in the bank comes up before any of them comes up
 /// twice. The order and the position in it are persisted, so closing the app
 /// mid-run does not reshuffle the pack and hand back the riddle just seen.
+/// When the bank grows, a stored pack is not thrown away: the riddles already
+/// dealt stay dealt, and the new ones are shuffled in among the rest.
 library;
 
 import 'dart:math';
@@ -48,18 +50,20 @@ class RiddleDeckRepository {
   static const String solvedKey = 'arrow_riddles_solved';
 
   /// The stored pack, or null when there isn't a usable one. A pack that is
-  /// not a permutation of the bank (an older, shorter bank; a hand-edited
-  /// preference) is thrown away rather than patched.
+  /// a permutation of an older, shorter bank (ids 1..n, n below
+  /// [kRiddleCount]) comes back as it is, for the notifier to grow; anything
+  /// else (a longer bank, a hand-edited preference) is thrown away rather
+  /// than patched.
   List<int>? loadOrder() {
     final raw = _prefs.getStringList(orderKey);
-    if (raw == null || raw.length != kRiddleCount) return null;
+    if (raw == null || raw.isEmpty || raw.length > kRiddleCount) return null;
     final ids = <int>[];
     for (final entry in raw) {
       final id = int.tryParse(entry);
       if (id == null) return null;
       ids.add(id);
     }
-    final expected = <int>{for (var i = 1; i <= kRiddleCount; i++) i};
+    final expected = <int>{for (var i = 1; i <= ids.length; i++) i};
     return ids.toSet().containsAll(expected) ? ids : null;
   }
 
@@ -83,16 +87,23 @@ class RiddleDeckRepository {
 class RiddleDeckNotifier extends StateNotifier<RiddleDeck> {
   factory RiddleDeckNotifier(RiddleDeckRepository repo, {Random? random}) {
     final rng = random ?? Random();
-    final order = repo.loadOrder() ?? _shuffled(rng);
+    var order = repo.loadOrder() ?? _shuffled(rng);
+    // A cursor from a pack that is no longer there would deal nothing.
+    final cursor = repo.loadCursor().clamp(0, order.length);
+    if (order.length < kRiddleCount) {
+      // The bank grew since this pack was dealt: keep what has been dealt,
+      // and shuffle the new riddles in with the ones still to come, so they
+      // turn up in this pack rather than after it.
+      final rest = <int>[
+        ...order.skip(cursor),
+        for (var id = order.length + 1; id <= kRiddleCount; id++) id,
+      ]..shuffle(rng);
+      order = <int>[...order.take(cursor), ...rest];
+    }
     return RiddleDeckNotifier._(
       repo,
       rng,
-      RiddleDeck(
-        order: order,
-        // A cursor from a pack that is no longer there would deal nothing.
-        cursor: repo.loadCursor().clamp(0, order.length),
-        solved: repo.loadSolved(),
-      ),
+      RiddleDeck(order: order, cursor: cursor, solved: repo.loadSolved()),
     );
   }
 

@@ -215,11 +215,14 @@ const prefs = {
   // JSON document inside that string. Its seed is LevelSpec.seed for variant
   // 0, so it fits a level that has not been re-dealt (level 3 has not).
   // An unshuffled pack starting at the top, so the riddle in the shot is
-  // always the same one (and --riddle-answer is its answer).
+  // always the same one (and --riddle-answer is its answer). It must be the
+  // whole bank (kRiddleCount in lib/data/riddle_bank.dart): a shorter pack
+  // reads as one dealt from an older bank, and the new riddles get shuffled
+  // into it.
   ...(riddleCells || riddleHintCell
     ? {
         'flutter.arrow_riddle_order': JSON.stringify(
-          Array.from({ length: 100 }, (_, i) => String(i + 1)),
+          Array.from({ length: 150 }, (_, i) => String(i + 1)),
         ),
         'flutter.arrow_riddle_cursor': '0',
       }
@@ -298,7 +301,7 @@ try {
     // nudging rather than sit through Playwright's 30 s default per probe.
     // While the node has no box yet the tile is still far down the page, so
     // take bigger strides; the budget grows with the level, since the finale
-    // is eighty levels down the trail.
+    // is a hundred levels down the trail.
     let nudged = false;
     for (let i = 0; i < 60 + level * 3; i++) {
       const box = await tile.boundingBox({ timeout: 300 }).catch(() => null);

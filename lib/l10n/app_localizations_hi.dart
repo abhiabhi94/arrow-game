@@ -361,6 +361,66 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName80 => 'किनारे के पार';
 
   @override
+  String get levelName81 => 'उस पार';
+
+  @override
+  String get levelName82 => 'महाभँवर';
+
+  @override
+  String get levelName83 => 'काँटों की दीवार';
+
+  @override
+  String get levelName84 => 'शीशमहल';
+
+  @override
+  String get levelName85 => 'घुमावदार सीढ़ी';
+
+  @override
+  String get levelName86 => 'दलदल';
+
+  @override
+  String get levelName87 => 'हज़ार फन';
+
+  @override
+  String get levelName88 => 'पाला';
+
+  @override
+  String get levelName89 => 'आँधी';
+
+  @override
+  String get levelName90 => 'लोहे का परदा';
+
+  @override
+  String get levelName91 => 'लंबी रात';
+
+  @override
+  String get levelName92 => 'टूटन बिंदु';
+
+  @override
+  String get levelName93 => 'तूफ़ान की आँख';
+
+  @override
+  String get levelName94 => 'जमी बर्फ़';
+
+  @override
+  String get levelName95 => 'अजगर की कुंडली';
+
+  @override
+  String get levelName96 => 'चोटी का जुनून';
+
+  @override
+  String get levelName97 => 'टूटते तारे';
+
+  @override
+  String get levelName98 => 'अंतहीन भूलभुलैया';
+
+  @override
+  String get levelName99 => 'बस एक क़दम';
+
+  @override
+  String get levelName100 => 'आख़िरी तीर';
+
+  @override
   String get tutorialTap =>
       'किसी तीर पर टैप करो — वह अपनी दिशा में निकल जाएगा।';
 

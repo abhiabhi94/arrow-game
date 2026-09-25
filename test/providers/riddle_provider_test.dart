@@ -49,7 +49,8 @@ void main() {
 
   test('a stored pack that is not the bank is thrown away', () async {
     for (final stored in <List<String>>[
-      <String>['1', '2', '3'], // an older, shorter bank
+      <String>['1', '2', '4'], // a hole in it
+      <String>[for (var i = 0; i <= kRiddleCount; i++) '${i + 1}'], // a longer bank
       <String>[for (var i = 0; i < kRiddleCount; i++) '1'], // not a permutation
       <String>[for (var i = 0; i < kRiddleCount; i++) 'seven'], // not even ids
     ]) {
@@ -58,6 +59,25 @@ void main() {
       expect(deck.state.order.toSet(), hasLength(kRiddleCount));
       expect(deck.state.order.toSet(), contains(kRiddleCount));
     }
+  });
+
+  test('a pack from a smaller bank keeps its dealt riddles and shuffles the new ones in', () async {
+    final prefs = await _prefs(<String, Object>{
+      RiddleDeckRepository.orderKey: <String>[for (var i = 100; i >= 1; i--) '$i'],
+      RiddleDeckRepository.cursorKey: 40,
+    });
+    final deck = _deck(prefs);
+    // The same forty are behind the cursor, in the order they were dealt…
+    expect(deck.state.cursor, 40);
+    expect(deck.state.order.take(40), <int>[for (var i = 100; i > 60; i--) i]);
+    // …and the rest of the pack is every riddle not yet seen, the new ones
+    // mixed in rather than tacked onto the end.
+    final rest = <int>[
+      for (var i = 0; i < kRiddleCount - 40; i++) deck.draw(),
+    ];
+    expect(rest.toSet(), <int>{for (var i = 1; i <= 60; i++) i, for (var i = 101; i <= kRiddleCount; i++) i});
+    expect(rest.take(60).where((id) => id > 100), isNotEmpty);
+    expect(deck.state.remaining, 0);
   });
 
   test('a cursor past the end of the pack still deals', () async {
