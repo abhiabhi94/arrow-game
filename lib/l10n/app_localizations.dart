@@ -776,6 +776,126 @@ abstract class AppLocalizations {
   /// **'Beyond the Edge'**
   String get levelName80;
 
+  /// No description provided for @levelName81.
+  ///
+  /// In en, this message translates to:
+  /// **'Far Side'**
+  String get levelName81;
+
+  /// No description provided for @levelName82.
+  ///
+  /// In en, this message translates to:
+  /// **'Maelstrom'**
+  String get levelName82;
+
+  /// No description provided for @levelName83.
+  ///
+  /// In en, this message translates to:
+  /// **'Thornwall'**
+  String get levelName83;
+
+  /// No description provided for @levelName84.
+  ///
+  /// In en, this message translates to:
+  /// **'Hall of Mirrors'**
+  String get levelName84;
+
+  /// No description provided for @levelName85.
+  ///
+  /// In en, this message translates to:
+  /// **'Spiral Stair'**
+  String get levelName85;
+
+  /// No description provided for @levelName86.
+  ///
+  /// In en, this message translates to:
+  /// **'Quicksand'**
+  String get levelName86;
+
+  /// No description provided for @levelName87.
+  ///
+  /// In en, this message translates to:
+  /// **'Hydra'**
+  String get levelName87;
+
+  /// No description provided for @levelName88.
+  ///
+  /// In en, this message translates to:
+  /// **'Frostbite'**
+  String get levelName88;
+
+  /// No description provided for @levelName89.
+  ///
+  /// In en, this message translates to:
+  /// **'Storm Front'**
+  String get levelName89;
+
+  /// No description provided for @levelName90.
+  ///
+  /// In en, this message translates to:
+  /// **'Iron Curtain'**
+  String get levelName90;
+
+  /// No description provided for @levelName91.
+  ///
+  /// In en, this message translates to:
+  /// **'Long Night'**
+  String get levelName91;
+
+  /// No description provided for @levelName92.
+  ///
+  /// In en, this message translates to:
+  /// **'Shatterpoint'**
+  String get levelName92;
+
+  /// No description provided for @levelName93.
+  ///
+  /// In en, this message translates to:
+  /// **'Eye of the Storm'**
+  String get levelName93;
+
+  /// No description provided for @levelName94.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Freeze'**
+  String get levelName94;
+
+  /// No description provided for @levelName95.
+  ///
+  /// In en, this message translates to:
+  /// **'Dragon\'s Coil'**
+  String get levelName95;
+
+  /// No description provided for @levelName96.
+  ///
+  /// In en, this message translates to:
+  /// **'Summit Fever'**
+  String get levelName96;
+
+  /// No description provided for @levelName97.
+  ///
+  /// In en, this message translates to:
+  /// **'Starfall'**
+  String get levelName97;
+
+  /// No description provided for @levelName98.
+  ///
+  /// In en, this message translates to:
+  /// **'Endless Maze'**
+  String get levelName98;
+
+  /// No description provided for @levelName99.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost Out'**
+  String get levelName99;
+
+  /// No description provided for @levelName100.
+  ///
+  /// In en, this message translates to:
+  /// **'The Last Arrow'**
+  String get levelName100;
+
   /// No description provided for @tutorialTap.
   ///
   /// In en, this message translates to:

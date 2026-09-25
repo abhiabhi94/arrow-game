@@ -23,27 +23,30 @@ the way its head points, until it leaves the board. Get every arrow out.
   ("I follow you all day long and vanish when the lights go out"). Every
   riddle has a 💡 that gives a clue and then the first letter, and the
   answer only has to be *close*: a plural, a tense or a typo is waved
-  through with a "close enough". **100 riddles per language** — the second
-  fifty a shade more lateral than the first, still one everyday word each —
-  dealt in a shuffled order so the whole pack comes round before any of
-  them repeats.
+  through with a "close enough". **150 riddles per language** — the later
+  ones a shade more lateral than the first fifty, still one everyday word
+  each — dealt in a shuffled order so the whole pack comes round before any
+  of them repeats (and a pack already under way when the bank grew gets
+  the new riddles shuffled into what it has left).
   The next fresh mistake asks again, so lives are never spent thoughtlessly.
-- **A clock on every level** (26 seconds to learn on, up to about twelve
-  and three-quarter minutes for the finale, growing with the board — brisk
-  on purpose, and brisker per arrow through the last forty levels: the
-  final twenty get eighty more arrows for barely a minute more).
+- **A clock on every level** (26 seconds to learn on, up to thirteen minutes
+  and twenty seconds for the finale, growing with the board — brisk
+  on purpose, and brisker per arrow through the last sixty levels: levels
+  61–80 get eighty more arrows for barely a minute more, and levels 81–100
+  eighty more again for half a minute more).
   Run out and it's "Time's up" — replay the same level.
-- **80 levels**, each a fixed, procedurally generated board that is solvable
+- **100 levels**, each a fixed, procedurally generated board that is solvable
   by construction. The curve is steep: 5 arrows on a 5×6 board to learn on,
   59 arrows on 19×26 by level 8, 144 arrows on 32×50 by level 20,
   224 arrows on 42×63 by level 40, 304 arrows on 47×73 by level 60,
-  384 arrows on 52×84 for the finale — and the "who must go before whom"
+  384 arrows on 52×84 by level 80, 464 arrows on 57×92 for the finale — and the "who must go before whom"
   chains get longer all the way. Levels 41–60 pack more arrows onto a board
   that hardly grows, with longer arrows, fewer playable at any moment and a
   little less time per arrow, so the endgame gets tighter level by level,
   not just wider. Levels 61–80 keep all of that and turn the clock into the
   difficulty: the time per arrow falls from 2.3 s to 2.0 s, so the last act
-  is a longer read on less time.
+  is a longer read on less time. Levels 81–100 squeeze it harder still —
+  1.98 s an arrow down to 1.72 s — with runs up to 18 cells long.
 - **3 hints per level** light up an arrow that can go right now. Spent
   them? The bulb turns into a riddle: crack one and you get another hint,
   with the clock stopped while you think.

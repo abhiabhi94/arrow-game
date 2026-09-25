@@ -298,7 +298,7 @@ try {
     // nudging rather than sit through Playwright's 30 s default per probe.
     // While the node has no box yet the tile is still far down the page, so
     // take bigger strides; the budget grows with the level, since the finale
-    // is eighty levels down the trail.
+    // is a hundred levels down the trail.
     let nudged = false;
     for (let i = 0; i < 60 + level * 3; i++) {
       const box = await tile.boundingBox({ timeout: 300 }).catch(() => null);

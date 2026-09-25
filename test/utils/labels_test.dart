@@ -14,6 +14,8 @@ void main() {
     expect(levelName(l10n, 60), 'Turning Point');
     expect(levelName(l10n, 61), 'Second Wind');
     expect(levelName(l10n, 80), 'Beyond the Edge');
-    expect(levelName(l10n, 99), 'Beyond the Edge');
+    expect(levelName(l10n, 81), 'Far Side');
+    expect(levelName(l10n, 100), 'The Last Arrow');
+    expect(levelName(l10n, 101), 'The Last Arrow');
   });
 }
