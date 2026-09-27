@@ -836,7 +836,7 @@ void main() {
       themeMode: ThemeMode.dark,
     );
     await _settle(tester, 300);
-    expect(find.text('Beyond the Edge'), findsOneWidget);
+    expect(find.text('The Last Arrow'), findsOneWidget);
     expect(find.byType(PuzzleBoard), findsOneWidget);
   });
 

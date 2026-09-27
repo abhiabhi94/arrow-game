@@ -8,9 +8,10 @@ A playful cross-platform (Android + iOS) **arrow exit puzzle** built with
 Flutter (in the spirit of "Arrow Exit Puzzle"). Bent arrow pieces sit on a
 grid; tapping one slides it along its own path, the way its head points, until
 it leaves the board. An arrow whose exit path runs into another arrow bumps
-back and costs a life. 80 fixed, procedurally generated levels on a steep
+back and costs a life. 100 fixed, procedurally generated levels on a steep
 curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50 by level
-20 → 224 on 42×63 by level 40 → 304 on 47×73 by level 60 → 384 on 52×84), drawn in a
+20 → 224 on 42×63 by level 40 → 304 on 47×73 by level 60 → 384 on 52×84 by
+level 80 → 464 on 57×92), drawn in a
 single ink like a printed puzzle, 3 lives per level (spend them all and a
 card asks for a riddle: crack it and the level carries on for one more
 mistake, then asks again — or start fresh), a clock on every level ("Time's
@@ -177,8 +178,8 @@ lib/
     puzzle.dart          Puzzle: occupancy, blockers, canExit, solvingOrder, hintFor, difficultyScore
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N
     answer_match.dart    judging a typed riddle answer (exact / close / wrong)
-  data/level_specs.dart  the 60 levels (board size, arrow count, length range, clock)
-  data/riddle_bank.dart  100 riddles in English + 100 पहेलियाँ in Hindi
+  data/level_specs.dart  the 100 levels (board size, arrow count, length range, clock)
+  data/riddle_bank.dart  150 riddles in English + 150 पहेलियाँ in Hindi
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot),
                        riddle (question, answers, hint)
@@ -230,7 +231,8 @@ Key patterns:
   level is a fixed puzzle. It runs on a background isolate
   (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
   it runs inline (~0.4 s for level 20, about 2.5 s for level 60 and ~4 s for
-  the 52×84 finale, which takes 1.7× level 60's time in the VM). `dart run tool/level_report.dart
+  the 52×84 level 80, which takes 1.7× level 60's time in the VM, and level
+  100's 57×92 board about 2.5 s in the VM). `dart run tool/level_report.dart
   [level] [extraSeeds]` prints arrows placed vs asked, fill, depth,
   free-at-start, open moves (mean/max vs the cap), `Puzzle.openTapRisk` and
   timing — run it after touching the table or the generator.
@@ -390,9 +392,9 @@ Key patterns:
 - **Home:** a gradient "Next up" hero card and a winding trail of level
   nodes (`_Trail` + `_TrailPainter`), locked/current/cleared states with
   stars and best time. The header (`_HomeHeader`, a
-  `SliverPersistentHeaderDelegate`) is **pinned**: the trail is eighty levels
-  long, and the star count and the way into Settings should not be eighty
-  levels back up the page. It shrinks 96 → 62 as the page scrolls — the
+  `SliverPersistentHeaderDelegate`) is **pinned**: the trail is a hundred
+  levels long, and the star count and the way into Settings should not be a
+  hundred levels back up the page. It shrinks 96 → 62 as the page scrolls — the
   title comes down to a heading and the tagline folds away, and out of the
   widget tree, so it is not read out either — while the pill and the gear
   stay put. Two things it has to get right: the delegate fills its extent
@@ -412,7 +414,8 @@ Key patterns:
   tangled). Tune numbers there; keep the generator test green — it is what
   guarantees a level is playable. The clock is brisk: ~1.7 s an arrow on
   levels 1–4, 2.1 s on 5–9 and 2.5 s from 10 (plus ~17 s) — 26 s on level
-  1, 9½ minutes on level 40, about 11½ on level 60, 12¾ on the finale — so
+  1, 9½ minutes on level 40, about 11½ on level 60, 12¾ on level 80, about 15 on
+  the finale — so
   a level is a sprint of quick reads. Those are the numbers the curve was drawn with,
   less 5%: every level's clock was tightened by that much in one pass, so
   the shape is unchanged and the whole game is that much brisker.
@@ -454,6 +457,21 @@ Key patterns:
   quarter). The arrows-per-open-move hunt keeps climbing through 80
   because the count does even where the variants' mean open moves plateau;
   the generator's own tightness does not improve past level 20.
+  **Levels 81–100** are the encore on the same rules: four more arrows a
+  level (388 → 464) on a board that keeps pace (52×84 → 57×92, ~11.3 cells
+  an arrow), longest runs to 17 then 18 cells, each level dealt from a
+  variant whose hunt clears a floor rising one a level (130 at 81 → 149 at
+  100, and the finale beats level 80) rather than beating its neighbour:
+  level 80 was a lucky deal, and on these boards only about one deal in two
+  hundred keeps every rule at all (`tool/level_report.dart <level> <n>`;
+  the encore test in `test/engine/puzzle_generator_test.dart`), and a clock
+  that holds level 80's pace, 2.00 → 1.96 s an arrow (12:55.6 at 81 to
+  15:10 at 100). It was first squeezed to 1.72 s (13:20 on the finale), and
+  a real run of level 100 timed out at 437 of 464 arrows, level 88 likewise:
+  on boards this size the read is the difficulty, so don't tighten the
+  encore's clock again without playing it. The spec test pins the 1.95 s
+  floor and that the encore's clock still grows slower than its count. The minimum arrow length stays
+  4: at 5 the generator cannot place the full count on these boards.
 - **Lives / stars:** `models/level_progress.dart`. `maxLives` is 3 on every
   level and `starsForMistakes(mistakes)` is the plain rule (flawless three,
   one slip two, two slips one). Spending the allowance is not the end of the
@@ -471,15 +489,18 @@ Key patterns:
   past a spent allowance is earned rather than tapped through, so lives are
   never spent thoughtlessly and a 300-arrow board is still never lost to one
   slipped finger; the same card, with `RiddlePrize.hint`, sells a fourth
-  hint and every one after it (see **Hints**). Each language has its own bank of `kRiddleCount` (100)
-  riddles — ids 51–100 a shade more lateral than the first fifty, since the
+  hint and every one after it (see **Hints**). Each language has its own bank of `kRiddleCount` (150)
+  riddles — ids 51–150 a shade more lateral than the first fifty, since the
   first fifty read as too easy, though the answer is still one everyday word
   and the gate is still not a crossword — the Hindi ones are written as पहेलियाँ, not translated, since a
   pun rarely survives the crossing — and `RiddleDeckNotifier` deals a
   *shuffled pack* rather than rolling a die: every riddle comes up before any
   repeats, the order and position are persisted (`arrow_riddle_order`,
   `arrow_riddle_cursor`, `arrow_riddles_solved`), and a reshuffle never opens
-  on the riddle the last pack closed with. `judgeAnswer` is deliberately
+  on the riddle the last pack closed with. When the bank grows, a stored
+  pack of the old size is kept rather than thrown away: what it has dealt
+  stays dealt, and the new ids are shuffled in with the ones still to come
+  (`RiddleDeckNotifier`'s factory). `judgeAnswer` is deliberately
   generous — it compares the typed word, the word with its inflections peeled
   off (English plurals/tenses, Hindi case endings) and the word within a typo
   or two (Damerau, so a transposition costs one, not two) — and reports
@@ -648,7 +669,7 @@ composite action check the `uses:` inside it too.
 
 - **Localization:** English and Hindi are authored (`lib/l10n/app_en.arb`,
   `app_hi.arb`) and Settings has the picker, so a third language is a third
-  `.arb` file, a `LanguageChoice` value, and a bank of 100 riddles in
+  `.arb` file, a `LanguageChoice` value, and a bank of 150 riddles in
   `data/riddle_bank.dart` (plus whatever `engine/answer_match.dart` needs to
   peel that language's endings off — it handles English and Devanagari today,
   and falls back to plain typo distance for anything else).

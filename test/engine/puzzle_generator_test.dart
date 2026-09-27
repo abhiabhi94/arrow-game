@@ -75,7 +75,7 @@ void main() {
     // level's variant with `dart run tool/level_report.dart <level> <n>`
     // rather than loosening the line.
     var hunt = puzzleForLevel(specForLevel(40)).arrowsPerOpenMove;
-    for (final spec in levelSpecs.where((s) => s.level >= 41)) {
+    for (final spec in levelSpecs.where((s) => s.level >= 41 && s.level <= 80)) {
       final p = puzzleForLevel(spec);
       expect(p.removable(const {}).length, lessThanOrEqualTo(3), reason: 'level ${spec.level} opening');
       expect(p.arrowsPerOpenMove, greaterThanOrEqualTo(hunt), reason: 'level ${spec.level} hunt');
@@ -85,6 +85,25 @@ void main() {
     // endgame began, and than the end of the first sixty.
     expect(hunt, greaterThan(puzzleForLevel(specForLevel(40)).arrowsPerOpenMove * 1.15));
     expect(hunt, greaterThan(puzzleForLevel(specForLevel(60)).arrowsPerOpenMove * 1.15));
+  });
+
+  test('the encore holds a hunt that climbs every level', () {
+    // Level 80 was an unusually tight deal (~149 arrows an open move), and
+    // at 81–100 a board that keeps every rule at all is about one deal in
+    // two hundred, so a neighbour-by-neighbour climb would mean thousands
+    // of deals a level. Instead each encore level clears a floor that rises
+    // one a level — 130 at 81, 149 at 100 — which no level before 61 comes
+    // near, and the finale is a harder find than level 80. Re-pick a
+    // variant rather than lower the floor.
+    for (final spec in levelSpecs.where((s) => s.level >= 81)) {
+      final p = puzzleForLevel(spec);
+      expect(p.removable(const {}).length, lessThanOrEqualTo(3), reason: 'level ${spec.level} opening');
+      expect(p.arrowsPerOpenMove, greaterThanOrEqualTo(130 + (spec.level - 81)), reason: 'level ${spec.level} hunt');
+    }
+    expect(
+      puzzleForLevel(specForLevel(totalLevels)).arrowsPerOpenMove,
+      greaterThan(puzzleForLevel(specForLevel(80)).arrowsPerOpenMove),
+    );
   });
 
   test('an arrow may point straight at another as long as nothing cycles', () {

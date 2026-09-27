@@ -14,7 +14,9 @@ set -euo pipefail
 THRESHOLD="${1:-92}"
 cd "$(dirname "$0")/.."
 
-flutter test --coverage >/dev/null
+# Quiet when green; a failure prints the failing tests (CI has nothing else
+# to go on).
+flutter test --coverage --reporter failures-only
 
 python3 - "$THRESHOLD" <<'PY'
 import sys
