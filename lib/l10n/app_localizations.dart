@@ -266,6 +266,12 @@ abstract class AppLocalizations {
   /// **'{count} of {total} stars'**
   String homeStars(int count, int total);
 
+  /// No description provided for @homeLevelsCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'{cleared} of {total} cleared'**
+  String homeLevelsCleared(int cleared, int total);
+
   /// No description provided for @homeLevels.
   ///
   /// In en, this message translates to:

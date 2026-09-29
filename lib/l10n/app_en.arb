@@ -54,6 +54,17 @@
       }
     }
   },
+  "homeLevelsCleared": "{cleared} of {total} cleared",
+  "@homeLevelsCleared": {
+    "placeholders": {
+      "cleared": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "homeLevels": "Levels",
   "homeLevelsHint": "Clear a level to unlock the next one. Three stars for a flawless run.",
   "levelNumber": "Level {number}",

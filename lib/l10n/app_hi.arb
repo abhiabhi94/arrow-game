@@ -28,6 +28,7 @@
   "onboardRuleZoom": "आगे बड़े बोर्ड — पिंच करो या बटन से ज़ूम करो",
   "onboardRuleRiddle": "जानें ख़त्म? एक पहेली बूझो और खेल जारी रखो",
   "homeStars": "{total} में से {count} तारे",
+  "homeLevelsCleared": "{total} में से {cleared} पार",
   "homeLevels": "लेवल",
   "homeLevelsHint": "अगला लेवल खोलने के लिए यह पार करो। बिना ग़लती के तीन तारे।",
   "levelNumber": "लेवल {number}",

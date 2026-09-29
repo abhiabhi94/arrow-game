@@ -43,7 +43,7 @@ void main() {
     }
   });
 
-  testWidgets('locked levels show a lock and do not open', (tester) async {
+  testWidgets('locked levels show their number, a lock, and do not open', (tester) async {
     await usePhoneSurface(tester);
     await pumpApp(
       tester,
@@ -59,6 +59,12 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.byIcon(Icons.lock_rounded, skipOffstage: false), findsNWidgets(totalLevels - 1));
+    // Locked or not, every node carries its number, and the heading says how
+    // far the trail goes.
+    for (var level = 1; level <= totalLevels; level++) {
+      expect(find.text('$level', skipOffstage: false), findsOneWidget, reason: 'node $level');
+    }
+    expect(find.text('0 of $totalLevels cleared'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.lock_rounded).first);
     await tester.pump(const Duration(milliseconds: 800));
@@ -89,6 +95,7 @@ void main() {
     expect(find.bySemanticsLabel('2 of ${totalLevels * 3} stars'), findsOneWidget);
     expect(find.text('0:21'), findsOneWidget);
     expect(find.byIcon(Icons.lock_rounded, skipOffstage: false), findsNWidgets(totalLevels - 2));
+    expect(find.text('1 of $totalLevels cleared'), findsOneWidget);
     // The hero card points at level 2 now; the node names it too.
     expect(find.text('Level 2'), findsOneWidget);
     expect(find.text('Two Ways Out'), findsNWidgets(2));

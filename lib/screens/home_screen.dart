@@ -21,7 +21,7 @@ import 'settings_screen.dart';
 const double kTrailSpacing = 104;
 
 /// The home screen: a stars tally, a "next up" hero card, and the journey — a
-/// winding trail of 20 level nodes with lock / stars / current state.
+/// winding trail of every level node (locked ones numbered too) with lock / stars / current state.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -93,13 +93,29 @@ class HomeScreen extends ConsumerWidget {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 4),
                       sliver: SliverToBoxAdapter(
-                        child: Text(
-                          l10n.homeJourney,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: p.textInk,
-                          ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                l10n.homeJourney,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: p.textInk,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              l10n.homeLevelsCleared(notifier.levelsCleared, totalLevels),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: p.textMuted,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -573,14 +589,36 @@ class _LevelNode extends StatelessWidget {
         ],
       ),
       child: Center(
-        child: unlocked
-            ? Text(
-                '$level',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: fg),
-              )
-            : Icon(Icons.lock_rounded, color: fg, size: 22),
+        child: Text(
+          '$level',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: fg),
+        ),
       ),
     );
+    // A locked level still shows its number — the player can see what is
+    // ahead and how far the trail goes — with a small lock tucked on it.
+    final node = unlocked
+        ? circle
+        : Stack(
+            clipBehavior: Clip.none,
+            children: [
+              circle,
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: p.surface,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: p.outlineSoft, width: 1.5),
+                  ),
+                  child: Icon(Icons.lock_rounded, color: p.textFaint, size: 13),
+                ),
+              ),
+            ],
+          );
 
     return Semantics(
       label: unlocked ? l10n.levelNumber(level) : '${l10n.levelNumber(level)} ${l10n.levelLocked}',
@@ -602,7 +640,7 @@ class _LevelNode extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                circle,
+                node,
                 const SizedBox(height: 4),
                 if (cleared)
                   Row(
