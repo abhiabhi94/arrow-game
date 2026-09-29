@@ -101,6 +101,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String homeLevelsCleared(int cleared, int total) {
+    return '$cleared of $total cleared';
+  }
+
+  @override
   String get homeLevels => 'Levels';
 
   @override

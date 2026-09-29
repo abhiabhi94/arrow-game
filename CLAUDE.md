@@ -391,7 +391,9 @@ Key patterns:
   it in `main.dart`; Settings → "How to play" replays it (`replay: true`).
 - **Home:** a gradient "Next up" hero card and a winding trail of level
   nodes (`_Trail` + `_TrailPainter`), locked/current/cleared states with
-  stars and best time. The header (`_HomeHeader`, a
+  stars and best time. A locked node still shows its number (a small lock
+  badge sits on it) and the journey heading reads "N of 100 cleared", so the
+  player can see what is ahead and where the trail ends. The header (`_HomeHeader`, a
   `SliverPersistentHeaderDelegate`) is **pinned**: the trail is a hundred
   levels long, and the star count and the way into Settings should not be a
   hundred levels back up the page. It shrinks 96 → 62 as the page scrolls — the
