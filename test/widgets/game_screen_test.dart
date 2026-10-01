@@ -483,6 +483,36 @@ void main() {
     await _settle(tester, 3000);
   });
 
+  testWidgets('closing the app on the riddle keeps the board: it reopens out of lives', (tester) async {
+    final container = await _pumpGame(
+      tester,
+      seed: {
+        SavedGameRepository.key: jsonEncode(const {
+          'level': 1,
+          'seed': 1 * 7919 + 17,
+          'removed': [0],
+          'mistakes': 3,
+          'hintsLeft': 3,
+          'elapsedMs': 5000,
+        }),
+      },
+    );
+    final notifier = container.read(gameProvider(1).notifier);
+    // Not a fresh level, and not a free life either: the riddle is still owed.
+    expect(find.text('Out of lives'), findsOneWidget);
+    expect(find.text('Welcome back'), findsNothing);
+    expect(notifier.state.phase, GamePhase.outOfLives);
+    expect(notifier.state.removed, {0});
+    expect(container.read(savedGameProvider)?.mistakes, 3);
+
+    await _crackRiddle(tester, container);
+    expect(notifier.state.phase, GamePhase.playing);
+    expect(notifier.state.continues, 1);
+    expect(notifier.state.removed, {0});
+    expect(notifier.state.elapsedMs, 5000);
+    expect(container.read(savedGameProvider)?.continues, 1);
+  });
+
   testWidgets('Start over on the welcome-back card begins the level afresh', (tester) async {
     final container = await _pumpGame(
       tester,

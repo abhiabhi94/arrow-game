@@ -444,6 +444,55 @@ void main() {
     n.dispose();
   });
 
+  test('a game saved out of lives comes back out of lives, riddle still owed', () {
+    const saved = SavedGame(level: 1, seed: sampleSeed, removed: [0], mistakes: 3, hintsLeft: 2, elapsedMs: 7000);
+    final n = _notifier(savedGame: saved);
+    expect(n.state.phase, GamePhase.outOfLives);
+    expect(n.state.resumeOffered, isFalse);
+    expect(n.state.removed, {0});
+    expect(n.state.mistakes, 3);
+    expect(n.state.elapsedMs, 7000);
+    n.tick(1000); // no clock while the riddle waits
+    expect(n.state.elapsedMs, 7000);
+    // Cracking the riddle carries on from the restored board.
+    n.keepGoing();
+    expect(n.state.phase, GamePhase.playing);
+    expect(n.state.continues, 1);
+    expect(n.state.removed, {0});
+    n.dispose();
+  });
+
+  test('a game saved out of lives again after a continue asks again', () {
+    const saved = SavedGame(
+      level: 1,
+      seed: sampleSeed,
+      removed: [0],
+      mistakes: 4,
+      hintsLeft: 3,
+      elapsedMs: 7000,
+      continues: 1,
+    );
+    final n = _notifier(savedGame: saved);
+    expect(n.state.phase, GamePhase.outOfLives);
+    expect(n.state.continues, 1);
+    n.dispose();
+    // One continue spent, one mistake still in hand: a plain paused resume.
+    final playing = _notifier(
+      savedGame: const SavedGame(
+        level: 1,
+        seed: sampleSeed,
+        removed: [0],
+        mistakes: 3,
+        hintsLeft: 3,
+        elapsedMs: 7000,
+        continues: 1,
+      ),
+    );
+    expect(playing.state.phase, GamePhase.paused);
+    expect(playing.state.resumeOffered, isTrue);
+    playing.dispose();
+  });
+
   test('"start over" from the offer is a plain restart', () {
     const saved = SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 7000);
     final n = _notifier(savedGame: saved);
@@ -462,7 +511,7 @@ void main() {
       SavedGame(level: 1, seed: sampleSeed, removed: [], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // nothing done
       SavedGame(level: 1, seed: sampleSeed, removed: [7], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // no such arrow
       SavedGame(level: 1, seed: sampleSeed, removed: [0, 1, 2], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // already cleared
-      SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 3, hintsLeft: 3, elapsedMs: 10), // out of lives
+      SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 4, hintsLeft: 3, elapsedMs: 10), // past the allowance
       SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 0, hintsLeft: 4, elapsedMs: 10), // too many hints
       SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 30000), // time up
     ];

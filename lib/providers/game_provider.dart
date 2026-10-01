@@ -91,17 +91,20 @@ class GameNotifier extends StateNotifier<GameState> {
 
   /// Puts [puzzle] on the board: fresh and playing, or — when a saved game
   /// for this level fits it — restored and paused with the resume offer up.
+  /// A game saved with its allowance spent comes back out of lives, so the
+  /// riddle is still the way on rather than a free life for reopening.
   void _begin(Puzzle puzzle) {
     final saved = savedGame;
     if (saved != null && _fits(saved, puzzle)) {
+      final spent = saved.mistakes >= maxLives + saved.continues;
       state = GameState.fresh(spec, puzzle).copyWith(
-        phase: GamePhase.paused,
+        phase: spent ? GamePhase.outOfLives : GamePhase.paused,
         removed: saved.removed.toSet(),
         bumped: saved.bumped.toSet(),
         mistakes: saved.mistakes,
         hintsLeft: saved.hintsLeft,
         elapsedMs: saved.elapsedMs,
-        resumeOffered: true,
+        resumeOffered: !spent,
         continues: saved.continues,
       );
     } else {
@@ -120,7 +123,9 @@ class GameNotifier extends StateNotifier<GameState> {
       saved.hasProgress &&
       saved.removed.length < puzzle.arrowCount &&
       saved.removed.every((id) => id >= 0 && id < puzzle.arrowCount) &&
-      (saved.continues > 0 || saved.mistakes < maxLives) &&
+      // Every continue buys exactly one more mistake, so this is as far as
+      // the count can go (at the limit, the level is waiting on a riddle).
+      saved.mistakes <= maxLives + saved.continues &&
       saved.hintsLeft >= 0 &&
       saved.hintsLeft <= maxHints &&
       saved.elapsedMs >= 0 &&
