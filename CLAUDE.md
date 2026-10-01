@@ -659,6 +659,14 @@ other repos unchanged. Both skip PRs from forks (no token to write
 permissions = "Read and write permissions" for the branch push and the
 comments.
 
+Every job runs on **`ubuntu-24.04`**, not `ubuntu-latest`: the label moves
+to Ubuntu 26 from October 19, 2026, and the runner image under the web smoke
+test (headless Chromium) and the APK build should change by a commit, not by
+a label migration. The Android build uses the Gradle wrapper
+(`android/gradle/wrapper/gradle-wrapper.properties`, 9.8.0) with AGP 9.0.1
+and Kotlin 2.3.20 (`android/settings.gradle.kts`); `setup-gradle` warns when
+the wrapper falls behind the current Gradle release.
+
 Every action is pinned to its **major** tag, and every major in use resolves
 to a `node24` (or composite) release — node20 is deprecated on GitHub-hosted
 runners. When adding a third-party action, check its `runs.using`, and for a

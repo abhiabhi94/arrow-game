@@ -35,7 +35,7 @@ concurrency:
 jobs:
   bundle:
     name: Play Store bundle
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: release
     env:
       KEYSTORE_PATH: ${{ github.workspace }}/android/upload-keystore.jks
