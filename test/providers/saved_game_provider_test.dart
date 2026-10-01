@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:arrow_game/models/game_state.dart';
+import 'package:arrow_game/models/level_progress.dart';
 import 'package:arrow_game/models/saved_game.dart';
 import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/saved_game_provider.dart';
@@ -69,7 +70,18 @@ void main() {
     await notifier.record(GameState.fresh(sampleSpecFor(1), samplePuzzle()));
     expect(repo.load(), isNull);
 
-    // An ending clears too.
+    // Out of lives is not an ending yet — the riddle can still carry on —
+    // so closing the app on that card keeps the board.
+    final spent = moved.copyWith(mistakes: maxLives, phase: GamePhase.outOfLives);
+    await notifier.record(spent);
+    expect(repo.load(), SavedGame.fromState(spent));
+    expect(container.read(savedGameProvider)?.mistakes, maxLives);
+
+    // A run-out clock is an ending, and clears.
+    await notifier.record(moved.copyWith(phase: GamePhase.timeUp));
+    expect(repo.load(), isNull);
+
+    // So does a clear.
     await notifier.record(moved);
     await notifier.record(moved.copyWith(phase: GamePhase.cleared));
     expect(repo.load(), isNull);

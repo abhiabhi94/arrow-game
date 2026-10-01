@@ -39,15 +39,18 @@ class SavedGameNotifier extends StateNotifier<SavedGame?> {
   /// The saved game for [level], if that is the one in the slot.
   SavedGame? forLevel(int level) => state?.level == level ? state : null;
 
-  /// Records where [state] stands. A finished level clears the slot; a level
-  /// with something done is saved; a level with nothing done yet clears the
-  /// slot only if the slot was this same level (a restart, or an untouched
-  /// visit), so peeking at another level never throws a saved one away.
+  /// Records where [state] stands. A finished level (cleared, or the clock
+  /// run out) clears the slot; a level with something done is saved —
+  /// including one out of lives, which is not finished: the riddle still
+  /// offers to carry on, and closing the app on that card must not throw
+  /// the board away. A level with nothing done yet clears the slot only if
+  /// the slot was this same level (a restart, or an untouched visit), so
+  /// peeking at another level never throws a saved one away.
   Future<void> record(GameState state) {
     // A game screen torn down with the whole app may report after this
     // notifier is gone; storage already has the last snapshot.
     if (!mounted || state.puzzle == null) return Future<void>.value();
-    if (state.isOver) return clear();
+    if (state.isOver && state.phase != GamePhase.outOfLives) return clear();
     final snapshot = SavedGame.fromState(state);
     if (snapshot.hasProgress) {
       this.state = snapshot;

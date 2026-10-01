@@ -280,7 +280,10 @@ Key patterns:
   from another board, or one without a seed, is not resumed). `GameNotifier.onSnapshot` fires
   after every move/hint/pause/restart/ending and in `dispose` (back, quit,
   next level); `SavedGameNotifier.record` saves a level with progress,
-  clears on an ending, and clears an untouched/restarted visit of the same
+  clears on a clear or a run-out clock — but *not* on "Out of lives", which
+  is not an ending while the riddle can still carry on: a level closed on
+  that card (or on its riddle) reopens out of lives, riddle still owed,
+  rather than from scratch — and clears an untouched/restarted visit of the same
   level only (peeking at another level keeps the slot). `gameProvider`
   passes `savedGame: forLevel(level)`; a fitting one comes back paused with
   `GameState.resumeOffered` and the "Welcome back" card (Continue / Start
