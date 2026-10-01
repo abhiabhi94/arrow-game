@@ -36,7 +36,7 @@ env:
 jobs:
   deploy:
     name: Deploy web preview
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: >-
       github.event.action != 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository
@@ -89,7 +89,7 @@ jobs:
 
   remove:
     name: Remove web preview
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: >-
       github.event.action == 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository

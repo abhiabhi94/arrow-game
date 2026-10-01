@@ -14,7 +14,7 @@ concurrency:
 jobs:
   test:
     name: Analyze & test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -46,7 +46,7 @@ jobs:
 
   smoke:
     name: Web smoke & screenshots
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -59,7 +59,7 @@ jobs:
 
   apk:
     name: Debug APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: write # the debug APK comment on PRs
