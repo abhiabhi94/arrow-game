@@ -285,7 +285,10 @@ Key patterns:
   that card (or on its riddle) reopens out of lives, riddle still owed,
   rather than from scratch — and clears an untouched/restarted visit of the same
   level only (peeking at another level keeps the slot). `gameProvider`
-  passes `savedGame: forLevel(level)`; a fitting one comes back paused with
+  passes `savedGame: forLevel(level)`; a fitting one comes back one of two
+  ways: with its allowance spent (`mistakes >= maxLives + continues`) it
+  comes back in `outOfLives` on the "Out of lives" card, no resume offer, so
+  reopening never buys a life; otherwise paused with
   `GameState.resumeOffered` and the "Welcome back" card (Continue / Start
   over / Home). Home's hero card becomes "Pick up where you left off ·
   Continue" for that level. Reset progress clears the slot too.
