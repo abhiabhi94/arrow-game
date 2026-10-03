@@ -284,7 +284,8 @@ Key patterns:
   is not an ending while the riddle can still carry on: a level closed on
   that card (or on its riddle) reopens out of lives, riddle still owed,
   rather than from scratch; a level left with the riddle itself up reopens on
-  that same riddle (`OpenRiddle`, prefs key `arrow_riddle_open`, held by
+  that same riddle, from the bank it was asked in even if the language has
+  changed since (`OpenRiddle`, prefs key `arrow_riddle_open`, held by
   `RiddleDeckNotifier.hold` and reclaimed by the game screen once the board
   loads — dropped when it no longer fits the level's phase) — and clears an untouched/restarted visit of the same
   level only (peeking at another level keeps the slot). `gameProvider`

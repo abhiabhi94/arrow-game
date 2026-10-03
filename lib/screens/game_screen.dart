@@ -102,6 +102,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// wiser, and a rebuild must not deal a different riddle mid-thought.
   int? _riddleId;
 
+  /// The bank [_riddleId] was dealt from — see [OpenRiddle.language].
+  String? _riddleLanguage;
+
   /// What the riddle on the table is for. A life is asked for over the
   /// "Out of lives" card; a hint pauses the level and asks over the board,
   /// so the clock is not running while the player thinks.
@@ -119,8 +122,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void _dealRiddle() {
     final deck = ref.read(riddleDeckProvider.notifier);
     final id = deck.draw();
-    deck.hold(OpenRiddle(level: widget.level, prize: _riddlePrize, id: id));
-    setState(() => _riddleId = id);
+    final language = Localizations.localeOf(context).languageCode;
+    deck.hold(OpenRiddle(level: widget.level, prize: _riddlePrize, id: id, language: language));
+    setState(() {
+      _riddleId = id;
+      _riddleLanguage = language;
+    });
   }
 
   /// Takes the card off the table, here and in storage.
@@ -147,6 +154,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     }
     _riddlePrize = open.prize;
     _riddleId = open.id;
+    _riddleLanguage = open.language;
   }
 
   /// Asks a riddle for [prize].
@@ -509,6 +517,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 GamePhase.paused when _riddleId != null => RiddleChallenge(
                   key: ValueKey<int>(_riddleId!),
                   riddleId: _riddleId!,
+                  languageCode: _riddleLanguage,
                   prize: RiddlePrize.hint,
                   solvedCount: ref.watch(riddleDeckProvider).solved,
                   onSolved: _riddleSolved,
@@ -608,6 +617,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 GamePhase.outOfLives when _riddleId != null => RiddleChallenge(
                   key: ValueKey<int>(_riddleId!),
                   riddleId: _riddleId!,
+                  languageCode: _riddleLanguage,
                   prize: RiddlePrize.life,
                   solvedCount: ref.watch(riddleDeckProvider).solved,
                   onSolved: _riddleSolved,

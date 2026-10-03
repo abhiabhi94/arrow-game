@@ -85,10 +85,16 @@ class RiddleChallenge extends ConsumerStatefulWidget {
     required this.onSwap,
     required this.onDismiss,
     this.prize = RiddlePrize.life,
+    this.languageCode,
   });
 
-  /// Which riddle, in the bank of the language the app is speaking.
+  /// Which riddle, in the bank of [languageCode].
   final int riddleId;
+
+  /// The bank [riddleId] is from: the language the riddle was asked in, so
+  /// one put back after the app changed language is still the same riddle.
+  /// Null is the language the app is speaking.
+  final String? languageCode;
 
   /// What the answer earns — a life or a hint.
   final RiddlePrize prize;
@@ -153,8 +159,10 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
     super.dispose();
   }
 
-  Riddle get _riddle =>
-      riddleFor(Localizations.localeOf(context).languageCode, widget.riddleId);
+  Riddle get _riddle => riddleFor(
+        widget.languageCode ?? Localizations.localeOf(context).languageCode,
+        widget.riddleId,
+      );
 
   /// Puts the keyboard back in the answer field after something else on the
   /// card has been pressed.

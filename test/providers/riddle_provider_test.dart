@@ -130,10 +130,10 @@ void main() {
     final prefs = await _prefs();
     final deck = _deck(prefs);
     expect(deck.open, isNull);
-    const open = OpenRiddle(level: 12, prize: RiddlePrize.hint, id: 40);
+    const open = OpenRiddle(level: 12, prize: RiddlePrize.hint, id: 40, language: 'hi');
     deck.hold(open);
     await Future<void>.delayed(Duration.zero);
-    expect(prefs.getString(RiddleDeckRepository.openKey), '12:hint:40');
+    expect(prefs.getString(RiddleDeckRepository.openKey), '12:hint:40:hi');
     expect(_deck(prefs).open, open);
 
     deck.hold(null);
@@ -150,11 +150,12 @@ void main() {
   test('a stored riddle that is not one is ignored', () async {
     for (final raw in <String>[
       '',
-      '3:life',
-      'x:life:4',
-      '3:wish:4',
-      '3:life:0',
-      '3:life:${kRiddleCount + 1}',
+      '3:life:4', // no language
+      '3:life:4:',
+      'x:life:4:en',
+      '3:wish:4:en',
+      '3:life:0:en',
+      '3:life:${kRiddleCount + 1}:en',
     ]) {
       final prefs = await _prefs(<String, Object>{RiddleDeckRepository.openKey: raw});
       expect(_deck(prefs).open, isNull, reason: raw);

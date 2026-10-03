@@ -53,30 +53,44 @@ enum RiddlePrize {
 /// back rather than the "Out of lives" card in front of it — and the same
 /// riddle, so walking away is not a way to swap a hard one for another.
 class OpenRiddle {
-  const OpenRiddle({required this.level, required this.prize, required this.id});
+  const OpenRiddle({
+    required this.level,
+    required this.prize,
+    required this.id,
+    required this.language,
+  });
 
   final int level;
   final RiddlePrize prize;
   final int id;
 
-  /// `level:prize:id`, the form it is stored in.
-  String encode() => '$level:${prize.name}:$id';
+  /// The bank [id] belongs to. The banks share ids but not riddles (7 is a
+  /// mirror in English and a peacock in Hindi), so without it a change of
+  /// language between leaving and coming back would be a swap.
+  final String language;
+
+  /// `level:prize:id:language`, the form it is stored in.
+  String encode() => '$level:${prize.name}:$id:$language';
 
   /// Reads [encode]'s form back; null when [raw] is not one.
   static OpenRiddle? decode(String raw) {
     final parts = raw.split(':');
-    if (parts.length != 3) return null;
+    if (parts.length != 4 || parts[3].isEmpty) return null;
     final level = int.tryParse(parts[0]);
     final id = int.tryParse(parts[2]);
     final prize = RiddlePrize.values.where((p) => p.name == parts[1]).firstOrNull;
     if (level == null || id == null || prize == null) return null;
-    return OpenRiddle(level: level, prize: prize, id: id);
+    return OpenRiddle(level: level, prize: prize, id: id, language: parts[3]);
   }
 
   @override
   bool operator ==(Object other) =>
-      other is OpenRiddle && other.level == level && other.prize == prize && other.id == id;
+      other is OpenRiddle &&
+      other.level == level &&
+      other.prize == prize &&
+      other.id == id &&
+      other.language == language;
 
   @override
-  int get hashCode => Object.hash(level, prize, id);
+  int get hashCode => Object.hash(level, prize, id, language);
 }

@@ -528,7 +528,7 @@ void main() {
     final asked = _riddleOnScreen(container);
     final prefs = container.read(sharedPreferencesProvider);
     final stored = prefs.getString(RiddleDeckRepository.openKey);
-    expect(stored, '1:life:${asked.id}');
+    expect(stored, '1:life:${asked.id}:en');
 
     // Back to the levels (or the app closed) and in again: the riddle, not
     // the "Out of lives" card it was asked from — and not a fresh one.
@@ -597,7 +597,7 @@ void main() {
           'hintsLeft': 0,
           'elapsedMs': 5000,
         }),
-        RiddleDeckRepository.openKey: '1:hint:7',
+        RiddleDeckRepository.openKey: '1:hint:7:en',
       },
     );
     final notifier = container.read(gameProvider(1).notifier);
@@ -613,6 +613,26 @@ void main() {
     expect(container.read(riddleDeckProvider.notifier).open, isNull);
   });
 
+  testWidgets('a riddle left in Hindi comes back in Hindi, whatever the app speaks now', (tester) async {
+    await _pumpGame(
+      tester,
+      seed: {
+        SavedGameRepository.key: jsonEncode(const {
+          'level': 1,
+          'seed': 1 * 7919 + 17,
+          'removed': [0],
+          'mistakes': 3,
+          'hintsLeft': 3,
+          'elapsedMs': 5000,
+        }),
+        RiddleDeckRepository.openKey: '1:life:7:hi',
+      },
+    );
+    // Id 7 is a different riddle in each bank: the stored one is the Hindi.
+    expect(find.text(riddleFor('hi', 7).question), findsOneWidget);
+    expect(find.text(riddleFor('en', 7).question), findsNothing);
+  });
+
   testWidgets('a left-over riddle that no longer fits the level is dropped', (tester) async {
     final container = await _pumpGame(
       tester,
@@ -626,7 +646,7 @@ void main() {
           'hintsLeft': 3,
           'elapsedMs': 5000,
         }),
-        RiddleDeckRepository.openKey: '1:life:7',
+        RiddleDeckRepository.openKey: '1:life:7:en',
       },
     );
     expect(find.text('Welcome back'), findsOneWidget);
