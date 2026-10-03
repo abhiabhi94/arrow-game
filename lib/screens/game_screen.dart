@@ -10,6 +10,7 @@ import '../l10n/app_localizations.dart';
 import '../models/bump_motion.dart';
 import '../models/game_state.dart';
 import '../models/reaction_motion.dart';
+import '../models/riddle.dart';
 import '../providers/game_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/riddle_provider.dart';
@@ -113,9 +114,39 @@ class _GameScreenState extends ConsumerState<GameScreen>
         RiddlePrize.hint => GamePhase.paused,
       };
 
-  /// Deals a riddle (a fresh one on every ask, including a swap).
+  /// Deals a riddle (a fresh one on every ask, including a swap), and notes
+  /// it as the one on the table, so leaving the level brings it back.
   void _dealRiddle() {
-    setState(() => _riddleId = ref.read(riddleDeckProvider.notifier).draw());
+    final deck = ref.read(riddleDeckProvider.notifier);
+    final id = deck.draw();
+    deck.hold(OpenRiddle(level: widget.level, prize: _riddlePrize, id: id));
+    setState(() => _riddleId = id);
+  }
+
+  /// Takes the card off the table, here and in storage.
+  void _putRiddleAway() {
+    ref.read(riddleDeckProvider.notifier).hold(null);
+    setState(() => _riddleId = null);
+  }
+
+  /// A level reopened on the moment it was left: if a riddle was up then,
+  /// put the same one back, rather than the card it was asked from (or the
+  /// "Welcome back" card) — the player left mid-riddle, and that is where
+  /// they expect to be. One that no longer fits the level (it was cleared,
+  /// restarted, or replayed since) is dropped.
+  void _reclaimRiddle(GameState state) {
+    final deck = ref.read(riddleDeckProvider.notifier);
+    final open = deck.open;
+    if (open == null || open.level != widget.level) return;
+    final fits =
+        state.phase == _phaseOf(open.prize) &&
+        (open.prize == RiddlePrize.life || state.hintsLeft == 0);
+    if (!fits) {
+      deck.hold(null);
+      return;
+    }
+    _riddlePrize = open.prize;
+    _riddleId = open.id;
   }
 
   /// Asks a riddle for [prize].
@@ -149,7 +180,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         notifier.resume();
         notifier.earnHint();
     }
-    setState(() => _riddleId = null);
+    _putRiddleAway();
   }
 
   /// Backed out without an answer: back to the ending card, or back to the
@@ -158,13 +189,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
     if (_riddlePrize == RiddlePrize.hint) {
       ref.read(gameProvider(widget.level).notifier).resume();
     }
-    setState(() => _riddleId = null);
+    _putRiddleAway();
   }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    final state = ref.read(gameProvider(widget.level));
+    if (state.phase != GamePhase.loading) _reclaimRiddle(state);
     _crash.addStatusListener((status) {
       if (status == AnimationStatus.completed && _endingHeld && mounted) {
         setState(() => _endingHeld = false);
@@ -275,8 +308,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
       // Restarting (or any other way out of the phase the riddle was asked
       // in) takes the riddle with it, so backing out never leaves a card
       // floating over the board.
+      if (prev?.phase == GamePhase.loading && next.phase != GamePhase.loading) {
+        setState(() => _reclaimRiddle(next));
+      }
       if (_riddleId != null && next.phase != _phaseOf(_riddlePrize)) {
-        setState(() => _riddleId = null);
+        _putRiddleAway();
       }
       if (next.phase == GamePhase.cleared && prev?.phase != GamePhase.cleared) {
         _hop.forward(from: 0);

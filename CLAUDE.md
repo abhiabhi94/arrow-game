@@ -283,7 +283,10 @@ Key patterns:
   clears on a clear or a run-out clock — but *not* on "Out of lives", which
   is not an ending while the riddle can still carry on: a level closed on
   that card (or on its riddle) reopens out of lives, riddle still owed,
-  rather than from scratch — and clears an untouched/restarted visit of the same
+  rather than from scratch; a level left with the riddle itself up reopens on
+  that same riddle (`OpenRiddle`, prefs key `arrow_riddle_open`, held by
+  `RiddleDeckNotifier.hold` and reclaimed by the game screen once the board
+  loads — dropped when it no longer fits the level's phase) — and clears an untouched/restarted visit of the same
   level only (peeking at another level keeps the slot). `gameProvider`
   passes `savedGame: forLevel(level)`; a fitting one comes back one of two
   ways: with its allowance spent (`mistakes >= maxLives + continues`) it

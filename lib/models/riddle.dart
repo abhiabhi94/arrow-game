@@ -37,3 +37,46 @@ class Riddle {
   /// Everything a typed answer may be measured against.
   List<String> get accepted => <String>[answer, ...alternates];
 }
+
+/// What cracking the riddle buys. The card's words change with it; the
+/// riddle, the judging and the jokes do not.
+enum RiddlePrize {
+  /// One more life, from the "Out of lives" card.
+  life,
+
+  /// One more hint, from the toolbar once the free ones are spent.
+  hint,
+}
+
+/// The riddle on the table for a level, kept so that leaving the level with
+/// the card up (back to the levels, or closing the app) brings the same card
+/// back rather than the "Out of lives" card in front of it — and the same
+/// riddle, so walking away is not a way to swap a hard one for another.
+class OpenRiddle {
+  const OpenRiddle({required this.level, required this.prize, required this.id});
+
+  final int level;
+  final RiddlePrize prize;
+  final int id;
+
+  /// `level:prize:id`, the form it is stored in.
+  String encode() => '$level:${prize.name}:$id';
+
+  /// Reads [encode]'s form back; null when [raw] is not one.
+  static OpenRiddle? decode(String raw) {
+    final parts = raw.split(':');
+    if (parts.length != 3) return null;
+    final level = int.tryParse(parts[0]);
+    final id = int.tryParse(parts[2]);
+    final prize = RiddlePrize.values.where((p) => p.name == parts[1]).firstOrNull;
+    if (level == null || id == null || prize == null) return null;
+    return OpenRiddle(level: level, prize: prize, id: id);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is OpenRiddle && other.level == level && other.prize == prize && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(level, prize, id);
+}

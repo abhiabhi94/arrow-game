@@ -24,6 +24,8 @@ import '../services/sfx_service.dart';
 import '../ui/colors.dart';
 import 'result_card.dart';
 
+export '../models/riddle.dart' show RiddlePrize;
+
 /// How many ways the card has of saying "no". They are jokes at the guess's
 /// expense rather than the player's — the gate is meant to be the fun part
 /// of losing, not a second punishment — and none of them mention the 💡 or
@@ -73,16 +75,6 @@ const String kRiddleAskingEmoji = '🧩';
 /// How many wrong guesses before the card offers a different riddle. Two is
 /// enough to have tried; a third dead end should never feel like a wall.
 const int kSwapAfterMisses = 2;
-
-/// What cracking the riddle buys. The card's words change with it; the
-/// riddle, the judging and the jokes do not.
-enum RiddlePrize {
-  /// One more life, from the "Out of lives" card.
-  life,
-
-  /// One more hint, from the toolbar once the free ones are spent.
-  hint,
-}
 
 class RiddleChallenge extends ConsumerStatefulWidget {
   const RiddleChallenge({

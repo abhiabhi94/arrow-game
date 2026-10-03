@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:arrow_game/data/riddle_bank.dart';
+import 'package:arrow_game/models/riddle.dart';
 import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/riddle_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -123,5 +124,40 @@ void main() {
     expect(container.read(riddleDeckProvider).order, hasLength(kRiddleCount));
     expect(container.read(riddleDeckProvider.notifier).draw(), inInclusiveRange(1, kRiddleCount));
     expect(container.read(riddleDeckProvider).cursor, 1);
+  });
+
+  test('the riddle on the table outlasts the deck, and a reset', () async {
+    final prefs = await _prefs();
+    final deck = _deck(prefs);
+    expect(deck.open, isNull);
+    const open = OpenRiddle(level: 12, prize: RiddlePrize.hint, id: 40);
+    deck.hold(open);
+    await Future<void>.delayed(Duration.zero);
+    expect(prefs.getString(RiddleDeckRepository.openKey), '12:hint:40');
+    expect(_deck(prefs).open, open);
+
+    deck.hold(null);
+    await Future<void>.delayed(Duration.zero);
+    expect(_deck(prefs).open, isNull);
+
+    deck.hold(open);
+    deck.reset();
+    await Future<void>.delayed(Duration.zero);
+    expect(deck.open, isNull);
+    expect(_deck(prefs).open, isNull);
+  });
+
+  test('a stored riddle that is not one is ignored', () async {
+    for (final raw in <String>[
+      '',
+      '3:life',
+      'x:life:4',
+      '3:wish:4',
+      '3:life:0',
+      '3:life:${kRiddleCount + 1}',
+    ]) {
+      final prefs = await _prefs(<String, Object>{RiddleDeckRepository.openKey: raw});
+      expect(_deck(prefs).open, isNull, reason: raw);
+    }
   });
 }
