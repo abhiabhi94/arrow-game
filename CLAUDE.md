@@ -136,7 +136,20 @@ Identity is tied to the **build type**, not a product flavor:
   dispatch) restores the upload key from the `ANDROID_UPLOAD_*` secrets,
   runs analyze + tests, builds the signed `.aab`/`.apk` with
   `--obfuscate --split-debug-info`, and uploads them (plus R8 mapping and
-  Dart symbols) as an artifact and a GitHub Release. Cloud sessions
+  Dart symbols) as an artifact and a GitHub Release, then uploads the
+  bundle to Google Play's **alpha** track (100%) with
+  `tool/play_publish.mjs` (Play Developer API, service-account secret
+  `PLAY_SERVICE_ACCOUNT_JSON`; skipped with a warning when it is absent).
+  `.github/workflows/promote.yml` (manual, `production` environment with a
+  required reviewer) moves alpha's build onto **production** at 100%,
+  without rebuilding. Only those two tracks are used. **Release notes**
+  are `whatsnew/en-US.txt` + `whatsnew/hi-IN.txt` (≤ 500 characters each,
+  Play's cap), written for players: what changed for them, never chores,
+  CI or refactors, a light touch but plain about the change, the Hindi
+  written rather than translated. A PR with a player-visible change updates
+  them; `bump_version.sh` refuses a release whose notes are unchanged since
+  the last tag (`--same-notes`), and the GitHub Release shows the same
+  text. Cloud sessions
   have no key, so a bundle built here is debug-signed and only proves the
   build compiles. Guide: `docs/release.md`.
 - **Cutting a release** is `tool/bump_version.sh` from an up-to-date `main`:

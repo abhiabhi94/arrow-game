@@ -2,7 +2,10 @@ name: Release
 
 # Builds the Play Store upload bundle (signed with the upload key kept in
 # repository secrets) and publishes it as a workflow artifact — and, on a
-# version tag, as a GitHub Release. See docs/release.md.
+# version tag, as a GitHub Release and on Google Play's alpha (closed
+# testing) track. Production is a separate step: the Promote workflow
+# (promote.yml) moves the build the testers have onto production. See
+# docs/release.md.
 #
 # Secrets live in the "release" GitHub environment (Settings → Environments →
 # release), which also lets you require a reviewer before a build runs:
@@ -12,6 +15,9 @@ name: Release
 #                                     keystore password — PKCS12 keystores,
 #                                     the keytool default, share one password)
 #   ANDROID_UPLOAD_KEY_ALIAS          key alias (optional, defaults to "upload")
+#   PLAY_SERVICE_ACCOUNT_JSON         Play Developer API service-account key;
+#                                     without it the bundle is built but not
+#                                     uploaded (a warning says so)
 
 on:
   push:
@@ -24,6 +30,10 @@ on:
       build_number:
         description: Version code override (pubspec "+N" part); blank = pubspec
         required: false
+      upload_to_alpha:
+        description: Also upload to Google Play's alpha track (a tag push always does)
+        type: boolean
+        default: false
 
 permissions:
   contents: write # attach the bundle to the GitHub Release on a tag push
@@ -42,6 +52,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      # The release notes are hand-written for players (whatsnew/*.txt, see
+      # docs/release.md) and Play caps them at 500 characters: check them
+      # before the five-minute build rather than at the upload after it.
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Check release notes
+        run: node tool/play_publish.mjs check-notes
 
       - name: Check signing secrets
         env:
@@ -203,13 +224,49 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      # The release page says what the Play Store says: the player-facing
+      # notes, not a list of merged PRs (chores and CI tweaks included).
+      - name: Write release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          {
+            echo "## What's new"
+            echo
+            cat whatsnew/en-US.txt
+            if [ -f whatsnew/hi-IN.txt ]; then
+              echo
+              echo "### नया क्या है"
+              echo
+              cat whatsnew/hi-IN.txt
+            fi
+          } > build/release-notes.md
+
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:
           name: Arrow ${{ steps.version.outputs.name }} (${{ steps.version.outputs.number }})
-          generate_release_notes: true
+          body_path: build/release-notes.md
           files: dist/*
+
+      # A tag is a release, so it goes to the testers. A manual run only when
+      # asked: it is also how a one-off or dry-run build is made. Alpha gets
+      # it at 100% — promote.yml is what moves it on to production.
+      - name: Upload to Google Play (alpha)
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.upload_to_alpha == 'true'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::warning::PLAY_SERVICE_ACCOUNT_JSON is not set, so nothing was uploaded to Google Play. Upload dist/*.aab by hand, or see docs/release.md to automate it."
+            exit 0
+          fi
+          v="${{ steps.outputs.outputs.version }}"
+          mapping=()
+          [ -f "dist/arrow-$v-mapping.txt" ] && mapping=(--mapping "dist/arrow-$v-mapping.txt")
+          node tool/play_publish.mjs upload --aab "dist/arrow-$v.aab" "${mapping[@]}" \
+            --notes whatsnew --name "${{ steps.version.outputs.name }} (${{ steps.version.outputs.number }})"
+          echo "Uploaded to Google Play alpha. Promote with Actions → Promote to production." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove signing material
         if: always()
