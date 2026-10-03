@@ -24,6 +24,8 @@ import '../services/sfx_service.dart';
 import '../ui/colors.dart';
 import 'result_card.dart';
 
+export '../models/riddle.dart' show RiddlePrize;
+
 /// How many ways the card has of saying "no". They are jokes at the guess's
 /// expense rather than the player's — the gate is meant to be the fun part
 /// of losing, not a second punishment — and none of them mention the 💡 or
@@ -74,16 +76,6 @@ const String kRiddleAskingEmoji = '🧩';
 /// enough to have tried; a third dead end should never feel like a wall.
 const int kSwapAfterMisses = 2;
 
-/// What cracking the riddle buys. The card's words change with it; the
-/// riddle, the judging and the jokes do not.
-enum RiddlePrize {
-  /// One more life, from the "Out of lives" card.
-  life,
-
-  /// One more hint, from the toolbar once the free ones are spent.
-  hint,
-}
-
 class RiddleChallenge extends ConsumerStatefulWidget {
   const RiddleChallenge({
     super.key,
@@ -93,10 +85,16 @@ class RiddleChallenge extends ConsumerStatefulWidget {
     required this.onSwap,
     required this.onDismiss,
     this.prize = RiddlePrize.life,
+    this.languageCode,
   });
 
-  /// Which riddle, in the bank of the language the app is speaking.
+  /// Which riddle, in the bank of [languageCode].
   final int riddleId;
+
+  /// The bank [riddleId] is from: the language the riddle was asked in, so
+  /// one put back after the app changed language is still the same riddle.
+  /// Null is the language the app is speaking.
+  final String? languageCode;
 
   /// What the answer earns — a life or a hint.
   final RiddlePrize prize;
@@ -161,8 +159,10 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
     super.dispose();
   }
 
-  Riddle get _riddle =>
-      riddleFor(Localizations.localeOf(context).languageCode, widget.riddleId);
+  Riddle get _riddle => riddleFor(
+        widget.languageCode ?? Localizations.localeOf(context).languageCode,
+        widget.riddleId,
+      );
 
   /// Puts the keyboard back in the answer field after something else on the
   /// card has been pressed.

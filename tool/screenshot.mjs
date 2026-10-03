@@ -303,8 +303,12 @@ try {
     // take bigger strides; the budget grows with the level, since the finale
     // is a hundred levels down the trail.
     let nudged = false;
+    // The first probe waits longer: on a slow runner the semantics tree can
+    // still be catching up with the page, and a node that is on screen but
+    // not yet built must not read as "further down" — one CI run strode
+    // past level 1 to level 90 that way and timed out clicking it.
     for (let i = 0; i < 60 + level * 3; i++) {
-      const box = await tile.boundingBox({ timeout: 300 }).catch(() => null);
+      const box = await tile.boundingBox({ timeout: i === 0 ? 5000 : 300 }).catch(() => null);
       if (box && box.y > 120 && box.y + box.height < 720) break;
       await page.mouse.wheel(0, box ? (box.y <= 120 ? -180 : 180) : 600);
       await settle(page, 150);

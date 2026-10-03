@@ -513,6 +513,147 @@ void main() {
     expect(container.read(savedGameProvider)?.continues, 1);
   });
 
+  testWidgets('leaving on the riddle itself brings the same riddle back', (tester) async {
+    const spent = {
+      'level': 1,
+      'seed': 1 * 7919 + 17,
+      'removed': [0],
+      'mistakes': 3,
+      'hintsLeft': 3,
+      'elapsedMs': 5000,
+    };
+    var container = await _pumpGame(tester, seed: {SavedGameRepository.key: jsonEncode(spent)});
+    await tester.tap(find.text('Solve a riddle'));
+    await _settle(tester, 400);
+    final asked = _riddleOnScreen(container);
+    final prefs = container.read(sharedPreferencesProvider);
+    final stored = prefs.getString(RiddleDeckRepository.openKey);
+    expect(stored, '1:life:${asked.id}:en');
+
+    // Back to the levels (or the app closed) and in again: the riddle, not
+    // the "Out of lives" card it was asked from — and not a fresh one.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    container = await _pumpGame(
+      tester,
+      seed: {
+        SavedGameRepository.key: jsonEncode(spent),
+        RiddleDeckRepository.openKey: stored!,
+        RiddleDeckRepository.orderKey: prefs.getStringList(RiddleDeckRepository.orderKey)!,
+        RiddleDeckRepository.cursorKey: prefs.getInt(RiddleDeckRepository.cursorKey)!,
+      },
+    );
+    final notifier = container.read(gameProvider(1).notifier);
+    expect(find.text('Riddle me this'), findsOneWidget);
+    expect(find.text('Out of lives'), findsNothing);
+    expect(find.text(asked.question), findsOneWidget);
+    expect(_riddleOnScreen(container).id, asked.id); // nothing new dealt
+
+    await tester.enterText(find.byType(TextField), asked.answer);
+    await tester.tap(find.text("That's my answer"));
+    await _settle(tester, 600);
+    await tester.tap(find.text('Back to the arrows'));
+    await _settle(tester, 400);
+    expect(notifier.state.phase, GamePhase.playing);
+    expect(notifier.state.continues, 1);
+    expect(container.read(riddleDeckProvider.notifier).open, isNull);
+    expect(
+      container.read(sharedPreferencesProvider).getString(RiddleDeckRepository.openKey),
+      isNull,
+    );
+  });
+
+  testWidgets('backing out of the riddle forgets it: reopening is the ending card', (tester) async {
+    final container = await _pumpGame(
+      tester,
+      seed: {
+        SavedGameRepository.key: jsonEncode(const {
+          'level': 1,
+          'seed': 1 * 7919 + 17,
+          'removed': [0],
+          'mistakes': 3,
+          'hintsLeft': 3,
+          'elapsedMs': 5000,
+        }),
+      },
+    );
+    await tester.tap(find.text('Solve a riddle'));
+    await _settle(tester, 400);
+    expect(container.read(riddleDeckProvider.notifier).open, isNotNull);
+    await tester.tap(find.text('Never mind'));
+    await _settle(tester, 400);
+    expect(container.read(riddleDeckProvider.notifier).open, isNull);
+  });
+
+  testWidgets('a hint riddle left open comes back over the welcome-back card', (tester) async {
+    final container = await _pumpGame(
+      tester,
+      seed: {
+        SavedGameRepository.key: jsonEncode(const {
+          'level': 1,
+          'seed': 1 * 7919 + 17,
+          'removed': [0],
+          'mistakes': 0,
+          'hintsLeft': 0,
+          'elapsedMs': 5000,
+        }),
+        RiddleDeckRepository.openKey: '1:hint:7:en',
+      },
+    );
+    final notifier = container.read(gameProvider(1).notifier);
+    expect(find.text('Riddle me this'), findsOneWidget);
+    expect(find.text('Welcome back'), findsNothing);
+    expect(find.text(riddleFor('en', 7).question), findsOneWidget);
+    expect(notifier.state.phase, GamePhase.paused);
+
+    // Backing out is back to the board, playing.
+    await tester.tap(find.text('Never mind'));
+    await _settle(tester, 400);
+    expect(notifier.state.isPlaying, isTrue);
+    expect(container.read(riddleDeckProvider.notifier).open, isNull);
+  });
+
+  testWidgets('a riddle left in Hindi comes back in Hindi, whatever the app speaks now', (tester) async {
+    await _pumpGame(
+      tester,
+      seed: {
+        SavedGameRepository.key: jsonEncode(const {
+          'level': 1,
+          'seed': 1 * 7919 + 17,
+          'removed': [0],
+          'mistakes': 3,
+          'hintsLeft': 3,
+          'elapsedMs': 5000,
+        }),
+        RiddleDeckRepository.openKey: '1:life:7:hi',
+      },
+    );
+    // Id 7 is a different riddle in each bank: the stored one is the Hindi.
+    expect(find.text(riddleFor('hi', 7).question), findsOneWidget);
+    expect(find.text(riddleFor('en', 7).question), findsNothing);
+  });
+
+  testWidgets('a left-over riddle that no longer fits the level is dropped', (tester) async {
+    final container = await _pumpGame(
+      tester,
+      seed: {
+        // Not out of lives any more: a riddle for a life has nothing to buy.
+        SavedGameRepository.key: jsonEncode(const {
+          'level': 1,
+          'seed': 1 * 7919 + 17,
+          'removed': [0],
+          'mistakes': 1,
+          'hintsLeft': 3,
+          'elapsedMs': 5000,
+        }),
+        RiddleDeckRepository.openKey: '1:life:7:en',
+      },
+    );
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Riddle me this'), findsNothing);
+    expect(container.read(riddleDeckProvider.notifier).open, isNull);
+  });
+
   testWidgets('Start over on the welcome-back card begins the level afresh', (tester) async {
     final container = await _pumpGame(
       tester,

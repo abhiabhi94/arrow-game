@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/riddle_bank.dart';
+import '../models/riddle.dart';
 import 'app_providers.dart';
 
 /// A shuffled pack of riddle ids, a position in it, and the tally of riddles
@@ -48,6 +49,7 @@ class RiddleDeckRepository {
   static const String orderKey = 'arrow_riddle_order';
   static const String cursorKey = 'arrow_riddle_cursor';
   static const String solvedKey = 'arrow_riddles_solved';
+  static const String openKey = 'arrow_riddle_open';
 
   /// The stored pack, or null when there isn't a usable one. A pack that is
   /// a permutation of an older, shorter bank (ids 1..n, n below
@@ -71,6 +73,16 @@ class RiddleDeckRepository {
 
   int loadSolved() => _prefs.getInt(solvedKey) ?? 0;
 
+  OpenRiddle? loadOpen() {
+    final raw = _prefs.getString(openKey);
+    final open = raw == null ? null : OpenRiddle.decode(raw);
+    // An id the bank does not have would have no riddle to show.
+    return open != null && open.id >= 1 && open.id <= kRiddleCount ? open : null;
+  }
+
+  Future<void> saveOpen(OpenRiddle? open) =>
+      open == null ? _prefs.remove(openKey) : _prefs.setString(openKey, open.encode());
+
   Future<void> save(RiddleDeck deck) async {
     await _prefs.setStringList(orderKey, deck.order.map((id) => '$id').toList());
     await _prefs.setInt(cursorKey, deck.cursor);
@@ -81,6 +93,7 @@ class RiddleDeckRepository {
     await _prefs.remove(orderKey);
     await _prefs.remove(cursorKey);
     await _prefs.remove(solvedKey);
+    await _prefs.remove(openKey);
   }
 }
 
@@ -107,10 +120,26 @@ class RiddleDeckNotifier extends StateNotifier<RiddleDeck> {
     );
   }
 
-  RiddleDeckNotifier._(this._repo, this._random, RiddleDeck initial) : super(initial);
+  RiddleDeckNotifier._(this._repo, this._random, RiddleDeck initial)
+      : _open = _repo.loadOpen(),
+        super(initial);
 
   final RiddleDeckRepository _repo;
   final Random _random;
+  OpenRiddle? _open;
+
+  /// The riddle left on the table when its level was put down, if any. Not
+  /// part of [state]: nothing watches it, the game screen asks once when a
+  /// level opens.
+  OpenRiddle? get open => _open;
+
+  /// Notes [open] as the riddle on the table, or — null — that the card was
+  /// put away (answered, dismissed, or the level moved on without it).
+  void hold(OpenRiddle? open) {
+    if (open == _open) return;
+    _open = open;
+    _repo.saveOpen(open);
+  }
 
   static List<int> _shuffled(Random random) =>
       <int>[for (var i = 1; i <= kRiddleCount; i++) i]..shuffle(random);
@@ -139,6 +168,7 @@ class RiddleDeckNotifier extends StateNotifier<RiddleDeck> {
   /// Back to a fresh pack and a zero tally (a progress reset).
   void reset() {
     state = RiddleDeck(order: _shuffled(_random), cursor: 0, solved: 0);
+    _open = null;
     _repo.clear();
   }
 
