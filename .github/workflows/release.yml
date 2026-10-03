@@ -53,6 +53,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # The release notes are hand-written for players (whatsnew/*.txt, see
+      # docs/release.md) and Play caps them at 500 characters: check them
+      # before the five-minute build rather than at the upload after it.
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Check release notes
+        run: node tool/play_publish.mjs check-notes
+
       - name: Check signing secrets
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
@@ -213,23 +224,34 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      # The release page says what the Play Store says: the player-facing
+      # notes, not a list of merged PRs (chores and CI tweaks included).
+      - name: Write release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          {
+            echo "## What's new"
+            echo
+            cat whatsnew/en-US.txt
+            if [ -f whatsnew/hi-IN.txt ]; then
+              echo
+              echo "### नया क्या है"
+              echo
+              cat whatsnew/hi-IN.txt
+            fi
+          } > build/release-notes.md
+
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:
           name: Arrow ${{ steps.version.outputs.name }} (${{ steps.version.outputs.number }})
-          generate_release_notes: true
+          body_path: build/release-notes.md
           files: dist/*
 
       # A tag is a release, so it goes to the testers. A manual run only when
       # asked: it is also how a one-off or dry-run build is made. Alpha gets
       # it at 100% — promote.yml is what moves it on to production.
-      - name: Set up Node
-        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.upload_to_alpha == 'true'
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-
       - name: Upload to Google Play (alpha)
         if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.upload_to_alpha == 'true'
         env:
@@ -243,7 +265,7 @@ jobs:
           mapping=()
           [ -f "dist/arrow-$v-mapping.txt" ] && mapping=(--mapping "dist/arrow-$v-mapping.txt")
           node tool/play_publish.mjs upload --aab "dist/arrow-$v.aab" "${mapping[@]}" \
-            --name "${{ steps.version.outputs.name }} (${{ steps.version.outputs.number }})"
+            --notes whatsnew --name "${{ steps.version.outputs.name }} (${{ steps.version.outputs.number }})"
           echo "Uploaded to Google Play alpha. Promote with Actions → Promote to production." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove signing material

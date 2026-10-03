@@ -234,9 +234,37 @@ and `crypto`, no dependencies).
 
 So a release is:
 
+0. Update `whatsnew/` (below) in the PRs that change something players see.
 1. `tool/bump_version.sh --push` → the build lands on alpha.
 2. Try it from the Play Store as a tester.
 3. Promote to production → approve → Google's review → live.
+
+### Release notes ("What's new")
+
+`whatsnew/en-US.txt` and `whatsnew/hi-IN.txt` are the text players read on
+the store page. The upload sends them as the alpha release's notes,
+promotion carries them to production, and the GitHub Release shows the same
+words instead of a list of merged PRs.
+
+Write them for players, not for the repository:
+
+- **What changed for them**, never how: no refactors, CI, dependency bumps,
+  tests or file names. A release with nothing visible says so in one line
+  ("Small fixes and polish under the hood").
+- **Short:** two or three bullets of one sentence each. Play's cap is 500
+  characters per language and the store shows only the first few lines.
+- **Light, but straight:** a little wit is welcome ("Walked away
+  mid-riddle? It waits for you now."), as long as the bullet still says
+  plainly what is different.
+- **Hindi is written, not translated**, the same as the riddles.
+
+The guards: `tool/bump_version.sh` refuses to cut a release while `whatsnew/`
+is unchanged since the last tag (`--same-notes` when that is really meant)
+and prints the English notes in its plan. The Release workflow runs
+`node tool/play_publish.mjs check-notes` before building, which fails on an
+empty or missing `en-US.txt` or on anything over 500 characters. A language
+the store listing does not have yet (add Hindi under Store presence → Main
+store listing → Manage translations) is skipped with a warning.
 
 Play still reviews releases on both tracks; the API only saves the clicks.
 A personal developer account opened after November 2023 also has to run a

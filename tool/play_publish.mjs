@@ -6,10 +6,15 @@
 //
 // Usage:
 //   node tool/play_publish.mjs upload --aab app.aab [--mapping mapping.txt] [--name "1.7.2 (11)"]
+//                                     [--notes whatsnew]
 //   node tool/play_publish.mjs promote [--version-code 11]
+//   node tool/play_publish.mjs check-notes [--notes whatsnew]
 //
 //   upload   uploads the bundle (and the R8 mapping, so crash reports are
-//            readable) and makes it the alpha track's release, at 100%
+//            readable) and makes it the alpha track's release, at 100%,
+//            with the "What's new" text from the notes directory
+//   check-notes  checks the notes directory without touching Play (no
+//            credentials needed): what CI runs before spending a build on it
 //   promote  makes the release on alpha the production release, at 100% —
 //            the same version code, so production gets exactly the build the
 //            testers had (a bundle cannot be uploaded twice anyway). With
@@ -22,15 +27,23 @@
 //
 // Only two tracks are used: alpha (closed testing) and production. See
 // docs/release.md for the one-time Play Console / Google Cloud setup.
+//
+// Release notes: whatsnew/<language>.txt, one file per Play language
+// (en-US.txt, hi-IN.txt), written for players — see docs/release.md. Play
+// caps each at 500 characters. A language the store listing does not have
+// is skipped with a warning rather than failing the release.
 
 import { createSign } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 const PACKAGE = process.env.PLAY_PACKAGE_NAME || 'app.curious.arrow';
 const API = process.env.PLAY_API_ROOT || 'https://androidpublisher.googleapis.com';
 const SCOPE = 'https://www.googleapis.com/auth/androidpublisher';
 const TESTING = 'alpha';
 const PRODUCTION = 'production';
+const NOTES_DIR = 'whatsnew';
+const NOTES_LIMIT = 500; // Play's cap on "What's new", per language
 
 function fail(message) {
   console.error(`::error::${message}`);
@@ -61,6 +74,25 @@ function serviceAccount() {
     fail('PLAY_SERVICE_ACCOUNT_JSON has no client_email/private_key — is it a service-account key?');
   }
   return key;
+}
+
+/** The release notes in [dir], as Play's [{language, text}], checked. */
+function readNotes(dir = NOTES_DIR) {
+  if (!existsSync(dir)) fail(`No release notes: ${dir}/ is missing. See docs/release.md.`);
+  const notes = readdirSync(dir)
+    .filter((f) => f.endsWith('.txt'))
+    .sort()
+    .map((f) => ({ language: f.slice(0, -4), text: readFileSync(join(dir, f), 'utf8').trim() }));
+  if (!notes.some((n) => n.language === 'en-US')) fail(`${dir}/en-US.txt is missing.`);
+  for (const { language, text } of notes) {
+    if (!text) fail(`${dir}/${language}.txt is empty.`);
+    // Play counts characters; JS length counts UTF-16 units, which agree
+    // for English and Devanagari (both in the Basic Multilingual Plane).
+    if (text.length > NOTES_LIMIT) {
+      fail(`${dir}/${language}.txt is ${text.length} characters; Play allows ${NOTES_LIMIT}.`);
+    }
+  }
+  return notes;
 }
 
 const b64url = (data) => Buffer.from(data).toString('base64url');
@@ -117,6 +149,7 @@ function client(token) {
         `${upload}/edits/${edit}/deobfuscationFiles/${versionCode}/proguard?uploadType=media`,
         { file: mapping },
       ),
+    listings: (edit) => call('GET', `${base}/edits/${edit}/listings`),
     getTrack: (edit, track) => call('GET', `${base}/edits/${edit}/tracks/${track}`),
     setTrack: (edit, track, release) =>
       call('PUT', `${base}/edits/${edit}/tracks/${track}`, { json: { track, releases: [release] } }),
@@ -126,7 +159,16 @@ function client(token) {
 
 async function upload(play, opts) {
   if (!opts.aab) fail('upload needs --aab');
+  const notes = readNotes(opts.notes);
   const edit = await play.openEdit();
+  const { listings = [] } = await play.listings(edit);
+  const listed = new Set(listings.map((l) => l.language));
+  const releaseNotes = notes.filter((n) => listed.has(n.language));
+  for (const n of notes) {
+    if (!listed.has(n.language)) {
+      console.log(`::warning::The store listing has no ${n.language}; its release notes are skipped.`);
+    }
+  }
   const { versionCode } = await play.uploadBundle(edit, opts.aab);
   console.log(`Uploaded ${opts.aab} as version code ${versionCode}`);
   if (opts.mapping) {
@@ -135,6 +177,7 @@ async function upload(play, opts) {
   }
   const release = { versionCodes: [String(versionCode)], status: 'completed' };
   if (opts.name) release.name = opts.name;
+  if (releaseNotes.length > 0) release.releaseNotes = releaseNotes;
   await play.setTrack(edit, TESTING, release);
   await play.commit(edit);
   console.log(`Version code ${versionCode} is the ${TESTING} release (100%).`);
@@ -165,8 +208,17 @@ async function promote(play, opts) {
 }
 
 const { command, opts } = parseArgs(process.argv.slice(2));
+if (command === 'check-notes') {
+  for (const { language, text } of readNotes(opts.notes)) {
+    console.log(`${language} (${text.length}/${NOTES_LIMIT}):\n${text}\n`);
+  }
+  process.exit(0);
+}
 if (command !== 'upload' && command !== 'promote') {
-  fail('Usage: play_publish.mjs upload --aab F [--mapping F] [--name N] | promote [--version-code N]');
+  fail(
+    'Usage: play_publish.mjs upload --aab F [--mapping F] [--name N] [--notes DIR]' +
+      ' | promote [--version-code N] | check-notes [--notes DIR]',
+  );
 }
 const play = client(await accessToken(serviceAccount()));
 await (command === 'upload' ? upload(play, opts) : promote(play, opts));

@@ -43,6 +43,12 @@
 #       --tag NAME    use this tag name instead of the derived one
 #       --no-fetch    skip the fetch that checks the branch/tags against origin
 #       --any-branch  allow cutting from a branch other than main
+#       --same-notes  release with whatsnew/ unchanged since the last tag
+#
+# The Play Store "What's new" text is whatsnew/<language>.txt, written for
+# players (docs/release.md). A release whose notes are the last release's is
+# almost always notes forgotten, so that is refused unless --same-notes says
+# it is meant (a rebuild that changes nothing a player would notice).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -50,7 +56,7 @@ cd "$(dirname "$0")/.."
 readonly MAIN_BRANCH=main
 bump=""
 tag_name=""
-yes=0 dry_run=0 check=0 push=0 tag=1 any_branch=0 fetch=1
+yes=0 dry_run=0 check=0 push=0 tag=1 any_branch=0 fetch=1 same_notes=0
 
 die() { echo "bump_version: $*" >&2; exit 1; }
 confirm() {
@@ -92,6 +98,7 @@ while [ $# -gt 0 ]; do
     --check) check=1 ;;
     --no-tag) tag=0 ;;
     --any-branch) any_branch=1 ;;
+    --same-notes) same_notes=1 ;;
     --no-fetch) fetch=0 ;;
     --tag) shift; tag_name=${1:-}; [ -n "$tag_name" ] || die "--tag needs a name" ;;
     -h|--help) usage; exit 0 ;;
@@ -193,6 +200,21 @@ if [ -n "$tag_ref" ]; then
   fi
 fi
 
+# --- the release notes -----------------------------------------------------
+
+readonly NOTES_DIR=whatsnew NOTES_LIMIT=500
+[ -s "$NOTES_DIR/en-US.txt" ] || die "$NOTES_DIR/en-US.txt is missing or empty — write the release notes first (docs/release.md)"
+for f in "$NOTES_DIR"/*.txt; do
+  # Characters, not bytes: Play's cap is 500 characters of Hindi too.
+  chars=$(tr -d '\n' <"$f" | LC_ALL=C.UTF-8 wc -m | tr -d ' ')
+  [ "$chars" -le "$NOTES_LIMIT" ] || die "$f is $chars characters; Play allows $NOTES_LIMIT"
+done
+if [ -n "$tag_ref" ] && [ "$same_notes" -eq 0 ] \
+   && git diff --quiet "$tag_ref" HEAD -- "$NOTES_DIR" 2>/dev/null \
+   && git cat-file -e "$tag_ref:$NOTES_DIR" 2>/dev/null; then
+  die "$NOTES_DIR/ is unchanged since $tag_ref — update the release notes for players (or --same-notes)"
+fi
+
 IFS=. read -r major minor patch <<<"$base_name"
 
 case "$bump" in
@@ -246,6 +268,9 @@ if [ "$yes" -eq 1 ] || [ ! -t 0 ]; then
 else
   echo "  push      $push_targets (asked for separately, after the commit)"
 fi
+
+echo "  notes     $NOTES_DIR/en-US.txt (Play Store \"What's new\"):"
+sed 's/^/              /' "$NOTES_DIR/en-US.txt"
 
 if [ "$dry_run" -eq 1 ]; then
   echo "bump_version: dry run, nothing changed"
