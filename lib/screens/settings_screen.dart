@@ -55,9 +55,14 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       // Full-width list, phone-width content: on a desktop browser the cards
       // would otherwise stretch across the whole window.
+      // An explicit padding turns off ListView's own system-inset padding, so
+      // the insets are added back: the app draws edge to edge, and the last
+      // card would otherwise scroll to a stop under the navigation bar.
       body: LayoutBuilder(
         builder: (context, constraints) => ListView(
-          padding: const EdgeInsets.all(20) + contentGutter(constraints.maxWidth),
+          padding: const EdgeInsets.all(20) +
+              contentGutter(constraints.maxWidth) +
+              MediaQuery.paddingOf(context),
           children: [
             _SettingCard(
               child: Column(

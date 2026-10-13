@@ -100,3 +100,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // WindowCompat.enableEdgeToEdge (MainActivity) arrived in core 1.17.
+    implementation("androidx.core:core-ktx:1.17.0")
+}
