@@ -17,10 +17,13 @@ class CreditsScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.creditsTitle)),
-      // Full-width list, phone-width content (see SettingsScreen).
+      // Full-width list, phone-width content, system insets added back (see
+      // SettingsScreen).
       body: LayoutBuilder(
         builder: (context, constraints) => ListView(
-          padding: const EdgeInsets.all(20) + contentGutter(constraints.maxWidth),
+          padding: const EdgeInsets.all(20) +
+              contentGutter(constraints.maxWidth) +
+              MediaQuery.paddingOf(context),
           children: [
             for (final credit in credits)
               Container(

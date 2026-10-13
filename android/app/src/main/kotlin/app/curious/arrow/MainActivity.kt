@@ -2,9 +2,11 @@ package app.curious.arrow
 
 import android.content.Context
 import android.os.Build
+import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.core.view.WindowCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -15,6 +17,19 @@ import io.flutter.plugin.common.MethodChannel
 /// service directly through this channel, so a slide always ticks and a
 /// bump always buzzes while the in-app switch is on.
 class MainActivity : FlutterActivity() {
+    /// Android 15+ draws a targetSdk-35 app edge to edge on its own; this
+    /// does the same on older versions (transparent system bars, content
+    /// behind them), so every phone gets the one layout. The Flutter side
+    /// already keeps its content clear of the bars through the system insets.
+    /// FlutterActivity is not a ComponentActivity, so it is the core-library
+    /// call rather than androidx.activity's enableEdgeToEdge(). It runs after
+    /// super.onCreate, which sets its own system-UI flags (and, below API 35,
+    /// a grey status-bar scrim) that would otherwise undo it.
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        WindowCompat.enableEdgeToEdge(window)
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)

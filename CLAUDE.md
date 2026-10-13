@@ -117,6 +117,16 @@ Identity is tied to the **build type**, not a product flavor:
   Vibrator service: Flutter's `HapticFeedback` uses
   `View.performHapticFeedback`, which the OS mutes whenever the user's
   system "touch feedback" is off. iOS keeps `HapticFeedback`.
+- **Edge to edge:** Android 15+ draws a targetSdk-35+ app under the system
+  bars on its own; `MainActivity.onCreate` calls
+  `WindowCompat.enableEdgeToEdge(window)` (androidx.core 1.17, declared in
+  `app/build.gradle.kts`) so older versions match — that is the Play
+  Console's "Edge-to-edge may not display for all users" item. It runs
+  *after* `super.onCreate`, whose own system-UI flags would undo it. The
+  Flutter side keeps clear of the bars through the insets: `SafeArea` on
+  home/onboarding/game, the `AppBar` on settings/credits, whose `ListView`s
+  add `MediaQuery.paddingOf` back (an explicit `padding:` turns off a
+  `ListView`'s own inset padding).
 - **Android SDK in cloud sessions:** not installed by the hook. To build an
   APK: unzip the command-line tools into `/opt/android-sdk/cmdline-tools/latest`,
   `sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358'`,
