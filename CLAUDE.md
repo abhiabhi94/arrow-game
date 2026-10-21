@@ -607,7 +607,11 @@ Key patterns:
   The riddle card reads `Localizations.localeOf(context).languageCode` to
   pick its bank, so the riddles follow the app's language rather than a
   stored copy of it.
-- **Accessibility** (`test/widgets/accessibility_test.dart` pins all of it):
+- **Accessibility** (`test/widgets/accessibility_test.dart` pins the
+  behaviours; `test/accessibility/guidelines_test.dart` runs Flutter's own
+  guideline checks — 48/44 px tap targets, labelled tap targets, text
+  contrast — over every screen and card in both themes; the **Accessibility**
+  workflow below reports both on every PR):
   - *Screen readers.* The board is a canvas, so `_BoardPainter.semanticsBuilder`
     hands the semantics tree **one button per arrow** still on the board,
     over its cells, labelled by `widgets/board_semantics.dart` — where it is,
@@ -697,6 +701,26 @@ hook reads the same file). Job "Analyze & test" runs `flutter analyze
 builds the web app, drives it in headless Chromium (`tool/screenshot.mjs`)
 at a phone viewport and at 1440×900 with keyboard presses, fails on any
 Flutter exception, and uploads `shots/`.
+
+`.github/workflows/accessibility.yml` runs on every PR and reports on it
+with two sticky comments. Job "Accessibility checks" runs the accessibility
+suites with the JSON reporter and `tool/a11y_report.py` turns the stream
+into a table: a row per check, and for a failure the guideline's own reason
+(which node, what size, what contrast), so the why is on the PR without
+opening the logs; the job fails when a check does. Job "Before/after
+screenshots" builds the base branch and the PR, drives both through
+`tool/screenshot.mjs` with the same flows (the PR's harness drives both, so
+it has to keep matching the old accessible names too — see `labels.board`),
+and `tool/compare_shots.py` (pure Pillow) writes one image per screen whose
+pixels changed — base left, PR right, the changed regions boxed and numbered
+in red (clusters under `kMinArea` are ignored, which is what keeps the level
+clock's digits from counting) — plus a summary with any problem the harness
+hit on the PR's build and the screen it failed on. The images go to
+`gh-pages` under `pr-preview/pr-<number>-a11y/` (a sibling of the preview
+folder, since the preview deploy wipes its own folder on every push) and
+are removed with the comments when the PR closes. The guideline test uses
+the hand-built sample board: on a real late level the arrow nodes are far
+under 48 px, which is the game's design and the zoom's job, not a failure.
 
 Job "Debug APK" builds `flutter build apk --debug` ("Arrow Testing", every
 level unlocked), uploads it as the `arrow-debug-apk` artifact and, on a PR,

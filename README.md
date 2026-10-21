@@ -91,6 +91,9 @@ the way its head points, until it leaves the board. Get every arrow out.
   and *Extra time* (twice the clock on every level).
 - Text follows the system font size, every colour pairing meets WCAG AA
   contrast, and nothing is told by colour alone.
+- All of it is checked on every pull request: Flutter's accessibility
+  guidelines on every screen, the behaviours above, and before/after
+  screenshots with the changes boxed, posted on the PR.
 
 ## Architecture
 

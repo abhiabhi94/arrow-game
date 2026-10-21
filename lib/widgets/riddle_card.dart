@@ -329,6 +329,9 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
                   // the hint under it.
                   Wrap(
                     alignment: WrapAlignment.center,
+                    // The tappable chip is taller than the fact chips (a 44 px
+                    // target), so the row centres them on each other.
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     spacing: 8,
                     runSpacing: 8,
                     children: [

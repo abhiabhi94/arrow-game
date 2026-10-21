@@ -1,0 +1,264 @@
+name: Accessibility
+
+# The accessibility audit, repeated on every pull request and reported on it:
+#
+# 1. "Accessibility checks" runs the accessibility test suites (Flutter's
+#    guideline checks — tap targets, labelled tap targets, text contrast — on
+#    every screen in both themes, the screen-reader / keyboard / large-font /
+#    reduced-motion behaviours, and the palette's contrast pins) and posts a
+#    sticky comment with a row per check and, for a failure, the guideline's
+#    own reason. The job fails when a check does.
+# 2. "Before/after screenshots" builds the base branch and the PR, drives both
+#    through tool/screenshot.mjs with the same flows, and posts the screens
+#    whose pixels changed as side-by-side images with the changed regions
+#    boxed in red (tool/compare_shots.py) — plus any problem the harness hit
+#    on the PR's build, with the screen it failed on. The images are published
+#    to gh-pages next to the PR preview and removed when the PR closes.
+#
+# Skipped for PRs from forks (no token to write gh-pages or comment).
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  contents: write # the screenshots go to gh-pages
+  pull-requests: write # the two sticky comments
+
+concurrency:
+  group: a11y-${{ github.event.number }}
+  cancel-in-progress: true
+
+env:
+  SHOTS_DIR: pr-preview/pr-${{ github.event.number }}-a11y
+  PLAYWRIGHT_VERSION: 1.56.1
+
+jobs:
+  checks:
+    name: Accessibility checks
+    runs-on: ubuntu-24.04
+    if: github.event.action != 'closed'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Read pinned Flutter version
+        id: flutter
+        run: echo "version=$(tr -d '[:space:]' < .flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+
+      - name: Run the accessibility suites
+        id: tests
+        run: |
+          flutter pub get
+          flutter gen-l10n
+          status=0
+          flutter test --reporter json \
+            test/accessibility \
+            test/widgets/accessibility_test.dart \
+            test/widgets/puzzle_board_semantics_test.dart \
+            test/widgets/board_semantics_test.dart \
+            test/models/board_cursor_test.dart \
+            test/ui/theme_test.dart \
+            > a11y.jsonl || status=1
+          python3 tool/a11y_report.py a11y.jsonl > a11y-report.md || status=1
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          cat a11y-report.md
+
+      - name: Comment the report on the PR
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: a11y-checks
+          path: a11y-report.md
+
+      - name: Fail when a check failed
+        if: steps.tests.outputs.status != '0'
+        run: |
+          echo "::error::An accessibility check failed; see the report above or the PR comment."
+          exit 1
+
+  shots:
+    name: Before/after screenshots
+    runs-on: ubuntu-24.04
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout the PR
+        uses: actions/checkout@v7
+
+      - name: Checkout the base branch beside it
+        run: |
+          git fetch --depth 1 origin "${{ github.event.pull_request.base.sha }}"
+          git worktree add ../base "${{ github.event.pull_request.base.sha }}"
+
+      - name: Read pinned Flutter version
+        id: flutter
+        run: echo "version=$(tr -d '[:space:]' < .flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+
+      - name: Build both web apps (debug = all levels unlocked)
+        run: |
+          flutter pub get
+          flutter gen-l10n
+          flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run
+          (cd ../base && flutter pub get && flutter gen-l10n \
+            && flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run)
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install Playwright + Chromium, and Pillow
+        run: |
+          npm install -g "playwright@$PLAYWRIGHT_VERSION"
+          npx --yes "playwright@$PLAYWRIGHT_VERSION" install --with-deps chromium
+          python3 -m pip install --quiet pillow
+
+      # The PR's harness drives both builds (it knows both the old and the
+      # new accessible names). The PR's run is strict — a Flutter exception
+      # or a flow that could not finish is a failure here too — and its log
+      # is kept for the comment; the base's run only has to produce pictures.
+      - name: Drive both builds
+        id: drive
+        env:
+          RUNS: |
+            --levels 1,20 --settings --hint
+            --levels 16 --dark --hint --grid
+            --levels 1 --riddle 2,4,2,3,2,2
+            --levels 3 --resume
+            --onboarding
+            --levels 1 --viewport 1440x900 --keys ArrowDown,ArrowDown
+        run: |
+          export NODE_PATH="$(npm root -g)"
+          status=0
+          while IFS= read -r line; do
+            [ -z "${line// }" ] && continue
+            echo "::group::PR: $line"
+            # shellcheck disable=SC2086
+            node tool/screenshot.mjs $line --scale 1 --out shots/head 2>&1 | tee -a head.log || status=1
+            echo "::endgroup::"
+            echo "::group::base: $line"
+            # shellcheck disable=SC2086
+            node tool/screenshot.mjs $line --scale 1 --no-strict --build-dir ../base/build/web --out shots/base || true
+            echo "::endgroup::"
+          done <<< "$RUNS"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Compare
+        env:
+          URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.SHOTS_DIR }}
+        run: |
+          python3 tool/compare_shots.py shots/base shots/head a11y-shots --log head.log --url "$URL"
+          {
+            echo "📸 **Before / after** for ${{ github.event.pull_request.head.sha }}: base on the left, this PR on the right, changed regions boxed in red. Images go live a minute or so after Pages rebuilds."
+            echo
+            cat a11y-shots/summary.md
+          } > a11y-shots-comment.md
+
+      - name: Publish the images to gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: a11y-shots
+          target-folder: ${{ env.SHOTS_DIR }}
+          clean: true
+          force: false
+          commit-message: 'Before/after screenshots for PR #${{ github.event.number }} (${{ github.event.pull_request.head.sha }})'
+
+      - name: Comment the screenshots on the PR
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: a11y-shots
+          path: a11y-shots-comment.md
+
+      - name: Upload the raw screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: a11y-screenshots
+          path: |
+            shots/
+            a11y-shots/
+          if-no-files-found: warn
+
+      - name: Fail when the PR build could not be driven
+        if: steps.drive.outputs.status != '0'
+        run: |
+          echo "::error::tool/screenshot.mjs hit a problem on the PR build; see the comment and head.log."
+          exit 1
+
+  remove:
+    name: Remove the screenshots
+    runs-on: ubuntu-24.04
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Look for the gh-pages branch
+        id: branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          url="https://x-access-token:$GH_TOKEN@github.com/${{ github.repository }}"
+          if git ls-remote --exit-code --heads "$url" gh-pages > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout gh-pages
+        if: steps.branch.outputs.exists == 'true'
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+
+      # Re-fetch before each attempt so a concurrent deploy is picked up
+      # instead of overwritten (the same dance as pr-preview.yml).
+      - name: Delete the screenshots folder
+        if: steps.branch.outputs.exists == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch --depth 1 origin gh-pages
+            git reset --hard FETCH_HEAD
+            if [ ! -d "$SHOTS_DIR" ]; then
+              echo "No $SHOTS_DIR on gh-pages; nothing to remove."
+              exit 0
+            fi
+            git rm -rq "$SHOTS_DIR"
+            git commit -qm "Remove before/after screenshots for PR #${{ github.event.number }}"
+            if git push origin HEAD:gh-pages; then
+              exit 0
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "::error::Could not remove $SHOTS_DIR from gh-pages after 3 attempts."
+          exit 1
+
+      - name: Remove the comments
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: a11y-shots
+          delete: true
+
+      - name: Remove the checks comment
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: a11y-checks
+          delete: true
