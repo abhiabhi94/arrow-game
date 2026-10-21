@@ -6,10 +6,15 @@ import '../models/level_progress.dart';
 import '../ui/colors.dart';
 
 /// Hearts for the lives left; a lost heart shrinks and greys out.
+///
+/// A live region: the label changes when a life goes, and a screen reader
+/// says so ("2 lives left") the moment the bump lands. With [reduceMotion]
+/// the lost heart simply greys out.
 class LivesIndicator extends StatelessWidget {
-  const LivesIndicator({super.key, required this.livesLeft});
+  const LivesIndicator({super.key, required this.livesLeft, this.reduceMotion = false});
 
   final int livesLeft;
+  final bool reduceMotion;
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +22,8 @@ class LivesIndicator extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Semantics(
       label: l10n.hudLives(livesLeft),
+      liveRegion: true,
+      excludeSemantics: true,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: List<Widget>.generate(maxLives, (i) {
@@ -29,7 +36,7 @@ class LivesIndicator extends StatelessWidget {
               color: alive ? p.heartFull : p.heartEmpty,
             ),
           );
-          if (alive) return heart;
+          if (alive || reduceMotion) return heart;
           // Keyed so the pop plays once, when this heart is lost.
           return heart
               .animate(key: ValueKey<String>('lost-$i'))

@@ -70,10 +70,11 @@ ThemeData _buildTheme(ArrowPalette p, Brightness brightness) {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     ),
+    // Lettering on a surface takes primaryInk, not the primary: see colors.dart.
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: p.primary,
-        side: BorderSide(color: p.primaryLight, width: 1.5),
+        foregroundColor: p.primaryInk,
+        side: BorderSide(color: p.primaryInk, width: 1.5),
         textStyle: const TextStyle(
           fontFamily: kFontFamily,
           fontWeight: FontWeight.w700,
@@ -85,7 +86,7 @@ ThemeData _buildTheme(ArrowPalette p, Brightness brightness) {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: p.primary,
+        foregroundColor: p.primaryInk,
         textStyle: const TextStyle(fontFamily: kFontFamily, fontWeight: FontWeight.w600),
       ),
     ),

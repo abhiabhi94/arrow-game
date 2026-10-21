@@ -1,15 +1,18 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import '../engine/arrow_piece.dart';
 import '../engine/cell.dart';
 import '../engine/direction.dart';
 import '../engine/puzzle.dart';
+import '../l10n/app_localizations.dart';
 import '../models/bump_motion.dart';
 import '../models/game_state.dart';
 import '../models/reaction_motion.dart';
 import '../ui/colors.dart';
+import 'board_semantics.dart';
 
 /// How far the arrow that was hit is shoved along, in cells, at full jolt.
 const double kShoveDistance = 0.12;
@@ -36,6 +39,16 @@ const Duration kHintPingPeriod = Duration(milliseconds: 1100);
 ///
 /// Game state changes instantly on a tap; the slide-out and bump animations
 /// are purely visual and live here, keyed on [GameState.moveToken].
+///
+/// **Accessibility.** The canvas is one picture, so the painter hands the
+/// semantics tree one node per arrow still on the board, placed over its
+/// cells and labelled the way `board_semantics.dart` describes it, with a
+/// tap action that plays it — a screen reader can walk the arrows and slide
+/// one out. The board itself is a container labelled with its size and how
+/// many arrows are left. With [focusedArrowId] set (the keyboard cursor on
+/// the game screen) a ring is drawn around that arrow. With [reduceMotion]
+/// the bump no longer travels (the hit cell still flashes), the hint glow
+/// holds still instead of pulsing and a lost level does not slump.
 class PuzzleBoard extends StatefulWidget {
   const PuzzleBoard({
     super.key,
@@ -43,6 +56,8 @@ class PuzzleBoard extends StatefulWidget {
     required this.showGrid,
     required this.onTapArrow,
     this.zoom = 1,
+    this.focusedArrowId,
+    this.reduceMotion = false,
   });
 
   final GameState state;
@@ -52,6 +67,12 @@ class PuzzleBoard extends StatefulWidget {
   /// The scale the board is being viewed at, so touch slop stays the same
   /// size on screen however far in the player has pinched.
   final double zoom;
+
+  /// The arrow the keyboard cursor is on, ringed on the board; null for none.
+  final int? focusedArrowId;
+
+  /// Keep the board's motion to what carries information (see `ui/motion.dart`).
+  final bool reduceMotion;
 
   @override
   State<PuzzleBoard> createState() => _PuzzleBoardState();
@@ -91,6 +112,12 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   @override
   void didUpdateWidget(PuzzleBoard old) {
     super.didUpdateWidget(old);
+    if (old.reduceMotion != widget.reduceMotion) {
+      _hintPing?.dispose();
+      _hintPing = null;
+      _slump?.dispose();
+      _slump = null;
+    }
     _syncHintPing();
     final s = widget.state;
     if (s.puzzle != old.state.puzzle || s.moveToken < old.state.moveToken) {
@@ -172,7 +199,8 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   void _syncSlump() {
     final ending =
         widget.state.phase == GamePhase.outOfLives || widget.state.phase == GamePhase.timeUp;
-    final losing = ending && _bump == null;
+    // A sagging board is motion for its own sake; the card says what happened.
+    final losing = ending && _bump == null && !widget.reduceMotion;
     if (losing == (_slump != null)) return;
     if (losing) {
       _slump =
@@ -188,9 +216,11 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     }
   }
 
-  /// Runs the ping while a hint points somewhere, and stops it otherwise.
+  /// Runs the ping while a hint points somewhere, and stops it otherwise. With
+  /// motion reduced the glow is enough: the hinted arrow is the one thing
+  /// still bright on a dimmed board.
   void _syncHintPing() {
-    final showing = widget.state.hintArrowId != null;
+    final showing = widget.state.hintArrowId != null && !widget.reduceMotion;
     if (showing == (_hintPing != null)) return;
     if (showing) {
       _hintPing = AnimationController(vsync: this, duration: kHintPingPeriod)
@@ -292,6 +322,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   Widget build(BuildContext context) {
     final puzzle = widget.state.puzzle!;
     final p = context.palette;
+    final l10n = AppLocalizations.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellSize = min(
@@ -300,14 +331,19 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
         );
         final size = Size(cellSize * puzzle.width, cellSize * puzzle.height);
         return Center(
+          // The board is a labelled container and the painter supplies one
+          // node per arrow; the gesture detector adds nothing of its own,
+          // since a semantic tap on the whole board would land at its centre.
           child: Semantics(
-            label: 'Puzzle board ${puzzle.width} by ${puzzle.height}',
+            container: true,
+            label: l10n == null ? null : boardLabel(l10n, widget.state),
             child: Listener(
               onPointerDown: (_) => _onPointerDown(),
               onPointerUp: (_) => _onPointerUp(),
               onPointerCancel: (_) => _onPointerUp(),
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
+                excludeFromSemantics: true,
                 onTapUp: (d) => _onTapUp(d, cellSize),
                 child: CustomPaint(
                   size: size,
@@ -321,6 +357,11 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
                     bumpId: _bumpId,
                     bump: _bump?.value,
                     bumpMotion: _bumpMotion,
+                    travel: widget.reduceMotion ? 0 : 1,
+                    focusedId: widget.focusedArrowId,
+                    l10n: l10n,
+                    textDirection: Directionality.of(context),
+                    onTapArrow: widget.onTapArrow,
                   ),
                 ),
               ),
@@ -343,11 +384,34 @@ class _BoardPainter extends CustomPainter {
     required this.bumpId,
     required this.bump,
     required this.bumpMotion,
+    required this.travel,
+    required this.focusedId,
+    required this.l10n,
+    required this.textDirection,
+    required this.onTapArrow,
   });
 
   final GameState state;
   final ArrowPalette palette;
   final bool showGrid;
+
+  /// How far the bump actually moves the arrows, 0..1: 0 with motion reduced,
+  /// when only the flash marks the hit.
+  final double travel;
+
+  /// The arrow the keyboard cursor rings, if any.
+  final int? focusedId;
+
+  /// For the labels of the semantics nodes, or null when no localizations
+  /// are in scope (then the board stays one node).
+  final AppLocalizations? l10n;
+
+  /// For the labels: a semantics node with a label has to say which way it
+  /// reads.
+  final TextDirection textDirection;
+
+  /// What a semantic tap on an arrow does.
+  final ValueChanged<int> onTapArrow;
 
   /// Slide-out progress (0..1) per exiting arrow.
   final Map<int, double> exits;
@@ -398,7 +462,7 @@ class _BoardPainter extends CustomPainter {
     final bumping =
         blocked != null && bumpT != null && motion != null && bumpId == state.lastMoveId;
     final flash = bumping ? motion.flashAt(bumpT) : 0.0;
-    final shove = bumping ? motion.shoveAt(bumpT) : 0.0;
+    final shove = bumping ? motion.shoveAt(bumpT) * travel : 0.0;
     final hitId = bumping ? puzzle.arrowAt(blocked) : null;
     if (bumping && flash > 0) {
       canvas.drawRRect(
@@ -420,7 +484,7 @@ class _BoardPainter extends CustomPainter {
       if (exiting != null) {
         offset = Curves.easeIn.transform(exiting) * travel;
       } else if (bumping && bumpId == arrow.id) {
-        offset = motion.offsetAt(bumpT);
+        offset = motion.offsetAt(bumpT) * travel;
       }
       final shoved = bumping && arrow.id == hitId && shove > 0;
       if (shoved) {
@@ -444,8 +508,86 @@ class _BoardPainter extends CustomPainter {
       if (shoved) canvas.restore();
     }
     _paintHint(canvas, size, cs);
+    _paintCursor(canvas, cs);
     canvas.restore();
   }
+
+  /// The keyboard cursor: a rounded ring around the cells of the focused
+  /// arrow, in the primary, so a player on a laptop can see which arrow
+  /// Enter will play.
+  void _paintCursor(Canvas canvas, double cs) {
+    final id = focusedId;
+    if (id == null || id >= puzzle.arrowCount || state.removed.contains(id)) return;
+    final rect = _bounds(puzzle.arrows[id], cs).inflate(cs * 0.18);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, Radius.circular(cs * 0.35)),
+      Paint()
+        ..color = palette.primary
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2.0, min(cs * 0.14, 4.0)),
+    );
+  }
+
+  /// The box around every cell of [arrow], in canvas pixels.
+  static Rect _bounds(ArrowPiece arrow, double cs) {
+    var minX = arrow.cells.first.x, maxX = minX, minY = arrow.cells.first.y, maxY = minY;
+    for (final c in arrow.cells) {
+      minX = min(minX, c.x);
+      maxX = max(maxX, c.x);
+      minY = min(minY, c.y);
+      maxY = max(maxY, c.y);
+    }
+    return Rect.fromLTRB(minX * cs, minY * cs, (maxX + 1) * cs, (maxY + 1) * cs);
+  }
+
+  /// One semantics node per arrow still on the board, over the cells it
+  /// covers, labelled as `board_semantics.dart` describes it and tappable.
+  /// Only ever called with semantics on, so the big boards pay nothing for
+  /// it otherwise.
+  @override
+  SemanticsBuilderCallback? get semanticsBuilder {
+    final strings = l10n;
+    if (strings == null) return null;
+    return (Size size) {
+      final cs = size.width / puzzle.width;
+      final nodes = <CustomPainterSemantics>[];
+      // Reading order: by the head's row, then its column.
+      final order = <ArrowPiece>[
+        for (final a in puzzle.arrows)
+          if (!state.removed.contains(a.id)) a,
+      ]..sort((a, b) => a.head.y != b.head.y ? a.head.y - b.head.y : a.head.x - b.head.x);
+      for (var i = 0; i < order.length; i++) {
+        final arrow = order[i];
+        nodes.add(
+          CustomPainterSemantics(
+            key: ValueKey<int>(arrow.id),
+            rect: _bounds(arrow, cs),
+            properties: SemanticsProperties(
+              label: arrowLabel(strings, state, arrow.id),
+              textDirection: textDirection,
+              hintOverrides: SemanticsHintOverrides(onTapHint: strings.arrowTapHint),
+              button: true,
+              enabled: state.isPlaying,
+              focused: arrow.id == focusedId,
+              sortKey: OrdinalSortKey(i.toDouble()),
+              onTap: state.isPlaying ? () => onTapArrow(arrow.id) : null,
+            ),
+          ),
+        );
+      }
+      return nodes;
+    };
+  }
+
+  @override
+  bool shouldRebuildSemantics(_BoardPainter old) =>
+      old.state.puzzle != state.puzzle ||
+      old.state.removed != state.removed ||
+      old.state.bumped != state.bumped ||
+      old.state.hintArrowId != state.hintArrowId ||
+      old.state.phase != state.phase ||
+      old.focusedId != focusedId ||
+      old.l10n != l10n;
 
   /// The hint, drawn over the finished board: everything else dims behind a
   /// veil, the hinted arrow is redrawn at full strength on top of it, and a
@@ -590,7 +732,9 @@ class _BoardPainter extends CustomPainter {
       old.palette != palette ||
       !_sameMap(old.exits, exits) ||
       old.bumpId != bumpId ||
-      old.bump != bump;
+      old.bump != bump ||
+      old.travel != travel ||
+      old.focusedId != focusedId;
 
   static bool _sameMap(Map<int, double> a, Map<int, double> b) {
     if (a.length != b.length) return false;

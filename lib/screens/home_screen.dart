@@ -12,6 +12,7 @@ import '../providers/progress_provider.dart';
 import '../providers/saved_game_provider.dart';
 import '../ui/colors.dart';
 import '../ui/layout.dart';
+import '../ui/motion.dart';
 import '../utils/format.dart';
 import '../utils/labels.dart';
 import 'game_screen.dart';
@@ -58,6 +59,7 @@ class HomeScreen extends ConsumerWidget {
                     tagline: l10n.appTagline,
                     stars: notifier.totalStars,
                     palette: p,
+                    textScaler: MediaQuery.textScalerOf(context),
                     settingsTooltip: l10n.homeSettings,
                     onSettings: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
@@ -98,21 +100,29 @@ class HomeScreen extends ConsumerWidget {
                           textBaseline: TextBaseline.alphabetic,
                           children: [
                             Expanded(
-                              child: Text(
-                                l10n.homeJourney,
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  color: p.textInk,
+                              child: Semantics(
+                                header: true,
+                                child: Text(
+                                  l10n.homeJourney,
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: p.textInk,
+                                  ),
                                 ),
                               ),
                             ),
-                            Text(
-                              l10n.homeLevelsCleared(notifier.levelsCleared, totalLevels),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: p.textMuted,
+                            // Flexible so a large system font wraps the count
+                            // rather than running off the row.
+                            Flexible(
+                              child: Text(
+                                l10n.homeLevelsCleared(notifier.levelsCleared, totalLevels),
+                                textAlign: TextAlign.end,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: p.textMuted,
+                                ),
                               ),
                             ),
                           ],
@@ -151,6 +161,7 @@ class _HomeHeader extends SliverPersistentHeaderDelegate {
     required this.tagline,
     required this.stars,
     required this.palette,
+    required this.textScaler,
     required this.settingsTooltip,
     required this.onSettings,
   });
@@ -159,21 +170,33 @@ class _HomeHeader extends SliverPersistentHeaderDelegate {
   final String tagline;
   final int stars;
   final ArrowPalette palette;
+
+  /// The system font size: the header has to make room for the title and
+  /// tagline it draws, or a large setting overflows the extent.
+  final TextScaler textScaler;
   final String settingsTooltip;
   final VoidCallback onSettings;
 
-  @override
-  double get maxExtent => 96;
+  /// The title's and tagline's line heights at 1x (generous: a typeface's
+  /// line is taller than its size), plus the vertical padding.
+  static const double _titleLine = 36 * 1.6;
+  static const double _headingLine = 24 * 1.6;
+  static const double _taglineLine = 15 * 1.6;
+  static const double _padding = 16;
 
   @override
-  double get minExtent => 62;
+  double get maxExtent => max(96, textScaler.scale(_titleLine + _taglineLine) + _padding);
+
+  @override
+  double get minExtent => max(62, textScaler.scale(_headingLine) + _padding);
 
   @override
   bool shouldRebuild(_HomeHeader old) =>
       old.stars != stars ||
       old.palette != palette ||
       old.title != title ||
-      old.tagline != tagline;
+      old.tagline != tagline ||
+      old.textScaler != textScaler;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -190,38 +213,49 @@ class _HomeHeader extends SliverPersistentHeaderDelegate {
           child: Row(
             children: [
               Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontSize: lerpDouble(36, 24, t),
-                        fontWeight: FontWeight.w800,
-                        color: palette.textInk,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    // heightFactor folds the line away rather than cutting
-                    // it; once folded it leaves the tree altogether, so a
-                    // screen reader is not still reading it out.
-                    if (t < 1)
-                      Align(
-                        alignment: Alignment.topLeft,
-                        heightFactor: 1 - t,
-                        child: Opacity(
-                          opacity: 1 - t,
-                          child: Text(
-                            tagline,
-                            maxLines: 1,
-                            style: TextStyle(color: palette.textMuted, fontSize: 15),
+                // Scales the lettering down rather than overflowing if a
+                // font's metrics outgrow the extent's estimate.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: lerpDouble(36, 24, t),
+                            fontWeight: FontWeight.w800,
+                            color: palette.textInk,
+                            letterSpacing: -0.5,
                           ),
                         ),
                       ),
-                  ],
+                      // heightFactor folds the line away rather than cutting
+                      // it; once folded it leaves the tree altogether, so a
+                      // screen reader is not still reading it out.
+                      if (t < 1)
+                        Align(
+                          alignment: Alignment.topLeft,
+                          heightFactor: 1 - t,
+                          child: Opacity(
+                            opacity: 1 - t,
+                            child: Text(
+                              tagline,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: palette.textMuted, fontSize: 15),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
               _StarsPill(stars: stars, total: totalLevels * 3),
@@ -292,9 +326,27 @@ class _NextUpCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
-    return Semantics(
-      label: '${l10n.levelNumber(level)} ${levelName(l10n, level)}',
+    final eyebrow = resume != null
+        ? l10n.homeResumeEyebrow
+        : allCleared
+            ? l10n.homeAllCleared
+            : l10n.homeNextUp;
+    final action = resume != null
+        ? l10n.homeContinue
+        : allCleared
+            ? l10n.homeReplay
+            : l10n.homePlay;
+    // One button to a screen reader, saying everything the card shows, in
+    // the order it shows it; the pieces inside are not read a second time.
+    final card = Semantics(
+      label: [
+        eyebrow,
+        '${l10n.levelNumber(level)}, ${levelName(l10n, level)}',
+        ?resume,
+        action,
+      ].join('. '),
       button: true,
+      excludeSemantics: true,
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(24),
@@ -325,14 +377,12 @@ class _NextUpCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Full-strength white: at 70% the 12 px eyebrow sat
+                        // at 3.2:1 on the gradient.
                         Text(
-                          resume != null
-                              ? l10n.homeResumeEyebrow.toUpperCase()
-                              : allCleared
-                                  ? l10n.homeAllCleared
-                                  : l10n.homeNextUp.toUpperCase(),
+                          allCleared && resume == null ? eyebrow : eyebrow.toUpperCase(),
                           style: const TextStyle(
-                            color: Colors.white70,
+                            color: Colors.white,
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                             letterSpacing: 1.2,
@@ -350,7 +400,7 @@ class _NextUpCard extends StatelessWidget {
                         Text(
                           levelName(l10n, level),
                           style: const TextStyle(
-                            color: Colors.white70,
+                            color: Colors.white,
                             fontWeight: FontWeight.w600,
                             fontSize: 15,
                           ),
@@ -376,18 +426,17 @@ class _NextUpCard extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                     ),
+                    // The pill is white in both themes, so its ink is the
+                    // deep primary in both: the dark theme's primary on
+                    // white was 4.1:1.
                     child: Row(
                       children: [
-                        Icon(Icons.play_arrow_rounded, color: p.primary),
+                        Icon(Icons.play_arrow_rounded, color: p.primaryDark),
                         const SizedBox(width: 4),
                         Text(
-                          resume != null
-                              ? l10n.homeContinue
-                              : allCleared
-                                  ? l10n.homeReplay
-                                  : l10n.homePlay,
+                          action,
                           style: TextStyle(
-                            color: p.primary,
+                            color: p.primaryDark,
                             fontWeight: FontWeight.w800,
                             fontSize: 16,
                           ),
@@ -401,7 +450,9 @@ class _NextUpCard extends StatelessWidget {
           ),
         ),
       ),
-    ).animate().fadeIn(duration: 250.ms).slideY(begin: -0.08);
+    );
+    if (reduceMotionOf(context)) return card;
+    return card.animate().fadeIn(duration: 250.ms).slideY(begin: -0.08);
   }
 }
 
@@ -556,8 +607,9 @@ class _LevelNode extends StatelessWidget {
     final Color fill;
     final Color fg;
     if (cleared) {
+      // Dark ink on the mint: white on it read at 1.9:1.
       fill = p.accentMint;
-      fg = Colors.white;
+      fg = p.onAccent;
     } else if (isCurrent) {
       fill = p.primary;
       fg = Colors.white;
@@ -565,8 +617,10 @@ class _LevelNode extends StatelessWidget {
       fill = p.surface;
       fg = p.textInk;
     } else {
+      // A locked level is still a number to read, so muted rather than faint
+      // (2.5:1 on the light surface).
       fill = p.surface;
-      fg = p.textFaint;
+      fg = p.textMuted;
     }
 
     final circle = Container(
@@ -614,15 +668,28 @@ class _LevelNode extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: p.outlineSoft, width: 1.5),
                   ),
-                  child: Icon(Icons.lock_rounded, color: p.textFaint, size: 13),
+                  child: Icon(Icons.lock_rounded, color: p.textMuted, size: 13),
                 ),
               ),
             ],
           );
 
-    return Semantics(
-      label: unlocked ? l10n.levelNumber(level) : '${l10n.levelNumber(level)} ${l10n.levelLocked}',
+    // Everything the node shows, in one label: the number, the name and its
+    // state — locked, up next, or cleared with its stars and best time.
+    final best = progress.bestTimeMs;
+    final label = [
+      '${l10n.levelNumber(level)}, ${levelName(l10n, level)}',
+      if (!unlocked) l10n.levelLocked,
+      if (isCurrent) l10n.levelUpNext,
+      if (cleared) l10n.levelCleared,
+      if (cleared) l10n.starsOfThree(progress.stars),
+      if (cleared && best != null) l10n.levelBestTime(formatDurationMs(best)),
+    ].join(', ');
+    final tile = Semantics(
+      label: label,
       button: unlocked,
+      enabled: unlocked,
+      excludeSemantics: true,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -634,9 +701,10 @@ class _LevelNode extends StatelessWidget {
                     ),
                   )
               : null,
+          // No fixed height: the caption under the node grows with the system
+          // font size, and the node is positioned by its top on the trail.
           child: SizedBox(
             width: size + 40,
-            height: size + 36,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -652,10 +720,10 @@ class _LevelNode extends StatelessWidget {
                           size: 13,
                           color: i < progress.stars ? p.star : p.starEmpty,
                         ),
-                      if (progress.bestTimeMs != null) ...[
+                      if (best != null) ...[
                         const SizedBox(width: 4),
                         Text(
-                          formatDurationMs(progress.bestTimeMs!),
+                          formatDurationMs(best),
                           style: TextStyle(fontSize: 10, color: p.textMuted),
                         ),
                       ],
@@ -664,10 +732,11 @@ class _LevelNode extends StatelessWidget {
                 else if (unlocked)
                   Text(
                     levelName(l10n, level),
+                    maxLines: 1,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: isCurrent ? p.primary : p.textMuted,
+                      color: isCurrent ? p.primaryInk : p.textMuted,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -676,6 +745,11 @@ class _LevelNode extends StatelessWidget {
           ),
         ),
       ),
-    ).animate(delay: (min(level, 12) * 30).ms).fadeIn(duration: 200.ms).scale(begin: const Offset(0.85, 0.85));
+    );
+    if (reduceMotionOf(context)) return tile;
+    return tile
+        .animate(delay: (min(level, 12) * 30).ms)
+        .fadeIn(duration: 200.ms)
+        .scale(begin: const Offset(0.85, 0.85));
   }
 }

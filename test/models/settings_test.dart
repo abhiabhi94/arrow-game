@@ -15,6 +15,10 @@ void main() {
     // The device decides which language the app opens in until the player
     // says otherwise.
     expect(Settings.defaults.languageChoice, LanguageChoice.system);
+    // Accessibility options are opt-in: the game is lively and brisk until
+    // the player asks otherwise.
+    expect(Settings.defaults.reduceMotion, isFalse);
+    expect(Settings.defaults.extraTime, isFalse);
   });
 
   test('copyWith and equality', () {
@@ -29,6 +33,8 @@ void main() {
       musicVolume: 0.2,
       onboardingDone: true,
       languageChoice: LanguageChoice.hindi,
+      reduceMotion: true,
+      extraTime: true,
     );
     const expected = Settings(
       musicOn: false,
@@ -39,9 +45,13 @@ void main() {
       gridLinesOn: true,
       onboardingDone: true,
       languageChoice: LanguageChoice.hindi,
+      reduceMotion: true,
+      extraTime: true,
     );
     expect(grid, expected);
     expect(grid.hashCode, expected.hashCode);
     expect(grid, isNot(dark));
+    expect(grid.copyWith(extraTime: false), isNot(expected));
+    expect(grid.copyWith(reduceMotion: false), isNot(expected));
   });
 }

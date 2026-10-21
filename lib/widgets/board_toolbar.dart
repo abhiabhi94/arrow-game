@@ -67,6 +67,7 @@ class BoardToolbar extends StatelessWidget {
           tooltip: gridUnlocked ? l10n.toolGrid : l10n.toolGridLocked(gridUnlockLevel),
           icon: gridUnlocked ? Icons.grid_4x4_rounded : Icons.lock_rounded,
           active: gridUnlocked && gridOn,
+          toggled: gridUnlocked ? gridOn : null,
           onPressed: gridUnlocked ? onToggleGrid : null,
         ),
         const SizedBox(width: 12),
@@ -92,6 +93,7 @@ class _ToolButton extends StatelessWidget {
     required this.icon,
     this.badge,
     this.active = false,
+    this.toggled,
     required this.onPressed,
   });
 
@@ -99,6 +101,10 @@ class _ToolButton extends StatelessWidget {
   final IconData icon;
   final String? badge;
   final bool active;
+
+  /// For a button that is a switch (the grid lines): its state, so a screen
+  /// reader says "on" or "off" rather than leaving the fill to say it.
+  final bool? toggled;
   final VoidCallback? onPressed;
 
   @override
@@ -109,6 +115,7 @@ class _ToolButton extends StatelessWidget {
       label: tooltip,
       button: true,
       enabled: enabled,
+      toggled: toggled,
       child: Tooltip(
         message: tooltip,
         child: Material(

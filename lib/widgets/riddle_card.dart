@@ -22,6 +22,7 @@ import '../models/riddle.dart';
 import '../services/haptics_service.dart';
 import '../services/sfx_service.dart';
 import '../ui/colors.dart';
+import '../ui/motion.dart';
 import 'result_card.dart';
 
 export '../models/riddle.dart' show RiddlePrize;
@@ -278,7 +279,6 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
           (RiddlePrize.hint, true) => l10n.riddleCloseHint(answer),
           (RiddlePrize.hint, false) => l10n.riddleCorrectBodyHint(answer),
         },
-        scrollable: true,
         content: Text(
           l10n.riddleSolvedCount(widget.solvedCount + 1),
           style: TextStyle(color: p.textMuted, fontWeight: FontWeight.w700),
@@ -299,7 +299,6 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
         RiddlePrize.life => l10n.riddleIntro,
         RiddlePrize.hint => l10n.riddleIntroHint,
       },
-      scrollable: true,
       content:
           Column(
                 children: [
@@ -391,16 +390,23 @@ class _RiddleChallengeState extends ConsumerState<RiddleChallenge> {
                   ),
                   if (_verdict == AnswerVerdict.wrong) ...[
                     const SizedBox(height: 10),
-                    Text(
-                      _missMessage(l10n),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: p.errorRed, fontWeight: FontWeight.w700),
+                    // A live region: the verdict is spoken, not just shown.
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        _missMessage(l10n),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: p.errorRed, fontWeight: FontWeight.w700),
+                      ),
                     ),
                   ],
                 ],
               )
               // The card shrugs off a wrong answer rather than scolding.
-              .animate(key: ValueKey<int>(_wobble), autoPlay: _misses > 0)
+              .animate(
+                key: ValueKey<int>(_wobble),
+                autoPlay: _misses > 0 && !reduceMotionOf(context),
+              )
               .shake(hz: 4, offset: const Offset(6, 0), duration: 380.ms),
       actions: [
         FilledButton(onPressed: _check, child: Text(l10n.riddleSubmit)),
@@ -458,6 +464,10 @@ class _Chip extends StatelessWidget {
 
   bool get _filled => onTap != null;
 
+  /// The least a finger should be asked to hit; a 13 px label with its padding
+  /// came to 34 px, too small a target for the one chip that is a control.
+  static const double kTapHeight = 44;
+
   @override
   Widget build(BuildContext context) {
     final content = Padding(
@@ -466,7 +476,7 @@ class _Chip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (emoji != null) ...[
-            Text(emoji!, style: const TextStyle(fontSize: 13)),
+            ExcludeSemantics(child: Text(emoji!, style: const TextStyle(fontSize: 13))),
             const SizedBox(width: 6),
           ],
           Text(
@@ -484,7 +494,15 @@ class _Chip extends StatelessWidget {
       color: _filled ? tint : tint.withValues(alpha: 0.14),
       borderRadius: BorderRadius.circular(999),
       clipBehavior: Clip.antiAlias,
-      child: _filled ? InkWell(onTap: onTap, child: content) : content,
+      child: _filled
+          ? InkWell(
+              onTap: onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: kTapHeight),
+                child: Center(widthFactor: 1, child: content),
+              ),
+            )
+          : content,
     );
   }
 }
@@ -509,7 +527,7 @@ class _Banner extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 18)),
+        ExcludeSemantics(child: Text(emoji, style: const TextStyle(fontSize: 18))),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
@@ -523,5 +541,8 @@ class _Banner extends StatelessWidget {
         ),
       ],
     ),
-  ).animate().fadeIn(duration: 200.ms).slideY(begin: -0.15, end: 0, duration: 220.ms);
+  )
+      .animate(autoPlay: !reduceMotionOf(context))
+      .fadeIn(duration: 200.ms)
+      .slideY(begin: -0.15, end: 0, duration: 220.ms);
 }

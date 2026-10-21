@@ -20,6 +20,7 @@ import '../services/haptics_service.dart';
 import '../services/sfx_service.dart';
 import 'progress_provider.dart';
 import 'saved_game_provider.dart';
+import 'settings_provider.dart';
 
 /// Called once when a level is cleared, with the clear time and star rating.
 typedef ClearedCallback = void Function(int level, int elapsedMs, int stars);
@@ -320,16 +321,21 @@ class GameNotifier extends StateNotifier<GameState> {
   }
 }
 
+/// How much longer the clock runs with the "extra time" setting on.
+const int kExtraTimeFactor = 2;
+
 /// One notifier per level, thrown away when the game screen closes. A level
 /// with a saved game comes back where it was left, paused, with the choice
-/// to continue or start over.
+/// to continue or start over. With "extra time" on in Settings the level is
+/// dealt with its clock doubled — the same board, the same stars.
 final gameProvider = StateNotifierProvider.autoDispose.family<GameNotifier, GameState, int>((
   ref,
   level,
 ) {
   final saves = ref.read(savedGameProvider.notifier);
+  final extraTime = ref.read(settingsProvider).extraTime;
   return GameNotifier(
-    specForLevel(level),
+    specForLevel(level).withClockFactor(extraTime ? kExtraTimeFactor : 1),
     savedGame: saves.forLevel(level),
     haptics: ref.watch(hapticsProvider),
     sfx: ref.watch(sfxProvider),

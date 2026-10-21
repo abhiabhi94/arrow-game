@@ -112,7 +112,7 @@ const lang = parseLang(args.lang);
 const labels = lang === 'hindi'
   ? {
       settings: /^सेटिंग्स/,
-      level: (n) => new RegExp(`^लेवल ${n}(\\s|$)`),
+      level: (n) => new RegExp(`^लेवल ${n}(,|\\s|$)`),
       hint: /^संकेत/,
       back: /^(वापस|back)/i,
       solveRiddle: /पहेली बूझें$/,
@@ -120,10 +120,11 @@ const labels = lang === 'hindi'
       riddleNudge: /एक और इशारा$/,
       riddleSubmit: /यही मेरा जवाब है$/,
       riddleSolved: /तीरों पर वापस$/,
+      board: /^पहेली बोर्ड, (\d+) गुणा (\d+)/,
     }
   : {
       settings: /^settings/i,
-      level: (n) => new RegExp(`^Level ${n}(\\s|$)`),
+      level: (n) => new RegExp(`^Level ${n}(,|\\s|$)`),
       hint: /^Hint/,
       back: /^back/i,
       solveRiddle: /Solve a riddle$/,
@@ -131,6 +132,7 @@ const labels = lang === 'hindi'
       riddleNudge: /One more nudge$/,
       riddleSubmit: /That's my answer$/,
       riddleSolved: /Back to the arrows$/,
+      board: /^Puzzle board, (\d+) by (\d+)/,
     };
 
 if (!fs.existsSync(path.join(buildDir, 'index.html'))) {
@@ -456,15 +458,17 @@ async function goBack(page) {
 function settle(page, ms) { return page.waitForTimeout(ms); }
 
 /// Taps the centre of grid cell {x, y} on the board. The board is one canvas
-/// (a tappable node named "Puzzle board W by H"), so the cell size comes
-/// from its box. With semantics on, a click lands on that node and Flutter
-/// turns it into a *semantic* tap at the node's centre, whatever the cell;
-/// so the semantics layer is made transparent to the pointer for the tap and
-/// the click reaches the canvas with its real coordinates.
+/// — to the semantics tree a group named "Puzzle board, W by H, …" holding
+/// one button per arrow (which is how a screen reader plays it) — so the cell
+/// size comes from the group's box. With semantics on, a click lands on an
+/// arrow's node and Flutter turns it into a *semantic* tap on that arrow,
+/// whatever the cell; so the semantics layer is made transparent to the
+/// pointer for the tap and the click reaches the canvas with its real
+/// coordinates.
 async function tapCell(page, { x, y }) {
-  const board = page.getByRole('button', { name: /^Puzzle board \d+ by \d+$/ }).first();
-  const name = await board.textContent();
-  const [, w, h] = /(\d+) by (\d+)/.exec(name).map(Number);
+  const board = page.getByLabel(labels.board).first();
+  const name = (await board.getAttribute('aria-label')) ?? (await board.textContent());
+  const [, w, h] = labels.board.exec(name).map(Number);
   const box = await board.boundingBox();
   const cell = Math.min(box.width / w, box.height / h);
   const left = box.x + (box.width - cell * w) / 2;

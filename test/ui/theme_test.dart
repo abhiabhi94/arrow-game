@@ -100,6 +100,34 @@ void main() {
     }
   });
 
+  test('lettering clears 4.5:1 and the bars 3:1 in both palettes', () {
+    // The audit's pins. Each pairing is one that shipped under the line:
+    // white on the dark primary (4.0), the primary as lettering on the light
+    // page (4.4), mint as lettering on white (1.9), the error red (3.8), the
+    // coral clock digits (2.5), the mint bar on its track (1.5).
+    for (final palette in [ArrowPalette.light, ArrowPalette.dark]) {
+      final name = palette == ArrowPalette.light ? 'light' : 'dark';
+      // White sits on the primary: filled buttons, the hero card, a current node.
+      expect(_contrast(Colors.white, palette.primary), greaterThanOrEqualTo(4.5), reason: '$name primary');
+      expect(_contrast(Colors.white, palette.primaryDark), greaterThanOrEqualTo(4.5), reason: '$name primaryDark');
+      // The primary as lettering, on the page and on a surface.
+      for (final bg in [palette.surface, palette.backgroundSoft]) {
+        expect(_contrast(palette.primaryInk, bg), greaterThanOrEqualTo(4.5), reason: '$name primaryInk');
+        expect(_contrast(palette.successInk, bg), greaterThanOrEqualTo(4.5), reason: '$name successInk');
+        expect(_contrast(palette.errorRed, bg), greaterThanOrEqualTo(4.5), reason: '$name errorRed');
+        expect(_contrast(palette.textMuted, bg), greaterThanOrEqualTo(4.5), reason: '$name textMuted');
+        expect(_contrast(palette.timerWarn, bg), greaterThanOrEqualTo(4.5), reason: '$name timerWarn');
+      }
+      // The play pill is white in both themes.
+      expect(_contrast(palette.primaryDark, Colors.white), greaterThanOrEqualTo(4.5));
+      // A cleared node's number on the mint.
+      expect(_contrast(palette.onAccent, palette.accentMint), greaterThanOrEqualTo(4.5));
+      // The clock's bar against its track, both colours it wears.
+      expect(_contrast(palette.timerFill, palette.timerTrack), greaterThanOrEqualTo(3), reason: '$name timerFill');
+      expect(_contrast(palette.timerWarn, palette.timerTrack), greaterThanOrEqualTo(3), reason: '$name timerWarn bar');
+    }
+  });
+
   test('themeModeFor maps every choice', () {
     expect(themeModeFor(ThemeChoice.system), ThemeMode.system);
     expect(themeModeFor(ThemeChoice.light), ThemeMode.light);

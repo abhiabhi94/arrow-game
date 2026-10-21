@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../ui/colors.dart';
+import '../ui/motion.dart';
 
 /// What the card's emoji does when it lands.
 enum EmojiMood {
@@ -18,6 +19,12 @@ enum EmojiMood {
 /// A scrim over the arena with a centred card: emoji, title, body, optional
 /// extra content, then the action buttons. Shared by the intro, pause and the
 /// three endings so they all feel like one family.
+///
+/// The card is modal to a screen reader as well as to the finger: it blocks
+/// the semantics of everything under the scrim, and its title is a header
+/// and a live region, so the card announces itself when it lands. The card
+/// always scrolls — at a large system font size the cleared card's stars,
+/// time and three buttons outgrow a short phone.
 class ResultCard extends StatelessWidget {
   const ResultCard({
     super.key,
@@ -26,7 +33,6 @@ class ResultCard extends StatelessWidget {
     this.body,
     this.content,
     required this.actions,
-    this.scrollable = false,
     this.mood = EmojiMood.still,
   });
 
@@ -36,27 +42,30 @@ class ResultCard extends StatelessWidget {
   final Widget? content;
   final List<Widget> actions;
 
-  /// True for the intro, whose rule list can outgrow short phones.
-  final bool scrollable;
-
   /// How the emoji behaves on arrival.
   final EmojiMood mood;
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    final calm = reduceMotionOf(context);
     final column = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _Emoji(emoji: emoji, mood: mood),
+        // Decoration: the title says what the card is about.
+        ExcludeSemantics(child: _Emoji(emoji: emoji, mood: calm ? EmojiMood.still : mood)),
         const SizedBox(height: 10),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            color: p.textInk,
+        Semantics(
+          header: true,
+          liveRegion: true,
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: p.textInk,
+            ),
           ),
         ),
         if (body != null) ...[
@@ -75,28 +84,33 @@ class ResultCard extends StatelessWidget {
         ],
       ],
     );
+    final card = Container(
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
+      constraints: const BoxConstraints(maxWidth: 380),
+      decoration: BoxDecoration(
+        color: p.surface,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: SingleChildScrollView(child: column),
+    );
     return Positioned.fill(
-      child: ColoredBox(
-        color: p.scrim,
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.all(24),
-            padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
-            constraints: const BoxConstraints(maxWidth: 380),
-            decoration: BoxDecoration(
-              color: p.surface,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: scrollable ? SingleChildScrollView(child: column) : column,
-          )
-              .animate()
-              .fadeIn(duration: 180.ms)
-              .scale(
-                begin: const Offset(0.92, 0.92),
-                end: const Offset(1, 1),
-                duration: 220.ms,
-                curve: Curves.easeOutBack,
-              ),
+      child: BlockSemantics(
+        child: ColoredBox(
+          color: p.scrim,
+          child: Center(
+            child: calm
+                ? card
+                : card
+                    .animate()
+                    .fadeIn(duration: 180.ms)
+                    .scale(
+                      begin: const Offset(0.92, 0.92),
+                      end: const Offset(1, 1),
+                      duration: 220.ms,
+                      curve: Curves.easeOutBack,
+                    ),
+          ),
         ),
       ),
     );

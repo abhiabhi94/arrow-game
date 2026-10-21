@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/level_specs.dart';
+import '../engine/direction.dart';
 import '../l10n/app_localizations.dart';
+import '../models/board_cursor.dart';
 import '../models/bump_motion.dart';
 import '../models/game_state.dart';
 import '../models/reaction_motion.dart';
@@ -17,6 +19,7 @@ import '../providers/riddle_provider.dart';
 import '../providers/settings_provider.dart';
 import '../ui/colors.dart';
 import '../ui/layout.dart';
+import '../ui/motion.dart';
 import '../utils/format.dart';
 import '../utils/labels.dart';
 import '../widgets/board_toolbar.dart';
@@ -109,6 +112,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// "Out of lives" card; a hint pauses the level and asks over the board,
   /// so the clock is not running while the player thinks.
   RiddlePrize _riddlePrize = RiddlePrize.life;
+
+  /// The keyboard cursor: the arrow the arrow keys have walked to, ringed on
+  /// the board and played by Enter (see `models/board_cursor.dart`). Null
+  /// until a key is pressed; an arrow that has left keeps the cursor where
+  /// it was until the next step. Dropped on a restart.
+  int? _cursor;
+
+  /// Whether the screen keeps still — read in build, used by the listener.
+  bool _calm = false;
 
   /// The phase a riddle for [prize] is asked in; leaving it takes the card
   /// away.
@@ -262,9 +274,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   /// Keyboard shortcuts for the web build, played on a laptop via GitHub
   /// Pages: H asks for a hint, + / - zoom, G toggles the grid lines (once
-  /// earned) and Space or P pauses and resumes. Taps stay on the mouse — the
-  /// arrows are drawn on a canvas, not focusable widgets. Anything with a
-  /// modifier held is left alone so the browser keeps its own shortcuts.
+  /// earned) and Space or P pauses and resumes. The arrow keys walk a cursor
+  /// from arrow to arrow and Enter plays the one it is on, so the game can be
+  /// played without a pointer at all. Anything with a modifier held is left
+  /// alone so the browser keeps its own shortcuts.
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final keyboard = HardwareKeyboard.instance;
@@ -294,8 +307,36 @@ class _GameScreenState extends ConsumerState<GameScreen>
       case GameShortcut.pause:
         // Resume covers the "Welcome back" card too: Space is "Continue".
         state.isPlaying ? notifier.pause() : notifier.resume();
+      case GameShortcut.cursorUp:
+        _moveCursor(state, Direction.up);
+      case GameShortcut.cursorRight:
+        _moveCursor(state, Direction.right);
+      case GameShortcut.cursorDown:
+        _moveCursor(state, Direction.down);
+      case GameShortcut.cursorLeft:
+        _moveCursor(state, Direction.left);
+      case GameShortcut.activate:
+        final cursor = _cursor;
+        if (cursor == null || !state.isPlaying) return KeyEventResult.ignored;
+        notifier.tapArrow(cursor);
     }
     return KeyEventResult.handled;
+  }
+
+  /// Restarts the level; the keyboard cursor goes with the attempt.
+  void _restart() {
+    if (_cursor != null) setState(() => _cursor = null);
+    ref.read(gameProvider(widget.level).notifier).restart();
+  }
+
+  /// Steps the keyboard cursor [direction] to the nearest arrow that way (or
+  /// onto the first arrow when there is no cursor yet). Nothing that way
+  /// leaves it where it is.
+  void _moveCursor(GameState state, Direction direction) {
+    final puzzle = state.puzzle;
+    if (puzzle == null) return;
+    final next = cursorStep(puzzle, state.removed, _cursor, direction);
+    if (next != null && next != _cursor) setState(() => _cursor = next);
   }
 
   @override
@@ -303,6 +344,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final l10n = AppLocalizations.of(context)!;
     final provider = gameProvider(widget.level);
     final progress = ref.read(progressProvider.notifier);
+    _calm = reduceMotionOf(context);
     ref.listen(provider, (prev, next) {
       if (next.lastOutcome == MoveOutcome.blocked && next.moveToken != prev?.moveToken) {
         final motion = BumpMotion.forTap(next.puzzle!, next.lastMoveId!, next.blockedCell!);
@@ -312,6 +354,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
           ..forward(from: 0);
         // The bump that ends the attempt gets to play out first.
         _endingHeld = next.phase == GamePhase.outOfLives;
+      }
+      // A restart (or a new board) forgets the keyboard cursor.
+      if (_cursor != null &&
+          (next.puzzle != prev?.puzzle || next.moveToken < (prev?.moveToken ?? 0))) {
+        setState(() => _cursor = null);
       }
       // Restarting (or any other way out of the phase the riddle was asked
       // in) takes the riddle with it, so backing out never leaves a card
@@ -323,12 +370,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _putRiddleAway();
       }
       if (next.phase == GamePhase.cleared && prev?.phase != GamePhase.cleared) {
-        _hop.forward(from: 0);
         _newBest = progress.progressFor(widget.level).isNewBest(next.elapsedMs);
         _gridJustUnlocked =
             widget.level == kGridLinesUnlockAfterLevel &&
             !progress.progressFor(widget.level).completed;
-        _confetti.play();
+        // The hop and the confetti are the celebration; with motion reduced
+        // the card and its sound are the celebration.
+        if (!_calm) {
+          _hop.forward(from: 0);
+          _confetti.play();
+        }
       }
     });
     final state = ref.watch(provider);
@@ -338,6 +389,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
     ref.watch(progressProvider);
     final gridUnlocked = progress.gridLinesUnlocked;
     final p = context.palette;
+    // The two-line title grows with the system font size; so does the bar.
+    final textScaler = MediaQuery.textScalerOf(context);
+    final toolbarHeight = max(kToolbarHeight, textScaler.scale(44) + 12);
 
     return Focus(
       autofocus: true,
@@ -347,6 +401,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
       includeSemantics: false,
       child: Scaffold(
         appBar: AppBar(
+          toolbarHeight: toolbarHeight,
           // Two lines so long level names never truncate on narrow phones.
           title: Column(
             mainAxisSize: MainAxisSize.min,
@@ -354,6 +409,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
               Text(l10n.levelNumber(widget.level)),
               Text(
                 levelName(l10n, widget.level),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: p.textMuted),
               ),
             ],
@@ -362,7 +419,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
             if (state.isPlaying) ...[
               IconButton(
                 tooltip: l10n.gameRestart,
-                onPressed: notifier.restart,
+                onPressed: _restart,
                 icon: const Icon(Icons.refresh_rounded),
               ),
               IconButton(
@@ -383,8 +440,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
               // sizes them there.
               AnimatedBuilder(
                 animation: Listenable.merge([_crash, _hop]),
+                // With motion reduced the screen never leaves its place: the
+                // red flash below still marks the hit.
                 builder: (context, child) => Transform.translate(
-                  offset: Offset((_crashMotion?.joltAt(_crash.value) ?? 0) * kCrashJoltPx, 0),
+                  offset: Offset(
+                    _calm ? 0 : (_crashMotion?.joltAt(_crash.value) ?? 0) * kCrashJoltPx,
+                    0,
+                  ),
                   child: Transform.scale(
                     scaleX: _hop.isAnimating ? hopScaleX(_hop.value) : 1,
                     scaleY: _hop.isAnimating ? hopScaleY(_hop.value) : 1,
@@ -408,8 +470,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                   fraction: state.timeFraction,
                                 ),
                               ),
-                              const SizedBox(width: 14),
-                              LivesIndicator(livesLeft: state.livesLeft),
+                              const SizedBox(width: 12),
+                              _ArrowsOut(out: state.arrowsOut, total: state.arrowsTotal),
+                              const SizedBox(width: 12),
+                              LivesIndicator(livesLeft: state.livesLeft, reduceMotion: _calm),
                             ],
                           ),
                         ),
@@ -437,6 +501,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                               showGrid: gridUnlocked && settings.gridLinesOn,
                                               onTapArrow: notifier.tapArrow,
                                               zoom: _scale,
+                                              focusedArrowId: _cursor,
+                                              reduceMotion: _calm,
                                             ),
                                     ),
                                   ),
@@ -534,7 +600,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   ),
                   actions: [
                     FilledButton(onPressed: notifier.resume, child: Text(l10n.resumeContinue)),
-                    OutlinedButton(onPressed: notifier.restart, child: Text(l10n.resumeStartOver)),
+                    OutlinedButton(onPressed: _restart, child: Text(l10n.resumeStartOver)),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(l10n.clearedHome),
@@ -573,7 +639,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                       if (_newBest)
                         Text(
                           l10n.clearedNewBest,
-                          style: TextStyle(fontWeight: FontWeight.w800, color: p.accentMint),
+                          style: TextStyle(fontWeight: FontWeight.w800, color: p.successInk),
                         ),
                       if (_gridJustUnlocked)
                         Padding(
@@ -581,7 +647,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                           child: Text(
                             l10n.gridUnlockedToast,
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontWeight: FontWeight.w700, color: p.primary),
+                            style: TextStyle(fontWeight: FontWeight.w700, color: p.primaryInk),
                           ),
                         ),
                       if (widget.level == totalLevels)
@@ -601,7 +667,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                         onPressed: () => _openLevel(widget.level + 1),
                         child: Text(l10n.clearedNext),
                       ),
-                    OutlinedButton(onPressed: notifier.restart, child: Text(l10n.clearedReplay)),
+                    OutlinedButton(onPressed: _restart, child: Text(l10n.clearedReplay)),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(l10n.clearedHome),
@@ -634,7 +700,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                       onPressed: () => _askRiddle(RiddlePrize.life),
                       child: Text(l10n.outOfLivesSolveRiddle),
                     ),
-                    OutlinedButton(onPressed: notifier.restart, child: Text(l10n.outOfLivesRetry)),
+                    OutlinedButton(onPressed: _restart, child: Text(l10n.outOfLivesRetry)),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(l10n.clearedHome),
@@ -647,7 +713,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   title: l10n.timeUpTitle,
                   body: l10n.timeUpBody(state.arrowsOut, state.arrowsTotal),
                   actions: [
-                    FilledButton(onPressed: notifier.restart, child: Text(l10n.timeUpRetry)),
+                    FilledButton(onPressed: _restart, child: Text(l10n.timeUpRetry)),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(l10n.clearedHome),
@@ -665,11 +731,23 @@ class _GameScreenState extends ConsumerState<GameScreen>
 }
 
 /// What a key press on the game screen does.
-enum GameShortcut { hint, zoomIn, zoomOut, grid, pause }
+enum GameShortcut {
+  hint,
+  zoomIn,
+  zoomOut,
+  grid,
+  pause,
+  cursorUp,
+  cursorRight,
+  cursorDown,
+  cursorLeft,
+  activate,
+}
 
 /// The shortcut a key press means, or null when it isn't one. Zoom answers
 /// both the main row and the numeric keypad, and `=` stands in for `+` so it
-/// works without Shift on a US layout.
+/// works without Shift on a US layout. The arrow keys move the board cursor
+/// and Enter plays the arrow under it.
 @visibleForTesting
 GameShortcut? shortcutFor(KeyEvent event) => switch (event.logicalKey) {
   LogicalKeyboardKey.keyH => GameShortcut.hint,
@@ -679,8 +757,49 @@ GameShortcut? shortcutFor(KeyEvent event) => switch (event.logicalKey) {
   LogicalKeyboardKey.minus || LogicalKeyboardKey.numpadSubtract => GameShortcut.zoomOut,
   LogicalKeyboardKey.keyG => GameShortcut.grid,
   LogicalKeyboardKey.space || LogicalKeyboardKey.keyP => GameShortcut.pause,
+  LogicalKeyboardKey.arrowUp => GameShortcut.cursorUp,
+  LogicalKeyboardKey.arrowRight => GameShortcut.cursorRight,
+  LogicalKeyboardKey.arrowDown => GameShortcut.cursorDown,
+  LogicalKeyboardKey.arrowLeft => GameShortcut.cursorLeft,
+  LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter => GameShortcut.activate,
   _ => null,
 };
+
+/// Arrows out so far, as "3/12". A live region, so a screen reader hears each
+/// exit land ("4 of 12 arrows out") without being told to look.
+class _ArrowsOut extends StatelessWidget {
+  const _ArrowsOut({required this.out, required this.total});
+
+  final int out;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final l10n = AppLocalizations.of(context)!;
+    return Semantics(
+      label: l10n.hudArrowsLeft(out, total),
+      liveRegion: true,
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.arrow_outward_rounded, size: 18, color: p.textMuted),
+          const SizedBox(width: 4),
+          Text(
+            l10n.hudArrows(out, total),
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              color: p.textInk,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _LoadingView extends StatelessWidget {
   const _LoadingView({required this.message});
