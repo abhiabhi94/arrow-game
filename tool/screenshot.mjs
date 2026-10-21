@@ -17,6 +17,11 @@
 //             its pinned header collapsed (home-scrolled-*.png)
 //   --hint    also taps the hint button and captures the glowing arrow
 //             (level-NN-hint-*.png)
+//   --still   seeds Settings > Reduce motion on, so nothing on screen keeps
+//             moving: the hint's ping, which never rests, is stilled. Runs
+//             whose shots are compared pixel for pixel (the accessibility
+//             workflow's before/after job) pass it so that two runs of the
+//             same build shoot the same frame
 //   --grid    seeds the grid-lines preference on (the lattice under the arrows)
 //   --resume  seeds a saved game on the first level (home shows Continue, the level its Welcome back card)
 //   --onboarding  boots into the first-launch walkthrough instead of home
@@ -98,6 +103,7 @@ const kCardRestMs = 1200;
 const levels = String(args.levels ?? '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 const dark = Boolean(args.dark);
 const hint = Boolean(args.hint);
+const still = Boolean(args.still);
 const grid = Boolean(args.grid);
 const resume = Boolean(args.resume);
 const scale = Number(args.scale ?? 2);
@@ -217,6 +223,7 @@ const prefs = {
   // Only forced on with --grid; otherwise left unset so a shot shows the
   // app's own default (on, once the toggle has been earned).
   ...(grid ? { 'flutter.arrow_grid_lines': 'true' } : {}),
+  ...(still ? { 'flutter.arrow_reduce_motion': 'true' } : {}),
   'flutter.arrow_theme': JSON.stringify(dark ? 'dark' : 'light'),
   // Unset by default, which is the app's own default: follow the device.
   ...(lang ? { 'flutter.arrow_language': JSON.stringify(lang) } : {}),
@@ -260,7 +267,11 @@ const page = await context.newPage();
 // canvas can be taken, so a crash run puts the page on a fake clock — which
 // keeps real time until pauseAt — and steps it to the frame it wants.
 // Installed before the app boots: switching clocks under a running Flutter
-// engine trips its frame-timestamp assertion in the debug build.
+// engine trips its frame-timestamp assertion in the debug build. Only a
+// crash run: under the fake clock the engine runs behind — a big level was
+// still loading at its shot and the riddle flow never saw its card — so the
+// hint's ping, the other thing that never comes to rest, is stilled by
+// --still instead.
 if (crash) await page.clock.install();
 page.on('pageerror', (e) => problems.push(`JS error: ${e.message}\n${String(e.stack ?? '').split('\n').slice(0, 8).join('\n')}`));
 page.on('console', (m) => {
@@ -384,6 +395,10 @@ try {
       await shoot(page, `level-${id}-riddle-solved-${tag}`);
     }
     if (hint) {
+      // The hint's ping is a ring that keeps expanding from the arrow's head
+      // (kHintPingPeriod, 1.1 s) for as long as the hint shows, so there is
+      // no frame it comes to rest on and two runs never shoot the same ring.
+      // A run whose shots are compared passes --still, which stills it.
       await page.getByRole('button', { name: labels.hint }).first().click();
       await settle(page, 500);
       await shoot(page, `level-${id}-hint-${tag}`);
