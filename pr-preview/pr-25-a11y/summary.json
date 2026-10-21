@@ -1,10 +1,5 @@
 {
- "changed": [
-  [
-   "level-16-hint-dark-grid.png",
-   1
-  ]
- ],
+ "changed": [],
  "same": [
   "home-dark-grid.png",
   "home-light-1440x900.png",
@@ -23,6 +18,7 @@
   "level-01-riddle-solved-light.png",
   "level-03-light-resume.png",
   "level-16-dark-grid.png",
+  "level-16-hint-dark-grid.png",
   "level-20-hint-light.png",
   "level-20-light.png",
   "onboarding-light.png",
