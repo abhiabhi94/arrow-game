@@ -1,7 +1,10 @@
 # Accessibility: before / after
 
 Side-by-side captures for the accessibility pass (pull request #24): the
-left half of each image is `main` before it, the right half the branch.
+left half of each image is `main` before it, the right half the branch,
+with numbered red callouts on the right half marking what changed and a
+key above. Screens with no visible change (the walkthrough, the solved
+riddle card) are left out.
 
 Both halves come from the web build driven by `tool/screenshot.mjs` in
 headless Chromium — the cloud session has no Android emulator — at the two
