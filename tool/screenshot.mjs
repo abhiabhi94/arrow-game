@@ -120,7 +120,7 @@ const labels = lang === 'hindi'
       riddleNudge: /एक और इशारा$/,
       riddleSubmit: /यही मेरा जवाब है$/,
       riddleSolved: /तीरों पर वापस$/,
-      board: /^पहेली बोर्ड, (\d+) गुणा (\d+)/,
+      board: /^पहेली बोर्ड,? (\d+) गुणा (\d+)/,
     }
   : {
       settings: /^settings/i,
@@ -132,7 +132,7 @@ const labels = lang === 'hindi'
       riddleNudge: /One more nudge$/,
       riddleSubmit: /That's my answer$/,
       riddleSolved: /Back to the arrows$/,
-      board: /^Puzzle board, (\d+) by (\d+)/,
+      board: /^Puzzle board,? (\d+) by (\d+)/,
     };
 
 if (!fs.existsSync(path.join(buildDir, 'index.html'))) {
@@ -466,7 +466,9 @@ function settle(page, ms) { return page.waitForTimeout(ms); }
 /// pointer for the tap and the click reaches the canvas with its real
 /// coordinates.
 async function tapCell(page, { x, y }) {
-  const board = page.getByLabel(labels.board).first();
+  // A labelled group on this build (aria-label); a button with the label as
+  // its text on builds before the arrows had nodes of their own.
+  const board = page.getByLabel(labels.board).or(page.getByRole('button', { name: labels.board })).first();
   const name = (await board.getAttribute('aria-label')) ?? (await board.textContent());
   const [, w, h] = labels.board.exec(name).map(Number);
   const box = await board.boundingBox();

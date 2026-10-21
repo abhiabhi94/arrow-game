@@ -508,8 +508,10 @@ class _BoardPainter extends CustomPainter {
       if (shoved) canvas.restore();
     }
     _paintHint(canvas, size, cs);
-    _paintCursor(canvas, cs);
     canvas.restore();
+    // Outside the clip: the ring sits a little proud of the cells, and an
+    // arrow on the board's edge would otherwise lose that side of it.
+    _paintCursor(canvas, cs);
   }
 
   /// The keyboard cursor: a rounded ring around the cells of the focused
