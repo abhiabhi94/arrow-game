@@ -118,15 +118,27 @@ Identity is tied to the **build type**, not a product flavor:
   `View.performHapticFeedback`, which the OS mutes whenever the user's
   system "touch feedback" is off. iOS keeps `HapticFeedback`.
 - **Edge to edge:** Android 15+ draws a targetSdk-35+ app under the system
-  bars on its own; `MainActivity.onCreate` calls
-  `WindowCompat.enableEdgeToEdge(window)` (androidx.core 1.17, declared in
-  `app/build.gradle.kts`) so older versions match — that is the Play
-  Console's "Edge-to-edge may not display for all users" item. It runs
-  *after* `super.onCreate`, whose own system-UI flags would undo it. The
-  Flutter side keeps clear of the bars through the insets: `SafeArea` on
-  home/onboarding/game, the `AppBar` on settings/credits, whose `ListView`s
-  add `MediaQuery.paddingOf` back (an explicit `padding:` turns off a
-  `ListView`'s own inset padding).
+  bars on its own; `MainActivity.onCreate` calls androidx.activity's
+  `enableEdgeToEdge()` so older versions match. `MainActivity` is therefore
+  a **`FlutterFragmentActivity`** (a `ComponentActivity`, which that call
+  needs; `FlutterActivity` is a plain `Activity`), with
+  `androidx.activity:activity-ktx` declared in `app/build.gradle.kts`. The
+  call runs *after* `super.onCreate`, whose own system-UI flags would undo
+  it, and `app/proguard-rules.pro` (picked up by Flutter's Gradle plugin on
+  its own) keeps `androidx.activity.EdgeToEdge` so R8 does not inline the
+  call away. Two Play Console items drove this:
+  "Edge-to-edge may not display for all users" is a static scan for that
+  exact call (the equivalent `WindowCompat.enableEdgeToEdge`, used before,
+  did not satisfy it, flutter/flutter#192921), and "Your app uses
+  deprecated APIs or parameters for edge-to-edge" lists
+  `Window.setStatusBarColor` / `setNavigationBarColor`, which every
+  pre-Android-15 backport calls — androidx's and the Flutter engine's
+  `PlatformPlugin` alike (flutter/flutter#165328) — so that one is
+  expected to stay until the engine moves off them; it is informational.
+  The Flutter side keeps clear of the bars through the insets: `SafeArea`
+  on home/onboarding/game, the `AppBar` on settings/credits, whose
+  `ListView`s add `MediaQuery.paddingOf` back (an explicit `padding:` turns
+  off a `ListView`'s own inset padding).
 - **Android SDK in cloud sessions:** not installed by the hook. To build an
   APK: unzip the command-line tools into `/opt/android-sdk/cmdline-tools/latest`,
   `sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358'`,
@@ -714,8 +726,15 @@ it has to keep matching the old accessible names too — see `labels.board`),
 and `tool/compare_shots.py` (pure Pillow) writes one image per screen whose
 pixels changed — base left, PR right, the changed regions boxed and numbered
 in red (clusters under `kMinArea` are ignored, which is what keeps the level
-clock's digits from counting) — plus a summary with any problem the harness
-hit on the PR's build and the screen it failed on. The images go to
+clock's digits from counting; and the harness shoots the same frame every
+run — a result card after `kCardRestMs`, once its emoji's arrival animation
+is over, and the hint flows under `--still`, which seeds Reduce motion so
+the hint's ping, a ring that never comes to rest, is stilled — because both
+used to be caught mid-animation and reported as a change on a PR that
+touched nothing on screen; the fake clock the crash shot uses is not the
+answer, since the engine runs behind on it and a big level was still
+loading at its shot) — plus a summary with any problem the harness hit on
+the PR's build and the screen it failed on. The images go to
 `gh-pages` under `pr-preview/pr-<number>-a11y/` (a sibling of the preview
 folder, since the preview deploy wipes its own folder on every push) and
 are removed with the comments when the PR closes. The guideline test uses

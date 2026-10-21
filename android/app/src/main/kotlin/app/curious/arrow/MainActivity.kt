@@ -6,8 +6,8 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import androidx.core.view.WindowCompat
-import io.flutter.embedding.android.FlutterActivity
+import androidx.activity.enableEdgeToEdge
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
@@ -16,18 +16,25 @@ import io.flutter.plugin.common.MethodChannel
 /// on plenty of phones). The game's haptics therefore talk to the Vibrator
 /// service directly through this channel, so a slide always ticks and a
 /// bump always buzzes while the in-app switch is on.
-class MainActivity : FlutterActivity() {
+/// A FlutterFragmentActivity rather than a FlutterActivity: it is a
+/// ComponentActivity, which is what androidx.activity's enableEdgeToEdge()
+/// needs — and that call, by name, is what the Play Console's edge-to-edge
+/// check looks for ("Edge-to-edge may not display for all users" kept
+/// firing against the equivalent WindowCompat.enableEdgeToEdge, which the
+/// scan does not recognise). Nothing else changes: the engine, the plugins
+/// and the haptics channel are hosted the same way.
+class MainActivity : FlutterFragmentActivity() {
     /// Android 15+ draws a targetSdk-35 app edge to edge on its own; this
     /// does the same on older versions (transparent system bars, content
     /// behind them), so every phone gets the one layout. The Flutter side
     /// already keeps its content clear of the bars through the system insets.
-    /// FlutterActivity is not a ComponentActivity, so it is the core-library
-    /// call rather than androidx.activity's enableEdgeToEdge(). It runs after
-    /// super.onCreate, which sets its own system-UI flags (and, below API 35,
-    /// a grey status-bar scrim) that would otherwise undo it.
+    /// It runs after super.onCreate, which sets its own system-UI flags (and,
+    /// below API 35, a grey status-bar scrim) that would otherwise undo it.
+    /// proguard-rules.pro keeps the call from being inlined away in release
+    /// builds, so the Play scan can see it.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WindowCompat.enableEdgeToEdge(window)
+        enableEdgeToEdge()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
