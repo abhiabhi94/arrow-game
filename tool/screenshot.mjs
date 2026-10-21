@@ -88,6 +88,13 @@ const args = parseArgs(process.argv.slice(2));
 const buildDir = path.resolve(args['build-dir'] ?? 'build/web');
 const fontCache = path.join(path.dirname(buildDir), 'font-cache');
 const outDir = path.resolve(args.out ?? 'shots');
+
+/// How long after a result card's node appears its arrival animations are
+/// over: the card's own 220 ms entrance, and the emoji's sulk (a 340 ms flop,
+/// then a 600 ms shake after a 300 ms pause: 900 ms) or cheer (520 ms), with
+/// a margin for a slow build. Shots of a card wait this long so the emoji is
+/// at rest in every run.
+const kCardRestMs = 1200;
 const levels = String(args.levels ?? '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 const dark = Boolean(args.dark);
 const hint = Boolean(args.hint);
@@ -341,6 +348,14 @@ try {
         await tapCell(page, cell);
         await settle(page, 1200); // the whole bump, or the tap is dropped
       }
+      // The card is held back until the crash has played out (up to ~940 ms
+      // after the tap), and its emoji then flops in and shakes its head for
+      // 900 ms more. A shot inside that window catches a different frame on
+      // every run, which the before/after comparison reports as a change on
+      // a PR that touched nothing on screen. So wait for the card by its
+      // button, then for the emoji to come to rest.
+      await page.getByRole('button', { name: labels.solveRiddle }).first().waitFor({ state: 'attached', timeout: 5000 });
+      await settle(page, kCardRestMs);
       await shoot(page, `level-${id}-outoflives-${tag}`);
       await page.getByRole('button', { name: labels.solveRiddle }).first().click();
       await settle(page, 700);
@@ -365,7 +380,7 @@ try {
       if (!answered) {
         problems.push(`Riddle not solved: typed "${riddleAnswer}" and submitted, but no "${labels.riddleSolved.source}" button appeared (the answer field lost the keyboard?)`);
       }
-      await settle(page, 900);
+      await settle(page, kCardRestMs); // the solved card's emoji cheers in
       await shoot(page, `level-${id}-riddle-solved-${tag}`);
     }
     if (hint) {
@@ -394,7 +409,7 @@ try {
       if (!answered) {
         problems.push(`Riddle for a hint not solved: typed "${riddleAnswer}" and submitted, but no "${labels.riddleSolved.source}" button appeared`);
       }
-      await settle(page, 900);
+      await settle(page, kCardRestMs); // the solved card's emoji cheers in
       await shoot(page, `level-${id}-hint-riddle-solved-${tag}`);
       await solved.click();
       await settle(page, 600);

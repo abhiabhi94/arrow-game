@@ -726,8 +726,11 @@ it has to keep matching the old accessible names too — see `labels.board`),
 and `tool/compare_shots.py` (pure Pillow) writes one image per screen whose
 pixels changed — base left, PR right, the changed regions boxed and numbered
 in red (clusters under `kMinArea` are ignored, which is what keeps the level
-clock's digits from counting) — plus a summary with any problem the harness
-hit on the PR's build and the screen it failed on. The images go to
+clock's digits from counting; and a shot of a result card waits
+`kCardRestMs` after the card's node appears, because its emoji's arrival
+animation used to be caught at a different frame on every run and reported
+as a change on a PR that touched nothing on screen) — plus a summary with
+any problem the harness hit on the PR's build and the screen it failed on. The images go to
 `gh-pages` under `pr-preview/pr-<number>-a11y/` (a sibling of the preview
 folder, since the preview deploy wipes its own folder on every push) and
 are removed with the comments when the PR closes. The guideline test uses
