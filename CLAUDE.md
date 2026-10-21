@@ -118,15 +118,27 @@ Identity is tied to the **build type**, not a product flavor:
   `View.performHapticFeedback`, which the OS mutes whenever the user's
   system "touch feedback" is off. iOS keeps `HapticFeedback`.
 - **Edge to edge:** Android 15+ draws a targetSdk-35+ app under the system
-  bars on its own; `MainActivity.onCreate` calls
-  `WindowCompat.enableEdgeToEdge(window)` (androidx.core 1.17, declared in
-  `app/build.gradle.kts`) so older versions match — that is the Play
-  Console's "Edge-to-edge may not display for all users" item. It runs
-  *after* `super.onCreate`, whose own system-UI flags would undo it. The
-  Flutter side keeps clear of the bars through the insets: `SafeArea` on
-  home/onboarding/game, the `AppBar` on settings/credits, whose `ListView`s
-  add `MediaQuery.paddingOf` back (an explicit `padding:` turns off a
-  `ListView`'s own inset padding).
+  bars on its own; `MainActivity.onCreate` calls androidx.activity's
+  `enableEdgeToEdge()` so older versions match. `MainActivity` is therefore
+  a **`FlutterFragmentActivity`** (a `ComponentActivity`, which that call
+  needs; `FlutterActivity` is a plain `Activity`), with
+  `androidx.activity:activity-ktx` declared in `app/build.gradle.kts`. The
+  call runs *after* `super.onCreate`, whose own system-UI flags would undo
+  it, and `app/proguard-rules.pro` (picked up by Flutter's Gradle plugin on
+  its own) keeps `androidx.activity.EdgeToEdge` so R8 does not inline the
+  call away. Two Play Console items drove this:
+  "Edge-to-edge may not display for all users" is a static scan for that
+  exact call (the equivalent `WindowCompat.enableEdgeToEdge`, used before,
+  did not satisfy it, flutter/flutter#192921), and "Your app uses
+  deprecated APIs or parameters for edge-to-edge" lists
+  `Window.setStatusBarColor` / `setNavigationBarColor`, which every
+  pre-Android-15 backport calls — androidx's and the Flutter engine's
+  `PlatformPlugin` alike (flutter/flutter#165328) — so that one is
+  expected to stay until the engine moves off them; it is informational.
+  The Flutter side keeps clear of the bars through the insets: `SafeArea`
+  on home/onboarding/game, the `AppBar` on settings/credits, whose
+  `ListView`s add `MediaQuery.paddingOf` back (an explicit `padding:` turns
+  off a `ListView`'s own inset padding).
 - **Android SDK in cloud sessions:** not installed by the hook. To build an
   APK: unzip the command-line tools into `/opt/android-sdk/cmdline-tools/latest`,
   `sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0' 'ndk;28.2.13676358'`,

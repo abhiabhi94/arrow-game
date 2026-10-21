@@ -102,6 +102,9 @@ flutter {
 }
 
 dependencies {
-    // WindowCompat.enableEdgeToEdge (MainActivity) arrived in core 1.17.
     implementation("androidx.core:core-ktx:1.17.0")
+    // enableEdgeToEdge() for MainActivity (a FlutterFragmentActivity, so a
+    // ComponentActivity). The Flutter embedding brings androidx.activity in
+    // transitively; this pins one new enough to have it.
+    implementation("androidx.activity:activity-ktx:1.10.1")
 }
