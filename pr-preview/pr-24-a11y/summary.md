@@ -60,7 +60,7 @@
 
 </details>
 
-<details><summary><b>level-01-outoflives-light</b> — 2 changed region(s)</summary>
+<details><summary><b>level-01-outoflives-light</b> — 3 changed region(s)</summary>
 
 ![level-01-outoflives-light](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-24-a11y/level-01-outoflives-light.png)
 
