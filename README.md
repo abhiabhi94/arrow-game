@@ -73,6 +73,28 @@ the way its head points, until it leaves the board. Get every arrow out.
   locked progression (all levels open in the debug build); Google Sans Flex
   throughout.
 
+## Accessibility
+
+- **Screen readers** (TalkBack, VoiceOver, and the web build with
+  accessibility on): every arrow on the board is its own button — "Arrow
+  pointing right, 2 cells long, head at row 2, column 3. Clear path to the
+  edge." — so the game is played by walking the arrows and double-tapping
+  one. The clock, the arrows-out counter and the lives are spoken; exits
+  and lost lives are announced as they happen; the result cards announce
+  themselves and hide the board behind them.
+- **Keyboard** (the web build on a laptop): the arrow keys move a cursor
+  from arrow to arrow, Enter plays it, and the ring on the board shows
+  where it is — alongside **H** hint, **+/-** zoom, **G** grid, **Space**
+  pause.
+- **Settings → Accessibility:** *Reduce motion* (no screen jolt, hop,
+  confetti, slump or shakes; the OS "reduce motion" setting does the same)
+  and *Extra time* (twice the clock on every level).
+- Text follows the system font size, every colour pairing meets WCAG AA
+  contrast, and nothing is told by colour alone.
+- All of it is checked on every pull request: Flutter's accessibility
+  guidelines on every screen, the behaviours above, and before/after
+  screenshots with the changes boxed, posted on the PR.
+
 ## Architecture
 
 Pure-Dart, zero-Flutter **engine** (`lib/engine/`) — cells, arrow pieces, the

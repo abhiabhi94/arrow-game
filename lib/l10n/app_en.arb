@@ -222,7 +222,7 @@
       }
     }
   },
-  "hudLives": "{lives} lives left",
+  "hudLives": "{lives, plural, =1{1 life left} other{{lives} lives left}}",
   "@hudLives": {
     "placeholders": {
       "lives": {
@@ -424,5 +424,116 @@
   "settingsResetConfirmTitle": "Reset all progress?",
   "settingsResetConfirmBody": "Stars and best times will be wiped. This can't be undone.",
   "commonCancel": "Cancel",
-  "commonReset": "Reset"
+  "commonReset": "Reset",
+  "hudArrowsLeft": "{out} of {total} arrows out",
+  "@hudArrowsLeft": {
+    "placeholders": {
+      "out": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "hudTimeLeft": "{time} left on the clock",
+  "@hudTimeLeft": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "starsOfThree": "{stars} of 3 stars",
+  "@starsOfThree": {
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      }
+    }
+  },
+  "boardLabel": "Puzzle board, {width} by {height}, {left} of {total} arrows left",
+  "@boardLabel": {
+    "placeholders": {
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      },
+      "left": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "arrowLabel": "Arrow pointing {direction}, {length, plural, =1{1 cell} other{{length} cells}} long, head at row {row}, column {column}. {path}",
+  "@arrowLabel": {
+    "description": "One arrow on the board, as a screen reader reads it. {path} is arrowPathClear or arrowPathBlocked.",
+    "placeholders": {
+      "direction": {
+        "type": "String"
+      },
+      "length": {
+        "type": "int"
+      },
+      "row": {
+        "type": "int"
+      },
+      "column": {
+        "type": "int"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "arrowPathClear": "Clear path to the edge.",
+  "arrowPathBlocked": "{distance, plural, =1{Another arrow is right in front of it.} other{Another arrow is {distance} cells ahead.}}",
+  "@arrowPathBlocked": {
+    "placeholders": {
+      "distance": {
+        "type": "int"
+      }
+    }
+  },
+  "arrowHinted": "Hint: this one can go.",
+  "arrowBumpedBefore": "Bumped before; another bump here is free.",
+  "arrowTapHint": "Slide it out",
+  "@arrowTapHint": {
+    "description": "The action a screen reader offers on an arrow (\"double tap to …\")."
+  },
+  "directionUp": "up",
+  "directionRight": "right",
+  "directionDown": "down",
+  "directionLeft": "left",
+  "levelCleared": "Cleared",
+  "levelUpNext": "Up next",
+  "levelBestTime": "best time {time}",
+  "@levelBestTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardStep": "Step {step} of {total}",
+  "@onboardStep": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsMusicVolume": "Music volume",
+  "settingsAccessibility": "Accessibility",
+  "settingsReduceMotion": "Reduce motion",
+  "settingsReduceMotionSubtitle": "No shakes, hops or confetti — the arrows still move",
+  "settingsExtraTime": "Extra time",
+  "settingsExtraTimeSubtitle": "Twice the clock on every level"
 }

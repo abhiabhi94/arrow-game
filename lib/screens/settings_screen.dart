@@ -13,8 +13,11 @@ import 'credits_screen.dart';
 import 'onboarding_screen.dart';
 
 /// Settings: music (on/off + volume), sound effects, haptic feedback,
-/// language, theme, the walkthrough again, music credits, and a progress
-/// reset.
+/// language, theme, accessibility (reduce motion, extra time), the
+/// walkthrough again, music credits, and a progress reset.
+///
+/// The emoji on each row are decoration and kept from the screen reader; the
+/// volume slider carries its own name and reads its value as a percentage.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -70,7 +73,7 @@ class SettingsScreen extends ConsumerWidget {
                   SwitchListTile(
                     value: settings.musicOn,
                     onChanged: notifier.setMusic,
-                    secondary: const Text('🎵', style: TextStyle(fontSize: 24)),
+                    secondary: const _Emoji('🎵'),
                     title: Text(l10n.settingsMusic),
                     subtitle: Text(l10n.settingsMusicSubtitle),
                   ),
@@ -79,19 +82,32 @@ class SettingsScreen extends ConsumerWidget {
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                       child: Row(
                         children: [
-                          Icon(Icons.volume_up_rounded, color: p.textMuted),
+                          ExcludeSemantics(
+                            child: Icon(Icons.volume_up_rounded, color: p.textMuted),
+                          ),
+                          // One node — "Music volume, 60%" with the slider's
+                          // own increase and decrease.
                           Expanded(
-                            child: Slider(
-                              value: settings.musicVolume,
-                              onChanged: notifier.setMusicVolume,
+                            child: MergeSemantics(
+                              child: Semantics(
+                                label: l10n.settingsMusicVolume,
+                                child: Slider(
+                                  value: settings.musicVolume,
+                                  onChanged: notifier.setMusicVolume,
+                                  semanticFormatterCallback: (value) => '${(value * 100).round()}%',
+                                ),
+                              ),
                             ),
                           ),
-                          SizedBox(
-                            width: 40,
-                            child: Text(
-                              '${(settings.musicVolume * 100).round()}%',
-                              textAlign: TextAlign.end,
-                              style: TextStyle(color: p.textMuted),
+                          // The slider already speaks its value.
+                          ExcludeSemantics(
+                            child: SizedBox(
+                              width: MediaQuery.textScalerOf(context).scale(40),
+                              child: Text(
+                                '${(settings.musicVolume * 100).round()}%',
+                                textAlign: TextAlign.end,
+                                style: TextStyle(color: p.textMuted),
+                              ),
                             ),
                           ),
                         ],
@@ -105,7 +121,7 @@ class SettingsScreen extends ConsumerWidget {
               child: SwitchListTile(
                 value: settings.sfxOn,
                 onChanged: notifier.setSfx,
-                secondary: const Text('💨', style: TextStyle(fontSize: 24)),
+                secondary: const _Emoji('💨'),
                 title: Text(l10n.settingsSfx),
                 subtitle: Text(l10n.settingsSfxSubtitle),
               ),
@@ -115,9 +131,44 @@ class SettingsScreen extends ConsumerWidget {
               child: SwitchListTile(
                 value: settings.hapticsOn,
                 onChanged: notifier.setHaptics,
-                secondary: const Text('📳', style: TextStyle(fontSize: 24)),
+                secondary: const _Emoji('📳'),
                 title: Text(l10n.settingsHaptics),
                 subtitle: Text(l10n.settingsHapticsSubtitle),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _SettingCard(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Row(
+                      children: [
+                        const _Emoji('♿'),
+                        const SizedBox(width: 12),
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            l10n.settingsAccessibility,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SwitchListTile(
+                    value: settings.reduceMotion,
+                    onChanged: notifier.setReduceMotion,
+                    title: Text(l10n.settingsReduceMotion),
+                    subtitle: Text(l10n.settingsReduceMotionSubtitle),
+                  ),
+                  SwitchListTile(
+                    value: settings.extraTime,
+                    onChanged: notifier.setExtraTime,
+                    title: Text(l10n.settingsExtraTime),
+                    subtitle: Text(l10n.settingsExtraTimeSubtitle),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -166,7 +217,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             _SettingCard(
               child: ListTile(
-                leading: const Text('🎯', style: TextStyle(fontSize: 24)),
+                leading: const _Emoji('🎯'),
                 title: Text(l10n.settingsHowToPlay),
                 subtitle: Text(l10n.howToPlayBody),
                 trailing: const Icon(Icons.chevron_right_rounded),
@@ -180,7 +231,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             _SettingCard(
               child: ListTile(
-                leading: const Text('🎼', style: TextStyle(fontSize: 24)),
+                leading: const _Emoji('🎼'),
                 title: Text(l10n.settingsCredits),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push(
@@ -191,7 +242,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             _SettingCard(
               child: ListTile(
-                leading: const Text('🧹', style: TextStyle(fontSize: 24)),
+                leading: const _Emoji('🧹'),
                 title: Text(l10n.settingsResetProgress),
                 subtitle: Text(l10n.settingsResetProgressSubtitle),
                 trailing: const Icon(Icons.chevron_right_rounded),
@@ -222,11 +273,14 @@ class _ChoiceCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(emoji, style: const TextStyle(fontSize: 24)),
+                _Emoji(emoji),
                 const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
                 ),
               ],
             ),
@@ -235,6 +289,17 @@ class _ChoiceCard extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// A row's emoji: decoration, so a screen reader skips it rather than
+/// announcing "musical note" before every setting.
+class _Emoji extends StatelessWidget {
+  const _Emoji(this.emoji);
+  final String emoji;
+
+  @override
+  Widget build(BuildContext context) =>
+      ExcludeSemantics(child: Text(emoji, style: const TextStyle(fontSize: 24)));
 }
 
 class _SettingCard extends StatelessWidget {

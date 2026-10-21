@@ -995,7 +995,7 @@ abstract class AppLocalizations {
   /// No description provided for @hudLives.
   ///
   /// In en, this message translates to:
-  /// **'{lives} lives left'**
+  /// **'{lives, plural, =1{1 life left} other{{lives} lives left}}'**
   String hudLives(int lives);
 
   /// No description provided for @toolHint.
@@ -1603,6 +1603,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset'**
   String get commonReset;
+
+  /// No description provided for @hudArrowsLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{out} of {total} arrows out'**
+  String hudArrowsLeft(int out, int total);
+
+  /// No description provided for @hudTimeLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{time} left on the clock'**
+  String hudTimeLeft(String time);
+
+  /// No description provided for @starsOfThree.
+  ///
+  /// In en, this message translates to:
+  /// **'{stars} of 3 stars'**
+  String starsOfThree(int stars);
+
+  /// No description provided for @boardLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Puzzle board, {width} by {height}, {left} of {total} arrows left'**
+  String boardLabel(int width, int height, int left, int total);
+
+  /// One arrow on the board, as a screen reader reads it. {path} is arrowPathClear or arrowPathBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrow pointing {direction}, {length, plural, =1{1 cell} other{{length} cells}} long, head at row {row}, column {column}. {path}'**
+  String arrowLabel(
+    String direction,
+    int length,
+    int row,
+    int column,
+    String path,
+  );
+
+  /// No description provided for @arrowPathClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear path to the edge.'**
+  String get arrowPathClear;
+
+  /// No description provided for @arrowPathBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'{distance, plural, =1{Another arrow is right in front of it.} other{Another arrow is {distance} cells ahead.}}'**
+  String arrowPathBlocked(int distance);
+
+  /// No description provided for @arrowHinted.
+  ///
+  /// In en, this message translates to:
+  /// **'Hint: this one can go.'**
+  String get arrowHinted;
+
+  /// No description provided for @arrowBumpedBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Bumped before; another bump here is free.'**
+  String get arrowBumpedBefore;
+
+  /// The action a screen reader offers on an arrow ("double tap to …").
+  ///
+  /// In en, this message translates to:
+  /// **'Slide it out'**
+  String get arrowTapHint;
+
+  /// No description provided for @directionUp.
+  ///
+  /// In en, this message translates to:
+  /// **'up'**
+  String get directionUp;
+
+  /// No description provided for @directionRight.
+  ///
+  /// In en, this message translates to:
+  /// **'right'**
+  String get directionRight;
+
+  /// No description provided for @directionDown.
+  ///
+  /// In en, this message translates to:
+  /// **'down'**
+  String get directionDown;
+
+  /// No description provided for @directionLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'left'**
+  String get directionLeft;
+
+  /// No description provided for @levelCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared'**
+  String get levelCleared;
+
+  /// No description provided for @levelUpNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Up next'**
+  String get levelUpNext;
+
+  /// No description provided for @levelBestTime.
+  ///
+  /// In en, this message translates to:
+  /// **'best time {time}'**
+  String levelBestTime(String time);
+
+  /// No description provided for @onboardStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step} of {total}'**
+  String onboardStep(int step, int total);
+
+  /// No description provided for @settingsMusicVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Music volume'**
+  String get settingsMusicVolume;
+
+  /// No description provided for @settingsAccessibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility'**
+  String get settingsAccessibility;
+
+  /// No description provided for @settingsReduceMotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce motion'**
+  String get settingsReduceMotion;
+
+  /// No description provided for @settingsReduceMotionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No shakes, hops or confetti — the arrows still move'**
+  String get settingsReduceMotionSubtitle;
+
+  /// No description provided for @settingsExtraTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra time'**
+  String get settingsExtraTime;
+
+  /// No description provided for @settingsExtraTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Twice the clock on every level'**
+  String get settingsExtraTimeSubtitle;
 }
 
 class _AppLocalizationsDelegate

@@ -477,7 +477,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String hudLives(int lives) {
-    return '$lives lives left';
+    String _temp0 = intl.Intl.pluralLogic(
+      lives,
+      locale: localeName,
+      other: '$lives lives left',
+      one: '1 life left',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -826,4 +832,111 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonReset => 'Reset';
+
+  @override
+  String hudArrowsLeft(int out, int total) {
+    return '$out of $total arrows out';
+  }
+
+  @override
+  String hudTimeLeft(String time) {
+    return '$time left on the clock';
+  }
+
+  @override
+  String starsOfThree(int stars) {
+    return '$stars of 3 stars';
+  }
+
+  @override
+  String boardLabel(int width, int height, int left, int total) {
+    return 'Puzzle board, $width by $height, $left of $total arrows left';
+  }
+
+  @override
+  String arrowLabel(
+    String direction,
+    int length,
+    int row,
+    int column,
+    String path,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      length,
+      locale: localeName,
+      other: '$length cells',
+      one: '1 cell',
+    );
+    return 'Arrow pointing $direction, $_temp0 long, head at row $row, column $column. $path';
+  }
+
+  @override
+  String get arrowPathClear => 'Clear path to the edge.';
+
+  @override
+  String arrowPathBlocked(int distance) {
+    String _temp0 = intl.Intl.pluralLogic(
+      distance,
+      locale: localeName,
+      other: 'Another arrow is $distance cells ahead.',
+      one: 'Another arrow is right in front of it.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get arrowHinted => 'Hint: this one can go.';
+
+  @override
+  String get arrowBumpedBefore => 'Bumped before; another bump here is free.';
+
+  @override
+  String get arrowTapHint => 'Slide it out';
+
+  @override
+  String get directionUp => 'up';
+
+  @override
+  String get directionRight => 'right';
+
+  @override
+  String get directionDown => 'down';
+
+  @override
+  String get directionLeft => 'left';
+
+  @override
+  String get levelCleared => 'Cleared';
+
+  @override
+  String get levelUpNext => 'Up next';
+
+  @override
+  String levelBestTime(String time) {
+    return 'best time $time';
+  }
+
+  @override
+  String onboardStep(int step, int total) {
+    return 'Step $step of $total';
+  }
+
+  @override
+  String get settingsMusicVolume => 'Music volume';
+
+  @override
+  String get settingsAccessibility => 'Accessibility';
+
+  @override
+  String get settingsReduceMotion => 'Reduce motion';
+
+  @override
+  String get settingsReduceMotionSubtitle =>
+      'No shakes, hops or confetti — the arrows still move';
+
+  @override
+  String get settingsExtraTime => 'Extra time';
+
+  @override
+  String get settingsExtraTimeSubtitle => 'Twice the clock on every level';
 }

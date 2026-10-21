@@ -21,6 +21,8 @@ class SettingsRepository {
   static const _kGridLines = 'arrow_grid_lines';
   static const _kOnboarding = 'arrow_onboarding_done';
   static const _kLanguage = 'arrow_language';
+  static const _kReduceMotion = 'arrow_reduce_motion';
+  static const _kExtraTime = 'arrow_extra_time';
 
   Settings load() {
     const d = Settings.defaults;
@@ -33,6 +35,8 @@ class SettingsRepository {
       gridLinesOn: _prefs.getBool(_kGridLines) ?? d.gridLinesOn,
       onboardingDone: _prefs.getBool(_kOnboarding) ?? d.onboardingDone,
       languageChoice: _parseLanguage(_prefs.getString(_kLanguage), d.languageChoice),
+      reduceMotion: _prefs.getBool(_kReduceMotion) ?? d.reduceMotion,
+      extraTime: _prefs.getBool(_kExtraTime) ?? d.extraTime,
     );
   }
 
@@ -45,6 +49,8 @@ class SettingsRepository {
     await _prefs.setBool(_kGridLines, s.gridLinesOn);
     await _prefs.setBool(_kOnboarding, s.onboardingDone);
     await _prefs.setString(_kLanguage, s.languageChoice.name);
+    await _prefs.setBool(_kReduceMotion, s.reduceMotion);
+    await _prefs.setBool(_kExtraTime, s.extraTime);
   }
 
   /// Maps a stored language name back to [LanguageChoice], falling back to
@@ -84,6 +90,10 @@ class SettingsNotifier extends StateNotifier<Settings> {
       _update(state.copyWith(languageChoice: choice));
 
   void setGridLines(bool on) => _update(state.copyWith(gridLinesOn: on));
+
+  void setReduceMotion(bool on) => _update(state.copyWith(reduceMotion: on));
+
+  void setExtraTime(bool on) => _update(state.copyWith(extraTime: on));
 
   void completeOnboarding() => _update(state.copyWith(onboardingDone: true));
 

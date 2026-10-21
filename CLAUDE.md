@@ -607,6 +607,66 @@ Key patterns:
   The riddle card reads `Localizations.localeOf(context).languageCode` to
   pick its bank, so the riddles follow the app's language rather than a
   stored copy of it.
+- **Accessibility** (`test/widgets/accessibility_test.dart` pins the
+  behaviours; `test/accessibility/guidelines_test.dart` runs Flutter's own
+  guideline checks — 48/44 px tap targets, labelled tap targets, text
+  contrast — over every screen and card in both themes; the **Accessibility**
+  workflow below reports both on every PR):
+  - *Screen readers.* The board is a canvas, so `_BoardPainter.semanticsBuilder`
+    hands the semantics tree **one button per arrow** still on the board,
+    over its cells, labelled by `widgets/board_semantics.dart` — where it is,
+    which way it points, how long it is, and what a sighted player sees along
+    its path ("Clear path to the edge" / "Another arrow is 3 cells ahead"),
+    plus the hint and a paid-for bump — with a tap action that plays it. The
+    board is a labelled container ("Puzzle board, 4 by 4, 3 of 3 arrows
+    left") and the `GestureDetector` is `excludeFromSemantics`, so there is no
+    whole-board tap landing at its centre. The painter's nodes are only built
+    with semantics on, so the 464-arrow boards pay nothing otherwise. The HUD
+    is three spoken nodes: the clock ("0:30 left on the clock", not live — it
+    ticks ten times a second), the **arrows-out counter** (`_ArrowsOut`, new
+    to the HUD, a live region so every exit is spoken) and the lives (a live
+    region too). `ResultCard` is wrapped in `BlockSemantics` — a card is modal
+    to a reader as well as a finger — and its title is a header *and* a live
+    region, so the card announces itself. Decorative emoji everywhere sit
+    under `ExcludeSemantics`; the trail nodes and the hero card are single
+    buttons whose label says everything on them (state, stars, best time);
+    the grid button carries `toggled`; the volume slider has a name and
+    reads a percentage; the walkthrough's dots say "Step 2 of 3".
+  - *Keyboard.* The arrow keys walk a cursor from arrow to arrow
+    (`models/board_cursor.dart`: nearest head in that direction, by
+    forward distance plus twice the sideways offset; a removed arrow still
+    anchors the next step) and **Enter** plays it; the board draws a ring
+    around the focused arrow (`PuzzleBoard.focusedArrowId`). A restart drops
+    the cursor. With a reader on the web, the arrow nodes are Tab-reachable
+    buttons on their own.
+  - *Contrast.* Every lettering pair is ≥ 4.5:1 and the clock bar ≥ 3:1 on
+    its track, pinned in `test/ui/theme_test.dart`. The rule that fell out of
+    the audit: **the primary and the mint are fills, not inks** — white sits
+    on them; as lettering they take `primaryInk` / `successInk` (deeper on
+    light, lighter on dark — the move `chipInk` already made). `textFaint`
+    is for disabled glyphs only, never for text to be read. The dark
+    primary moved to `0xFF6F5FE8` so white clears 4.5:1 on it.
+  - *Text scaling.* Nothing is a fixed-height box around text: the game
+    `AppBar`'s two-line title scales `toolbarHeight`, the home header's
+    extents follow `MediaQuery.textScalerOf`, the trail node has no fixed
+    height, the clock digits' box scales (tabular figures, so they do not
+    reflow), every `ResultCard` scrolls, and the walkthrough steps scroll
+    when they must (`IntrinsicHeight` inside a `SingleChildScrollView`, so
+    the `Spacer`s still work when there is room).
+  - *Reduced motion.* `reduceMotionOf(context)` (`ui/motion.dart`) is
+    `MediaQuery.disableAnimations`: the OS setting, or Settings → Reduce
+    motion, which `main.dart` folds into the same flag via
+    `MaterialApp.builder` so widgets ask one question. Reduced means nothing
+    moves that carries no information: no screen jolt, hop, confetti, slump,
+    shake or entrance animation, a still hint glow, a bump that flashes
+    without travelling (`_BoardPainter.travel` = 0). Arrows still slide out.
+  - *Time.* Settings → **Extra time** doubles every level's clock
+    (`LevelSpec.withClockFactor`, applied in `gameProvider`; the seed, board
+    and stars are untouched, so saved games still fit). The curve is brisk
+    by design; this is the opt-out for hands and eyes that need longer.
+  - *Touch targets.* Everything tappable is ≥ 44 px (the riddle's hint chip
+    was 34). Cells on late boards are the game's own problem and the zoom's
+    answer (`kFingerCellPx`).
 
 ## Testing
 
@@ -641,6 +701,26 @@ hook reads the same file). Job "Analyze & test" runs `flutter analyze
 builds the web app, drives it in headless Chromium (`tool/screenshot.mjs`)
 at a phone viewport and at 1440×900 with keyboard presses, fails on any
 Flutter exception, and uploads `shots/`.
+
+`.github/workflows/accessibility.yml` runs on every PR and reports on it
+with two sticky comments. Job "Accessibility checks" runs the accessibility
+suites with the JSON reporter and `tool/a11y_report.py` turns the stream
+into a table: a row per check, and for a failure the guideline's own reason
+(which node, what size, what contrast), so the why is on the PR without
+opening the logs; the job fails when a check does. Job "Before/after
+screenshots" builds the base branch and the PR, drives both through
+`tool/screenshot.mjs` with the same flows (the PR's harness drives both, so
+it has to keep matching the old accessible names too — see `labels.board`),
+and `tool/compare_shots.py` (pure Pillow) writes one image per screen whose
+pixels changed — base left, PR right, the changed regions boxed and numbered
+in red (clusters under `kMinArea` are ignored, which is what keeps the level
+clock's digits from counting) — plus a summary with any problem the harness
+hit on the PR's build and the screen it failed on. The images go to
+`gh-pages` under `pr-preview/pr-<number>-a11y/` (a sibling of the preview
+folder, since the preview deploy wipes its own folder on every push) and
+are removed with the comments when the PR closes. The guideline test uses
+the hand-built sample board: on a real late level the arrow nodes are far
+under 48 px, which is the game's design and the zoom's job, not a failure.
 
 Job "Debug APK" builds `flutter build apk --debug` ("Arrow Testing", every
 level unlocked), uploads it as the `arrow-debug-apk` artifact and, on a PR,

@@ -29,9 +29,13 @@ void main() {
         gridLinesOn: true,
         onboardingDone: true,
         languageChoice: LanguageChoice.hindi,
+        reduceMotion: true,
+        extraTime: true,
       );
       await SettingsRepository(prefs).save(custom);
       expect(SettingsRepository(prefs).load(), custom);
+      expect(prefs.getBool('arrow_reduce_motion'), isTrue);
+      expect(prefs.getBool('arrow_extra_time'), isTrue);
     });
 
     test('unknown stored theme values fall back to system', () async {
@@ -64,6 +68,8 @@ void main() {
       notifier.setMusicVolume(1.7); // clamped
       notifier.completeOnboarding();
       notifier.setLanguageChoice(LanguageChoice.hindi);
+      notifier.setReduceMotion(true);
+      notifier.setExtraTime(true);
       await Future<void>.delayed(Duration.zero);
 
       expect(
@@ -77,9 +83,13 @@ void main() {
           gridLinesOn: true,
           onboardingDone: true,
           languageChoice: LanguageChoice.hindi,
+          reduceMotion: true,
+          extraTime: true,
         ),
       );
       expect(prefs.getBool('arrow_haptics_on'), isFalse);
+      expect(prefs.getBool('arrow_reduce_motion'), isTrue);
+      expect(prefs.getBool('arrow_extra_time'), isTrue);
       expect(prefs.getBool('arrow_sfx_on'), isFalse);
       expect(prefs.getString('arrow_theme'), 'light');
       expect(prefs.getBool('arrow_grid_lines'), isTrue);

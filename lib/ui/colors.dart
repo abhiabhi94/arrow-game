@@ -26,9 +26,24 @@ const Color _lAccentCoral = Color(0xFFFF6B6B);
 const Color _lAccentSun = Color(0xFFFFC53D);
 const Color _lAccentMint = Color(0xFF32D296);
 
-// Semantic
+// Semantic. The error red is used as *text* (the riddle's "wrong" line), so
+// it is the deep one: 0xFFEF4444 sat at 3.8:1 on white.
 const Color _lSuccessGreen = Color(0xFF22C55E);
-const Color _lErrorRed = Color(0xFFEF4444);
+const Color _lErrorRed = Color(0xFFD23232);
+
+// The primary *as text or an icon* on the page or a surface: the outlined
+// and text buttons, a current level's name, the grid-lines toast. The
+// primary itself is a fill colour — white sits on it — and as lettering it
+// came to 4.4:1 on the light page and 4.1:1 on the dark surface, under the
+// 4.5:1 that body-sized text needs. Each palette steps the other way from
+// its page: darker on light, lighter on dark (the same move chipInk makes).
+const Color _lPrimaryInk = Color(0xFF5647C4);
+
+// Mint *as text*: "New best time!", the walkthrough's tick. The mint accent
+// is a fill colour — on white it reads at 1.9:1 — so light text in it goes
+// to a deep green (5.0:1 on white, 4.6:1 on the page); the dark palette's
+// mint is already 9.7:1 on its surface and stays itself.
+const Color _lSuccessInk = Color(0xFF0F7F57);
 
 // Ink for text and icons sitting ON a bright accent (the amber hint badge).
 // The accents are bright in both palettes, so this ink is dark in both: the
@@ -63,8 +78,11 @@ const Color _lArrowInk = Color(0xFF2D2A4A);
 const Color _lHeartFull = Color(0xFFFF6B6B);
 const Color _lHeartEmpty = Color(0xFFDAD7F2);
 const Color _lTimerTrack = Color(0xFFE4E0FF);
-const Color _lTimerFill = Color(0xFF32D296);
-const Color _lTimerWarn = Color(0xFFFF6B6B);
+// The bar's fill against its track is a non-text contrast (3:1): the mint
+// accent sat at 1.5:1 on the lavender track, the coral at 2.2:1. The warning
+// colour is also the digits' ink in the last quarter, so it is the deep red.
+const Color _lTimerFill = Color(0xFF149066);
+const Color _lTimerWarn = Color(0xFFCC2E2E);
 const Color _lStar = Color(0xFFFFC53D);
 const Color _lStarEmpty = Color(0xFFDAD7F2);
 
@@ -79,7 +97,10 @@ const Color _dCardTint = Color(0xFF262238);
 const Color _dOutlineSoft = Color(0xFF322E4A);
 const Color _dScrim = Color(0xB3000000);
 
-const Color _dPrimary = Color(0xFF7A6BF2);
+// White text sits on the primary (the filled buttons, the hero card, the
+// current level's node); at 0xFF7A6BF2 it read at 4.0:1, so the fill is a
+// shade deeper (4.7:1) and the primary-as-text roles take primaryInk.
+const Color _dPrimary = Color(0xFF6F5FE8);
 const Color _dPrimaryDark = Color(0xFF5647C4);
 const Color _dPrimaryLight = Color(0xFFB7AEFF);
 const Color _dAccentCoral = Color(0xFFFF7B7B);
@@ -92,6 +113,8 @@ const Color _dErrorRed = Color(0xFFFF6B6B);
 const Color _dOnAccent = Color(0xFF241F3B);
 
 const Color _dChipInk = Color(0xFFB7AEFF);
+const Color _dPrimaryInk = Color(0xFFB7AEFF);
+const Color _dSuccessInk = Color(0xFF3FE0A6);
 
 const Color _dTextInk = Color(0xFFEAE7F7);
 const Color _dTextMuted = Color(0xFFA9A4CC);
@@ -133,6 +156,8 @@ class ArrowPalette {
     required this.errorRed,
     required this.onAccent,
     required this.chipInk,
+    required this.primaryInk,
+    required this.successInk,
     required this.textInk,
     required this.textMuted,
     required this.textFaint,
@@ -167,6 +192,13 @@ class ArrowPalette {
   final Color onAccent;
   /// Ink for a label on a wash of [primary] — see [_lChipInk].
   final Color chipInk;
+
+  /// The primary as lettering or an icon on the page or a surface — see
+  /// [_lPrimaryInk]. [primary] itself is a fill for white to sit on.
+  final Color primaryInk;
+
+  /// Mint as lettering — see [_lSuccessInk]. [accentMint] is a fill.
+  final Color successInk;
   final Color textInk;
   final Color textMuted;
   final Color textFaint;
@@ -203,6 +235,8 @@ class ArrowPalette {
     errorRed: _lErrorRed,
     onAccent: _lOnAccent,
     chipInk: _lChipInk,
+    primaryInk: _lPrimaryInk,
+    successInk: _lSuccessInk,
     textInk: _lTextInk,
     textMuted: _lTextMuted,
     textFaint: _lTextFaint,
@@ -236,6 +270,8 @@ class ArrowPalette {
     errorRed: _dErrorRed,
     onAccent: _dOnAccent,
     chipInk: _dChipInk,
+    primaryInk: _dPrimaryInk,
+    successInk: _dSuccessInk,
     textInk: _dTextInk,
     textMuted: _dTextMuted,
     textFaint: _dTextFaint,

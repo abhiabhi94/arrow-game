@@ -76,9 +76,17 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
     return Listener(
       onPointerDown: (_) => ref.read(audioServiceProvider).nudge(),
       child: MaterialApp(
-        title: 'Arrow',
+        onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
         debugShowCheckedModeBanner: false,
         scrollBehavior: const AppScrollBehavior(),
+        // "Reduce motion" in Settings becomes the same flag the OS setting
+        // sets, so every widget asks one question (see ui/motion.dart).
+        builder: (context, child) => settings.reduceMotion
+            ? MediaQuery(
+                data: MediaQuery.of(context).copyWith(disableAnimations: true),
+                child: child!,
+              )
+            : child!,
         theme: buildLightTheme(),
         darkTheme: buildDarkTheme(),
         themeMode: themeModeFor(settings.themeChoice),

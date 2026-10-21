@@ -23,6 +23,8 @@ class Settings {
     required this.gridLinesOn,
     required this.onboardingDone,
     required this.languageChoice,
+    this.reduceMotion = false,
+    this.extraTime = false,
   });
 
   /// Background music on/off (on by default).
@@ -53,6 +55,18 @@ class Settings {
   /// device.
   final LanguageChoice languageChoice;
 
+  /// Calms the screen down for players who find motion hard to take: no
+  /// screen jolt on a bump, no hop or confetti on a clear, no slump, no
+  /// entrance animations, a still hint glow. Off by default; the OS "reduce
+  /// motion" setting switches the same behaviour on without this flag (see
+  /// `reduceMotionOf` in `ui/motion.dart`).
+  final bool reduceMotion;
+
+  /// Doubles every level's clock. The game is a sprint by design — 26 s on
+  /// level 1 — and that is a wall for a player whose hands or eyes need
+  /// longer; stars and progress are earned the same way.
+  final bool extraTime;
+
   static const Settings defaults = Settings(
     musicOn: true,
     musicVolume: 0.6,
@@ -62,6 +76,8 @@ class Settings {
     gridLinesOn: true,
     onboardingDone: false,
     languageChoice: LanguageChoice.system,
+    reduceMotion: false,
+    extraTime: false,
   );
 
   Settings copyWith({
@@ -73,6 +89,8 @@ class Settings {
     bool? gridLinesOn,
     bool? onboardingDone,
     LanguageChoice? languageChoice,
+    bool? reduceMotion,
+    bool? extraTime,
   }) =>
       Settings(
         musicOn: musicOn ?? this.musicOn,
@@ -83,6 +101,8 @@ class Settings {
         gridLinesOn: gridLinesOn ?? this.gridLinesOn,
         onboardingDone: onboardingDone ?? this.onboardingDone,
         languageChoice: languageChoice ?? this.languageChoice,
+        reduceMotion: reduceMotion ?? this.reduceMotion,
+        extraTime: extraTime ?? this.extraTime,
       );
 
   @override
@@ -95,7 +115,9 @@ class Settings {
       other.themeChoice == themeChoice &&
       other.gridLinesOn == gridLinesOn &&
       other.onboardingDone == onboardingDone &&
-      other.languageChoice == languageChoice;
+      other.languageChoice == languageChoice &&
+      other.reduceMotion == reduceMotion &&
+      other.extraTime == extraTime;
 
   @override
   int get hashCode => Object.hash(
@@ -107,5 +129,7 @@ class Settings {
         gridLinesOn,
         onboardingDone,
         languageChoice,
+        reduceMotion,
+        extraTime,
       );
 }

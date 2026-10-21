@@ -13,6 +13,7 @@ import '../providers/game_provider.dart';
 import '../providers/settings_provider.dart';
 import '../ui/colors.dart';
 import '../ui/layout.dart';
+import '../ui/motion.dart';
 import '../widgets/puzzle_board.dart';
 
 /// A tiny board with one free arrow: "tap it".
@@ -123,8 +124,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final oneDone = _oneState.phase == GamePhase.cleared;
     final twoDone = _twoState.phase == GamePhase.cleared;
     final canNext = switch (_step) { 0 => oneDone, 1 => twoDone, _ => true };
+    final calm = reduceMotionOf(context);
 
-    return Scaffold(
+    final screen = Scaffold(
       body: SafeArea(
         // A phone-width column, centred, so the walkthrough reads the same in
         // a desktop browser.
@@ -136,7 +138,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               children: [
                 Row(
                   children: [
-                    _StepDots(step: _step),
+                    _StepDots(step: _step, label: l10n.onboardStep(_step + 1, 3)),
                     const Spacer(),
                     TextButton(onPressed: _finish, child: Text(l10n.onboardSkip)),
                   ],
@@ -144,7 +146,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 const SizedBox(height: 8),
                 Expanded(
                   child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
+                    duration: Duration(milliseconds: calm ? 0 : 250),
                     child: switch (_step) {
                       0 => _DemoStep(
                           key: const ValueKey(0),
@@ -153,6 +155,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           done: oneDone,
                           state: _oneState,
                           onTapArrow: _one.tapArrow,
+                          calm: calm,
                         ),
                       1 => _DemoStep(
                           key: const ValueKey(1),
@@ -165,8 +168,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           done: twoDone,
                           state: _twoState,
                           onTapArrow: _two.tapArrow,
+                          calm: calm,
                         ),
-                      _ => _SummaryStep(key: const ValueKey(2)),
+                      _ => _SummaryStep(key: const ValueKey(2), calm: calm),
                     },
                   ),
                 ),
@@ -187,28 +191,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
         ),
       ),
-    ).animate().fadeIn(duration: 250.ms);
+    );
+    if (calm) return screen;
+    return screen.animate().fadeIn(duration: 250.ms);
   }
 }
 
+/// Three dots, the current one stretched; to a screen reader, "Step 2 of 3".
 class _StepDots extends StatelessWidget {
-  const _StepDots({required this.step});
+  const _StepDots({required this.step, required this.label});
   final int step;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    return Row(
-      children: List<Widget>.generate(
-        3,
-        (i) => AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          margin: const EdgeInsets.only(right: 6),
-          width: i == step ? 22 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: i <= step ? p.primary : p.outlineSoft,
-            borderRadius: BorderRadius.circular(4),
+    return Semantics(
+      label: label,
+      excludeSemantics: true,
+      child: Row(
+        children: List<Widget>.generate(
+          3,
+          (i) => AnimatedContainer(
+            duration: Duration(milliseconds: reduceMotionOf(context) ? 0 : 250),
+            margin: const EdgeInsets.only(right: 6),
+            width: i == step ? 22 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: i <= step ? p.primary : p.outlineSoft,
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
         ),
       ),
@@ -224,6 +236,7 @@ class _DemoStep extends StatelessWidget {
     required this.done,
     required this.state,
     required this.onTapArrow,
+    required this.calm,
   });
 
   final String title;
@@ -231,25 +244,55 @@ class _DemoStep extends StatelessWidget {
   final bool done;
   final GameState state;
   final ValueChanged<int> onTapArrow;
+  final bool calm;
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    return Column(
+    // The tick is decoration: the body line above already says "one down".
+    final tick = ExcludeSemantics(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: p.accentMint.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle_rounded, color: p.successInk, size: 20),
+            const SizedBox(width: 6),
+            Text(
+              AppLocalizations.of(context)!.onboardNext,
+              style: TextStyle(color: p.successInk, fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+      ),
+    );
+    final column = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 12),
-        Text(
-          title,
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: p.textInk),
+        Semantics(
+          header: true,
+          child: Text(
+            title,
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: p.textInk),
+          ),
         ),
         const SizedBox(height: 8),
+        // A live region: the line changes as the player does things ("That's
+        // it — one down!"), and a screen reader should hear it change.
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: Text(
-            body,
-            key: ValueKey(body),
-            style: TextStyle(fontSize: 16, color: p.textMuted, height: 1.4),
+          duration: Duration(milliseconds: calm ? 0 : 200),
+          child: Semantics(
+            liveRegion: true,
+            child: Text(
+              body,
+              key: ValueKey(body),
+              style: TextStyle(fontSize: 16, color: p.textMuted, height: 1.4),
+            ),
           ),
         ),
         const Spacer(),
@@ -263,7 +306,12 @@ class _DemoStep extends StatelessWidget {
             child: SizedBox(
               width: 240,
               height: 180,
-              child: PuzzleBoard(state: state, showGrid: true, onTapArrow: onTapArrow),
+              child: PuzzleBoard(
+                state: state,
+                showGrid: true,
+                onTapArrow: onTapArrow,
+                reduceMotion: calm,
+              ),
             ),
           ),
         ),
@@ -272,35 +320,37 @@ class _DemoStep extends StatelessWidget {
           height: 36,
           child: done
               ? Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: p.accentMint.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle_rounded, color: p.accentMint, size: 20),
-                        const SizedBox(width: 6),
-                        Text(
-                          AppLocalizations.of(context)!.onboardNext,
-                          style: TextStyle(color: p.accentMint, fontWeight: FontWeight.w800),
-                        ),
-                      ],
-                    ),
-                  ).animate().scale(begin: const Offset(0.6, 0.6), curve: Curves.easeOutBack, duration: 300.ms),
+                  child: calm
+                      ? tick
+                      : tick.animate().scale(
+                            begin: const Offset(0.6, 0.6),
+                            curve: Curves.easeOutBack,
+                            duration: 300.ms,
+                          ),
                 )
               : null,
         ),
         const Spacer(),
       ],
     );
+    // Scrolls only when it has to: at a large system font size the copy and
+    // the board outgrow a short phone, and a Spacer cannot give what it has
+    // not got.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(child: column),
+        ),
+      ),
+    );
   }
 }
 
 class _SummaryStep extends StatelessWidget {
-  const _SummaryStep({super.key});
+  const _SummaryStep({super.key, required this.calm});
+
+  final bool calm;
 
   @override
   Widget build(BuildContext context) {
@@ -313,36 +363,43 @@ class _SummaryStep extends StatelessWidget {
       ('🔍', l10n.onboardRuleZoom),
       ('🧩', l10n.onboardRuleRiddle),
     ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    Widget rule(int i) => Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: p.surface,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            children: [
+              ExcludeSemantics(child: Text(rules[i].$1, style: const TextStyle(fontSize: 24))),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  rules[i].$2,
+                  style: TextStyle(fontSize: 15, color: p.textInk, height: 1.3),
+                ),
+              ),
+            ],
+          ),
+        );
+    // A list, so five rules at a large font size scroll rather than overflow.
+    return ListView(
+      padding: EdgeInsets.zero,
       children: [
         const SizedBox(height: 12),
-        Text(
-          l10n.onboardTitle3,
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: p.textInk),
+        Semantics(
+          header: true,
+          child: Text(
+            l10n.onboardTitle3,
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: p.textInk),
+          ),
         ),
         const SizedBox(height: 20),
         for (var i = 0; i < rules.length; i++)
-          Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: p.surface,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                Text(rules[i].$1, style: const TextStyle(fontSize: 24)),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    rules[i].$2,
-                    style: TextStyle(fontSize: 15, color: p.textInk, height: 1.3),
-                  ),
-                ),
-              ],
-            ),
-          ).animate(delay: (80 * i).ms).fadeIn(duration: 250.ms).slideY(begin: 0.15),
+          calm
+              ? rule(i)
+              : rule(i).animate(delay: (80 * i).ms).fadeIn(duration: 250.ms).slideY(begin: 0.15),
       ],
     );
   }

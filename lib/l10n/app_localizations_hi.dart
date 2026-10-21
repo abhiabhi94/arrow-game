@@ -478,7 +478,13 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String hudLives(int lives) {
-    return '$lives जानें बाक़ी';
+    String _temp0 = intl.Intl.pluralLogic(
+      lives,
+      locale: localeName,
+      other: '$lives जानें बचीं',
+      one: '1 जान बची',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -823,4 +829,112 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get commonReset => 'मिटाएँ';
+
+  @override
+  String hudArrowsLeft(int out, int total) {
+    return '$total में से $out तीर बाहर';
+  }
+
+  @override
+  String hudTimeLeft(String time) {
+    return 'घड़ी पर $time बाक़ी';
+  }
+
+  @override
+  String starsOfThree(int stars) {
+    return '3 में से $stars तारे';
+  }
+
+  @override
+  String boardLabel(int width, int height, int left, int total) {
+    return 'पहेली बोर्ड, $width गुणा $height, $total में से $left तीर बाक़ी';
+  }
+
+  @override
+  String arrowLabel(
+    String direction,
+    int length,
+    int row,
+    int column,
+    String path,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      length,
+      locale: localeName,
+      other: '$length खाने',
+      one: '1 खाना',
+    );
+    return '$direction की ओर तीर, $_temp0 लंबा, सिरा पंक्ति $row, स्तंभ $column पर। $path';
+  }
+
+  @override
+  String get arrowPathClear => 'किनारे तक रास्ता साफ़ है।';
+
+  @override
+  String arrowPathBlocked(int distance) {
+    String _temp0 = intl.Intl.pluralLogic(
+      distance,
+      locale: localeName,
+      other: '$distance खाने आगे एक और तीर है।',
+      one: 'ठीक सामने एक और तीर है।',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get arrowHinted => 'संकेत: यह निकल सकता है।';
+
+  @override
+  String get arrowBumpedBefore =>
+      'पहले टकरा चुका है; यहाँ फिर टकराने पर जान नहीं जाएगी।';
+
+  @override
+  String get arrowTapHint => 'इसे बाहर निकालें';
+
+  @override
+  String get directionUp => 'ऊपर';
+
+  @override
+  String get directionRight => 'दाएँ';
+
+  @override
+  String get directionDown => 'नीचे';
+
+  @override
+  String get directionLeft => 'बाएँ';
+
+  @override
+  String get levelCleared => 'पार';
+
+  @override
+  String get levelUpNext => 'अगला';
+
+  @override
+  String levelBestTime(String time) {
+    return 'सबसे अच्छा समय $time';
+  }
+
+  @override
+  String onboardStep(int step, int total) {
+    return '$total में से चरण $step';
+  }
+
+  @override
+  String get settingsMusicVolume => 'संगीत की आवाज़';
+
+  @override
+  String get settingsAccessibility => 'सुगम्यता';
+
+  @override
+  String get settingsReduceMotion => 'हरकत कम करें';
+
+  @override
+  String get settingsReduceMotionSubtitle =>
+      'कोई झटका, छलाँग या कंफ़ेटी नहीं — तीर फिर भी चलते हैं';
+
+  @override
+  String get settingsExtraTime => 'अतिरिक्त समय';
+
+  @override
+  String get settingsExtraTimeSubtitle => 'हर लेवल पर दुगनी घड़ी';
 }

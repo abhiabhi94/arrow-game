@@ -60,12 +60,15 @@ void main() {
   testWidgets('opens the credits and the walkthrough', (tester) async {
     await usePhoneSurface(tester);
     await pumpApp(tester, const SettingsScreen());
+    // Both rows sit below a phone's fold since the accessibility card.
+    await tester.scrollUntilVisible(find.text('Music credits'), 200);
     await tester.tap(find.text('Music credits'));
     await tester.pumpAndSettle();
     expect(find.byType(CreditsScreen), findsOneWidget);
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.text('How to play'), 200);
     await tester.tap(find.text('How to play'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -89,6 +92,8 @@ void main() {
     expect(container.read(riddleDeckProvider).solved, 5);
     expect(container.read(savedGameProvider)?.level, 2);
 
+    // The accessibility card pushed the reset card below a phone's fold.
+    await tester.scrollUntilVisible(find.text('Reset progress'), 200);
     await tester.tap(find.text('Reset progress'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancel'));
@@ -112,6 +117,7 @@ void main() {
     expect(tester.takeException(), isNull);
     final card = tester.getRect(find.byType(Switch).first);
     expect(card.right, lessThanOrEqualTo((1440 + kMaxContentWidth) / 2));
+    await tester.scrollUntilVisible(find.text('How to play'), 200);
     final title = tester.getRect(find.text('How to play'));
     expect(title.left, greaterThanOrEqualTo((1440 - kMaxContentWidth) / 2));
   });

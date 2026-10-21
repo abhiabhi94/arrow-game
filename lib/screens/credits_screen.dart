@@ -45,8 +45,10 @@ class CreditsScreen extends StatelessWidget {
                     Text(l10n.creditsBy(credit.artist),
                         style: TextStyle(color: context.palette.textMuted)),
                     const SizedBox(height: 8),
+                    // Muted, not faint: the faint ink is 2.5:1 on the light
+                    // surface, and a licence line is there to be read.
                     Text('${credit.license} · ${credit.sourceUrl}',
-                        style: TextStyle(color: context.palette.textFaint, fontSize: 12)),
+                        style: TextStyle(color: context.palette.textMuted, fontSize: 13)),
                   ],
                 ),
               ),

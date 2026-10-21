@@ -54,6 +54,26 @@ class LevelSpec {
 
   int get cellCount => width * height;
 
+  /// The same level with its clock multiplied by [factor] — the "extra time"
+  /// accessibility setting. The board (and so [seed]) is untouched, so a
+  /// saved game still fits and a cleared level is still that level. A factor
+  /// of 1 is this very spec.
+  LevelSpec withClockFactor(int factor) {
+    assert(factor >= 1);
+    if (factor == 1) return this;
+    return LevelSpec(
+      level: level,
+      width: width,
+      height: height,
+      arrows: arrows,
+      minLength: minLength,
+      maxLength: maxLength,
+      timeLimitMs: timeLimitMs * factor,
+      openMoves: openMoves,
+      variant: variant,
+    );
+  }
+
   @override
   String toString() =>
       'LevelSpec($level: ${width}x$height, $arrows arrows, ${timeLimitMs}ms)';
