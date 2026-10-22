@@ -138,6 +138,7 @@ const labels = lang === 'hindi'
       riddleSolved: /तीरों पर वापस$/,
       board: /^पहेली बोर्ड,? (\d+) गुणा (\d+)/,
       gotIt: /^समझ गया$/,
+      welcomeBack: /^जारी रखें$/,
       daily: /^आज का बोर्ड\./,
     }
   : {
@@ -152,6 +153,7 @@ const labels = lang === 'hindi'
       riddleSolved: /Back to the arrows$/,
       board: /^Puzzle board,? (\d+) by (\d+)/,
       gotIt: /^Got it$/,
+      welcomeBack: /^Continue$/,
       daily: /^Daily board\./,
     };
 
@@ -360,13 +362,15 @@ try {
     await tile.click();
     await settle(page, 1200);
     // A big level takes seconds to deal on the web: wait for the board, or
-    // for a chapter card, which stands in front of it (the card is modal to
-    // a reader too, so the board is not in the tree while it is up). Asking
-    // for the card too early read as "no card" on level 40, and the hint
-    // click then sat behind the card until it timed out.
+    // for a card standing in front of it — a chapter card, or the welcome
+    // back of a resumed game (a card is modal to a reader too, so the board
+    // is not in the tree while one is up). Asking for the chapter card too
+    // early read as "no card" on level 40, and the hint click then sat
+    // behind the card until it timed out.
     const board = page.getByLabel(labels.board).or(page.getByRole('button', { name: labels.board })).first();
     const gotIt = page.getByRole('button', { name: labels.gotIt }).first();
-    await gotIt.or(board).first().waitFor({ state: 'attached', timeout: 60_000 });
+    const welcome = page.getByRole('button', { name: labels.welcomeBack }).first();
+    await gotIt.or(welcome).or(board).first().waitFor({ state: 'attached', timeout: 60_000 });
     if (args.dump) console.log(await dumpSemantics(page));
     const id = String(level).padStart(2, '0');
     // A chapter's first level (or the first level opened past one) opens on
