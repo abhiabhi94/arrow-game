@@ -35,7 +35,6 @@
   "level-01-riddle-letter-light.png",
   "level-01-riddle-light.png",
   "level-01-riddle-solved-light.png",
-  "level-03-light-resume.png",
   "level-16-dark-grid.png",
   "level-16-hint-dark-grid.png",
   "level-20-hint-light.png",
@@ -47,5 +46,7 @@
   "home-scrolled-light-resume.png"
  ],
  "only_before": [],
- "problems": []
+ "problems": [
+  "Driver failed: locator.waitFor: Timeout 60000ms exceeded."
+ ]
 }

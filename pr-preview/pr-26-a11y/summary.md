@@ -1,4 +1,13 @@
-**6 screen(s) changed**, 16 unchanged, 1 new.
+### ❌ 1 problem(s) driving the PR build
+
+```
+Driver failed: locator.waitFor: Timeout 60000ms exceeded.
+```
+The screen when it failed:
+
+![failure](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-26-a11y/failure.png)
+
+**6 screen(s) changed**, 15 unchanged, 1 new.
 
 <details><summary><b>home-dark-grid</b> — 5 changed region(s)</summary>
 
@@ -48,7 +57,6 @@
 - `level-01-riddle-letter-light.png`
 - `level-01-riddle-light.png`
 - `level-01-riddle-solved-light.png`
-- `level-03-light-resume.png`
 - `level-16-dark-grid.png`
 - `level-16-hint-dark-grid.png`
 - `level-20-hint-light.png`
