@@ -53,6 +53,7 @@ dart run tool/level_report.dart 41 3  # a level (and its next 3 variants): arrow
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
 node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + keyboard
 node tool/screenshot.mjs --levels 1 --crash 2,4                     # a bump mid-crash (fake clock): jolt + red flash
+node tool/screenshot.mjs --levels 21 --crash 5,5,650                # a bump that turned at a mirror, 650 ms in: pressed on the blocker
 node tool/screenshot.mjs --levels 1 --riddle 2,4,2,3,2,2            # spend all 3 lives -> Out of lives, the riddle, its hint, solved
 node tool/screenshot.mjs --lang hi --settings --levels 1 --riddle 2,4,2,3,2,2 --riddle-answer aam  # the same in Hindi
 node tool/screenshot.mjs --levels 1 --riddle-hint 2,4                # spend the 3 hints -> the riddle button, its riddle, the hint it buys
@@ -75,8 +76,8 @@ hint glow, light/dark) at 390×844 and writes PNGs to `shots/`; `--viewport
 WxH` renders the desktop layout instead and `--keys` presses keys on each
 opened level (both exercised in CI, since the web build is also played on a
 laptop via GitHub Pages); `--crash x,y` taps a grid cell on the first level
-and captures the bump 260 ms in on Playwright's fake clock (a screenshot
-takes longer than the bump), with the semantics layer made pointer-transparent
+and captures the bump 330 ms in (or `x,y,ms`) on Playwright's fake clock
+(a screenshot takes longer than the bump), with the semantics layer made pointer-transparent
 for the tap — a click on the board's accessibility node would otherwise be a
 semantic tap at the board's centre. `--riddle x,y,…` spends every life on
 three different blocked heads (level 1: `2,4,2,3,2,2`) and captures the
@@ -225,7 +226,8 @@ lib/
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot),
                        riddle (question, answers, hint)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider,
-                       saved_game_provider (the one level in progress), riddle_provider (the deck)
+                       saved_game_provider (the one level in progress), riddle_provider (the deck),
+                       intro_provider (which chapter cards have been shown)
   services/            haptics_service (injectable HapticEngine), sfx_service (whoosh + bump),
                        audio_service (looping music)
   data/audio_credits.dart  attribution for the bundled track
@@ -350,8 +352,11 @@ Key patterns:
   `tick()` when `autoTick` is true; tests pass `autoTick: false`.
 - **Bump:** `models/bump_motion.dart` (pure Dart) describes the blocked
   tap — the arrow accelerates up to the arrow in its way (stopping
-  `kStopShort` of a cell before its centre, 180–460 ms by distance) and
-  eases back over 480 ms; the blocker flashes and is shoved a touch at
+  `kStopShort` of a cell before its centre, 280–900 ms by distance: about
+  a tenth of a second a cell, since a bump over in a blink is a missed
+  life, and a bump that turned at a mirror can run a long way), stays
+  pressed against it for `holdMs` (140) so *what* was hit is seen, and
+  eases back over 520 ms; the blocker flashes and is shoved a touch at
   impact. The board draws `offsetAt/shoveAt/flashAt`. The game screen runs
   the same motion in its own controller to throw the whole screen sideways
   (`joltAt` × `kCrashJoltPx`) and bloom a red edge over it (`flashAt` on a
@@ -441,7 +446,11 @@ Key patterns:
   the shine over a wash in `palette.mirror` (the thickest line on the
   board, since which way it lies is the whole message), and an arrow
   sliding out bends through it — `_paintArrow`'s track is the body, the
-  bent ray, then on past the edge in `exitHeadingOf`, and a bump's shove
+  bent ray, then on past the edge in `exitHeadingOf`; as the head reaches
+  each mirror the glass flashes in the glow with a ring (`_bounces`,
+  `kBounceMs`, started from the exit controller's listener on the
+  painter's own offset formula) and the slide takes `kBounceDwellMs` longer
+  per turn, so a bounce is watched rather than inferred; a bump's shove
   goes the way the arrow was travelling at impact — a locked arrow wears a
   padlock on its middle cell that swings open and fades once its key has
   left, a key wears a key glyph,
@@ -455,8 +464,8 @@ Key patterns:
   number and whether it is open, a key its number, a pair that it is
   tethered, an arrow whose path turns says so, and a blocker's distance is
   counted along the bent path. Slide-out and bump are
-  animated in `PuzzleBoard` (240–600 ms slide, ease-in; the bump 180–460 ms
-  in and 480 ms back). Strokes cap at
+  animated in `PuzzleBoard` (240–600 ms slide, ease-in, plus 140 ms a
+  mirror; the bump 280–900 ms in, 140 ms held and 520 ms back). Strokes cap at
   3 px and heads at 8 px so the small early boards read as pen lines.
 - **Sound effects:** `SfxService` (`services/sfx_service.dart`, injectable
   `SfxBackend`, a pool of low-latency players built once behind a single
@@ -567,10 +576,19 @@ Key patterns:
   so the card is a title, one line and a loop of the rule being played
   (still, with motion reduced; a picture to the finger and the reader).
   The game screen shows the card (`_IntroCard`) over the paused board
-  on a chapter's first level until that level is cleared, once per visit,
-  never over a resumed game, and the pause is deferred a frame since a
-  provider may not change while the tree builds; the teaching levels also
-  get a line under the board like levels 1–2. The home trail is headed by a
+  once per install: `providers/intro_provider.dart` (prefs
+  `arrow_intros_seen`, cleared by Reset progress) remembers which cards
+  have been dismissed, and `IntroNotifier.due(level:)` is every chapter
+  past the first at or before the level whose card has not been, in trail
+  order — so a chapter's first level brings its card, and a player who was
+  already at level 65 when the chapters arrived (the levels re-dealt under
+  them, so a saved board from before is refused and the level restarts) is
+  shown Mirrors, Locks and Fog one after another when they next open a
+  level, "Got it" marking each seen and the last one resuming the clock.
+  The daily board brings the cards of the chapter it borrows from. Never
+  over a resumed game, and the pause is deferred a frame since a provider
+  may not change while the tree builds; the teaching levels also get a line
+  under the board like levels 1–2. The home trail is headed by a
   `_ChapterBand` per chapter (`_Trail.topOf` adds a band's height per
   chapter, scaled with the system font). The **daily board**
   (`data/daily.dart`, `providers/daily_provider.dart`, prefs `arrow_daily_*`)

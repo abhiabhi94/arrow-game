@@ -17,6 +17,7 @@ import '../models/reaction_motion.dart';
 import '../models/riddle.dart';
 import '../providers/daily_provider.dart';
 import '../providers/game_provider.dart';
+import '../providers/intro_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/riddle_provider.dart';
 import '../providers/settings_provider.dart';
@@ -134,35 +135,46 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// Whether the screen keeps still — read in build, used by the listener.
   bool _calm = false;
 
-  /// The twist this level teaches, while its card is up over the paused
-  /// board. Shown once per visit, on a chapter's first level, until that
-  /// level has been cleared.
-  ChapterRule? _introRule;
-  bool _introShown = false;
+  /// The chapter cards still to show over the paused board, in trail
+  /// order: every twist this level is at or past whose card the player has
+  /// not yet dismissed (`introProvider`). Usually one, on a chapter's first
+  /// level; several for a player who was already past a chapter when it
+  /// arrived. The first is the one up.
+  List<ChapterRule> _intros = const <ChapterRule>[];
+  bool _introsChecked = false;
+
+  ChapterRule? get _introRule => _intros.isEmpty ? null : _intros.first;
 
   /// The twist [level] teaches, if it is a chapter's first level.
   ChapterRule? get _taught => widget.isDaily ? null : ruleTaughtAt(widget.level);
 
-  /// Puts the chapter card up over a freshly dealt board that teaches a
-  /// twist the player has not cleared yet. A board coming back from a saved
-  /// game (paused, with the resume offer) has been seen: no card.
+  /// Puts the chapter cards up over a freshly dealt board. A board coming
+  /// back from a saved game (paused, with the resume offer) has been seen:
+  /// no card.
   void _maybeIntro(GameState state) {
-    final rule = _taught;
-    if (rule == null || _introShown || state.phase != GamePhase.playing) return;
-    if (ref.read(progressProvider.notifier).progressFor(widget.level).completed) return;
-    _introShown = true;
-    _introRule = rule;
+    if (_introsChecked || state.phase != GamePhase.playing) return;
+    final intro = ref.read(introProvider.notifier);
+    final due = widget.isDaily
+        ? intro.due(chapter: ref.read(dailyProvider).chapter)
+        : intro.due(level: widget.level);
+    _introsChecked = true;
+    if (due.isEmpty) return;
+    _intros = due;
     // The card is up from this build; the clock stops after it, since a
     // provider may not change while the tree is being built.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _introRule == null) return;
+      if (!mounted || _intros.isEmpty) return;
       ref.read(gameProvider(widget.level).notifier).pause();
     });
   }
 
+  /// "Got it": the card is marked seen for good, and the next one owed
+  /// takes its place, or the level resumes.
   void _introDone() {
-    setState(() => _introRule = null);
-    ref.read(gameProvider(widget.level).notifier).resume();
+    final rule = _intros.first;
+    ref.read(introProvider.notifier).markSeen(rule);
+    setState(() => _intros = _intros.sublist(1));
+    if (_intros.isEmpty) ref.read(gameProvider(widget.level).notifier).resume();
   }
 
   /// The phase a riddle for [prize] is asked in; leaving it takes the card
@@ -635,10 +647,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   colors: [p.primary, p.accentCoral, p.accentSun, p.accentMint],
                 ),
               ),
-              // A chapter's first level: the twist it brings, drawn on a
-              // card over the paused board.
+              // A chapter's first level (or the first level opened past
+              // one): the twist it brings, drawn on a card over the paused
+              // board.
               if (_introRule != null)
-                _IntroCard(rule: _introRule!, onDone: _introDone)
+                _IntroCard(key: ValueKey<ChapterRule>(_introRule!), rule: _introRule!, onDone: _introDone)
               else
               switch (state.phase) {
                 // The free hints are spent and the player wants another: the
@@ -816,7 +829,7 @@ extension on _GameScreenState {
 /// small board that plays it over and over (`ChapterDemoBoard`). Watching
 /// beats reading: the line is as short as it can be.
 class _IntroCard extends StatelessWidget {
-  const _IntroCard({required this.rule, required this.onDone});
+  const _IntroCard({super.key, required this.rule, required this.onDone});
 
   final ChapterRule rule;
   final VoidCallback onDone;

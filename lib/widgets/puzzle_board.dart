@@ -41,6 +41,13 @@ const int kUnlockMs = 700;
 /// How long a hidden head takes to spring into view, with its ring.
 const int kRevealMs = 650;
 
+/// How long the flash on a mirror lasts as an arrow bounces through it.
+const int kBounceMs = 600;
+
+/// How much longer a slide takes for every mirror it turns at, so a bounce
+/// is a moment and not a blink.
+const int kBounceDwellMs = 140;
+
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
 /// on its way out) in a single ink — thin lines with a small head, like a
 /// printed puzzle, straight on the page with no frame — plus optional grid
@@ -126,6 +133,11 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   /// (or a hint lit it), and the head springs into view with a ring.
   final Map<int, AnimationController> _reveals = <int, AnimationController>{};
 
+  /// Mirrors flashing, by packed cell (`y * width + x`): an arrow on its way
+  /// out has just turned there, and the glass lights up with a ring so the
+  /// bounce is seen as well as implied by the path.
+  final Map<int, AnimationController> _bounces = <int, AnimationController>{};
+
   @override
   void initState() {
     super.initState();
@@ -180,17 +192,38 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     // the longer half's.
     final group = puzzle.exitGroup(id);
     var travel = 0;
+    var turns = 0;
     for (final member in group) {
       travel = max(travel, puzzle.arrows[member].length + puzzle.rayOf(member).length);
+      turns = max(turns, puzzle.rayOf(member).where(puzzle.isMirror).length);
     }
     // Quick but still readable as a slide: a short arrow at the edge is gone
     // in about a quarter second; a long crossing of a big board never drags.
-    final duration = Duration(milliseconds: (140 + travel * 30).clamp(240, 600));
+    // A turn at a mirror buys a little more, so the bounce is watched.
+    final dwell = turns * kBounceDwellMs;
+    final duration = Duration(milliseconds: (140 + travel * 30 + dwell).clamp(240, 600 + dwell));
     for (final member in group) {
       final controller = AnimationController(vsync: this, duration: duration);
       _exits[member]?.dispose();
       _exits[member] = controller;
-      controller.addListener(() => setState(() {}));
+      // The mirrors on the way, with how far the head has to travel to
+      // reach each; the glass flashes as the head gets there. The offset is
+      // the painter's own formula, so the flash lands as the arrow turns.
+      final arrow = puzzle.arrows[member];
+      final ray = puzzle.rayOf(member);
+      final ahead = <(int, Cell)>[
+        for (var i = 0; i < ray.length; i++)
+          if (puzzle.isMirror(ray[i])) (i + 1, ray[i]),
+      ];
+      final run = arrow.length + ray.length;
+      controller.addListener(() {
+        final offset = Curves.easeIn.transform(controller.value) * run;
+        while (ahead.isNotEmpty && offset >= ahead.first.$1) {
+          final cell = ahead.removeAt(0).$2;
+          _startOneShot(_bounces, cell.y * puzzle.width + cell.x, kBounceMs);
+        }
+        setState(() {});
+      });
       controller.forward().whenComplete(() {
         if (!mounted) return;
         setState(() {
@@ -316,7 +349,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
       c.dispose();
     }
     _exits.clear();
-    for (final slot in <Map<int, AnimationController>>[_unlocks, _reveals]) {
+    for (final slot in <Map<int, AnimationController>>[_unlocks, _reveals, _bounces]) {
       for (final c in slot.values) {
         c.dispose();
       }
@@ -341,7 +374,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   }
 
   /// Whether the board is still reacting to the last tap. A bump throws the
-  /// whole screen sideways for two thirds of a second, and a slide is in
+  /// whole screen sideways for about a second, and a slide is in
   /// flight for up to another half: a tap that lands in that window is a
   /// finger still finishing the last move, not a new decision.
   bool get _settling {
@@ -447,6 +480,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
                     keyPing: _keyPing?.value,
                     unlocks: <int, double>{for (final e in _unlocks.entries) e.key: e.value.value},
                     reveals: <int, double>{for (final e in _reveals.entries) e.key: e.value.value},
+                    bounces: <int, double>{for (final e in _bounces.entries) e.key: e.value.value},
                     travel: widget.reduceMotion ? 0 : 1,
                     focusedId: widget.focusedArrowId,
                     l10n: l10n,
@@ -477,6 +511,7 @@ class _BoardPainter extends CustomPainter {
     required this.keyPing,
     required this.unlocks,
     required this.reveals,
+    required this.bounces,
     required this.travel,
     required this.focusedId,
     required this.l10n,
@@ -527,6 +562,9 @@ class _BoardPainter extends CustomPainter {
   /// (hidden id → progress).
   final Map<int, double> unlocks;
   final Map<int, double> reveals;
+
+  /// Mirrors mid-flash, by packed cell: an arrow has just turned there.
+  final Map<int, double> bounces;
 
   Puzzle get puzzle => state.puzzle!;
 
@@ -635,12 +673,39 @@ class _BoardPainter extends CustomPainter {
       if (slumping) canvas.restore();
       if (shoved) canvas.restore();
     }
+    _paintBounces(canvas, cs, glyphs);
     _paintKeyPointer(canvas, cs, glyphs);
     _paintHint(canvas, size, cs);
     canvas.restore();
     // Outside the clip: the ring sits a little proud of the cells, and an
     // arrow on the board's edge would otherwise lose that side of it.
     _paintCursor(canvas, cs);
+  }
+
+  /// A mirror an arrow has just turned at: its diagonal lights up in the
+  /// glow and a ring swells out of the cell and fades, the same ring the
+  /// board uses for everything that just happened (a key leaving, a head
+  /// appearing), so a bounce is a thing that is seen to happen and not only
+  /// a path that happened to bend.
+  void _paintBounces(Canvas canvas, double cs, BoardGlyphs glyphs) {
+    for (final e in bounces.entries) {
+      final cell = Cell(e.key % puzzle.width, e.key ~/ puzzle.width);
+      final kind = puzzle.mirrorAt(cell);
+      if (kind == null) continue;
+      final t = e.value;
+      final centre = _center(cell, cs);
+      final rect = Rect.fromLTWH(cell.x * cs, cell.y * cs, cs, cs);
+      glyphs.mirrorFlash(canvas, rect, kind, palette.hintGlow.withValues(alpha: 1 - t));
+      final ease = Curves.easeOutCubic.transform(t);
+      canvas.drawCircle(
+        centre,
+        max(cs * 0.5, 10.0) + max(cs * 1.4, 28.0) * ease,
+        Paint()
+          ..color = palette.hintGlow.withValues(alpha: 0.9 * (1 - ease))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(2.0, min(cs * 0.2, 4.0)),
+      );
+    }
   }
 
   /// After a tap on a locked arrow: a dashed line from the lock to its key
@@ -1003,6 +1068,7 @@ class _BoardPainter extends CustomPainter {
       old.keyPing != keyPing ||
       !_sameMap(old.unlocks, unlocks) ||
       !_sameMap(old.reveals, reveals) ||
+      !_sameMap(old.bounces, bounces) ||
       old.travel != travel ||
       old.focusedId != focusedId;
 

@@ -49,11 +49,7 @@ class BoardGlyphs {
       RRect.fromRectAndRadius(cell.deflate(cs * 0.08), Radius.circular(cs * 0.2)),
       Paint()..color = mirrorWash,
     );
-    final inset = cs * 0.2;
-    final (a, b) = switch (kind) {
-      Mirror.slash => (Offset(cell.left + inset, cell.bottom - inset), Offset(cell.right - inset, cell.top + inset)),
-      Mirror.backslash => (Offset(cell.left + inset, cell.top + inset), Offset(cell.right - inset, cell.bottom - inset)),
-    };
+    final (a, b) = _diagonal(cell, kind);
     final stroke = max(2.5, min(cs * 0.2, 6.0));
     canvas.drawLine(
       a,
@@ -74,6 +70,29 @@ class BoardGlyphs {
         ..strokeWidth = max(0.8, stroke * 0.22)
         ..strokeCap = StrokeCap.round,
     );
+  }
+
+  /// The diagonal of the mirror in [cell] lit up in [glow]: drawn over the
+  /// mirror as an arrow turns at it.
+  void mirrorFlash(Canvas canvas, Rect cell, Mirror kind, Color glow) {
+    final (a, b) = _diagonal(cell, kind);
+    canvas.drawLine(
+      a,
+      b,
+      Paint()
+        ..color = glow
+        ..strokeWidth = max(2.5, min(cell.width * 0.2, 6.0)) * 1.6
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  /// The two ends of a mirror's diagonal across [cell].
+  static (Offset, Offset) _diagonal(Rect cell, Mirror kind) {
+    final inset = cell.width * 0.2;
+    return switch (kind) {
+      Mirror.slash => (Offset(cell.left + inset, cell.bottom - inset), Offset(cell.right - inset, cell.top + inset)),
+      Mirror.backslash => (Offset(cell.left + inset, cell.top + inset), Offset(cell.right - inset, cell.bottom - inset)),
+    };
   }
 
   /// A padlock centred on [c]: [openness] 0 is shut, 1 is open (the

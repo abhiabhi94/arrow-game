@@ -29,8 +29,12 @@ class BumpMotion {
   /// How far a locked arrow jabs forward before the lock throws it back.
   static const double kLockJab = 0.35;
 
+  /// The pause pressed against the blocker, tip to its edge, before the
+  /// spring home: the moment the eye needs to see *what* was hit.
+  static const int holdMs = 140;
+
   /// The back leg, a fixed spring home — also how long the screen shakes.
-  static const int backMs = 480;
+  static const int backMs = 520;
 
   /// Shakes of the screen over the back leg.
   static const int kJoltCycles = 3;
@@ -38,17 +42,26 @@ class BumpMotion {
   /// Cells the head moves before impact.
   final double travel;
 
-  /// The forward leg: an accelerating slide, longer for a longer run. Slow
-  /// enough to be seen — a bump that is over in a blink is a missed life.
-  int get forwardMs => (140 + travel * 70).round().clamp(180, 460);
+  /// The forward leg: an accelerating slide, longer for a longer run, and
+  /// slow enough to be followed — the first cut ran a long bump (one that
+  /// turned at a mirror and hit something far down its new column) in
+  /// under half a second, which was over before the player knew which
+  /// arrow had moved. Now a cell takes about a tenth of a second and the
+  /// longest run just under a second. The jab at a lock keeps its snap: it
+  /// costs nothing and is tapped often.
+  int get forwardMs => travel <= kLockJab ? 180 : (200 + travel * 90).round().clamp(280, 900);
 
-  int get totalMs => forwardMs + backMs;
+  int get totalMs => forwardMs + holdMs + backMs;
 
   /// The moment of impact as a fraction of [totalMs].
   double get impactAt => forwardMs / totalMs;
 
+  /// The moment the spring home starts, as a fraction of [totalMs].
+  double get releaseAt => (forwardMs + holdMs) / totalMs;
+
   /// The head's offset along its track, in cells, at progress [t] (0..1):
-  /// accelerating into the blocker, then easing back home.
+  /// accelerating into the blocker, pressed against it, then easing back
+  /// home.
   double offsetAt(double t) {
     final impact = impactAt;
     if (t <= 0) return 0;
@@ -56,17 +69,21 @@ class BumpMotion {
       final u = t / impact;
       return travel * u * u;
     }
-    final u = ((t - impact) / (1 - impact)).clamp(0.0, 1.0);
+    final release = releaseAt;
+    if (t < release) return travel;
+    final u = ((t - release) / (1 - release)).clamp(0.0, 1.0);
     final back = 1 - u;
     return travel * back * back * back;
   }
 
-  /// How hard the blocker is being shoved at [t]: a jolt at impact that
-  /// dies away over the back leg, 0..1.
+  /// How hard the blocker is being shoved at [t]: a jolt at impact, held
+  /// while the arrow is pressed against it, dying away over the back leg,
+  /// 0..1.
   double shoveAt(double t) {
-    final impact = impactAt;
-    if (t < impact) return 0;
-    final u = ((t - impact) / (1 - impact)).clamp(0.0, 1.0);
+    if (t < impactAt) return 0;
+    final release = releaseAt;
+    if (t < release) return 1;
+    final u = ((t - release) / (1 - release)).clamp(0.0, 1.0);
     final left = 1 - u;
     return left * left;
   }

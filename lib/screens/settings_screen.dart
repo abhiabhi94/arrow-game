@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../models/settings.dart';
 import '../providers/daily_provider.dart';
+import '../providers/intro_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/riddle_provider.dart';
 import '../providers/saved_game_provider.dart';
@@ -46,6 +47,7 @@ class SettingsScreen extends ConsumerWidget {
       ref.read(savedGameProvider.notifier).clear();
       ref.read(dailyProvider.notifier).reset();
       ref.read(riddleDeckProvider.notifier).reset();
+      ref.read(introProvider.notifier).reset();
     }
   }
 

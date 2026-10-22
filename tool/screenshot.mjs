@@ -53,11 +53,13 @@
 //   --lang    seeds the language setting ('en' or 'hi'), so the shots show the
 //             app in that language whatever the browser's locale is; the
 //             language lands in the filename
-//   --crash x,y  taps grid cell (x, y) on the first level and captures the
-//             moment after impact (level-NN-crash-*.png): the screen jolt and
-//             the red flash of a bump. On level 1, cell 2,4 is a blocked head.
-//             A screenshot takes longer than the bump, so this run drives the
-//             page on Playwright's fake clock and steps it to the frame.
+//   --crash x,y[,ms]  taps grid cell (x, y) on the first level and captures
+//             the moment after impact (level-NN-crash-*.png): the screen jolt
+//             and the red flash of a bump. On level 1, cell 2,4 is a blocked
+//             head. A screenshot takes longer than the bump, so this run
+//             drives the page on Playwright's fake clock and steps it to the
+//             frame — ms in after the tap, 330 by default (a short run has
+//             just hit); a long run, one that turns at a mirror, wants more.
 //
 // Prereq: `flutter build web --debug --no-web-resources-cdn`
 //   debug   = all levels unlocked (same as the "Arrow Testing" Android build)
@@ -371,11 +373,11 @@ try {
     if (crash && level === levels[0]) {
       await page.clock.pauseAt(Date.now() + 1000);
       await tapCell(page, crash);
-      // 260 ms in: a short run hit at 180 ms, the screen is mid-shake and
-      // the red edge is still most of the way up.
-      await page.clock.runFor(260);
+      // 330 ms in: a short run hit at 280 ms and is pressed against the
+      // blocker, the screen mid-shake and the red edge all the way up.
+      await page.clock.runFor(crash.ms);
       await shoot(page, `level-${id}-crash-${tag}`);
-      await page.clock.runFor(900);
+      await page.clock.runFor(1600);
       await page.clock.resume();
     }
     if (riddleCells && level === levels[0]) {
@@ -544,12 +546,13 @@ async function shoot(page, name) {
   console.log('  wrote', path.relative(process.cwd(), file));
 }
 
-/// `--crash 2,4` -> { x, y }; nothing when the flag is absent.
+/// `--crash 2,4` -> { x, y, ms: 330 }, `--crash 5,5,650` -> { x, y, ms };
+/// nothing when the flag is absent.
 function parseCell(value) {
   if (!value || value === true) return null;
-  const m = /^(\d+),(\d+)$/.exec(String(value));
-  if (!m) { console.error(`Bad --crash ${value}; expected a grid cell, e.g. 2,4`); process.exit(2); }
-  return { x: Number(m[1]), y: Number(m[2]) };
+  const m = /^(\d+),(\d+)(?:,(\d+))?$/.exec(String(value));
+  if (!m) { console.error(`Bad --crash ${value}; expected a grid cell, e.g. 2,4 or 2,4,650`); process.exit(2); }
+  return { x: Number(m[1]), y: Number(m[2]), ms: m[3] ? Number(m[3]) : 330 };
 }
 
 /// `--lang hi` -> the LanguageChoice name the app persists; nothing when the
