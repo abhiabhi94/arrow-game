@@ -11,12 +11,14 @@ it leaves the board. An arrow whose exit path runs into another arrow bumps
 back and costs a life. 100 fixed, procedurally generated levels in **five
 chapters of twenty** (`data/chapters.dart`), each built on one twist and
 keeping the ones before it: **Lines** (1–20, the plain rectangle, 5 arrows on
-5×6 → 144 on 32×50), **Shapes** (21–40: walls are holes in the page an arrow
-falls into — a ring, a cross, an octagon, pillars), **Locks** (41–60: a
-padlocked arrow also waits for the key with its number), **Fog** (61–80: a
-dashed arrow hides its head until a neighbour leaves), **Pairs** (81–100: two
-tethered arrows leave on one tap, so both paths must be clear). Every
-chapter opens on a small teaching board with an illustrated card, has a
+5×6 → 144 on 32×50), **Walls** (21–40: solid cells the arrows go around —
+a hole in the middle, pillars, bars, blocks), **Locks** (41–60: a
+padlocked arrow also waits for the key with its number; tapping it early
+costs nothing and points at the key), **Fog** (61–80: a dashed arrow hides
+its head until a neighbour leaves), **Pairs** (81–100: two tethered arrows
+leave on one tap, so both paths must be clear). Every chapter opens on a
+small teaching board under a card that is one line and a self-playing
+demo of the twist, has a
 12×16 sprint at its 5th and 15th level, a boss at its 10th and a finale at
 its 20th, and climbs one arrow a level between them (~150 at level 22 to
 ~230 at 99, finales to ~265, no clock over ten minutes). A **daily board**
@@ -24,7 +26,8 @@ its 20th, and climbs one arrow a level between them (~150 at level 22 to
 twists of the chapter the player has reached, seeded from the date and a
 per-install salt so no two phones share one; it keeps a streak. Everything
 is drawn in a single ink like a printed puzzle (the sun-coloured key badge
-is the one new colour), 3 lives per level (spend them all and a
+and the pointer from a tapped lock to its key are the one new colour),
+3 lives per level (spend them all and a
 card asks for a riddle: crack it and the level carries on for one more
 mistake, then asks again — or start fresh), a clock on every level ("Time's
 up" → replay the same level), 3 hints per level, zoom in/out, a grid-lines
@@ -43,7 +46,7 @@ tool/coverage.sh 92             # coverage gate (fails under threshold)
 
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
 node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-viewport screenshots -> shots/
-node tool/screenshot.mjs --levels 21,41,61,81 --daily                # each chapter's card + teaching board, and today's daily board
+node tool/screenshot.mjs --levels 21,41,61,81 --daily                # each chapter's card (mid-demo) + teaching board, and today's daily board
 dart run tool/make_levels.dart        # prints levels 21-100 from the chapter rules (paste into lib/data/level_specs.dart)
 dart run tool/pick_variants.dart      # the first variant of each level from 21 that keeps every pinned rule
 dart run tool/level_report.dart 41 3  # a level (and its next 3 variants): arrows placed, twists placed, fill, open moves
@@ -241,15 +244,20 @@ Key patterns:
   repositories/providers read prefs through it. Tests override it with a mock.
 - **Persistence:** `shared_preferences` only, keys prefixed `arrow_*`.
 - **Rules:** an arrow can exit iff every cell of its ray (`Puzzle.rayOf`:
-  head → board edge *or the first wall*, in its heading) is free of other
-  arrows still on the board. Arrows leave entirely, so "who blocks whom" is
-  fixed; solvable ⇔ acyclic. The chapter twists are four small additions
-  to that one relation (`engine/puzzle.dart`): **walls** (`Puzzle.walls`,
-  `engine/board_shape.dart` masks — `corners`, `hole`, `cross`, `pillars`)
-  are dead cells an arrow falls into, so a ray ends there as at the edge
-  (making walls exits is what keeps shaped boards tight — with rays that
-  merely stopped short of a wall, the arms of a cross and the staircases of
-  a cut corner had almost no valid closers and opened with 10–15 free taps);
+  head → board edge, in its heading) is free of other arrows still on the
+  board. Arrows leave entirely, so "who blocks whom" is fixed; solvable ⇔
+  acyclic. The chapter twists are four small additions to that one
+  relation (`engine/puzzle.dart`): **walls** (`Puzzle.walls`,
+  `engine/board_shape.dart` masks — `hole`, `pillars`, `bars`, `blocks`)
+  are solid cells no arrow sits on or slides through; a head is never
+  aimed at one (the generator rejects such rays, `Puzzle` asserts), so a
+  wall only shapes the board and what the arrows wrap around. The first
+  cut drew walls as holes an arrow fell into (a ray ended at a wall as at
+  the edge) because shapes that reach in from the edge — a cut corner, a
+  cross — came out loose with blocking walls; but a solid grey block reads
+  as an obstacle, and acting like an exit was the opposite of what it
+  looked like. So walls block, and every shape stands in the interior,
+  where blocking walls deal tight (open ≈ 2.2–3.0 on the climb).
   **locks** (`locks`: locked id → key id) add one edge, the locked arrow
   waits for its key wherever it is (`dependenciesOf` = ray blockers + key +
   the partner's; `blockOf` says what stopped a tap: a cell, or a key, in
@@ -259,9 +267,19 @@ Key patterns:
   (`pairs`, symmetric) merge two nodes — `exitGroup` leaves together,
   `canExit` needs both ways clear, a pair is one move in `openMoveProfile`.
   `Puzzle.lockNumber` numbers lock and key alike so they can be matched by
-  eye. A tap that fails on a lock jabs (`BumpMotion.kLockJab`, no cell) and
-  the key arrow flashes; on a pair the half whose way was blocked is the
-  one that bumps (`GameState.lastMoveId`), and both halves go in `bumped`.
+  eye. **A tap on a locked arrow whose path is clear costs nothing**
+  (`MoveOutcome.locked`: no mistake, no `bumped`, no crash on the screen —
+  a locked arrow looks locked, so it is not a slip): the arrow rattles
+  (`BumpMotion.kLockJab`, no cell) and the board draws a dashed line in the
+  sun colour from the lock to its key with a ring pulsing twice on the key
+  (`_paintKeyPointer`, `kKeyPingMs`), which is how the pair is found on a
+  200-arrow board rather than by reading the numbers. When the key leaves,
+  its padlock swings open with a ring (`_unlocks`, `kUnlockMs`,
+  `BoardGlyphs.padlock(openness:)`); when a hidden head is uncovered it
+  springs in with a ring (`_reveals`, `kRevealMs`). A pair leaves on one
+  clock: `_startExit` starts a slide for every member of `exitGroup`. On a
+  pair the half whose way was blocked is the one that bumps
+  (`GameState.lastMoveId`), and both halves go in `bumped`.
 - **Generation:** `puzzle_generator.dart` places arrows one by one on flat
   typed-data grids, roughly inside-out (deep heads sampled first so the free
   area stays an outer ring). A head may face free cells *or point straight
@@ -407,17 +425,16 @@ Key patterns:
   `cheer` over-spins and boings in, `sulk` flops down and shakes its head.
 - **Board look:** one ink (`palette.arrowInk`), thin strokes (≤5 px), small
   heads, no frame — the arrows sit straight on the page. The hint glow, the
-  blocked flash and the sun-coloured number badge on a key and its lock are
-  the only colour on the board. The twists are drawn by
-  `widgets/board_glyphs.dart` so the board and the chapter cards agree: a
-  wall is a sunken square in `palette.wall` (and cut out of the clip, so an
-  arrow sliding into it is swallowed; `_paintArrow` stops drawing past the
-  far side of the wall run, since the track goes on into free cells behind
-  a thin wall), a locked arrow wears a padlock on its middle cell that
-  swings open and fades once its key has left, a key wears a key glyph,
+  blocked flash, the sun-coloured number badge on a key and its lock and
+  the pointer to a key are the only colour on the board. The twists are
+  drawn by `widgets/board_glyphs.dart` so the board and the chapter cards
+  agree: a wall is a sunken square in `palette.wall`, a locked arrow wears a
+  padlock on its middle cell that swings open and fades once its key has
+  left, a key wears a key glyph,
   both with the lock's number in a badge, a hidden head is a dashed body
   with no head and a ? disc, a pair a dotted tether between their nearest
-  cells with a ring at each end. Glyphs are `BoardGlyphs.glyphSize(cs)`:
+  cells (off the heads where there is a choice) with a ring at each end.
+  Glyphs are `BoardGlyphs.glyphSize(cs)`:
   most of a cell, never under 10 px, so the zoom is how they are read on a
   dense board. The screen reader hears the same (`board_semantics.dart`):
   a hidden arrow gives neither its direction nor its path, a lock says its
@@ -526,8 +543,13 @@ Key patterns:
 - **Chapters and the daily board:** `data/chapters.dart` is the map (five of
   `kChapterLength` = 20, `chapterOf`, `ruleTaughtAt`, `chapterForProgress`);
   `data/chapter_demos.dart` holds the tiny solvable boards each chapter card
-  draws. The game screen shows the card (`_IntroCard`, a `ResultCard` with a
-  `ChapterDemoBoard` picture under `ExcludeSemantics`) over the paused board
+  plays and the script of taps that shows the twist (`demoScriptFor`; the
+  lock demo taps the lock first on purpose, for the rattle and the pointer).
+  `widgets/chapter_demo.dart` runs that script on a real `GameNotifier`
+  every `kDemoStep`, rests `kDemoRest` on the cleared board and starts over,
+  so the card is a title, one line and a loop of the rule being played
+  (still, with motion reduced; a picture to the finger and the reader).
+  The game screen shows the card (`_IntroCard`) over the paused board
   on a chapter's first level until that level is cleared, once per visit,
   never over a resumed game, and the pause is deferred a frame since a
   provider may not change while the tree builds; the teaching levels also
@@ -544,7 +566,9 @@ Key patterns:
   the day's board is looked at (`arrow_daily_<day>_chapter`) so clearing a
   level mid-day does not re-deal it. The streak counts consecutive days
   with a clear (`liveStreak` is zero once a day is missed); best time and
-  stars per day. A daily snapshot in the saved-game slot carries today's
+  stars per day, and the card counts down to the next board
+  (`DailyNotifier.untilNextBoard`, local midnight; `_DailyCard` ticks once
+  a minute). A daily snapshot in the saved-game slot carries today's
   seed, so yesterday's never fits; the home hero ignores it and the daily
   card says Continue. Reset progress wipes the standing but keeps the salt.
 - **Lives / stars:** `models/level_progress.dart`. `maxLives` is 3 on every

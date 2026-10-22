@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' show lerpDouble;
 
@@ -112,6 +113,7 @@ class HomeScreen extends ConsumerWidget {
                         child: _DailyCard(
                           standing: daily,
                           arrows: dailyNotifier.spec.arrows,
+                          untilNext: dailyNotifier.untilNextBoard,
                           resuming: dailySaved,
                           onPlay: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(builder: (_) => const GameScreen.daily()),
@@ -881,10 +883,11 @@ class _ChapterBand extends StatelessWidget {
 /// The daily board's card: today's deal in the chapter the player has
 /// reached, the streak, today's best, and the way in. One button to a
 /// screen reader.
-class _DailyCard extends StatelessWidget {
+class _DailyCard extends StatefulWidget {
   const _DailyCard({
     required this.standing,
     required this.arrows,
+    required this.untilNext,
     required this.resuming,
     required this.onPlay,
   });
@@ -892,21 +895,65 @@ class _DailyCard extends StatelessWidget {
   final DailyStanding standing;
   final int arrows;
 
+  /// Time to the next board when the card was built; the card counts it
+  /// down a minute at a time.
+  final Duration untilNext;
+
   /// Today's board was left mid-way: the button says Continue.
   final bool resuming;
   final VoidCallback onPlay;
 
   @override
+  State<_DailyCard> createState() => _DailyCardState();
+}
+
+class _DailyCardState extends State<_DailyCard> {
+  Timer? _ticker;
+  late DateTime _builtAt;
+
+  @override
+  void initState() {
+    super.initState();
+    _builtAt = DateTime.now();
+    // Once a minute is as fine as the countdown reads.
+    _ticker = Timer.periodic(const Duration(minutes: 1), (_) => setState(() {}));
+  }
+
+  @override
+  void didUpdateWidget(_DailyCard old) {
+    super.didUpdateWidget(old);
+    if (old.untilNext != widget.untilNext) _builtAt = DateTime.now();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  /// The countdown as "5h 12m" (or "12m" under an hour).
+  String _countdown(AppLocalizations l10n) {
+    final left = widget.untilNext - DateTime.now().difference(_builtAt);
+    // Rounded up: "1m" until the minute is really over.
+    final minutes = max(0, (left.inSeconds + 59) ~/ 60);
+    return minutes >= 60 ? l10n.dailyNextInHours(minutes ~/ 60, minutes % 60) : l10n.dailyNextInMinutes(minutes);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
+    final standing = widget.standing;
+    final resuming = widget.resuming;
+    final onPlay = widget.onPlay;
     final chapter = chapterName(l10n, standing.chapter.index);
-    final body = l10n.dailyBody(kDailyMinutes, arrows, chapter);
+    final body = l10n.dailyBody(kDailyMinutes, widget.arrows, chapter);
     final streak = l10n.dailyStreak(standing.liveStreak);
     final best = standing.bestTodayMs;
+    final next = _countdown(l10n);
     final status = best == null
-        ? streak
-        : '${l10n.dailyClearedToday} · ${l10n.dailyBestToday(formatDurationMs(best))} · $streak';
+        ? '$streak · $next'
+        : '${l10n.dailyClearedToday} · ${l10n.dailyBestToday(formatDurationMs(best))} · $streak · $next';
     final action = resuming
         ? l10n.homeContinue
         : standing.clearedToday

@@ -3,9 +3,11 @@ import 'package:arrow_game/models/bump_motion.dart';
 import 'package:arrow_game/models/game_state.dart';
 import 'package:arrow_game/models/saved_game.dart';
 import 'package:arrow_game/providers/game_provider.dart';
+import 'package:arrow_game/services/haptics_service.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/fake_haptics.dart';
 import '../support/sample_puzzle.dart';
 
 GameNotifier _notifier({SavedGame? savedGame, SnapshotCallback? onSnapshot}) => GameNotifier(
@@ -28,17 +30,29 @@ void main() {
     n.dispose();
   });
 
-  test('a locked arrow with a clear path jabs at its lock and costs a life', () {
+  test('a locked arrow with a clear path rattles for free and points at its key', () {
     fakeAsync((async) {
-      final n = _notifier();
+      final engine = RecordingHapticEngine();
+      final n = GameNotifier(
+        featureSpecFor(1),
+        puzzle: featurePuzzle(),
+        haptics: HapticsService(() => true, engine: engine),
+        autoTick: false,
+      );
       n.tapArrow(1);
-      expect(n.state.mistakes, 1);
-      expect(n.state.lastOutcome, MoveOutcome.blocked);
+      // Not a mistake: a locked arrow looks locked.
+      expect(n.state.mistakes, 0);
+      expect(n.state.livesLeft, 3);
+      expect(n.state.lastOutcome, MoveOutcome.locked);
       expect(n.state.lastMoveId, 1);
       expect(n.state.blockedCell, isNull);
       expect(n.state.blockedKey, 0);
-      expect(n.state.bumped, {1});
-      // The jab is short and over quickly.
+      expect(n.state.bumped, isEmpty);
+      expect(n.state.moveToken, 1);
+      // A light tick for the finger, no crash.
+      async.elapse(const Duration(seconds: 1));
+      expect(engine.calls, ['selection']);
+      // The jab the board plays is short.
       final motion = BumpMotion.forTap(n.state.puzzle!, 1, null);
       expect(motion.travel, BumpMotion.kLockJab);
       expect(motion.forwardMs, 180);
@@ -47,10 +61,22 @@ void main() {
       expect(n.state.blockedKey, isNull);
       n.tapArrow(1);
       expect(n.state.removed, {0, 1});
-      expect(n.state.mistakes, 1);
-      async.elapse(const Duration(seconds: 2));
+      expect(n.state.mistakes, 0);
       n.dispose();
     });
+  });
+
+  test('a cell bump after a lock tap forgets the key, and the other way round', () {
+    final n = _notifier();
+    n.tapArrow(1);
+    expect(n.state.blockedKey, 0);
+    n.tapArrow(2); // the pair's partner runs into 4
+    expect(n.state.blockedKey, isNull);
+    expect(n.state.blockedCell, const Cell(4, 4));
+    n.tapArrow(1);
+    expect(n.state.blockedCell, isNull);
+    expect(n.state.blockedKey, 0);
+    n.dispose();
   });
 
   test('a tethered pair leaves on one tap once both ways are clear', () {

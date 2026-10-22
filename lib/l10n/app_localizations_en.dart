@@ -47,7 +47,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chapterName1 => 'Lines';
 
   @override
-  String get chapterName2 => 'Shapes';
+  String get chapterName2 => 'Walls';
 
   @override
   String get chapterName3 => 'Locks';
@@ -73,67 +73,56 @@ class AppLocalizationsEn extends AppLocalizations {
       'One rule: tap an arrow with a clear path and it slides out.';
 
   @override
-  String get chapterBlurb2 =>
-      'Boards with holes in them. An arrow falls into a hole just as it slides off the edge.';
+  String get chapterBlurb2 => 'Walls in the board. The arrows go around them.';
 
   @override
-  String get chapterBlurb3 =>
-      'Some arrows wear a padlock. They also wait for the key with the same number.';
+  String get chapterBlurb3 => 'Locked arrows wait for their key.';
 
   @override
-  String get chapterBlurb4 =>
-      'Some arrows hide their head. It shows once an arrow beside them leaves.';
+  String get chapterBlurb4 => 'Some heads are hidden until a neighbour leaves.';
 
   @override
-  String get chapterBlurb5 =>
-      'Some arrows are tethered. One tap sends both out — so both paths must be clear.';
+  String get chapterBlurb5 => 'Tethered arrows leave together.';
 
   @override
-  String get introTitleShapes => 'New: holes';
+  String get introTitleShapes => 'Walls';
 
   @override
-  String get introBodyShapes =>
-      'The grey squares are holes in the page. No arrow sits on one, and an arrow that slides into one is gone — a hole is a way out, just like the edge.';
+  String get introBodyShapes => 'Arrows go around walls.';
 
   @override
-  String get introTitleLocks => 'New: locks';
+  String get introTitleLocks => 'Locks';
 
   @override
-  String get introBodyLocks =>
-      'An arrow with a padlock waits for two things: a clear path, and the key with the same number to leave first. Tap it too soon and it rattles — that costs a life.';
+  String get introBodyLocks => 'The key goes first. Then the lock opens.';
 
   @override
-  String get introTitleFog => 'New: hidden heads';
+  String get introTitleFog => 'Hidden heads';
 
   @override
-  String get introBodyFog =>
-      'A dashed arrow with a ? is hiding which way it points. Slide out an arrow beside it and the head appears. A hint shows it too.';
+  String get introBodyFog => 'Clear an arrow beside it to see where it points.';
 
   @override
-  String get introTitlePairs => 'New: pairs';
+  String get introTitlePairs => 'Pairs';
 
   @override
-  String get introBodyPairs =>
-      'Two arrows joined by a dotted line are tethered: one tap sends both out at once. If either one is blocked, the tap bumps — so check both paths.';
+  String get introBodyPairs => 'One tap, both go. Both paths must be clear.';
 
   @override
   String get introGotIt => 'Got it';
 
   @override
-  String get tutorialShapes =>
-      'The grey squares are holes: an arrow slides into one and is gone.';
+  String get tutorialShapes => 'Arrows go around walls.';
 
   @override
-  String get tutorialLocks =>
-      'A padlocked arrow waits for the key with its number.';
+  String get tutorialLocks => 'A locked arrow waits for its key.';
 
   @override
   String get tutorialFog =>
-      'A dashed arrow hides its head. Free an arrow beside it to see which way it points.';
+      'Clear an arrow beside a dashed one to see its head.';
 
   @override
-  String get tutorialPairs =>
-      'Tethered arrows leave together: both paths must be clear.';
+  String get tutorialPairs => 'Tethered arrows leave together.';
 
   @override
   String get dailyEyebrow => 'Daily board';
@@ -165,6 +154,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dailyClearedToday => 'Cleared today';
+
+  @override
+  String dailyNextInHours(int hours, int minutes) {
+    return 'Next board in ${hours}h ${minutes}m';
+  }
+
+  @override
+  String dailyNextInMinutes(int minutes) {
+    return 'Next board in ${minutes}m';
+  }
 
   @override
   String get dailyPlay => 'Play today';
@@ -1036,9 +1035,6 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return 'Arrow with a hidden head, $_temp0 long, from row $row, column $column. Which way it points shows once an arrow beside it leaves.';
   }
-
-  @override
-  String get arrowPathClearHole => 'Clear path into a hole.';
 
   @override
   String arrowLocked(int number) {

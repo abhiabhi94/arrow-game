@@ -24,15 +24,13 @@ void main() {
       expect(p.arrowAt(const Cell(2, 1)), isNull);
       expect(p.freeCellCount, 23);
       expect(p.hasFeatures, isTrue);
-      // A wall on a ray is where the ray ends: arrow 1 (aiming along row 2)
-      // falls into the hole at (3,2) rather than leaving over the edge.
-      final q = Puzzle(width: 5, height: 5, arrows: arrows(), walls: {const Cell(3, 2)});
-      expect(q.rayOf(1), const [Cell(2, 2)]);
+      // A wall on a ray is refused: arrow 1 aims along row 2, and an arrow
+      // aimed at a wall could never leave.
       expect(p.rayOf(1), const [Cell(2, 2), Cell(3, 2), Cell(4, 2)]);
-      // Facing a wall head-on is an empty ray, like facing the edge.
-      final r = Puzzle(width: 5, height: 5, arrows: arrows(), walls: {const Cell(2, 2)});
-      expect(r.rayOf(1), isEmpty);
-      expect(r.canExit(1, const {}), isTrue);
+      expect(
+        () => Puzzle(width: 5, height: 5, arrows: arrows(), walls: {const Cell(3, 2)}),
+        throwsA(isA<AssertionError>()),
+      );
       // A wall under an arrow is refused.
       expect(
         () => Puzzle(width: 5, height: 5, arrows: arrows(), walls: {const Cell(1, 0)}),

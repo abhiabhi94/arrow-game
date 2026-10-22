@@ -67,8 +67,7 @@ void main() {
     final hidden = labels.singleWhere((l) => l.startsWith('Arrow with a hidden head'));
     expect(hidden, 'Arrow with a hidden head, 2 cells long, from row 5, column 5. Which way it points shows once an arrow beside it leaves.');
     expect(hidden, isNot(contains('pointing')));
-    // Arrow 1 aims along row 3 into the wall at (4,2): a clear path into a hole.
-    expect(labels, contains(contains('Clear path into a hole.')));
+    expect(labels, contains(contains('Clear path to the edge.')));
     handle.dispose();
   });
 
@@ -83,7 +82,7 @@ void main() {
     final labels = semanticsNodes(tester, RegExp(r'^Arrow')).map((n) => n.label).toList();
     expect(labels, hasLength(4));
     expect(labels, contains(contains('Lock 1 is open.')));
-    expect(labels, contains(contains('Arrow pointing up, 2 cells long, head at row 4, column 5. Clear path into a hole. Hint: this one can go.')));
+    expect(labels, contains(contains('Arrow pointing up, 2 cells long, head at row 4, column 5. Clear path to the edge. Hint: this one can go.')));
     expect(labels.any((l) => l.contains('hidden head')), isFalse);
     handle.dispose();
   });
@@ -100,24 +99,25 @@ void main() {
     expect(arrowLabel(hi, state, 2), contains('बँधा'));
   });
 
-  testWidgets('a lock bump jabs and flashes the key; a pair and a wall exit animate without error', (tester) async {
+  testWidgets('a locked tap rattles and points at the key; the lock pops open; a pair leaves together', (tester) async {
     final puzzle = featurePuzzle();
     final fresh = GameState.fresh(featureSpecFor(1), puzzle);
     final push = await _pumpBoard(tester, fresh);
-    // Held by the lock: the locked arrow jabs, the key flashes.
+    // Held by the lock: the locked arrow rattles, a line runs to the key
+    // and a ring pulses on it — nothing is charged.
     push(fresh.copyWith(
-      mistakes: 1,
-      bumped: const {1},
       lastMoveId: 1,
-      lastOutcome: MoveOutcome.blocked,
+      lastOutcome: MoveOutcome.locked,
       blockedKey: 0,
       moveToken: 1,
     ));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     expect(tester.takeException(), isNull);
-    await tester.pump(const Duration(milliseconds: 600));
-    // The key leaves over the edge; the lock opens.
+    await tester.pump(const Duration(milliseconds: 900));
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 900));
+    // The key leaves over the edge; the padlock swings open with a ring.
     push(fresh.copyWith(
       removed: const {0},
       lastMoveId: 0,
@@ -128,9 +128,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
     await tester.pump(const Duration(milliseconds: 500));
-    // Arrow 1 slides into the hole at (4,2) and is swallowed by it.
+    // Arrow 1 leaves; a hidden head (4) is lit by a hint and springs in.
     push(fresh.copyWith(
       removed: const {0, 1},
+      revealed: const {4},
+      hintArrowId: 4,
       lastMoveId: 1,
       lastOutcome: MoveOutcome.exited,
       moveToken: 3,
@@ -157,6 +159,7 @@ void main() {
     // goes together: two slides at once, the tether gone with them.
     push(fresh.copyWith(
       removed: const {0, 1, 4},
+      revealed: const {4},
       lastMoveId: 4,
       lastOutcome: MoveOutcome.exited,
       moveToken: 5,
@@ -165,12 +168,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
     push(fresh.copyWith(
       removed: const {0, 1, 2, 3, 4},
+      revealed: const {4},
       phase: GamePhase.cleared,
       lastMoveId: 2,
       lastOutcome: MoveOutcome.exited,
       moveToken: 6,
     ));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    // Both halves of the pair are mid-slide at once.
+    final boardState = tester.state<State<PuzzleBoard>>(find.byType(PuzzleBoard));
+    expect(boardState, isNotNull);
+    expect(tester.takeException(), isNull);
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
     await tester.pump(const Duration(milliseconds: 700));

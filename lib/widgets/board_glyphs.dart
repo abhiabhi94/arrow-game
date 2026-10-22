@@ -51,28 +51,24 @@ class BoardGlyphs {
     );
   }
 
-  /// A padlock centred on [c], shut or [open] (the shackle swung up and the
-  /// whole thing faded: the key has gone). [number] sits in a badge at its
+  /// A padlock centred on [c]: [openness] 0 is shut, 1 is open (the
+  /// shackle swung up and out, the whole thing faded: the key has gone),
+  /// and in between it is on its way. [number] sits in a badge at its
   /// corner while it is shut, so the matching key can be found.
-  void padlock(Canvas canvas, Offset c, double g, {required bool open, int? number}) {
+  void padlock(Canvas canvas, Offset c, double g, {required double openness, int? number}) {
     final body = Rect.fromCenter(center: c + Offset(0, g * 0.14), width: g * 0.62, height: g * 0.46);
-    final color = open ? ink.withValues(alpha: 0.45) : ink;
+    final color = ink.withValues(alpha: 1 - 0.55 * openness.clamp(0, 1));
     final stroke = max(1.2, g * 0.09);
-    // The shackle: an arc over the body, lifted off one side when open.
-    final shackle = Path();
     final r = g * 0.19;
     final top = body.top - r;
-    if (open) {
-      shackle.moveTo(body.left + g * 0.12, body.top);
-      shackle.lineTo(body.left + g * 0.12, top - g * 0.08);
-      shackle.arcToPoint(Offset(body.left + g * 0.12 + 2 * r, top - g * 0.08), radius: Radius.circular(r));
-      shackle.lineTo(body.left + g * 0.12 + 2 * r, top + g * 0.02);
-    } else {
-      shackle.moveTo(c.dx - r, body.top);
-      shackle.lineTo(c.dx - r, top);
-      shackle.arcToPoint(Offset(c.dx + r, top), radius: Radius.circular(r));
-      shackle.lineTo(c.dx + r, body.top);
-    }
+    // The shackle: an arc over the body. Opening, its right leg lifts out
+    // of the body and swings up, pivoting on the left leg.
+    final lift = g * 0.22 * openness;
+    final shackle = Path()
+      ..moveTo(c.dx - r, body.top)
+      ..lineTo(c.dx - r, top - lift * 0.3)
+      ..arcToPoint(Offset(c.dx + r, top - lift * 0.3), radius: Radius.circular(r))
+      ..lineTo(c.dx + r, body.top - lift);
     canvas.drawPath(
       shackle,
       Paint()
@@ -91,7 +87,7 @@ class BoardGlyphs {
       Rect.fromCenter(center: body.center + Offset(0, g * 0.06), width: g * 0.07, height: g * 0.16),
       Paint()..color = paper,
     );
-    if (!open && number != null) {
+    if (openness < 0.5 && number != null) {
       numberBadge(canvas, Offset(body.right, body.bottom), g * 0.5, number);
     }
   }

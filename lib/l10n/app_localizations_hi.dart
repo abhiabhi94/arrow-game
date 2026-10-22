@@ -47,7 +47,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get chapterName1 => 'रेखाएँ';
 
   @override
-  String get chapterName2 => 'आकार';
+  String get chapterName2 => 'दीवारें';
 
   @override
   String get chapterName3 => 'ताले';
@@ -74,66 +74,56 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get chapterBlurb2 =>
-      'बोर्ड में छेद। तीर छेद में वैसे ही गिर जाता है जैसे किनारे से निकलता है।';
+      'बोर्ड में दीवारें। तीर उनके किनारे से निकलते हैं।';
 
   @override
-  String get chapterBlurb3 =>
-      'कुछ तीरों पर ताला है। वे उसी नंबर की चाबी का भी इंतज़ार करते हैं।';
+  String get chapterBlurb3 => 'ताले वाले तीर अपनी चाबी का इंतज़ार करते हैं।';
 
   @override
-  String get chapterBlurb4 =>
-      'कुछ तीर अपना सिरा छिपाते हैं। पास का कोई तीर निकलते ही वह दिख जाता है।';
+  String get chapterBlurb4 => 'कुछ सिरे छिपे हैं, जब तक पास का तीर न निकले।';
 
   @override
-  String get chapterBlurb5 =>
-      'कुछ तीर आपस में बँधे हैं। एक छुअन से दोनों निकलते हैं — तो दोनों के रास्ते साफ़ चाहिए।';
+  String get chapterBlurb5 => 'बँधे तीर साथ निकलते हैं।';
 
   @override
-  String get introTitleShapes => 'नया: छेद';
+  String get introTitleShapes => 'दीवारें';
 
   @override
-  String get introBodyShapes =>
-      'भूरे खाने पन्ने के छेद हैं। उन पर कोई तीर नहीं बैठता, और जो तीर छेद में फिसलता है वह निकल जाता है — छेद भी किनारे की तरह एक रास्ता है।';
+  String get introBodyShapes => 'तीर दीवारों के किनारे से निकलते हैं।';
 
   @override
-  String get introTitleLocks => 'नया: ताले';
+  String get introTitleLocks => 'ताले';
 
   @override
-  String get introBodyLocks =>
-      'ताले वाला तीर दो चीज़ों का इंतज़ार करता है: साफ़ रास्ता, और उसी नंबर की चाबी का पहले निकलना। जल्दी छुओगे तो वह खड़खड़ाएगा — और एक जान जाएगी।';
+  String get introBodyLocks => 'पहले चाबी निकलती है। फिर ताला खुलता है।';
 
   @override
-  String get introTitleFog => 'नया: छिपे सिरे';
+  String get introTitleFog => 'छिपे सिरे';
 
   @override
-  String get introBodyFog =>
-      'बिंदीदार तीर जिस पर ? है, वह छिपा रहा है कि किस ओर है। उसके पास का कोई तीर निकालो और सिरा दिख जाएगा। संकेत भी उसे दिखा देता है।';
+  String get introBodyFog => 'पास का तीर निकालो, सिरा दिख जाएगा।';
 
   @override
-  String get introTitlePairs => 'नया: जोड़ियाँ';
+  String get introTitlePairs => 'जोड़ियाँ';
 
   @override
   String get introBodyPairs =>
-      'बिंदीदार रेखा से जुड़े दो तीर बँधे हैं: एक छुअन से दोनों एक साथ निकलते हैं। अगर एक भी रुका है तो टक्कर होगी — इसलिए दोनों रास्ते देखो।';
+      'एक छुअन, दोनों निकलते हैं। दोनों रास्ते साफ़ चाहिए।';
 
   @override
   String get introGotIt => 'समझ गया';
 
   @override
-  String get tutorialShapes =>
-      'भूरे खाने छेद हैं: तीर उनमें फिसलकर निकल जाता है।';
+  String get tutorialShapes => 'तीर दीवारों के किनारे से निकलते हैं।';
 
   @override
-  String get tutorialLocks =>
-      'ताले वाला तीर अपने नंबर की चाबी का इंतज़ार करता है।';
+  String get tutorialLocks => 'ताले वाला तीर अपनी चाबी का इंतज़ार करता है।';
 
   @override
-  String get tutorialFog =>
-      'बिंदीदार तीर अपना सिरा छिपाता है। पास का तीर निकालो तो दिशा दिखेगी।';
+  String get tutorialFog => 'बिंदीदार तीर के पास का तीर निकालो, सिरा दिखेगा।';
 
   @override
-  String get tutorialPairs =>
-      'बँधे तीर साथ निकलते हैं: दोनों रास्ते साफ़ चाहिए।';
+  String get tutorialPairs => 'बँधे तीर साथ निकलते हैं।';
 
   @override
   String get dailyEyebrow => 'आज का बोर्ड';
@@ -165,6 +155,16 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get dailyClearedToday => 'आज पूरा हुआ';
+
+  @override
+  String dailyNextInHours(int hours, int minutes) {
+    return 'अगला बोर्ड $hoursघं $minutesमि में';
+  }
+
+  @override
+  String dailyNextInMinutes(int minutes) {
+    return 'अगला बोर्ड $minutesमि में';
+  }
 
   @override
   String get dailyPlay => 'आज खेलें';
@@ -1033,9 +1033,6 @@ class AppLocalizationsHi extends AppLocalizations {
     );
     return 'छिपे सिरे वाला तीर, $_temp0 लंबा, पंक्ति $row, स्तंभ $column से। पास का कोई तीर निकलते ही दिखेगा कि यह किस ओर है।';
   }
-
-  @override
-  String get arrowPathClearHole => 'छेद तक रास्ता साफ़ है।';
 
   @override
   String arrowLocked(int number) {

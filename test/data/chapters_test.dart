@@ -86,7 +86,7 @@ void main() {
     expect(chapterForProgress(-3).index, 1);
   });
 
-  test('every chapter card has a small, solvable board that shows its twist', () {
+  test('every chapter card has a small, solvable board that shows its twist, and a script that plays it', () {
     for (final rule in ChapterRule.values) {
       final p = demoPuzzleFor(rule);
       expect(p.isSolvable, isTrue, reason: rule.name);
@@ -94,14 +94,25 @@ void main() {
       final spec = demoSpecFor(rule);
       expect(spec.width, p.width);
       expect(spec.arrows, p.arrowCount);
+      // The script clears the board in order: every tap but a deliberate
+      // first tap on a lock slides something out.
+      final removed = <int>{};
+      for (final id in demoScriptFor(rule)) {
+        if (p.canExit(id, removed)) {
+          removed.addAll(p.exitGroup(id));
+        } else {
+          expect(p.blockOf(id, removed)!.isLock, isTrue, reason: '$rule tap $id');
+        }
+      }
+      expect(removed, hasLength(p.arrowCount), reason: rule.name);
       switch (rule) {
         case ChapterRule.lines:
           expect(p.hasFeatures, isFalse);
         case ChapterRule.shapes:
           expect(p.walls, isNotEmpty);
-          // The first arrow's run ends in a hole.
-          expect(p.rayOf(0).length, 1);
-          expect(p.isWall(p.rayOf(0).last.step(p.arrows[0].heading)), isTrue);
+          // The long arrow wraps around the wall and leaves clear of it.
+          expect(p.arrows[0].length, 6);
+          expect(p.rayOf(0).every((c) => !p.isWall(c)), isTrue);
         case ChapterRule.locks:
           expect(p.locks, {0: 1});
           expect(p.lockNumber(0), 1);

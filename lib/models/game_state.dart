@@ -16,8 +16,10 @@ const int maxHints = 3;
 /// maps to its own result overlay.
 enum GamePhase { loading, playing, paused, cleared, outOfLives, timeUp }
 
-/// What the most recent tap did, for UI feedback.
-enum MoveOutcome { none, exited, blocked }
+/// What the most recent tap did, for UI feedback. [locked] is a tap on an
+/// arrow whose path is clear but whose key has not left: it costs nothing
+/// and the board points at the key.
+enum MoveOutcome { none, exited, blocked, locked }
 
 class GameState {
   const GameState({

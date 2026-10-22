@@ -83,14 +83,15 @@ LevelSpec blockedSpecFor(int level) => LevelSpec(
 /// A 6x5 board with one of every chapter twist, for the rules about them:
 ///   0: (0,0)(1,0)(2,0) → right, ray (3,0),(4,0),(5,0): free — and the key
 ///      of the lock on 1.
-///   1: (0,2)(1,2) → right, ray (2,2),(3,2): ends at the wall (4,2). Locked;
-///      its key is 0. Hidden: its neighbour 0... is not beside it, but 4 is.
+///   1: (0,2)(1,2) → right, ray (2,2)..(5,2): clear, but locked; its key
+///      is 0.
 ///   2: (5,4)(5,3) ↑ up, ray (5,2),(5,1),(5,0): free.
 ///   3: (0,4)(1,4)(2,4) → right, ray (3,4),(4,4): blocked by 4. Tethered
 ///      to 2: the pair waits for 4.
-///   4: (4,4)(4,3) ↑ up, ray (4,2)... the wall: empty ray, free. Hidden; its
-///      neighbours are 2 (at (5,4)/(5,3)) and 3 (at (2,4)? no — (3,4) is
-///      empty) so 2 uncovers it.
+///   4: (4,4)(4,3) ↑ up, ray (4,2),(4,1),(4,0): free. Hidden; its only
+///      neighbour is 2 (at (5,4)/(5,3)), which cannot leave before it, so
+///      only a hint uncovers it.
+///   A wall at (3,3), on nobody's ray.
 /// Solve: 0, then 1 (unlocked), 4 (always free), then the pair 2+3.
 Puzzle featurePuzzle({Set<int> hidden = const {4}}) => Puzzle(
   width: 6,
@@ -102,7 +103,7 @@ Puzzle featurePuzzle({Set<int> hidden = const {4}}) => Puzzle(
     ArrowPiece(id: 3, cells: const [Cell(0, 4), Cell(1, 4), Cell(2, 4)], heading: Direction.right),
     ArrowPiece(id: 4, cells: const [Cell(4, 4), Cell(4, 3)], heading: Direction.up),
   ],
-  walls: {const Cell(4, 2)},
+  walls: {const Cell(3, 3)},
   locks: const {1: 0},
   pairs: const {2: 3},
   hidden: hidden,

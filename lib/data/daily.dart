@@ -39,7 +39,7 @@ int dailySeed(int day, int salt) {
 /// in one chapter still differs board to board.
 LevelSpec dailySpec({required int day, required Chapter chapter, required int salt}) {
   final seed = dailySeed(day, salt);
-  final shapes = <BoardShape>[BoardShape.corners, BoardShape.hole, BoardShape.cross, BoardShape.pillars];
+  final shapes = <BoardShape>[BoardShape.hole, BoardShape.pillars, BoardShape.bars, BoardShape.blocks];
   final shape = chapter.index >= 2 ? shapes[seed % shapes.length] : BoardShape.plain;
   final twist = 3 + (seed >> 4) % 3; // 3..5 of the chapter's own
   final features = switch (chapter.rule) {

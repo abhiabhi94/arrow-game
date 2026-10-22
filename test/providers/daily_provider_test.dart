@@ -104,6 +104,20 @@ void main() {
     m.dispose();
   });
 
+  test('the time to the next board runs to local midnight', () async {
+    var now = DateTime(2026, 10, 22, 9, 30);
+    final n = DailyNotifier(
+      DailyRepository(await _prefs()),
+      levelsCleared: () => 0,
+      clock: () => now,
+      random: Random(1),
+    );
+    expect(n.untilNextBoard, const Duration(hours: 14, minutes: 30));
+    now = DateTime(2026, 10, 22, 23, 59, 30);
+    expect(n.untilNextBoard, const Duration(seconds: 30));
+    n.dispose();
+  });
+
   test('a clear after midnight counts for the new day', () async {
     var now = _day;
     final n = DailyNotifier(

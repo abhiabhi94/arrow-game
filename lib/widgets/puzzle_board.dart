@@ -32,6 +32,15 @@ const double kSettleFraction = 0.3;
 /// How long one ping of the hint ring takes.
 const Duration kHintPingPeriod = Duration(milliseconds: 1100);
 
+/// How long the pointer from a tapped lock to its key stays up.
+const int kKeyPingMs = 1800;
+
+/// How long a padlock takes to swing open, with its ring.
+const int kUnlockMs = 700;
+
+/// How long a hidden head takes to spring into view, with its ring.
+const int kRevealMs = 650;
+
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
 /// on its way out) in a single ink — thin lines with a small head, like a
 /// printed puzzle, straight on the page with no frame — plus optional grid
@@ -98,10 +107,24 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   /// — it finds movement.
   AnimationController? _hintPing;
 
-  /// The arrow currently bumping, if any, and how it moves.
+  /// The arrow currently bumping (or rattling at its lock), if any, and
+  /// how it moves.
   int? _bumpId;
   BumpMotion? _bumpMotion;
   AnimationController? _bump;
+
+  /// Runs after a tap on a locked arrow: a dashed line from the lock to its
+  /// key and a ring pulsing on the key, so the player sees what has to go
+  /// first without reading a number.
+  AnimationController? _keyPing;
+
+  /// Padlocks popping open, by the locked arrow's id: the key has just
+  /// left, and the lock swings open with a ring.
+  final Map<int, AnimationController> _unlocks = <int, AnimationController>{};
+
+  /// Heads appearing, by the hidden arrow's id: a neighbour has just left
+  /// (or a hint lit it), and the head springs into view with a ring.
+  final Map<int, AnimationController> _reveals = <int, AnimationController>{};
 
   @override
   void initState() {
@@ -133,11 +156,18 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
       switch (s.lastOutcome) {
         case MoveOutcome.exited:
           _startExit(id);
+          _startUnlocks(id);
         case MoveOutcome.blocked:
           _startBump(id);
+        case MoveOutcome.locked:
+          _startBump(id);
+          _startKeyPing();
         case MoveOutcome.none:
           break;
       }
+    }
+    for (final id in s.revealed.difference(old.state.revealed)) {
+      _startReveal(id);
     }
     // After the move, not before: the bump that spends the last life has to
     // have started before the slump can know to wait for it.
@@ -146,21 +176,69 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
 
   void _startExit(int id) {
     final puzzle = widget.state.puzzle!;
-    final arrow = puzzle.arrows[id];
-    final travel = arrow.length + puzzle.rayOf(id).length;
+    // A tethered pair leaves together, so both halves run on one clock —
+    // the longer half's.
+    final group = puzzle.exitGroup(id);
+    var travel = 0;
+    for (final member in group) {
+      travel = max(travel, puzzle.arrows[member].length + puzzle.rayOf(member).length);
+    }
     // Quick but still readable as a slide: a short arrow at the edge is gone
     // in about a quarter second; a long crossing of a big board never drags.
-    final controller = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: (140 + travel * 30).clamp(240, 600)),
-    );
-    _exits[id]?.dispose();
-    _exits[id] = controller;
+    final duration = Duration(milliseconds: (140 + travel * 30).clamp(240, 600));
+    for (final member in group) {
+      final controller = AnimationController(vsync: this, duration: duration);
+      _exits[member]?.dispose();
+      _exits[member] = controller;
+      controller.addListener(() => setState(() {}));
+      controller.forward().whenComplete(() {
+        if (!mounted) return;
+        setState(() {
+          _exits.remove(member)?.dispose();
+        });
+      });
+    }
+  }
+
+  /// The padlocks [id] was the key of swing open as it leaves.
+  void _startUnlocks(int id) {
+    final puzzle = widget.state.puzzle!;
+    for (final member in puzzle.exitGroup(id)) {
+      for (final lock in puzzle.locksOpenedBy(member)) {
+        if (widget.state.removed.contains(lock)) continue;
+        _startOneShot(_unlocks, lock, kUnlockMs);
+      }
+    }
+  }
+
+  void _startReveal(int id) => _startOneShot(_reveals, id, kRevealMs);
+
+  /// Starts (or restarts) a one-shot [ms] animation for [id] in [slot].
+  void _startOneShot(Map<int, AnimationController> slot, int id, int ms) {
+    slot[id]?.dispose();
+    final controller = AnimationController(vsync: this, duration: Duration(milliseconds: ms));
+    slot[id] = controller;
     controller.addListener(() => setState(() {}));
     controller.forward().whenComplete(() {
       if (!mounted) return;
       setState(() {
-        _exits.remove(id)?.dispose();
+        if (slot[id] == controller) slot.remove(id);
+        controller.dispose();
+      });
+    });
+  }
+
+  /// Points at the key of the arrow just tapped.
+  void _startKeyPing() {
+    _keyPing?.dispose();
+    final controller = AnimationController(vsync: this, duration: const Duration(milliseconds: kKeyPingMs));
+    _keyPing = controller;
+    controller.addListener(() => setState(() {}));
+    controller.forward().whenComplete(() {
+      if (!mounted) return;
+      setState(() {
+        if (_keyPing == controller) _keyPing = null;
+        controller.dispose();
       });
     });
   }
@@ -238,6 +316,14 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
       c.dispose();
     }
     _exits.clear();
+    for (final slot in <Map<int, AnimationController>>[_unlocks, _reveals]) {
+      for (final c in slot.values) {
+        c.dispose();
+      }
+      slot.clear();
+    }
+    _keyPing?.dispose();
+    _keyPing = null;
     _bump?.dispose();
     _bump = null;
     _bumpId = null;
@@ -358,6 +444,9 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
                     bumpId: _bumpId,
                     bump: _bump?.value,
                     bumpMotion: _bumpMotion,
+                    keyPing: _keyPing?.value,
+                    unlocks: <int, double>{for (final e in _unlocks.entries) e.key: e.value.value},
+                    reveals: <int, double>{for (final e in _reveals.entries) e.key: e.value.value},
                     travel: widget.reduceMotion ? 0 : 1,
                     focusedId: widget.focusedArrowId,
                     l10n: l10n,
@@ -385,6 +474,9 @@ class _BoardPainter extends CustomPainter {
     required this.bumpId,
     required this.bump,
     required this.bumpMotion,
+    required this.keyPing,
+    required this.unlocks,
+    required this.reveals,
     required this.travel,
     required this.focusedId,
     required this.l10n,
@@ -427,6 +519,14 @@ class _BoardPainter extends CustomPainter {
   final int? bumpId;
   final double? bump;
   final BumpMotion? bumpMotion;
+
+  /// The pointer to the key after a locked tap, 0..1, or null.
+  final double? keyPing;
+
+  /// Padlocks popping open (locked id → progress) and heads appearing
+  /// (hidden id → progress).
+  final Map<int, double> unlocks;
+  final Map<int, double> reveals;
 
   Puzzle get puzzle => state.puzzle!;
 
@@ -475,34 +575,24 @@ class _BoardPainter extends CustomPainter {
 
     // The bump: the tapped arrow runs into the arrow in its way, which takes
     // the hit — its cell flashes and it is shoved a touch — then springs
-    // back. Held by a lock instead, it jabs at the lock and the key arrow
-    // flashes: that is what has to go first.
+    // back. Held by a lock instead, it only rattles (the same motion, a
+    // fraction of a cell), and the key is pointed at below.
     final blocked = state.blockedCell;
-    final lockedBy = state.blockedKey;
     final bumpT = bump;
     final motion = bumpMotion;
     final bumping =
-        (blocked != null || lockedBy != null) && bumpT != null && motion != null && bumpId == state.lastMoveId;
-    final flash = bumping ? motion.flashAt(bumpT) : 0.0;
+        (blocked != null || state.blockedKey != null) && bumpT != null && motion != null && bumpId == state.lastMoveId;
+    final flash = bumping && blocked != null ? motion.flashAt(bumpT) : 0.0;
     final shove = bumping && blocked != null ? motion.shoveAt(bumpT) * travel : 0.0;
     final hitId = bumping && blocked != null ? puzzle.arrowAt(blocked) : null;
-    if (bumping && flash > 0) {
-      final flashPaint = Paint()
-        ..color = palette.blockedFlash.withValues(alpha: palette.blockedFlash.a * flash);
-      if (blocked != null) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(blocked.x * cs, blocked.y * cs, cs, cs).deflate(cs * 0.08),
-            Radius.circular(cs * 0.2),
-          ),
-          flashPaint,
-        );
-      } else if (lockedBy != null && !state.removed.contains(lockedBy)) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(_bounds(puzzle.arrows[lockedBy], cs).inflate(cs * 0.1), Radius.circular(cs * 0.3)),
-          flashPaint,
-        );
-      }
+    if (flash > 0) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(blocked!.x * cs, blocked.y * cs, cs, cs).deflate(cs * 0.08),
+          Radius.circular(cs * 0.2),
+        ),
+        Paint()..color = palette.blockedFlash.withValues(alpha: palette.blockedFlash.a * flash),
+      );
     }
 
     canvas.save();
@@ -551,11 +641,52 @@ class _BoardPainter extends CustomPainter {
       if (slumping) canvas.restore();
       if (shoved) canvas.restore();
     }
+    _paintKeyPointer(canvas, cs, glyphs);
     _paintHint(canvas, size, cs);
     canvas.restore();
     // Outside the clip: the ring sits a little proud of the cells, and an
     // arrow on the board's edge would otherwise lose that side of it.
     _paintCursor(canvas, cs);
+  }
+
+  /// After a tap on a locked arrow: a dashed line from the lock to its key
+  /// and a ring swelling out of the key, twice, so "that one first" needs
+  /// no number read.
+  void _paintKeyPointer(Canvas canvas, double cs, BoardGlyphs glyphs) {
+    final t = keyPing;
+    final lock = state.lastMoveId;
+    final key = state.blockedKey;
+    if (t == null || lock == null || key == null || state.removed.contains(key)) return;
+    final from = _center(puzzle.arrows[lock].cells[puzzle.arrows[lock].length ~/ 2], cs);
+    final to = _center(puzzle.arrows[key].cells[puzzle.arrows[key].length ~/ 2], cs);
+    final fade = t < 0.75 ? 1.0 : 1 - (t - 0.75) / 0.25;
+    final stroke = max(2.0, min(cs * 0.16, 4.0));
+    final line = Path()
+      ..moveTo(from.dx, from.dy)
+      ..lineTo(to.dx, to.dy);
+    canvas.drawPath(
+      BoardGlyphs.dashed(line, stroke * 1.5, stroke * 1.5),
+      Paint()
+        ..color = palette.accentSun.withValues(alpha: fade)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round,
+    );
+    // Two pings over the run.
+    final phase = (t * 2) % 1;
+    final ease = Curves.easeOutCubic.transform(phase);
+    final from0 = max(cs * 0.8, 14.0);
+    final to0 = max(from0 + 8, min(cs * 2.4, 50.0));
+    canvas.drawCircle(
+      to,
+      from0 + (to0 - from0) * ease,
+      Paint()
+        ..color = palette.accentSun.withValues(alpha: (0.95 - 0.8 * ease) * fade)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2.5, min(cs * 0.26, 5.0)),
+    );
+    // The key itself, brought forward.
+    _paintArrow(canvas, puzzle.arrows[key], cs, 0, false, glyphs);
   }
 
   /// The keyboard cursor: a rounded ring around the cells of the focused
@@ -663,13 +794,17 @@ class _BoardPainter extends CustomPainter {
     );
   }
 
-  /// The closest two cells of [a] and [b], for the tether between them.
+  /// The closest two cells of [a] and [b], for the tether between them —
+  /// off the heads where there is a choice, so the ring never sits on the
+  /// one part of an arrow that says which way it goes.
   static (Cell, Cell) _nearestCells(ArrowPiece a, ArrowPiece b) {
     var best = (a.cells.first, b.cells.first);
     var bestD = 1 << 30;
     for (final ca in a.cells) {
       for (final cb in b.cells) {
-        final d = (ca.x - cb.x).abs() + (ca.y - cb.y).abs();
+        var d = 4 * ((ca.x - cb.x).abs() + (ca.y - cb.y).abs());
+        if (ca == a.head) d += 3;
+        if (cb == b.head) d += 3;
         if (d < bestD) {
           bestD = d;
           best = (ca, cb);
@@ -735,10 +870,13 @@ class _BoardPainter extends CustomPainter {
     if (dir.distance < 0.001) dir = _unit(arrow.heading);
     dir = dir / dir.distance;
     final headShown = state.headShown(arrow.id);
+    // A head that has just been uncovered springs in from nothing.
+    final reveal = reveals[arrow.id];
+    final headScale = reveal == null ? 1.0 : Curves.elasticOut.transform(reveal);
 
     // Body ends a bit short of the head so the triangle caps it cleanly;
     // a hidden head is no head, so the body runs to the cell's centre.
-    final headLen = min(cs * 0.3, 8.0);
+    final headLen = min(cs * 0.3, 8.0) * headScale;
     final bodyEnd = headShown ? head - dir * (headLen * 0.55) : head;
     var path = Path()..moveTo(points.first.dx, points.first.dy);
     for (var i = 1; i < points.length - 1; i++) {
@@ -807,6 +945,19 @@ class _BoardPainter extends CustomPainter {
       );
     }
 
+    if (reveal != null) {
+      // A ring swells out of the new head.
+      final t = Curves.easeOutCubic.transform(reveal);
+      canvas.drawCircle(
+        head,
+        max(cs * 0.6, 10.0) + max(cs * 1.6, 30.0) * t,
+        Paint()
+          ..color = palette.hintGlow.withValues(alpha: 0.9 * (1 - t))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(2.0, min(cs * 0.2, 4.0)),
+      );
+    }
+
     if (glyphs == null) return;
     // The twist, on the arrow's middle cell, travelling with it.
     final mid = at(offset + arrow.length ~/ 2);
@@ -816,13 +967,22 @@ class _BoardPainter extends CustomPainter {
     }
     final key = puzzle.keyOf(arrow.id);
     if (key != null) {
-      glyphs.padlock(
-        canvas,
-        mid,
-        g,
-        open: state.removed.contains(key),
-        number: puzzle.lockNumber(arrow.id),
-      );
+      final opened = state.removed.contains(key);
+      final pop = unlocks[arrow.id];
+      // Shut, swinging open, or open: the swing is the pop's first half.
+      final openness = !opened ? 0.0 : (pop == null ? 1.0 : Curves.easeOutBack.transform(min(1, pop * 2)));
+      if (pop != null) {
+        final t = Curves.easeOutCubic.transform(pop);
+        canvas.drawCircle(
+          mid,
+          g * 0.5 + max(cs * 1.4, 26.0) * t,
+          Paint()
+            ..color = palette.hintGlow.withValues(alpha: 0.9 * (1 - t))
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = max(2.0, min(cs * 0.2, 4.0)),
+        );
+      }
+      glyphs.padlock(canvas, mid, g, openness: openness, number: puzzle.lockNumber(arrow.id));
     } else if (puzzle.locksOpenedBy(arrow.id).isNotEmpty) {
       glyphs.key(canvas, mid, g, puzzle.lockNumber(arrow.id)!);
     }
@@ -852,6 +1012,9 @@ class _BoardPainter extends CustomPainter {
       !_sameMap(old.exits, exits) ||
       old.bumpId != bumpId ||
       old.bump != bump ||
+      old.keyPing != keyPing ||
+      !_sameMap(old.unlocks, unlocks) ||
+      !_sameMap(old.reveals, reveals) ||
       old.travel != travel ||
       old.focusedId != focusedId;
 

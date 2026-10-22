@@ -138,9 +138,9 @@ class GameNotifier extends StateNotifier<GameState> {
   void _snapshot() => onSnapshot?.call(state);
 
   /// Taps arrow [id]: it slides out if its exit path is clear (and its
-  /// lock is open, and its tethered partner's way is clear too), otherwise
-  /// it bumps and costs a life. An arrow leaving uncovers any hidden heads
-  /// beside it.
+  /// lock is open, and its tethered partner's way is clear too); held by a
+  /// lock it rattles for free; otherwise it bumps and costs a life. An
+  /// arrow leaving uncovers any hidden heads beside it.
   void tapArrow(int id) {
     if (!state.isPlaying || state.removed.contains(id)) return;
     final puzzle = state.puzzle!;
@@ -172,6 +172,23 @@ class GameNotifier extends StateNotifier<GameState> {
       _snapshot();
       return;
     }
+    // What stopped it: a cell on its way, its lock, or its partner's.
+    final block = puzzle.blockOf(id, state.removed)!;
+    if (block.isLock) {
+      // A lock is not a mistake: the arrow is simply not ready. The tap
+      // rattles it and the board points at the key — nothing is charged,
+      // since a locked arrow looks locked.
+      state = state.copyWith(clearBlocked: true).copyWith(
+        clearHint: true,
+        lastMoveId: block.arrow,
+        lastOutcome: MoveOutcome.locked,
+        blockedKey: block.key,
+        moveToken: token,
+      );
+      haptics?.tap();
+      _snapshot();
+      return;
+    }
     // One bump the board does not charge for: a second run at an arrow that
     // has already bumped. That lesson is paid for, and a 200-arrow board is
     // far too big to hold every dead end in your head.
@@ -181,9 +198,7 @@ class GameNotifier extends StateNotifier<GameState> {
     // exactly one more, never an open licence.
     final lost = !free && mistakes >= maxLives;
     if (lost) _stopTimer();
-    // What stopped it: a cell on its way, its lock, or its partner's.
-    final block = puzzle.blockOf(id, state.removed)!;
-    // Cleared first: a cell bump after a lock bump (or the reverse) must
+    // Cleared first: a cell bump after a lock tap (or the reverse) must
     // not keep the other's marker.
     state = state.copyWith(clearBlocked: true).copyWith(
       mistakes: mistakes,
@@ -193,7 +208,6 @@ class GameNotifier extends StateNotifier<GameState> {
       lastMoveId: block.arrow,
       lastOutcome: MoveOutcome.blocked,
       blockedCell: block.cell,
-      blockedKey: block.key,
       moveToken: token,
     );
     haptics?.tap();

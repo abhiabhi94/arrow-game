@@ -60,8 +60,8 @@ Future<void> _tapCell(WidgetTester tester, Cell cell) async {
 void main() {
   testWidgets('a chapter\'s first level opens on its card, over the paused board', (tester) async {
     final container = await _pump(tester, const GameScreen(level: 21));
-    expect(find.text('New: holes'), findsOneWidget);
-    expect(find.textContaining('The grey squares are holes in the page'), findsOneWidget);
+    expect(find.text('Walls'), findsOneWidget);
+    expect(find.text('Arrows go around walls.'), findsNWidgets(2)); // the card's line and the one under the board
     expect(find.text('Got it'), findsOneWidget);
     expect(container.read(gameProvider(21)).phase, GamePhase.paused);
     // Two boards on screen: the level's and the card's picture.
@@ -69,19 +69,19 @@ void main() {
     await tester.tap(find.text('Got it'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('New: holes'), findsNothing);
+    expect(find.text('Walls'), findsNothing);
     expect(container.read(gameProvider(21)).phase, GamePhase.playing);
-    // The line under the board says the same in a sentence.
-    expect(find.text('The grey squares are holes: an arrow slides into one and is gone.'), findsOneWidget);
+    // The line under the board stays.
+    expect(find.text('Arrows go around walls.'), findsOneWidget);
     // Pausing again does not bring the card back.
     container.read(gameProvider(21).notifier).pause();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('New: holes'), findsNothing);
+    expect(find.text('Walls'), findsNothing);
     expect(find.text('Paused'), findsOneWidget);
   });
 
-  for (final (level, title) in <(int, String)>[(41, 'New: locks'), (61, 'New: hidden heads'), (81, 'New: pairs')]) {
+  for (final (level, title) in <(int, String)>[(41, 'The key goes first. Then the lock opens.'), (61, 'Clear an arrow beside it to see where it points.'), (81, 'One tap, both go. Both paths must be clear.')]) {
     testWidgets('level $level opens on its chapter card', (tester) async {
       await _pump(tester, GameScreen(level: level));
       expect(find.text(title), findsOneWidget);
@@ -96,9 +96,9 @@ void main() {
       const GameScreen(level: 41),
       seed: const {'arrow_level_41_done': true},
     );
-    expect(find.text('New: locks'), findsNothing);
+    expect(find.text('The key goes first. Then the lock opens.'), findsNothing);
     expect(container.read(gameProvider(41)).phase, GamePhase.playing);
-    expect(find.text('A padlocked arrow waits for the key with its number.'), findsOneWidget);
+    expect(find.text('A locked arrow waits for its key.'), findsOneWidget);
   });
 
   testWidgets('a level coming back from a saved game shows the welcome, not the card', (tester) async {
@@ -117,7 +117,7 @@ void main() {
       },
     );
     expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('New: hidden heads'), findsNothing);
+    expect(find.text('Clear an arrow beside it to see where it points.'), findsNothing);
     expect(resumed.read(gameProvider(61)).resumeOffered, isTrue);
     await tester.pump(const Duration(milliseconds: 400));
   });
@@ -125,7 +125,7 @@ void main() {
   testWidgets('a plain level has no card and no line', (tester) async {
     await _pump(tester, const GameScreen(level: 22));
     expect(find.text('Got it'), findsNothing);
-    expect(find.textContaining('holes'), findsNothing);
+    expect(find.textContaining('walls'), findsNothing);
   });
 
   testWidgets('the daily board is titled by the day and ends without a next level', (tester) async {

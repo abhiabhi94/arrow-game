@@ -135,6 +135,13 @@ class DailyNotifier extends StateNotifier<DailyStanding> {
   /// Today's board.
   LevelSpec get spec => dailySpec(day: state.day, chapter: state.chapter, salt: salt);
 
+  /// How long until the next board: local midnight.
+  Duration get untilNextBoard {
+    final now = _clock();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    return midnight.difference(now);
+  }
+
   /// Records a clear of today's board in [timeMs] with [stars]. The streak
   /// grows by one on the first clear of a day that follows a cleared day,
   /// restarts at one after a gap, and is untouched by a second clear.

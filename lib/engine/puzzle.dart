@@ -8,11 +8,10 @@
 /// Later chapters add four things to a board, each a small twist on that one
 /// relation rather than a second rule:
 ///
-/// * **Walls** ([walls]): holes in the page. No arrow sits on one, and an
-///   arrow that slides into one is gone just as if it had left over the
-///   edge, so an exit ray ends at the first wall as well as at the edge
-///   ([rayOf]). They shape the board (a ring, a cross, an octagon, pillars)
-///   and give it inner edges to leave by.
+/// * **Walls** ([walls]): solid cells. No arrow sits on one and no arrow
+///   slides through one — a head is never aimed at a wall, so every ray
+///   runs clear of them to the edge ([rayOf]). They shape the board (a
+///   hole in the middle, pillars, bars, blocks) and the arrows go around.
 /// * **Locks** ([locks]): a locked arrow also waits for its *key* arrow to
 ///   leave, wherever on the board that key is. One more edge in the graph.
 /// * **Hidden heads** ([hidden]): the arrow is drawn without its head until
@@ -55,11 +54,8 @@ class Puzzle {
       }
     }
     for (final a in arrows) {
-      final ray = <Cell>[];
-      for (final c in a.exitRay(width, height)) {
-        if (_occupancy[c] == kWall) break;
-        ray.add(c);
-      }
+      final ray = a.exitRay(width, height);
+      assert(ray.every((c) => _occupancy[c] != kWall), 'arrow ${a.id} aims at a wall');
       _rays.add(List<Cell>.unmodifiable(ray));
     }
     final lockIds = this.locks.keys.toList()..sort();
@@ -130,8 +126,8 @@ class Puzzle {
   bool isWall(Cell c) => _occupancy[c] == kWall;
 
   /// The cells arrow [id] slides through on its way off the board: from the
-  /// cell past its head to the last cell before the edge or the first wall.
-  /// Empty for a head already facing the edge or a wall.
+  /// cell past its head to the edge. Never a wall. Empty for a head on the
+  /// edge facing out.
   List<Cell> rayOf(int id) => _rays[id];
 
   /// The arrow tethered to [id], or null.

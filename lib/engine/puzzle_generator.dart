@@ -244,18 +244,23 @@ class _Builder {
     return false;
   }
 
-  /// Every cell from just past ([x],[y]) to the edge — or the first wall,
-  /// which an arrow falls into just as it falls off the edge — in [d],
-  /// packed.
+  /// Every cell from just past ([x],[y]) to the edge in [d], packed.
   List<int> _rayCells(int x, int y, Direction d) {
     final (dx, dy) = d.vector;
     final out = <int>[];
     for (var cx = x + dx, cy = y + dy; inside(cx, cy); cx += dx, cy += dy) {
-      final k = idx(cx, cy);
-      if (owner[k] == _kWall) break;
-      out.add(k);
+      out.add(idx(cx, cy));
     }
     return out;
+  }
+
+  /// Whether a head may face along [ray]: no wall on it. An arrow aimed at
+  /// a wall could never leave.
+  bool _rayClear(List<int> ray) {
+    for (final k in ray) {
+      if (owner[k] == _kWall) return false;
+    }
+    return true;
   }
 
   /// [_rayCells] from [piece]'s head.
@@ -372,12 +377,9 @@ class _Builder {
           for (final d in Direction.values) {
             final (dx, dy) = d.vector;
             if (!free(x - dx, y - dy)) continue;
-            // A head facing the edge or a wall has an empty ray: a free tap
-            // for the whole game, so while closing it is a last resort.
-            if (!allowEdgeHeads &&
-                (!inside(x + dx, y + dy) || owner[idx(x + dx, y + dy)] == _kWall)) {
-              continue;
-            }
+            // A head on the edge facing out can never be blocked — a free
+            // tap for the whole game — so while closing it is a last resort.
+            if (!allowEdgeHeads && !inside(x + dx, y + dy)) continue;
             var weight = (depth[k] + 1) * (depth[k] + 1);
             if (closing && (openOn(k) > 0 || openOn(idx(x - dx, y - dy)) > 0)) {
               weight *= 4;
@@ -418,6 +420,7 @@ class _Builder {
       final hy = (packed ~/ 4) ~/ w;
       final heading = Direction.values[packed % 4];
       final ray = _rayCells(hx, hy, heading);
+      if (!_rayClear(ray)) continue;
       final body = _growBody(hx, hy, heading, ray, _targetLength(id), closing);
       if (body.length < spec.minLength || !_acyclic(body, ray)) continue;
       // Crossing existing rays makes this arrow a blocker now and a longer
@@ -547,7 +550,7 @@ class _Builder {
       final head = cells.last;
       final heading = cells[cells.length - 2].directionTo(head)!;
       final ray = _rayCells(head.x, head.y, heading);
-      if (ray.isEmpty) continue;
+      if (ray.isEmpty || !_rayClear(ray)) continue;
       if (cells.any((c) => ray.contains(idx(c.x, c.y)))) continue;
       if (!_acyclic(cells, ray)) continue;
       out.add(ArrowPiece(id: id, cells: cells, heading: heading));

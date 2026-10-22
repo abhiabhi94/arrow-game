@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/chapter_demos.dart';
 import '../data/chapters.dart';
 import '../data/level_specs.dart';
 import '../engine/direction.dart';
@@ -27,6 +26,7 @@ import '../ui/motion.dart';
 import '../utils/format.dart';
 import '../utils/labels.dart';
 import '../widgets/board_toolbar.dart';
+import '../widgets/chapter_demo.dart';
 import '../widgets/lives_indicator.dart';
 import '../widgets/puzzle_board.dart';
 import '../widgets/result_card.dart';
@@ -392,6 +392,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final progress = ref.read(progressProvider.notifier);
     _calm = reduceMotionOf(context);
     ref.listen(provider, (prev, next) {
+      // A locked tap is not a crash: the board rattles the arrow and points
+      // at the key, and the screen keeps still.
       if (next.lastOutcome == MoveOutcome.blocked && next.moveToken != prev?.moveToken) {
         final motion = BumpMotion.forTap(next.puzzle!, next.lastMoveId!, next.blockedCell);
         _crashMotion = motion;
@@ -810,10 +812,9 @@ extension on _GameScreenState {
   }
 }
 
-/// The chapter card: what the twist is called, a small board that shows
-/// it in the game's own ink, and a line on how it plays. The board is a
-/// picture — not tappable, and not read out piece by piece — since the
-/// body says what it shows.
+/// The chapter card: the twist's name, one line on how it plays, and a
+/// small board that plays it over and over (`ChapterDemoBoard`). Watching
+/// beats reading: the line is as short as it can be.
 class _IntroCard extends StatelessWidget {
   const _IntroCard({required this.rule, required this.onDone});
 
@@ -825,7 +826,7 @@ class _IntroCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final (emoji, title, body) = switch (rule) {
       ChapterRule.lines => ('➡️', l10n.chapterName1, l10n.chapterBlurb1),
-      ChapterRule.shapes => ('🕳️', l10n.introTitleShapes, l10n.introBodyShapes),
+      ChapterRule.shapes => ('🧱', l10n.introTitleShapes, l10n.introBodyShapes),
       ChapterRule.locks => ('🔒', l10n.introTitleLocks, l10n.introBodyLocks),
       ChapterRule.fog => ('🌫️', l10n.introTitleFog, l10n.introBodyFog),
       ChapterRule.pairs => ('🔗', l10n.introTitlePairs, l10n.introBodyPairs),
@@ -838,29 +839,6 @@ class _IntroCard extends StatelessWidget {
       actions: [FilledButton(onPressed: onDone, child: Text(l10n.introGotIt))],
     );
   }
-}
-
-/// A chapter's twist drawn on a small board, as a picture.
-class ChapterDemoBoard extends StatelessWidget {
-  const ChapterDemoBoard({super.key, required this.rule, this.height = 120});
-
-  final ChapterRule rule;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-        child: IgnorePointer(
-          child: SizedBox(
-            height: height,
-            child: PuzzleBoard(
-              state: GameState.fresh(demoSpecFor(rule), demoPuzzleFor(rule)),
-              showGrid: true,
-              onTapArrow: (_) {},
-              reduceMotion: true,
-            ),
-          ),
-        ),
-      );
 }
 
 /// What a key press on the game screen does.

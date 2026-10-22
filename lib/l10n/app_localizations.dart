@@ -173,7 +173,7 @@ abstract class AppLocalizations {
   /// No description provided for @chapterName2.
   ///
   /// In en, this message translates to:
-  /// **'Shapes'**
+  /// **'Walls'**
   String get chapterName2;
 
   /// No description provided for @chapterName3.
@@ -215,73 +215,73 @@ abstract class AppLocalizations {
   /// No description provided for @chapterBlurb2.
   ///
   /// In en, this message translates to:
-  /// **'Boards with holes in them. An arrow falls into a hole just as it slides off the edge.'**
+  /// **'Walls in the board. The arrows go around them.'**
   String get chapterBlurb2;
 
   /// No description provided for @chapterBlurb3.
   ///
   /// In en, this message translates to:
-  /// **'Some arrows wear a padlock. They also wait for the key with the same number.'**
+  /// **'Locked arrows wait for their key.'**
   String get chapterBlurb3;
 
   /// No description provided for @chapterBlurb4.
   ///
   /// In en, this message translates to:
-  /// **'Some arrows hide their head. It shows once an arrow beside them leaves.'**
+  /// **'Some heads are hidden until a neighbour leaves.'**
   String get chapterBlurb4;
 
   /// No description provided for @chapterBlurb5.
   ///
   /// In en, this message translates to:
-  /// **'Some arrows are tethered. One tap sends both out — so both paths must be clear.'**
+  /// **'Tethered arrows leave together.'**
   String get chapterBlurb5;
 
   /// No description provided for @introTitleShapes.
   ///
   /// In en, this message translates to:
-  /// **'New: holes'**
+  /// **'Walls'**
   String get introTitleShapes;
 
   /// No description provided for @introBodyShapes.
   ///
   /// In en, this message translates to:
-  /// **'The grey squares are holes in the page. No arrow sits on one, and an arrow that slides into one is gone — a hole is a way out, just like the edge.'**
+  /// **'Arrows go around walls.'**
   String get introBodyShapes;
 
   /// No description provided for @introTitleLocks.
   ///
   /// In en, this message translates to:
-  /// **'New: locks'**
+  /// **'Locks'**
   String get introTitleLocks;
 
   /// No description provided for @introBodyLocks.
   ///
   /// In en, this message translates to:
-  /// **'An arrow with a padlock waits for two things: a clear path, and the key with the same number to leave first. Tap it too soon and it rattles — that costs a life.'**
+  /// **'The key goes first. Then the lock opens.'**
   String get introBodyLocks;
 
   /// No description provided for @introTitleFog.
   ///
   /// In en, this message translates to:
-  /// **'New: hidden heads'**
+  /// **'Hidden heads'**
   String get introTitleFog;
 
   /// No description provided for @introBodyFog.
   ///
   /// In en, this message translates to:
-  /// **'A dashed arrow with a ? is hiding which way it points. Slide out an arrow beside it and the head appears. A hint shows it too.'**
+  /// **'Clear an arrow beside it to see where it points.'**
   String get introBodyFog;
 
   /// No description provided for @introTitlePairs.
   ///
   /// In en, this message translates to:
-  /// **'New: pairs'**
+  /// **'Pairs'**
   String get introTitlePairs;
 
   /// No description provided for @introBodyPairs.
   ///
   /// In en, this message translates to:
-  /// **'Two arrows joined by a dotted line are tethered: one tap sends both out at once. If either one is blocked, the tap bumps — so check both paths.'**
+  /// **'One tap, both go. Both paths must be clear.'**
   String get introBodyPairs;
 
   /// No description provided for @introGotIt.
@@ -293,25 +293,25 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialShapes.
   ///
   /// In en, this message translates to:
-  /// **'The grey squares are holes: an arrow slides into one and is gone.'**
+  /// **'Arrows go around walls.'**
   String get tutorialShapes;
 
   /// No description provided for @tutorialLocks.
   ///
   /// In en, this message translates to:
-  /// **'A padlocked arrow waits for the key with its number.'**
+  /// **'A locked arrow waits for its key.'**
   String get tutorialLocks;
 
   /// No description provided for @tutorialFog.
   ///
   /// In en, this message translates to:
-  /// **'A dashed arrow hides its head. Free an arrow beside it to see which way it points.'**
+  /// **'Clear an arrow beside a dashed one to see its head.'**
   String get tutorialFog;
 
   /// No description provided for @tutorialPairs.
   ///
   /// In en, this message translates to:
-  /// **'Tethered arrows leave together: both paths must be clear.'**
+  /// **'Tethered arrows leave together.'**
   String get tutorialPairs;
 
   /// No description provided for @dailyEyebrow.
@@ -349,6 +349,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cleared today'**
   String get dailyClearedToday;
+
+  /// No description provided for @dailyNextInHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Next board in {hours}h {minutes}m'**
+  String dailyNextInHours(int hours, int minutes);
+
+  /// No description provided for @dailyNextInMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Next board in {minutes}m'**
+  String dailyNextInMinutes(int minutes);
 
   /// No description provided for @dailyPlay.
   ///
@@ -1879,12 +1891,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Arrow with a hidden head, {length, plural, =1{1 cell} other{{length} cells}} long, from row {row}, column {column}. Which way it points shows once an arrow beside it leaves.'**
   String arrowHiddenLabel(int length, int row, int column);
-
-  /// No description provided for @arrowPathClearHole.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear path into a hole.'**
-  String get arrowPathClearHole;
 
   /// No description provided for @arrowLocked.
   ///

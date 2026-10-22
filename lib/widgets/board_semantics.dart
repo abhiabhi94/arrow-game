@@ -39,11 +39,8 @@ String arrowLabel(AppLocalizations l10n, GameState state, int id) {
   if (!state.headShown(id)) {
     parts.add(l10n.arrowHiddenLabel(arrow.length, arrow.tail.y + 1, arrow.tail.x + 1));
   } else {
-    final ray = puzzle.rayOf(id);
-    final past = (ray.isEmpty ? arrow.head : ray.last).step(arrow.heading);
-    final intoHole = past.isInside(puzzle.width, puzzle.height) && puzzle.isWall(past);
     final path = blocked == null
-        ? (intoHole ? l10n.arrowPathClearHole : l10n.arrowPathClear)
+        ? l10n.arrowPathClear
         : l10n.arrowPathBlocked(
             (blocked.x - arrow.head.x).abs() + (blocked.y - arrow.head.y).abs(),
           );

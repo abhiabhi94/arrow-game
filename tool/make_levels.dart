@@ -48,10 +48,10 @@ void main() {
     // The shape: teaching boards for Shapes use the simplest cut; later
     // chapters teach their twist on a plain board so it stands alone; the
     // climb cycles through every shape.
-    final shapes = <BoardShape>[BoardShape.corners, BoardShape.hole, BoardShape.cross, BoardShape.pillars];
+    final shapes = <BoardShape>[BoardShape.hole, BoardShape.pillars, BoardShape.bars, BoardShape.blocks];
     final BoardShape shape;
     if (teach) {
-      shape = chapter == 1 ? BoardShape.corners : BoardShape.plain;
+      shape = chapter == 1 ? BoardShape.blocks : BoardShape.plain;
     } else {
       shape = shapes[(level + chapter) % shapes.length];
     }
