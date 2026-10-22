@@ -1,6 +1,5 @@
 import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/data/level_specs.dart';
-import 'package:arrow_game/engine/board_shape.dart';
 import 'package:arrow_game/models/level_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -125,7 +124,7 @@ void main() {
     // tether buys seconds, so the clock itself is not simply shorter.
     double pace(LevelSpec s) {
       final f = s.features;
-      final think = (f.locks * 4 + f.hidden * 3 + f.pairs * 3) * 1000;
+      final think = (f.mirrors * 1 + f.locks * 4 + f.hidden * 3 + f.pairs * 3) * 1000;
       return (s.timeLimitMs - think) / s.arrows;
     }
 
@@ -155,12 +154,20 @@ void main() {
     expect(specForLevel(100).maxLength, greaterThan(specForLevel(40).maxLength));
   });
 
-  test('every shape is used, and each chapter cycles through them', () {
-    final shapes = <BoardShape>{};
+  test('mirrors stand on every board from the Mirrors chapter on, a handful to a couple of dozen', () {
     for (final s in levelSpecs.where((s) => s.level > kChapterLength)) {
-      shapes.add(s.features.shape);
+      final f = s.features;
+      if (ruleTaughtAt(s.level) != null && chapterOf(s.level).rule != ChapterRule.mirrors) {
+        expect(f.mirrors, 0, reason: 'level ${s.level} teaches another twist alone');
+        continue;
+      }
+      expect(f.mirrors, inInclusiveRange(3, 25), reason: 'level ${s.level}');
+      // Thickest through their own chapter: about one for every eight
+      // arrows there, one for every fourteen after.
+      if (beatOf(s.level) == Beat.climb) {
+        expect(f.mirrors, (s.arrows / (chapterOf(s.level).index == 2 ? 8 : 14)).round(), reason: 'level ${s.level}');
+      }
     }
-    expect(shapes, containsAll(BoardShape.values));
   });
 
   test('seed and toString', () {

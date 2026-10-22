@@ -1,6 +1,5 @@
 import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/data/daily.dart';
-import 'package:arrow_game/engine/board_shape.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
 import 'package:arrow_game/models/level_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,8 +37,8 @@ void main() {
       switch (chapter.rule) {
         case ChapterRule.lines:
           expect(f.isPlain, isTrue);
-        case ChapterRule.shapes:
-          expect(f.shape, isNot(BoardShape.plain));
+        case ChapterRule.mirrors:
+          expect(f.mirrors, inInclusiveRange(8, 12));
           expect(f.locks + f.hidden + f.pairs, 0);
         case ChapterRule.locks:
           expect(f.locks, inInclusiveRange(3, 5));
@@ -57,15 +56,15 @@ void main() {
     }
   });
 
-  test('the shape and the counts turn with the day', () {
-    final shapes = <BoardShape>{};
+  test('the mirrors and the counts turn with the day', () {
+    final mirrors = <int>{};
     final counts = <int>{};
     for (var d = 0; d < 30; d++) {
       final spec = dailySpec(day: 20700 + d, chapter: chapters[4], salt: 11);
-      shapes.add(spec.features.shape);
+      mirrors.add(spec.features.mirrors);
       counts.add(spec.features.pairs);
     }
-    expect(shapes, hasLength(4));
+    expect(mirrors, {8, 9, 10, 11, 12});
     expect(counts, {3, 4, 5});
   });
 
@@ -75,6 +74,7 @@ void main() {
       final p = puzzleForLevel(spec);
       expect(p.arrowCount, spec.arrows, reason: chapter.rule.name);
       expect(p.isSolvable, isTrue, reason: chapter.rule.name);
+      expect(p.mirrors.length, spec.features.mirrors, reason: chapter.rule.name);
       expect(p.locks.length, spec.features.locks, reason: chapter.rule.name);
       expect(p.hidden.length, spec.features.hidden, reason: chapter.rule.name);
       expect(p.pairs.length ~/ 2, spec.features.pairs, reason: chapter.rule.name);

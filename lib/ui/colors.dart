@@ -66,10 +66,10 @@ const Color _lTextFaint = Color(0xFFA6A2C4);
 // from the page (~45 levels a channel) to survive a 1 px hairline on any
 // screen. The old 0xFFE4E0FF sat 16 levels off the page and vanished.
 const Color _lGridLine = Color(0xFFC8C3EC);
-// A wall: a hole in the page that an arrow falls into. A shade off the
-// page in the grid's own hue, so it reads as "no board here" rather than as
-// a piece — the arrows stay the only ink.
-const Color _lWall = Color(0xFFDCD9EF);
+// A mirror's pane: a wash a shade off the page in the grid's own hue, so
+// the cell reads as glass under the diagonal of ink — the arrows and the
+// diagonal stay the only ink.
+const Color _lMirror = Color(0xFFDCD9EF);
 const Color _lHintGlow = Color(0xCCFFB300);
 const Color _lBlockedFlash = Color(0x80FF6B6B);
 // Laid over the board while a hint shows, so the hinted arrow is the only
@@ -125,7 +125,7 @@ const Color _dTextMuted = Color(0xFFA9A4CC);
 const Color _dTextFaint = Color(0xFF6E6A8F);
 
 const Color _dGridLine = Color(0xFF423D66);
-const Color _dWall = Color(0xFF2A2641);
+const Color _dMirror = Color(0xFF2A2641);
 const Color _dHintGlow = Color(0xD9FFCE52);
 const Color _dBlockedFlash = Color(0x99FF7B7B);
 const Color _dHintVeil = Color(0xC2131120);
@@ -167,7 +167,7 @@ class ArrowPalette {
     required this.textMuted,
     required this.textFaint,
     required this.gridLine,
-    required this.wall,
+    required this.mirror,
     required this.hintGlow,
     required this.hintVeil,
     required this.blockedFlash,
@@ -210,8 +210,8 @@ class ArrowPalette {
   final Color textFaint;
   final Color gridLine;
 
-  /// A wall cell on a shaped board.
-  final Color wall;
+  /// The pane of a mirror cell, under its diagonal.
+  final Color mirror;
   final Color hintGlow;
 
   /// Dims the rest of the board while a hint points at one arrow.
@@ -250,7 +250,7 @@ class ArrowPalette {
     textMuted: _lTextMuted,
     textFaint: _lTextFaint,
     gridLine: _lGridLine,
-    wall: _lWall,
+    mirror: _lMirror,
     hintGlow: _lHintGlow,
     hintVeil: _lHintVeil,
     blockedFlash: _lBlockedFlash,
@@ -286,7 +286,7 @@ class ArrowPalette {
     textMuted: _dTextMuted,
     textFaint: _dTextFaint,
     gridLine: _dGridLine,
-    wall: _dWall,
+    mirror: _dMirror,
     hintGlow: _dHintGlow,
     hintVeil: _dHintVeil,
     blockedFlash: _dBlockedFlash,

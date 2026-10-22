@@ -44,7 +44,7 @@ void main() {
     expect(n.state.liveStreak, 0);
     expect(n.state.clearedToday, isFalse);
     expect(n.spec.seed, dailySeed(_today, n.salt));
-    expect(n.spec.features.shape, isNot(isNull));
+    expect(n.spec.features.mirrors, greaterThan(0));
     // More levels cleared later in the day do not re-deal the board.
     cleared = 45;
     n.refresh();

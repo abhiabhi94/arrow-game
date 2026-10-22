@@ -47,7 +47,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chapterName1 => 'Lines';
 
   @override
-  String get chapterName2 => 'Walls';
+  String get chapterName2 => 'Mirrors';
 
   @override
   String get chapterName3 => 'Locks';
@@ -73,7 +73,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'One rule: tap an arrow with a clear path and it slides out.';
 
   @override
-  String get chapterBlurb2 => 'Walls in the board. The arrows go around them.';
+  String get chapterBlurb2 =>
+      'Mirrors on the board. An arrow bounces off and goes on.';
 
   @override
   String get chapterBlurb3 => 'Locked arrows wait for their key.';
@@ -85,10 +86,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chapterBlurb5 => 'Tethered arrows leave together.';
 
   @override
-  String get introTitleShapes => 'Walls';
+  String get introTitleMirrors => 'Mirrors';
 
   @override
-  String get introBodyShapes => 'Arrows go around walls.';
+  String get introBodyMirrors => 'Arrows bounce off mirrors.';
 
   @override
   String get introTitleLocks => 'Locks';
@@ -112,7 +113,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get introGotIt => 'Got it';
 
   @override
-  String get tutorialShapes => 'Arrows go around walls.';
+  String get tutorialMirrors => 'Arrows bounce off mirrors.';
 
   @override
   String get tutorialLocks => 'A locked arrow waits for its key.';
@@ -1007,6 +1008,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get arrowPathClear => 'Clear path to the edge.';
+
+  @override
+  String get arrowPathMirror => 'Its path bounces off a mirror.';
 
   @override
   String arrowPathBlocked(int distance) {

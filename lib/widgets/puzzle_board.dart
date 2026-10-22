@@ -560,17 +560,13 @@ class _BoardPainter extends CustomPainter {
       paper: palette.backgroundSoft,
       badge: palette.accentSun,
       onBadge: palette.onAccent,
-      wall: palette.wall,
-      wallEdge: palette.gridLine,
+      mirrorWash: palette.mirror,
       textDirection: textDirection,
     );
-    // Walls: holes in the page. Drawn under everything, and cut out of the
-    // clip below, so an arrow sliding into one is swallowed by it.
-    final holes = Path();
-    for (final wall in puzzle.walls) {
-      final cell = Rect.fromLTWH(wall.x * cs, wall.y * cs, cs, cs);
-      glyphs.wallCell(canvas, cell);
-      holes.addRect(cell);
+    // Mirrors: drawn under everything, so an arrow slides over the glass as
+    // it turns.
+    for (final e in puzzle.mirrors.entries) {
+      glyphs.mirror(canvas, Rect.fromLTWH(e.key.x * cs, e.key.y * cs, cs, cs), e.value);
     }
 
     // The bump: the tapped arrow runs into the arrow in its way, which takes
@@ -596,11 +592,7 @@ class _BoardPainter extends CustomPainter {
     }
 
     canvas.save();
-    if (puzzle.walls.isEmpty) {
-      canvas.clipRect(rect);
-    } else {
-      canvas.clipPath(Path.combine(PathOperation.difference, Path()..addRect(rect), holes));
-    }
+    canvas.clipRect(rect);
     // Tethers first, under the arrows they join. A pair in flight has
     // left together; the line is not drawn after them.
     for (final e in puzzle.pairs.entries) {
@@ -622,7 +614,9 @@ class _BoardPainter extends CustomPainter {
       }
       final shoved = bumping && arrow.id == hitId && shove > 0;
       if (shoved) {
-        final push = _unit(puzzle.arrows[bumpId!].heading) * (shove * kShoveDistance * cs);
+        // Shoved the way the bumping arrow was going when it hit — past a
+        // mirror that is not the way its head points.
+        final push = _unit(_travelInto(bumpId!, blocked!)) * (shove * kShoveDistance * cs);
         canvas.save();
         canvas.translate(push.dx, push.dy);
       }
@@ -687,6 +681,14 @@ class _BoardPainter extends CustomPainter {
     );
     // The key itself, brought forward.
     _paintArrow(canvas, puzzle.arrows[key], cs, 0, false, glyphs);
+  }
+
+  /// The direction arrow [id] is travelling as it enters [cell] on its ray.
+  Direction _travelInto(int id, Cell cell) {
+    final ray = puzzle.rayOf(id);
+    final i = ray.indexOf(cell);
+    final from = i <= 0 ? puzzle.arrows[id].head : ray[i - 1];
+    return from.directionTo(cell) ?? puzzle.arrows[id].heading;
   }
 
   /// The keyboard cursor: a rounded ring around the cells of the focused
@@ -815,10 +817,11 @@ class _BoardPainter extends CustomPainter {
   }
 
   /// Draws [arrow] shifted [offset] cells forward along its own track (its
-  /// cells, then its exit ray, then straight on past the edge — or into the
-  /// wall it falls into, where the clip swallows it). With [glyphs] the
-  /// arrow's twist is drawn on it too: its padlock or key, its question mark
-  /// while its head is hidden; the hint's redraw passes none.
+  /// cells, then its exit ray — which turns at a mirror, so the arrow bends
+  /// through the glass as it goes — then straight on past the edge, where
+  /// the clip swallows it). With [glyphs] the arrow's twist is drawn on it
+  /// too: its padlock or key, its question mark while its head is hidden;
+  /// the hint's redraw passes none.
   void _paintArrow(
     Canvas canvas,
     ArrowPiece arrow,
@@ -829,23 +832,12 @@ class _BoardPainter extends CustomPainter {
   ) {
     final ray = puzzle.rayOf(arrow.id);
     final track = <Cell>[...arrow.cells, ...ray];
-    // Extend past the edge (or on into the hole) so sampling never runs out.
+    // Extend past the edge so sampling never runs out.
     var beyond = track.last;
+    final exitHeading = puzzle.exitHeadingOf(arrow.id);
     for (var i = 0; i < arrow.length + 2; i++) {
-      beyond = beyond.step(arrow.heading);
+      beyond = beyond.step(exitHeading);
       track.add(beyond);
-    }
-    // Where the arrow is gone for good: past the far side of the wall it is
-    // sliding into, nothing of it may be drawn (the track runs on into free
-    // cells behind a thin wall). Off the edge the clip takes care of it.
-    final sink = arrow.length + ray.length;
-    var hidden = double.infinity;
-    if (track[sink].isInside(puzzle.width, puzzle.height) && puzzle.isWall(track[sink])) {
-      var run = 0;
-      while (sink + run < track.length && puzzle.isWall(track[sink + run])) {
-        run++;
-      }
-      hidden = sink + run - 0.5;
     }
     Offset at(double u) {
       final i = u.floor().clamp(0, track.length - 2);
@@ -858,11 +850,7 @@ class _BoardPainter extends CustomPainter {
     // cell is huge and a proportional stroke would turn into a slab.
     final stroke = min(cs * 0.12, 3.0);
     final headAt = offset + arrow.length - 1;
-    if (headAt >= hidden) return;
-    final points = <Offset>[
-      for (var i = 0; i < arrow.length; i++)
-        if (offset + i < hidden) at(offset + i),
-    ];
+    final points = <Offset>[for (var i = 0; i < arrow.length; i++) at(offset + i)];
     final head = at(headAt);
     // The head's travel direction: where the track goes next.
     final ahead = at(headAt + 0.5);

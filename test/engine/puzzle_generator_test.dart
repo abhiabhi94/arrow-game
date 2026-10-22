@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/data/level_specs.dart';
-import 'package:arrow_game/engine/board_shape.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
 import 'package:arrow_game/models/level_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,19 +24,36 @@ void main() {
           reason: 'level ${spec.level} $a',
         );
         for (final c in a.cells) {
-          expect(p.isWall(c), isFalse, reason: 'level ${spec.level} $a on a wall');
+          expect(p.isMirror(c), isFalse, reason: 'level ${spec.level} $a on a mirror');
         }
       }
       // Dense like a printed puzzle: at least four cells in five of the
-      // board the shape leaves are used. A teaching board is airy on
+      // board the mirrors leave are used. A teaching board is airy on
       // purpose, and a small sprint board has less room to pack.
       final used = p.arrows.fold<int>(0, (n, a) => n + a.length);
       final teaching = ruleTaughtAt(spec.level) != null;
       final floor = teaching ? 0.5 : (spec.cellCount < 300 ? 0.75 : 0.8);
       expect(used / spec.freeCellCount, greaterThanOrEqualTo(floor), reason: 'level ${spec.level} fill');
-      // The shape and every twist the level asks for are on the board.
+      // Every twist the level asks for is on the board.
       final f = spec.features;
-      expect(p.walls, wallsFor(f.shape, spec.width, spec.height), reason: 'level ${spec.level} walls');
+      expect(p.mirrors, hasLength(f.mirrors), reason: 'level ${spec.level} mirrors');
+      for (final m in p.mirrors.keys) {
+        // Mirrors stand clear of the edge and of each other.
+        expect(m.x, inInclusiveRange(kMirrorMargin, spec.width - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
+        expect(m.y, inInclusiveRange(kMirrorMargin, spec.height - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
+        for (final other in p.mirrors.keys) {
+          if (other == m) continue;
+          expect((m.x - other.x).abs() > 1 || (m.y - other.y).abs() > 1, isTrue, reason: 'level ${spec.level} $m $other');
+        }
+      }
+      if (f.mirrors > 0) {
+        // The mirrors are on the arrows' paths, not ornaments: most are on
+        // some arrow's way out (one way out may cross two of them).
+        final hit = p.mirrors.keys.where((m) => p.arrows.any((a) => p.rayOf(a.id).contains(m))).length;
+        expect(hit, greaterThanOrEqualTo((f.mirrors * 0.6).ceil()), reason: 'level ${spec.level} mirrors hit');
+        final bent = p.arrows.where((a) => p.bends(a.id)).length;
+        expect(bent, greaterThanOrEqualTo((hit / 2).ceil()), reason: 'level ${spec.level} arrows bent');
+      }
       expect(p.locks, hasLength(f.locks), reason: 'level ${spec.level} locks');
       expect(p.hidden, hasLength(f.hidden), reason: 'level ${spec.level} hidden');
       expect(p.pairs, hasLength(f.pairs * 2), reason: 'level ${spec.level} pairs');

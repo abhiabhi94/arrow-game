@@ -11,8 +11,8 @@ it leaves the board. An arrow whose exit path runs into another arrow bumps
 back and costs a life. 100 fixed, procedurally generated levels in **five
 chapters of twenty** (`data/chapters.dart`), each built on one twist and
 keeping the ones before it: **Lines** (1–20, the plain rectangle, 5 arrows on
-5×6 → 144 on 32×50), **Walls** (21–40: solid cells the arrows go around —
-a hole in the middle, pillars, bars, blocks), **Locks** (41–60: a
+5×6 → 144 on 32×50), **Mirrors** (21–40: a diagonal in a cell turns an
+arrow's path a right angle, so the way out is read off the board), **Locks** (41–60: a
 padlocked arrow also waits for the key with its number; tapping it early
 costs nothing and points at the key), **Fog** (61–80: a dashed arrow hides
 its head until a neighbour leaves), **Pairs** (81–100: two tethered arrows
@@ -247,17 +247,20 @@ Key patterns:
   head → board edge, in its heading) is free of other arrows still on the
   board. Arrows leave entirely, so "who blocks whom" is fixed; solvable ⇔
   acyclic. The chapter twists are four small additions to that one
-  relation (`engine/puzzle.dart`): **walls** (`Puzzle.walls`,
-  `engine/board_shape.dart` masks — `hole`, `pillars`, `bars`, `blocks`)
-  are solid cells no arrow sits on or slides through; a head is never
-  aimed at one (the generator rejects such rays, `Puzzle` asserts), so a
-  wall only shapes the board and what the arrows wrap around. The first
-  cut drew walls as holes an arrow fell into (a ray ended at a wall as at
-  the edge) because shapes that reach in from the edge — a cut corner, a
-  cross — came out loose with blocking walls; but a solid grey block reads
-  as an obstacle, and acting like an exit was the opposite of what it
-  looked like. So walls block, and every shape stands in the interior,
-  where blocking walls deal tight (open ≈ 2.2–3.0 on the climb).
+  relation (`engine/puzzle.dart`): **mirrors** (`Puzzle.mirrors`, cell →
+  `Mirror.slash` / `Mirror.backslash`, `engine/mirror.dart`) are cells no
+  arrow sits on; a ray entering one turns a right angle and carries on
+  (`traceRay`: `/` sends right→up, up→right, left→down, down→left; `\`
+  the other way), so `rayOf` is a bent path, `exitHeadingOf` is the way
+  the arrow leaves the edge, `bends(id)` says whether it turned, and a
+  mirror on a ray blocks nothing (`blockersOf` skips `kMirror`). Four
+  mirrors can send a ray round in a ring and a bent ray can come back
+  through the arrow's own body; `traceRay` returns null for the ring, the
+  generator rejects both and `Puzzle` asserts. The chapter was walls
+  first (solid cells the arrows went around): a wall could never stand in
+  an arrow's way, since an arrow aimed at one could never leave, so the
+  walls only shaped the board and taught nothing — a mirror is the piece
+  that *does* something to a path.
   **locks** (`locks`: locked id → key id) add one edge, the locked arrow
   waits for its key wherever it is (`dependenciesOf` = ray blockers + key +
   the partner's; `blockOf` says what stopped a tap: a cell, or a key, in
@@ -303,10 +306,16 @@ Key patterns:
   count, and the levels open with ≤ 5 free arrows and offer ~2 taps at a
   typical moment (`test/engine/puzzle_generator_test.dart` pins that).
   `puzzleForLevel(spec)` seeds `Random` from `LevelSpec.seed`, so each
-  level is a fixed puzzle. On a shaped board the builder marks the walls as
-  never-free, stops rays at them, and measures "inside" as the distance from
-  the nearest wall or edge (`_measureDepth`), so the inside-out ramp follows
-  the shape. The twists go on last (`_FeaturePlanner`, after the board is
+  level is a fixed puzzle. The mirrors go on *first* (`_placeMirrors`:
+  `LevelFeatures.mirrors` of them, spread over the interior at random,
+  `kMirrorMargin` cells clear of the edge, never within a cell of one
+  another, each lying either way), marked never-free; every ray is then
+  traced through them (`_rayCells`, null for a ring or a ray back through
+  the head), and a head whose straight run meets a mirror is
+  `kMirrorHeadWeight` (3×) likelier to be tried, which is what puts the
+  mirrors on the arrows' paths (~80–95% of a level's mirrors are on some
+  arrow's way out; `level_report` prints `hit` and `bend`, and the
+  generator test pins ≥ 60% hit). The twists go on last (`_FeaturePlanner`, after the board is
   full and before the candidates are compared, so tightness counts them):
   locks first (a lock on `a` keyed by `k` only where `a` does not already
   wait for `k` and `k` does not wait for `a`, preferring a key that is itself
@@ -428,7 +437,12 @@ Key patterns:
   blocked flash, the sun-coloured number badge on a key and its lock and
   the pointer to a key are the only colour on the board. The twists are
   drawn by `widgets/board_glyphs.dart` so the board and the chapter cards
-  agree: a wall is a sunken square in `palette.wall`, a locked arrow wears a
+  agree: a mirror is a diagonal bar of ink with a hairline of paper for
+  the shine over a wash in `palette.mirror` (the thickest line on the
+  board, since which way it lies is the whole message), and an arrow
+  sliding out bends through it — `_paintArrow`'s track is the body, the
+  bent ray, then on past the edge in `exitHeadingOf`, and a bump's shove
+  goes the way the arrow was travelling at impact — a locked arrow wears a
   padlock on its middle cell that swings open and fades once its key has
   left, a key wears a key glyph,
   both with the lock's number in a badge, a hidden head is a dashed body
@@ -439,7 +453,8 @@ Key patterns:
   dense board. The screen reader hears the same (`board_semantics.dart`):
   a hidden arrow gives neither its direction nor its path, a lock says its
   number and whether it is open, a key its number, a pair that it is
-  tethered, and a clear path says whether it ends at the edge or in a hole. Slide-out and bump are
+  tethered, an arrow whose path turns says so, and a blocker's distance is
+  counted along the bent path. Slide-out and bump are
   animated in `PuzzleBoard` (240–600 ms slide, ease-in; the bump 180–460 ms
   in and 480 ms back). Strokes cap at
   3 px and heads at 8 px so the small early boards read as pen lines.
@@ -519,7 +534,7 @@ Key patterns:
 - **Difficulty:** every knob is in `data/level_specs.dart` — size, arrow
   count, lengths, clock, `openMoves` (3 on levels 1–3 and on every teaching
   board, 2 otherwise: how many taps the generator leaves available at once),
-  `features` (shape, locks, hidden, pairs) and `variant`. Levels 1–20 are
+  `features` (mirrors, locks, hidden, pairs) and `variant`. Levels 1–20 are
   untouched from the first release. **Levels 21–100 are printed by
   `tool/make_levels.dart`** from the chapter rules rather than tuned a row
   at a time — the first hundred levels were the same level played eighty
@@ -532,14 +547,16 @@ Key patterns:
   12-arrow teaching board with the new twist alone at each chapter's first
   level, 12×16 sprints at its 5th and 15th, the boss and finale its biggest,
   a climb of one arrow a level, the count capped at 270, no clock over ten
-  minutes, the pace per arrow easing chapter by chapter — 2.4 s in Shapes
-  to 2.0 s in Pairs — plus 4 s a lock and 3 s a hidden head or tether) and
+  minutes, the pace per arrow easing chapter by chapter — 2.4 s in Mirrors
+  to 2.0 s in Pairs — plus 1 s a mirror, 4 s a lock and 3 s a hidden head
+  or tether, the whole thing capped at 599 s; mirrors one per eight arrows
+  through their own chapter and one per fourteen after, 3 on a sprint) and
   `test/engine/puzzle_generator_test.dart` pins that every level deals its
   full count with its twists, solvable, tight, and that the hunt (arrows on
   the board per open move) climbs chapter by chapter. Keep the generator
   test green — it is what guarantees a level is playable. The board is
   sized to ~11.3 free cells an arrow (`freeCellCount`: the rectangle less
-  the walls), which fills to ~0.88.
+  the mirrors), which fills to ~0.88.
 - **Chapters and the daily board:** `data/chapters.dart` is the map (five of
   `kChapterLength` = 20, `chapterOf`, `ruleTaughtAt`, `chapterForProgress`);
   `data/chapter_demos.dart` holds the tiny solvable boards each chapter card
@@ -561,8 +578,8 @@ Key patterns:
   `DailyNotifier.spec`, its clear recorded to the streak rather than the
   trail: seed = `dailySeed(day, salt)` with the day the local calendar day
   (`dayIndexOf`) and the salt drawn once per install, ~100 arrows on a
-  29×44 board (90 on 27×42 plain) with a flat five-minute clock, the shape
-  and twist counts turning with the day, the chapter fixed the first time
+  29×44 board (90 on 27×42 plain) with a flat five-minute clock, the
+  mirror count (8–12) and twist counts turning with the day, the chapter fixed the first time
   the day's board is looked at (`arrow_daily_<day>_chapter`) so clearing a
   level mid-day does not re-deal it. The streak counts consecutive days
   with a clear (`liveStreak` is zero once a day is missed); best time and

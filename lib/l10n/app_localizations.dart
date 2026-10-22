@@ -173,7 +173,7 @@ abstract class AppLocalizations {
   /// No description provided for @chapterName2.
   ///
   /// In en, this message translates to:
-  /// **'Walls'**
+  /// **'Mirrors'**
   String get chapterName2;
 
   /// No description provided for @chapterName3.
@@ -215,7 +215,7 @@ abstract class AppLocalizations {
   /// No description provided for @chapterBlurb2.
   ///
   /// In en, this message translates to:
-  /// **'Walls in the board. The arrows go around them.'**
+  /// **'Mirrors on the board. An arrow bounces off and goes on.'**
   String get chapterBlurb2;
 
   /// No description provided for @chapterBlurb3.
@@ -236,17 +236,17 @@ abstract class AppLocalizations {
   /// **'Tethered arrows leave together.'**
   String get chapterBlurb5;
 
-  /// No description provided for @introTitleShapes.
+  /// No description provided for @introTitleMirrors.
   ///
   /// In en, this message translates to:
-  /// **'Walls'**
-  String get introTitleShapes;
+  /// **'Mirrors'**
+  String get introTitleMirrors;
 
-  /// No description provided for @introBodyShapes.
+  /// No description provided for @introBodyMirrors.
   ///
   /// In en, this message translates to:
-  /// **'Arrows go around walls.'**
-  String get introBodyShapes;
+  /// **'Arrows bounce off mirrors.'**
+  String get introBodyMirrors;
 
   /// No description provided for @introTitleLocks.
   ///
@@ -290,11 +290,11 @@ abstract class AppLocalizations {
   /// **'Got it'**
   String get introGotIt;
 
-  /// No description provided for @tutorialShapes.
+  /// No description provided for @tutorialMirrors.
   ///
   /// In en, this message translates to:
-  /// **'Arrows go around walls.'**
-  String get tutorialShapes;
+  /// **'Arrows bounce off mirrors.'**
+  String get tutorialMirrors;
 
   /// No description provided for @tutorialLocks.
   ///
@@ -1867,6 +1867,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear path to the edge.'**
   String get arrowPathClear;
+
+  /// No description provided for @arrowPathMirror.
+  ///
+  /// In en, this message translates to:
+  /// **'Its path bounces off a mirror.'**
+  String get arrowPathMirror;
 
   /// No description provided for @arrowPathBlocked.
   ///

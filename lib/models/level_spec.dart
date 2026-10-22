@@ -1,24 +1,24 @@
 /// The knobs that define one level's board. Pure Dart (no Flutter).
 library;
 
-import '../engine/board_shape.dart';
-
-/// The chapter twists a board is dealt with: its shape and how many of its
-/// arrows are locked, hidden or tethered. The plain rectangle with none of
-/// them is every level before the Shapes chapter.
+/// The chapter twists a board is dealt with: how many mirrors stand on it
+/// and how many of its arrows are locked, hidden or tethered. The plain
+/// board with none of them is every level before the Mirrors chapter.
 class LevelFeatures {
   const LevelFeatures({
-    this.shape = BoardShape.plain,
+    this.mirrors = 0,
     this.locks = 0,
     this.hidden = 0,
     this.pairs = 0,
-  })  : assert(locks >= 0),
+  })  : assert(mirrors >= 0),
+        assert(locks >= 0),
         assert(hidden >= 0),
         assert(pairs >= 0);
 
   static const LevelFeatures none = LevelFeatures();
 
-  final BoardShape shape;
+  /// Mirror cells, each turning the arrows that slide into it.
+  final int mirrors;
 
   /// Locked arrows, each with its own key arrow elsewhere on the board.
   final int locks;
@@ -29,21 +29,21 @@ class LevelFeatures {
   /// Tethered pairs that leave on one tap.
   final int pairs;
 
-  bool get isPlain => shape == BoardShape.plain && locks == 0 && hidden == 0 && pairs == 0;
+  bool get isPlain => mirrors == 0 && locks == 0 && hidden == 0 && pairs == 0;
 
   @override
   bool operator ==(Object other) =>
       other is LevelFeatures &&
-      other.shape == shape &&
+      other.mirrors == mirrors &&
       other.locks == locks &&
       other.hidden == hidden &&
       other.pairs == pairs;
 
   @override
-  int get hashCode => Object.hash(shape, locks, hidden, pairs);
+  int get hashCode => Object.hash(mirrors, locks, hidden, pairs);
 
   @override
-  String toString() => 'LevelFeatures(${shape.name}, locks $locks, hidden $hidden, pairs $pairs)';
+  String toString() => 'LevelFeatures(mirrors $mirrors, locks $locks, hidden $hidden, pairs $pairs)';
 }
 
 class LevelSpec {
@@ -98,7 +98,7 @@ class LevelSpec {
   /// `tool/level_report.dart <level> <extra>` shows how the variants compare.
   final int variant;
 
-  /// The shape and the chapter twists the board is dealt with.
+  /// The chapter twists the board is dealt with.
   final LevelFeatures features;
 
   final int? _seed;
@@ -112,8 +112,8 @@ class LevelSpec {
 
   int get cellCount => width * height;
 
-  /// Cells an arrow may use: the board less the shape's walls.
-  int get freeCellCount => cellCount - wallsFor(features.shape, width, height).length;
+  /// Cells an arrow may use: the board less its mirrors.
+  int get freeCellCount => cellCount - features.mirrors;
 
   /// The same level with its clock multiplied by [factor] — the "extra time"
   /// accessibility setting. The board (and so [seed]) is untouched, so a

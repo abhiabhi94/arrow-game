@@ -8,10 +8,10 @@
 /// Later chapters add four things to a board, each a small twist on that one
 /// relation rather than a second rule:
 ///
-/// * **Walls** ([walls]): solid cells. No arrow sits on one and no arrow
-///   slides through one — a head is never aimed at a wall, so every ray
-///   runs clear of them to the edge ([rayOf]). They shape the board (a
-///   hole in the middle, pillars, bars, blocks) and the arrows go around.
+/// * **Mirrors** ([mirrors]): a diagonal in a cell. No arrow sits on one,
+///   and an arrow sliding into one turns a right angle and carries on, so
+///   its ray ([rayOf]) bends: the way out is read off the board, not off
+///   the head alone. A mirror blocks nothing.
 /// * **Locks** ([locks]): a locked arrow also waits for its *key* arrow to
 ///   leave, wherever on the board that key is. One more edge in the graph.
 /// * **Hidden heads** ([hidden]): the arrow is drawn without its head until
@@ -25,38 +25,47 @@ library;
 import 'arrow_piece.dart';
 import 'cell.dart';
 import 'direction.dart';
+import 'mirror.dart';
 
 class Puzzle {
   Puzzle({
     required this.width,
     required this.height,
     required List<ArrowPiece> arrows,
-    Set<Cell> walls = const <Cell>{},
+    Map<Cell, Mirror> mirrors = const <Cell, Mirror>{},
     Map<int, int> locks = const <int, int>{},
     Set<int> hidden = const <int>{},
     Map<int, int> pairs = const <int, int>{},
   })  : arrows = List<ArrowPiece>.unmodifiable(arrows),
-        walls = Set<Cell>.unmodifiable(walls),
+        mirrors = Map<Cell, Mirror>.unmodifiable(mirrors),
         locks = Map<int, int>.unmodifiable(locks),
         hidden = Set<int>.unmodifiable(hidden),
         pairs = Map<int, int>.unmodifiable(_symmetric(pairs)),
         assert(width > 0 && height > 0) {
-    for (final c in walls) {
-      assert(c.isInside(width, height), 'wall $c is off the board');
-      _occupancy[c] = kWall;
+    for (final c in mirrors.keys) {
+      assert(c.isInside(width, height), 'mirror $c is off the board');
+      _occupancy[c] = kMirror;
     }
     for (var i = 0; i < arrows.length; i++) {
       assert(arrows[i].id == i, 'arrow ids must be their index');
       for (final c in arrows[i].cells) {
         assert(c.isInside(width, height), '$c is off the board');
-        assert(!_occupancy.containsKey(c), '$c is used twice (an arrow or a wall)');
+        assert(!_occupancy.containsKey(c), '$c is used twice (an arrow or a mirror)');
         _occupancy[c] = i;
       }
     }
     for (final a in arrows) {
-      final ray = a.exitRay(width, height);
-      assert(ray.every((c) => _occupancy[c] != kWall), 'arrow ${a.id} aims at a wall');
-      _rays.add(List<Cell>.unmodifiable(ray));
+      final trace = traceRay(
+        head: a.head,
+        heading: a.heading,
+        width: width,
+        height: height,
+        mirrorAt: (c) => this.mirrors[c],
+      );
+      assert(trace != null, 'arrow ${a.id} is sent round in a ring');
+      assert(trace!.cells.every((c) => _occupancy[c] != a.id), 'arrow ${a.id} is in its own way');
+      _rays.add(List<Cell>.unmodifiable(trace!.cells));
+      _exitHeadings.add(trace.exitHeading);
     }
     final lockIds = this.locks.keys.toList()..sort();
     for (var n = 0; n < lockIds.length; n++) {
@@ -76,15 +85,15 @@ class Puzzle {
     }
   }
 
-  /// The occupancy mark of a wall cell.
-  static const int kWall = -1;
+  /// The occupancy mark of a mirror cell.
+  static const int kMirror = -1;
 
   final int width;
   final int height;
   final List<ArrowPiece> arrows;
 
-  /// Dead cells: never occupied, never slid through.
-  final Set<Cell> walls;
+  /// The mirrors on the board: never occupied, slid through with a turn.
+  final Map<Cell, Mirror> mirrors;
 
   /// Locked arrow id → the key arrow it waits for.
   final Map<int, int> locks;
@@ -97,6 +106,7 @@ class Puzzle {
 
   final Map<Cell, int> _occupancy = <Cell, int>{};
   final List<List<Cell>> _rays = <List<Cell>>[];
+  final List<Direction> _exitHeadings = <Direction>[];
   final Map<int, int> _lockNumbers = <int, int>{};
 
   static Map<int, int> _symmetric(Map<int, int> pairs) {
@@ -110,25 +120,36 @@ class Puzzle {
 
   int get arrowCount => arrows.length;
 
-  /// Cells an arrow may use: the board less its walls.
-  int get freeCellCount => width * height - walls.length;
+  /// Cells an arrow may use: the board less its mirrors.
+  int get freeCellCount => width * height - mirrors.length;
 
   /// Whether the board has any of the chapter twists on it.
   bool get hasFeatures =>
-      walls.isNotEmpty || locks.isNotEmpty || hidden.isNotEmpty || pairs.isNotEmpty;
+      mirrors.isNotEmpty || locks.isNotEmpty || hidden.isNotEmpty || pairs.isNotEmpty;
 
-  /// The id of the arrow covering [c], or null if the cell is empty or a wall.
+  /// The id of the arrow covering [c], or null if the cell is empty or a
+  /// mirror.
   int? arrowAt(Cell c) {
     final id = _occupancy[c];
-    return id == null || id == kWall ? null : id;
+    return id == null || id == kMirror ? null : id;
   }
 
-  bool isWall(Cell c) => _occupancy[c] == kWall;
+  bool isMirror(Cell c) => _occupancy[c] == kMirror;
+
+  /// The mirror in [c], or null.
+  Mirror? mirrorAt(Cell c) => mirrors[c];
 
   /// The cells arrow [id] slides through on its way off the board: from the
-  /// cell past its head to the edge. Never a wall. Empty for a head on the
-  /// edge facing out.
+  /// cell past its head to the edge, turning at every mirror (the mirror
+  /// cells are on it). Empty for a head on the edge facing out.
   List<Cell> rayOf(int id) => _rays[id];
+
+  /// The way arrow [id] is going as it leaves the edge: its heading, unless
+  /// a mirror turned it.
+  Direction exitHeadingOf(int id) => _exitHeadings[id];
+
+  /// Whether arrow [id]'s way out turns at a mirror.
+  bool bends(int id) => _rays[id].any(isMirror);
 
   /// The arrow tethered to [id], or null.
   int? partnerOf(int id) => pairs[id];
@@ -153,12 +174,13 @@ class Puzzle {
     return partner == null ? <int>[id] : <int>[id, partner];
   }
 
-  /// Ids of the arrows sitting on [id]'s exit ray (present or not).
+  /// Ids of the arrows sitting on [id]'s exit ray (present or not). A
+  /// mirror on it is no blocker.
   Set<int> blockersOf(int id) {
     final out = <int>{};
     for (final c in _rays[id]) {
       final other = _occupancy[c];
-      if (other != null && other != id) out.add(other);
+      if (other != null && other != kMirror && other != id) out.add(other);
     }
     return out;
   }
@@ -187,7 +209,7 @@ class Puzzle {
   Cell? firstBlockedCell(int id, Set<int> removed) {
     for (final c in _rays[id]) {
       final other = _occupancy[c];
-      if (other != null && other != id && !removed.contains(other)) return c;
+      if (other != null && other != kMirror && other != id && !removed.contains(other)) return c;
     }
     return null;
   }
@@ -263,7 +285,7 @@ class Puzzle {
     for (final c in arrows[id].cells) {
       for (final d in Direction.values) {
         final other = _occupancy[c.step(d)];
-        if (other != null && other != kWall && other != id) out.add(other);
+        if (other != null && other != kMirror && other != id) out.add(other);
       }
     }
     return out;
@@ -381,7 +403,7 @@ class Puzzle {
             if (!n.isInside(width, height) || own.contains(n)) continue;
             final other = _occupancy[n];
             if (other != null &&
-                other != kWall &&
+                other != kMirror &&
                 other != id &&
                 !removed.contains(other) &&
                 !canExit(other, removed)) {

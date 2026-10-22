@@ -26,9 +26,9 @@ import 'dart:typed_data';
 
 import '../models/level_spec.dart';
 import 'arrow_piece.dart';
-import 'board_shape.dart';
 import 'cell.dart';
 import 'direction.dart';
+import 'mirror.dart';
 import 'puzzle.dart';
 
 /// Candidate boards generated per puzzle, scaled down for big boards so a
@@ -59,8 +59,17 @@ const double kCloseStepBias = 6.0;
 /// up gaps in the final pass.
 const int kGapTailSlack = 8;
 
-/// The owner mark of a wall cell while building: never free, never an arrow.
-const int _kWall = -2;
+/// The owner mark of a mirror cell while building: never free, never an
+/// arrow, slid through with a turn.
+const int _kMirror = -2;
+
+/// How much likelier a head whose way out turns at a mirror is to be tried,
+/// so the mirrors on a board are on somebody's path rather than ornaments.
+const int kMirrorHeadWeight = 3;
+
+/// The clear band along the edge no mirror stands in, in cells: a bounce
+/// right at the edge is a turn nobody sees.
+const int kMirrorMargin = 2;
 
 /// How far apart (head to head, in cells) a lock and its key are placed when
 /// the board allows it, so finding the key is a search rather than a glance.
@@ -125,16 +134,17 @@ class _Builder {
   _Builder(this.spec, this.random)
       : w = spec.width,
         h = spec.height,
-        walls = wallsFor(spec.features.shape, spec.width, spec.height),
         owner = Int32List(spec.width * spec.height)..fillRange(0, spec.width * spec.height, -1),
         rayOwners = List<List<int>>.generate(spec.width * spec.height, (_) => <int>[]),
         scratch = Uint8List(spec.width * spec.height),
         seen = Uint8List(spec.arrows + 1),
         depth = Int32List(spec.width * spec.height) {
-    for (final c in walls) {
-      owner[idx(c.x, c.y)] = _kWall;
+    _placeMirrors();
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        depth[idx(x, y)] = min(min(x, y), min(w - 1 - x, h - 1 - y));
+      }
     }
-    _measureDepth();
   }
 
   final LevelSpec spec;
@@ -142,10 +152,10 @@ class _Builder {
   final int w;
   final int h;
 
-  /// The shape's dead cells.
-  final Set<Cell> walls;
+  /// The mirrors, where they were put.
+  final Map<Cell, Mirror> mirrors = <Cell, Mirror>{};
 
-  /// Cell → placement index of the arrow on it, -1 when free, [_kWall].
+  /// Cell → placement index of the arrow on it, -1 when free, [_kMirror].
   final Int32List owner;
 
   /// Per cell, the placement indices of the arrows whose exit ray covers it.
@@ -157,50 +167,38 @@ class _Builder {
   /// Visited marks for [_reaches].
   final Uint8List seen;
 
-  /// Per cell, how many steps it is from the nearest wall or the edge of the
-  /// board: the "inside" of the shape. On a plain rectangle that is the
-  /// distance to the border; on a ring it peaks midway through the ring,
-  /// and on a cut corner the cells along the cut count as the border they
-  /// are. Inside-out placement works from this rather than the rectangle,
-  /// or a shaped board's pockets fill first and its middle is left loose.
+  /// Per cell, how many steps it is from the edge of the board: the
+  /// "inside". Inside-out placement works from this.
   final Int32List depth;
 
-  /// A breadth-first sweep in from every wall and every edge.
-  void _measureDepth() {
-    depth.fillRange(0, depth.length, -1);
-    final queue = <int>[];
-    for (var y = 0; y < h; y++) {
-      for (var x = 0; x < w; x++) {
-        final k = idx(x, y);
-        final border = owner[k] == _kWall ||
-            x == 0 ||
-            y == 0 ||
-            x == w - 1 ||
-            y == h - 1 ||
-            (owner[idx(x - 1, y)] == _kWall ||
-                owner[idx(x + 1, y)] == _kWall ||
-                owner[idx(x, y - 1)] == _kWall ||
-                owner[idx(x, y + 1)] == _kWall);
-        if (border) {
-          depth[k] = 0;
-          queue.add(k);
-        }
-      }
-    }
-    for (var i = 0; i < queue.length; i++) {
-      final k = queue[i];
+  /// Stands the level's mirrors on the board before any arrow: spread over
+  /// the interior, never within a cell of one another (two touching
+  /// diagonals read as one zigzag), each lying either way at random. A
+  /// mirror is a bend in the road for whichever arrows are later aimed
+  /// through it; [kMirrorHeadWeight] sees to it that some are.
+  void _placeMirrors() {
+    final want = spec.features.mirrors;
+    if (want == 0) return;
+    final spots = <int>[
+      for (var y = kMirrorMargin; y < h - kMirrorMargin; y++)
+        for (var x = kMirrorMargin; x < w - kMirrorMargin; x++) idx(x, y),
+    ]..shuffle(random);
+    for (final k in spots) {
+      if (mirrors.length >= want) break;
       final x = k % w;
       final y = k ~/ w;
-      for (final d in Direction.values) {
-        final (dx, dy) = d.vector;
-        final nx = x + dx;
-        final ny = y + dy;
-        if (!inside(nx, ny)) continue;
-        final n = idx(nx, ny);
-        if (depth[n] >= 0) continue;
-        depth[n] = depth[k] + 1;
-        queue.add(n);
+      var clear = true;
+      for (var dy = -1; dy <= 1 && clear; dy++) {
+        for (var dx = -1; dx <= 1; dx++) {
+          if (inside(x + dx, y + dy) && owner[idx(x + dx, y + dy)] == _kMirror) {
+            clear = false;
+            break;
+          }
+        }
       }
+      if (!clear) continue;
+      owner[k] = _kMirror;
+      mirrors[Cell(x, y)] = random.nextBool() ? Mirror.slash : Mirror.backslash;
     }
   }
 
@@ -244,27 +242,25 @@ class _Builder {
     return false;
   }
 
-  /// Every cell from just past ([x],[y]) to the edge in [d], packed.
-  List<int> _rayCells(int x, int y, Direction d) {
+  /// Every cell from just past ([x],[y]) to the edge in [d], turning at the
+  /// mirrors, packed. Null when the way never reaches the edge (sent round
+  /// in a ring) or comes back through the head or the cell behind it,
+  /// where the arrow would be in its own way.
+  List<int>? _rayCells(int x, int y, Direction d) {
+    final trace = traceRay(head: Cell(x, y), heading: d, width: w, height: h, mirrorAt: (c) => mirrors[c]);
+    if (trace == null) return null;
     final (dx, dy) = d.vector;
     final out = <int>[];
-    for (var cx = x + dx, cy = y + dy; inside(cx, cy); cx += dx, cy += dy) {
-      out.add(idx(cx, cy));
+    for (final c in trace.cells) {
+      if (c.x == x && c.y == y || c.x == x - dx && c.y == y - dy) return null;
+      out.add(idx(c.x, c.y));
     }
     return out;
   }
 
-  /// Whether a head may face along [ray]: no wall on it. An arrow aimed at
-  /// a wall could never leave.
-  bool _rayClear(List<int> ray) {
-    for (final k in ray) {
-      if (owner[k] == _kWall) return false;
-    }
-    return true;
-  }
-
-  /// [_rayCells] from [piece]'s head.
-  List<int> _rayOf(ArrowPiece piece) => _rayCells(piece.head.x, piece.head.y, piece.heading);
+  /// [_rayCells] from [piece]'s head: a placed arrow's way out, which was
+  /// checked when it was placed.
+  List<int> _rayOf(ArrowPiece piece) => _rayCells(piece.head.x, piece.head.y, piece.heading)!;
 
   /// Free cells at the start of [ray] before the first arrow on it.
   int _freeAhead(List<int> ray) {
@@ -308,7 +304,7 @@ class _Builder {
       for (var i = 0; i < ordered.length; i++)
         ArrowPiece(id: i, cells: ordered[i].cells, heading: ordered[i].heading),
     ];
-    final plain = Puzzle(width: w, height: h, arrows: arrows, walls: walls);
+    final plain = Puzzle(width: w, height: h, arrows: arrows, mirrors: mirrors);
     if (spec.features.locks == 0 && spec.features.hidden == 0 && spec.features.pairs == 0) {
       return plain;
     }
@@ -363,7 +359,8 @@ class _Builder {
     // weighted so deep heads come first: filling from the inside out keeps
     // the free area an outer ring every later ray can reach. While the board
     // should close open rays, heads on or next to one weigh extra so the
-    // walk starts where it can do that.
+    // walk starts where it can do that; a head whose way out turns at a
+    // mirror weighs extra always, so the mirrors are on the arrows' paths.
     final closing = wantClosing;
     final heads = <int>[]; // packed: idx * 4 + heading
     final weights = <int>[];
@@ -384,6 +381,7 @@ class _Builder {
             if (closing && (openOn(k) > 0 || openOn(idx(x - dx, y - dy)) > 0)) {
               weight *= 4;
             }
+            if (mirrors.isNotEmpty && _aimsAtMirror(x, y, d)) weight *= kMirrorHeadWeight;
             heads.add(k * 4 + d.index);
             weights.add(weight);
             totalWeight += weight;
@@ -420,7 +418,7 @@ class _Builder {
       final hy = (packed ~/ 4) ~/ w;
       final heading = Direction.values[packed % 4];
       final ray = _rayCells(hx, hy, heading);
-      if (!_rayClear(ray)) continue;
+      if (ray == null) continue;
       final body = _growBody(hx, hy, heading, ray, _targetLength(id), closing);
       if (body.length < spec.minLength || !_acyclic(body, ray)) continue;
       // Crossing existing rays makes this arrow a blocker now and a longer
@@ -436,6 +434,18 @@ class _Builder {
       }
     }
     return best == null ? null : (best, bestScore);
+  }
+
+  /// Whether the straight run from ([x],[y]) in [d] meets a mirror before
+  /// anything else: the cheap test for a head that will bounce.
+  bool _aimsAtMirror(int x, int y, Direction d) {
+    final (dx, dy) = d.vector;
+    for (var cx = x + dx, cy = y + dy; inside(cx, cy); cx += dx, cy += dy) {
+      final o = owner[idx(cx, cy)];
+      if (o == _kMirror) return true;
+      if (o >= 0) return false;
+    }
+    return false;
   }
 
   /// What [body] earns for the rays it lies across: a little per ray, and
@@ -482,6 +492,8 @@ class _Builder {
       final o = open[random.nextInt(open.length)];
       final ray = _rayOf(placed[o]);
       final k = ray[random.nextInt(ray.length)];
+      // An open arrow's ray is all free cells — but for a mirror on it.
+      if (owner[k] != -1) continue;
       final path = _growFrom(Cell(k % w, k ~/ w), target);
       if (path.length < spec.minLength) continue;
       for (final piece in _orientations(id, path)) {
@@ -550,7 +562,7 @@ class _Builder {
       final head = cells.last;
       final heading = cells[cells.length - 2].directionTo(head)!;
       final ray = _rayCells(head.x, head.y, heading);
-      if (ray.isEmpty || !_rayClear(ray)) continue;
+      if (ray == null || ray.isEmpty) continue;
       if (cells.any((c) => ray.contains(idx(c.x, c.y)))) continue;
       if (!_acyclic(cells, ray)) continue;
       out.add(ArrowPiece(id: id, cells: cells, heading: heading));
@@ -705,7 +717,7 @@ class _FeaturePlanner {
       width: puzzle.width,
       height: puzzle.height,
       arrows: puzzle.arrows,
-      walls: puzzle.walls,
+      mirrors: puzzle.mirrors,
       locks: locks,
       hidden: hidden,
       pairs: pairs,

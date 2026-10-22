@@ -1,8 +1,10 @@
 // Prints, for each level, how the generator copes: arrows placed vs asked,
 // board fill, average arrow length, dependency depth, arrows free at the
 // start, moves open at a typical moment (and at most), arrows on the board
-// per open move (hunt — see Puzzle.arrowsPerOpenMove), how exposed the
-// playable arrows are to a slipped finger (risk — see Puzzle.openTapRisk),
+// per open move (hunt — see Puzzle.arrowsPerOpenMove), how many of the
+// mirrors are on some arrow's way out and how many arrows bounce (hit,
+// bend), how exposed the playable arrows are to a slipped finger (risk —
+// see Puzzle.openTapRisk),
 // the clock per arrow and generation time. Run after touching level_specs.dart or the generator:
 //
 //   dart run tool/level_report.dart            # all levels, the level's board
@@ -14,7 +16,6 @@
 import 'dart:math';
 
 import 'package:arrow_game/data/level_specs.dart';
-import 'package:arrow_game/engine/board_shape.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
 import 'package:arrow_game/models/level_spec.dart';
 
@@ -31,8 +32,10 @@ void main(List<String> args) {
       final cells = p.arrows.fold<int>(0, (s, a) => s + a.length);
       final profile = p.openMoveProfile();
       final f = spec.features;
+      final bent = p.arrows.where((a) => p.bends(a.id)).length;
+      final used = p.mirrors.keys.where((m) => p.arrows.any((a) => p.rayOf(a.id).contains(m))).length;
       final twists = <String>[
-        if (f.shape != BoardShape.plain) f.shape.name,
+        if (f.mirrors > 0) 'mirrors ${p.mirrors.length}/${f.mirrors} (hit $used, bend $bent)',
         if (f.locks > 0) 'locks ${p.locks.length}/${f.locks}',
         if (f.hidden > 0) 'hidden ${p.hidden.length}/${f.hidden}',
         if (f.pairs > 0) 'pairs ${p.pairs.length ~/ 2}/${f.pairs}',

@@ -804,7 +804,7 @@ extension on _GameScreenState {
     if (widget.level == 2) return l10n.tutorialBlocked;
     return switch (_taught) {
       null || ChapterRule.lines => null,
-      ChapterRule.shapes => l10n.tutorialShapes,
+      ChapterRule.mirrors => l10n.tutorialMirrors,
       ChapterRule.locks => l10n.tutorialLocks,
       ChapterRule.fog => l10n.tutorialFog,
       ChapterRule.pairs => l10n.tutorialPairs,
@@ -826,7 +826,7 @@ class _IntroCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final (emoji, title, body) = switch (rule) {
       ChapterRule.lines => ('➡️', l10n.chapterName1, l10n.chapterBlurb1),
-      ChapterRule.shapes => ('🧱', l10n.introTitleShapes, l10n.introBodyShapes),
+      ChapterRule.mirrors => ('🪞', l10n.introTitleMirrors, l10n.introBodyMirrors),
       ChapterRule.locks => ('🔒', l10n.introTitleLocks, l10n.introBodyLocks),
       ChapterRule.fog => ('🌫️', l10n.introTitleFog, l10n.introBodyFog),
       ChapterRule.pairs => ('🔗', l10n.introTitlePairs, l10n.introBodyPairs),

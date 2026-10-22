@@ -62,6 +62,9 @@ void main() {
     expect(labels, hasLength(5));
     expect(labels, contains(contains('Key 1: it opens lock 1.')));
     expect(labels, contains(contains('Lock 1: it also waits for key 1 to leave.')));
+    // The locked arrow's way out turns at the mirror, and a reader hears so.
+    expect(labels, contains(contains('Clear path to the edge. Its path bounces off a mirror. Lock 1')));
+    expect(labels.where((l) => l.contains('bounces')), hasLength(1));
     expect(labels.where((l) => l.contains('Tethered to another arrow')), hasLength(2));
     // The hidden one gives away neither its direction nor its path.
     final hidden = labels.singleWhere((l) => l.startsWith('Arrow with a hidden head'));

@@ -28,7 +28,7 @@
   },
   "homeJourney": "Your journey",
   "chapterName1": "Lines",
-  "chapterName2": "Walls",
+  "chapterName2": "Mirrors",
   "chapterName3": "Locks",
   "chapterName4": "Fog",
   "chapterName5": "Pairs",
@@ -55,12 +55,12 @@
     }
   },
   "chapterBlurb1": "One rule: tap an arrow with a clear path and it slides out.",
-  "chapterBlurb2": "Walls in the board. The arrows go around them.",
+  "chapterBlurb2": "Mirrors on the board. An arrow bounces off and goes on.",
   "chapterBlurb3": "Locked arrows wait for their key.",
   "chapterBlurb4": "Some heads are hidden until a neighbour leaves.",
   "chapterBlurb5": "Tethered arrows leave together.",
-  "introTitleShapes": "Walls",
-  "introBodyShapes": "Arrows go around walls.",
+  "introTitleMirrors": "Mirrors",
+  "introBodyMirrors": "Arrows bounce off mirrors.",
   "introTitleLocks": "Locks",
   "introBodyLocks": "The key goes first. Then the lock opens.",
   "introTitleFog": "Hidden heads",
@@ -68,7 +68,7 @@
   "introTitlePairs": "Pairs",
   "introBodyPairs": "One tap, both go. Both paths must be clear.",
   "introGotIt": "Got it",
-  "tutorialShapes": "Arrows go around walls.",
+  "tutorialMirrors": "Arrows bounce off mirrors.",
   "tutorialLocks": "A locked arrow waits for its key.",
   "tutorialFog": "Clear an arrow beside a dashed one to see its head.",
   "tutorialPairs": "Tethered arrows leave together.",
@@ -592,6 +592,7 @@
     }
   },
   "arrowPathClear": "Clear path to the edge.",
+  "arrowPathMirror": "Its path bounces off a mirror.",
   "arrowPathBlocked": "{distance, plural, =1{Another arrow is right in front of it.} other{Another arrow is {distance} cells ahead.}}",
   "@arrowPathBlocked": {
     "placeholders": {

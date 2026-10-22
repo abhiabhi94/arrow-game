@@ -60,8 +60,8 @@ Future<void> _tapCell(WidgetTester tester, Cell cell) async {
 void main() {
   testWidgets('a chapter\'s first level opens on its card, over the paused board', (tester) async {
     final container = await _pump(tester, const GameScreen(level: 21));
-    expect(find.text('Walls'), findsOneWidget);
-    expect(find.text('Arrows go around walls.'), findsNWidgets(2)); // the card's line and the one under the board
+    expect(find.text('Mirrors'), findsOneWidget);
+    expect(find.text('Arrows bounce off mirrors.'), findsNWidgets(2)); // the card's line and the one under the board
     expect(find.text('Got it'), findsOneWidget);
     expect(container.read(gameProvider(21)).phase, GamePhase.paused);
     // Two boards on screen: the level's and the card's picture.
@@ -69,15 +69,15 @@ void main() {
     await tester.tap(find.text('Got it'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Walls'), findsNothing);
+    expect(find.text('Mirrors'), findsNothing);
     expect(container.read(gameProvider(21)).phase, GamePhase.playing);
     // The line under the board stays.
-    expect(find.text('Arrows go around walls.'), findsOneWidget);
+    expect(find.text('Arrows bounce off mirrors.'), findsOneWidget);
     // Pausing again does not bring the card back.
     container.read(gameProvider(21).notifier).pause();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Walls'), findsNothing);
+    expect(find.text('Mirrors'), findsNothing);
     expect(find.text('Paused'), findsOneWidget);
   });
 
@@ -125,7 +125,7 @@ void main() {
   testWidgets('a plain level has no card and no line', (tester) async {
     await _pump(tester, const GameScreen(level: 22));
     expect(find.text('Got it'), findsNothing);
-    expect(find.textContaining('walls'), findsNothing);
+    expect(find.textContaining('mirrors'), findsNothing);
   });
 
   testWidgets('the daily board is titled by the day and ends without a next level', (tester) async {

@@ -84,8 +84,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('Cleared today · Best today 2:23 · 3 day streak · Next board in 15h 0m'), findsOneWidget);
     expect(find.text('Play it again'), findsOneWidget);
-    // 25 levels cleared: the daily is dealt with the Walls chapter's rules.
-    expect(find.textContaining('Walls rules'), findsOneWidget);
+    // 25 levels cleared: the daily is dealt with the Mirrors chapter's rules.
+    expect(find.textContaining('Mirrors rules'), findsOneWidget);
   });
 
   testWidgets('a daily board left mid-way is offered on the daily card, not the hero', (tester) async {
@@ -122,7 +122,7 @@ void main() {
     await pumpApp(tester, const HomeScreen(), extraOverrides: [..._gameOverride, ..._fixedDay()]);
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('Chapter 1 · Lines'), findsOneWidget);
-    expect(find.text('Chapter 2 · Walls', skipOffstage: false), findsOneWidget);
+    expect(find.text('Chapter 2 · Mirrors', skipOffstage: false), findsOneWidget);
     expect(find.text('Chapter 5 · Pairs', skipOffstage: false), findsOneWidget);
     expect(find.textContaining('Levels 41–60', skipOffstage: false), findsOneWidget);
     // Only the first band is on screen; the rest are down the trail.
@@ -130,7 +130,7 @@ void main() {
     expect(headings, isNotEmpty);
     expect(headings.first.label, 'Chapter 1 · Lines. Levels 1–20. One rule: tap an arrow with a clear path and it slides out.');
     // The bands sit above their first level, in order down the trail.
-    final band2 = tester.getRect(find.text('Chapter 2 · Walls', skipOffstage: false)).top;
+    final band2 = tester.getRect(find.text('Chapter 2 · Mirrors', skipOffstage: false)).top;
     final node20 = tester.getRect(find.text('20', skipOffstage: false)).top;
     final node21 = tester.getRect(find.text('21', skipOffstage: false)).top;
     expect(band2, greaterThan(node20));

@@ -28,7 +28,9 @@ String boardLabel(AppLocalizations l10n, GameState state) {
 /// The label of arrow [id] on the board of [state]. A hidden head is as
 /// hidden to a reader as to the eye: no direction and no path until it is
 /// uncovered. The chapter twists are read out after the arrow itself —
-/// its lock (and whether the key has gone), that it is a key, its tether.
+/// that its path turns at a mirror, its lock (and whether the key has
+/// gone), that it is a key, its tether. A blocker's distance is counted
+/// along the path, bends and all.
 String arrowLabel(AppLocalizations l10n, GameState state, int id) {
   final puzzle = state.puzzle!;
   final arrow = puzzle.arrows[id];
@@ -41,9 +43,7 @@ String arrowLabel(AppLocalizations l10n, GameState state, int id) {
   } else {
     final path = blocked == null
         ? l10n.arrowPathClear
-        : l10n.arrowPathBlocked(
-            (blocked.x - arrow.head.x).abs() + (blocked.y - arrow.head.y).abs(),
-          );
+        : l10n.arrowPathBlocked(puzzle.rayOf(id).indexOf(blocked) + 1);
     parts.add(
       l10n.arrowLabel(
         directionName(l10n, arrow.heading),
@@ -53,6 +53,7 @@ String arrowLabel(AppLocalizations l10n, GameState state, int id) {
         path,
       ),
     );
+    if (puzzle.bends(id)) parts.add(l10n.arrowPathMirror);
   }
   if (key != null && number != null) {
     parts.add(state.removed.contains(key) ? l10n.arrowUnlocked(number) : l10n.arrowLocked(number));

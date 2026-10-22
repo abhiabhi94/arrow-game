@@ -1,6 +1,7 @@
 import 'package:arrow_game/engine/arrow_piece.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/engine/direction.dart';
+import 'package:arrow_game/engine/mirror.dart';
 import 'package:arrow_game/engine/puzzle.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,23 +18,26 @@ List<ArrowPiece> arrows() => [
     ];
 
 void main() {
-  group('walls', () {
-    test('are dead cells: not an arrow, and never on a ray', () {
-      final p = Puzzle(width: 5, height: 5, arrows: arrows(), walls: {const Cell(2, 1), const Cell(3, 3)});
-      expect(p.isWall(const Cell(2, 1)), isTrue);
-      expect(p.arrowAt(const Cell(2, 1)), isNull);
-      expect(p.freeCellCount, 23);
+  group('mirrors', () {
+    test('turn the rays through them and are never a blocker', () {
+      // A `\\` at (3,2) on arrow 1's ray turns it down: (3,3),(3,4) — into
+      // arrow 3's tail cell? No: 3 lies along row 4 up to (2,4); (3,4) is
+      // free. And it sits on 2's ray at (4,2)? No, (3,2) is not. So 1 now
+      // leaves by the bottom edge, clear.
+      final p = Puzzle(width: 5, height: 5, arrows: arrows(), mirrors: {const Cell(3, 2): Mirror.backslash});
+      expect(p.isMirror(const Cell(3, 2)), isTrue);
+      expect(p.arrowAt(const Cell(3, 2)), isNull);
+      expect(p.freeCellCount, 24);
       expect(p.hasFeatures, isTrue);
-      // A wall on a ray is refused: arrow 1 aims along row 2, and an arrow
-      // aimed at a wall could never leave.
-      expect(p.rayOf(1), const [Cell(2, 2), Cell(3, 2), Cell(4, 2)]);
+      expect(p.rayOf(1), const [Cell(2, 2), Cell(3, 2), Cell(3, 3), Cell(3, 4)]);
+      expect(p.exitHeadingOf(1), Direction.down);
+      expect(p.bends(1), isTrue);
+      expect(p.blockersOf(1), isEmpty);
+      expect(p.canExit(1, const {}), isTrue);
+      expect(p.isSolvable, isTrue);
+      // A mirror under an arrow is refused.
       expect(
-        () => Puzzle(width: 5, height: 5, arrows: arrows(), walls: {const Cell(3, 2)}),
-        throwsA(isA<AssertionError>()),
-      );
-      // A wall under an arrow is refused.
-      expect(
-        () => Puzzle(width: 5, height: 5, arrows: arrows(), walls: {const Cell(1, 0)}),
+        () => Puzzle(width: 5, height: 5, arrows: arrows(), mirrors: {const Cell(1, 0): Mirror.slash}),
         throwsA(isA<AssertionError>()),
       );
     });

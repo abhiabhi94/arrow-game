@@ -4,7 +4,7 @@
 //
 //   dart run tool/make_levels.dart > /tmp/rows.dart
 //
-// Each chapter is twenty levels on one new twist (Shapes, Locks, Fog, Pairs)
+// Each chapter is twenty levels on one new twist (Mirrors, Locks, Fog, Pairs)
 // stacked on the ones before it, and every chapter has the same rhythm:
 //
 //   level  1   a small, roomy teaching board with the new twist alone
@@ -17,15 +17,15 @@
 // The arrow count climbs from ~150 at level 22 to ~230 at level 99 and the
 // finales run to ~265: the last levels are long because there is a lot to
 // read, not because the read never changes. The board is sized so the cells
-// an arrow may use (the rectangle less the shape's walls) come to ~11.3 per
+// an arrow may use (the rectangle less its mirrors) come to ~11.3 per
 // arrow, the fill the generator packs to ~0.88.
 //
-// The clock is a pace per arrow — 2.4 s in Shapes easing to 2.0 s in Pairs —
-// plus a few seconds for every lock, hidden head and tether on the board,
-// since each is a thing to look for, plus slack. Sprints run at 1.6 s an
-// arrow; teaching boards at 3 s.
+// The clock is a pace per arrow — 2.4 s in Mirrors easing to 2.0 s in Pairs —
+// plus a few seconds for every mirror, lock, hidden head and tether on the
+// board, since each is a thing to look for, plus slack, and never over ten
+// minutes. Sprints run at 1.6 s an arrow; teaching boards at 3 s.
 
-import 'package:arrow_game/engine/board_shape.dart';
+import 'dart:math';
 
 const int firstLevel = 21;
 const int lastLevel = 100;
@@ -38,26 +38,16 @@ const double aspect = 1.52;
 
 void main() {
   for (var level = firstLevel; level <= lastLevel; level++) {
-    final chapter = (level - 1) ~/ 20; // 1 = Shapes, 2 = Locks, 3 = Fog, 4 = Pairs
+    final chapter = (level - 1) ~/ 20; // 1 = Mirrors, 2 = Locks, 3 = Fog, 4 = Pairs
     final i = level - (chapter * 20); // 1..20 within the chapter
     final teach = i == 1;
     final sprint = i == 5 || i == 15;
     final boss = i == 10;
     final finale = i == 20;
 
-    // The shape: teaching boards for Shapes use the simplest cut; later
-    // chapters teach their twist on a plain board so it stands alone; the
-    // climb cycles through every shape.
-    final shapes = <BoardShape>[BoardShape.hole, BoardShape.pillars, BoardShape.bars, BoardShape.blocks];
-    final BoardShape shape;
-    if (teach) {
-      shape = chapter == 1 ? BoardShape.blocks : BoardShape.plain;
-    } else {
-      shape = shapes[(level + chapter) % shapes.length];
-    }
-
     // Twists: the chapter's own climbs through it; earlier chapters' stay
-    // at a steady few. Teaching boards carry two of the new one, nothing else.
+    // at a steady few. Teaching boards carry a few of the new one, nothing
+    // else. Mirrors are counted per arrow (set below, once the count is).
     final climb = 2 + (i - 2) ~/ 3; // 2..8 over the chapter
     final extra = (boss || finale) ? 2 : 0;
     var locks = 0, hidden = 0, pairs = 0;
@@ -88,6 +78,18 @@ void main() {
       arrows = (base * (boss ? 1.1 : finale ? 1.15 : 1.0)).round();
     }
 
+    // Mirrors: a good handful on every board from the Mirrors chapter on —
+    // one for every eight arrows through its own chapter, one for every
+    // fourteen after, when the newer twist takes the stage.
+    final int mirrors;
+    if (teach) {
+      mirrors = chapter == 1 ? 3 : 0;
+    } else if (sprint) {
+      mirrors = 3;
+    } else {
+      mirrors = (arrows / (chapter == 1 ? 8 : 14)).round();
+    }
+
     // Lengths.
     final minLength = teach || sprint ? 2 : (chapter == 1 ? 3 : 4);
     final int maxLength;
@@ -99,12 +101,12 @@ void main() {
       maxLength = 10 + chapter + (i >= 12 ? 1 : 0);
     }
 
-    // Board size: enough free cells for the arrows at the shape's wall cost.
+    // Board size: enough free cells for the arrows beside the mirrors.
     final (width, height) = teach
         ? (10, 13)
         : sprint
             ? (12, 16)
-            : _sizeFor(arrows, shape);
+            : _sizeFor(arrows, mirrors);
 
     // Clock.
     final pace = teach
@@ -113,11 +115,12 @@ void main() {
             ? 1.6
             : <double>[0, 2.4, 2.25, 2.1, 2.0][chapter];
     final slack = teach ? 25.0 : (sprint ? 8.0 : 15.0);
-    final think = locks * 4.0 + hidden * 3.0 + pairs * 3.0;
-    final timeLimitMs = ((arrows * pace + slack + think) * 1000).round();
+    final think = mirrors * 1.0 + locks * 4.0 + hidden * 3.0 + pairs * 3.0;
+    // Never a clock over ten minutes: the last finale is held at that.
+    final timeLimitMs = min(((arrows * pace + slack + think) * 1000).round(), 599000);
 
     final features = <String>[
-      if (shape != BoardShape.plain) 'shape: BoardShape.${shape.name}',
+      if (mirrors > 0) 'mirrors: $mirrors',
       if (locks > 0) 'locks: $locks',
       if (hidden > 0) 'hidden: $hidden',
       if (pairs > 0) 'pairs: $pairs',
@@ -135,16 +138,14 @@ void main() {
 }
 
 /// The smallest board of the usual proportions whose free cells cover
-/// [arrows] at [cellsPerArrow].
-(int, int) _sizeFor(int arrows, BoardShape shape) {
-  final want = arrows * cellsPerArrow;
+/// [arrows] at [cellsPerArrow] once [mirrors] have taken theirs.
+(int, int) _sizeFor(int arrows, int mirrors) {
+  final want = arrows * cellsPerArrow + mirrors;
   for (var width = 20; width < 80; width++) {
     final height = (width * aspect).round();
-    final free = width * height - wallsFor(shape, width, height).length;
-    if (free >= want) return (width, height);
+    if (width * height >= want) return (width, height);
     // Try one row taller before the next width, for a finer step.
-    final free2 = width * (height + 1) - wallsFor(shape, width, height + 1).length;
-    if (free2 >= want) return (width, height + 1);
+    if (width * (height + 1) >= want) return (width, height + 1);
   }
   return (80, (80 * aspect).round());
 }

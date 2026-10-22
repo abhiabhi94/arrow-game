@@ -1,5 +1,5 @@
 /// The trail in five chapters of twenty levels, each built on one twist:
-/// plain lines, then shaped boards, then locks, then hidden heads, then
+/// plain lines, then mirrors, then locks, then hidden heads, then
 /// tethered pairs. Every chapter opens on a small teaching board that
 /// carries the new twist alone, and the game screen puts an illustrated
 /// card over that board the first time it is played. Pure Dart.
@@ -12,8 +12,8 @@ enum ChapterRule {
   /// The one rule: tap an arrow with a clear path and it slides out.
   lines,
 
-  /// Shaped boards: walls are holes an arrow falls into.
-  shapes,
+  /// Mirrors turn an arrow's path a right angle.
+  mirrors,
 
   /// Locked arrows wait for their numbered key.
   locks,
@@ -46,7 +46,7 @@ const int kChapterLength = 20;
 
 const List<Chapter> chapters = <Chapter>[
   Chapter(index: 1, rule: ChapterRule.lines),
-  Chapter(index: 2, rule: ChapterRule.shapes),
+  Chapter(index: 2, rule: ChapterRule.mirrors),
   Chapter(index: 3, rule: ChapterRule.locks),
   Chapter(index: 4, rule: ChapterRule.fog),
   Chapter(index: 5, rule: ChapterRule.pairs),

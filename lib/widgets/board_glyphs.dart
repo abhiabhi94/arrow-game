@@ -3,11 +3,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../engine/mirror.dart';
+
 /// The small marks the board draws for the chapter twists, in one place so
 /// the game board and the chapter-intro illustrations draw them the same
 /// way: a padlock on a locked arrow, a numbered key badge on its key, a
 /// question mark on a hidden head, a link at either end of a tether, and
-/// the hole a wall makes in the page. All are sized from the cell and
+/// the diagonal of a mirror. All are sized from the cell and
 /// floored in pixels so they stay legible on a dense board, where a cell is
 /// a dozen pixels and the player zooms in to read them.
 ///
@@ -21,8 +23,7 @@ class BoardGlyphs {
     required this.paper,
     required this.badge,
     required this.onBadge,
-    required this.wall,
-    required this.wallEdge,
+    required this.mirrorWash,
     required this.textDirection,
   });
 
@@ -30,24 +31,48 @@ class BoardGlyphs {
   final Color paper;
   final Color badge;
   final Color onBadge;
-  final Color wall;
-  final Color wallEdge;
+  final Color mirrorWash;
   final TextDirection textDirection;
 
   /// The size of a glyph on a cell [cs] across: most of the cell, never a
   /// speck.
   static double glyphSize(double cs) => max(10.0, min(cs * 0.95, 26.0));
 
-  /// A wall cell: a sunken square, a hole in the page.
-  void wallCell(Canvas canvas, Rect cell) {
-    final r = RRect.fromRectAndRadius(cell.deflate(cell.width * 0.06), Radius.circular(cell.width * 0.18));
-    canvas.drawRRect(r, Paint()..color = wall);
+  /// A mirror in [cell]: a pane of glass across the diagonal — a soft wash
+  /// over the cell so it reads as a *thing* on the board even at a dozen
+  /// pixels, and the diagonal itself as a bar of ink with a hairline of
+  /// paper along it for the shine. Which way it lies is the whole message,
+  /// so the bar is the thickest line on the board.
+  void mirror(Canvas canvas, Rect cell, Mirror kind) {
+    final cs = cell.width;
     canvas.drawRRect(
-      r,
+      RRect.fromRectAndRadius(cell.deflate(cs * 0.08), Radius.circular(cs * 0.2)),
+      Paint()..color = mirrorWash,
+    );
+    final inset = cs * 0.2;
+    final (a, b) = switch (kind) {
+      Mirror.slash => (Offset(cell.left + inset, cell.bottom - inset), Offset(cell.right - inset, cell.top + inset)),
+      Mirror.backslash => (Offset(cell.left + inset, cell.top + inset), Offset(cell.right - inset, cell.bottom - inset)),
+    };
+    final stroke = max(2.5, min(cs * 0.2, 6.0));
+    canvas.drawLine(
+      a,
+      b,
       Paint()
-        ..color = wallEdge
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = max(1.0, cell.width * 0.05),
+        ..color = ink
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round,
+    );
+    // The shine: a thin line of paper just off the bar, on its upper side.
+    final along = (b - a) / (b - a).distance;
+    final normal = Offset(along.dy, -along.dx) * (stroke * 0.55);
+    canvas.drawLine(
+      a + normal + along * (stroke * 0.6),
+      b + normal - along * (stroke * 0.6),
+      Paint()
+        ..color = paper
+        ..strokeWidth = max(0.8, stroke * 0.22)
+        ..strokeCap = StrokeCap.round,
     );
   }
 

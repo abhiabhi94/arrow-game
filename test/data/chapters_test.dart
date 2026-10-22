@@ -1,7 +1,6 @@
 import 'package:arrow_game/data/chapter_demos.dart';
 import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/data/level_specs.dart';
-import 'package:arrow_game/engine/board_shape.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -14,7 +13,7 @@ void main() {
     }
     expect(chapterOf(1).rule, ChapterRule.lines);
     expect(chapterOf(20).rule, ChapterRule.lines);
-    expect(chapterOf(21).rule, ChapterRule.shapes);
+    expect(chapterOf(21).rule, ChapterRule.mirrors);
     expect(chapterOf(40).index, 2);
     expect(chapterOf(41).rule, ChapterRule.locks);
     expect(chapterOf(61).rule, ChapterRule.fog);
@@ -29,7 +28,7 @@ void main() {
   test('each chapter past the first teaches its twist on its first level', () {
     expect(ruleTaughtAt(1), isNull);
     expect(ruleTaughtAt(2), isNull);
-    expect(ruleTaughtAt(21), ChapterRule.shapes);
+    expect(ruleTaughtAt(21), ChapterRule.mirrors);
     expect(ruleTaughtAt(22), isNull);
     expect(ruleTaughtAt(41), ChapterRule.locks);
     expect(ruleTaughtAt(61), ChapterRule.fog);
@@ -43,7 +42,7 @@ void main() {
       final f = s.features;
       final teaching = ruleTaughtAt(s.level) != null;
       // Nothing from a later chapter ever leaks back.
-      if (chapter.index < 2) expect(f.shape, BoardShape.plain, reason: 'level ${s.level}');
+      if (chapter.index < 2) expect(f.mirrors, 0, reason: 'level ${s.level}');
       if (chapter.index < 3) expect(f.locks, 0, reason: 'level ${s.level}');
       if (chapter.index < 4) expect(f.hidden, 0, reason: 'level ${s.level}');
       if (chapter.index < 5) expect(f.pairs, 0, reason: 'level ${s.level}');
@@ -51,8 +50,8 @@ void main() {
       switch (chapter.rule) {
         case ChapterRule.lines:
           expect(f.isPlain, isTrue, reason: 'level ${s.level}');
-        case ChapterRule.shapes:
-          expect(f.shape, isNot(BoardShape.plain), reason: 'level ${s.level}');
+        case ChapterRule.mirrors:
+          expect(f.mirrors, greaterThan(0), reason: 'level ${s.level}');
         case ChapterRule.locks:
           expect(f.locks, greaterThan(0), reason: 'level ${s.level}');
         case ChapterRule.fog:
@@ -64,7 +63,7 @@ void main() {
       if (teaching) {
         expect(s.arrows, lessThanOrEqualTo(12), reason: 'level ${s.level}');
         expect(s.openMoves, 3, reason: 'level ${s.level}');
-        final twists = (f.locks > 0 ? 1 : 0) + (f.hidden > 0 ? 1 : 0) + (f.pairs > 0 ? 1 : 0) + (f.shape != BoardShape.plain ? 1 : 0);
+        final twists = (f.locks > 0 ? 1 : 0) + (f.hidden > 0 ? 1 : 0) + (f.pairs > 0 ? 1 : 0) + (f.mirrors > 0 ? 1 : 0);
         expect(twists, 1, reason: 'level ${s.level}');
       }
     }
@@ -108,11 +107,13 @@ void main() {
       switch (rule) {
         case ChapterRule.lines:
           expect(p.hasFeatures, isFalse);
-        case ChapterRule.shapes:
-          expect(p.walls, isNotEmpty);
-          // The long arrow wraps around the wall and leaves clear of it.
-          expect(p.arrows[0].length, 6);
-          expect(p.rayOf(0).every((c) => !p.isWall(c)), isTrue);
+        case ChapterRule.mirrors:
+          expect(p.mirrors, hasLength(2));
+          // Both arrows bounce, and the second is turned up the column the
+          // first lies across, so it has to go second.
+          expect(p.bends(0), isTrue);
+          expect(p.bends(1), isTrue);
+          expect(p.blockersOf(1), {0});
         case ChapterRule.locks:
           expect(p.locks, {0: 1});
           expect(p.lockNumber(0), 1);

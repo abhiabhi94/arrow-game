@@ -7,6 +7,7 @@ library;
 import '../engine/arrow_piece.dart';
 import '../engine/cell.dart';
 import '../engine/direction.dart';
+import '../engine/mirror.dart';
 import '../engine/puzzle.dart';
 import '../models/level_spec.dart';
 import 'chapters.dart';
@@ -21,21 +22,17 @@ Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
             ArrowPiece(id: 1, cells: const [Cell(4, 3), Cell(4, 2)], heading: Direction.up),
           ],
         ),
-      // A wall block in the middle; the arrows bend around it on their way
-      // out, and none aims at it.
-      ChapterRule.shapes => Puzzle(
+      // Two mirrors. The first arrow slides right into one and leaves up
+      // the top; the second slides left into the other and is turned up the
+      // column the first arrow was lying across — so it has to go second.
+      ChapterRule.mirrors => Puzzle(
           width: 7,
-          height: 4,
+          height: 5,
           arrows: [
-            ArrowPiece(
-              id: 0,
-              cells: const [Cell(1, 2), Cell(1, 1), Cell(2, 1), Cell(3, 1), Cell(4, 1), Cell(5, 1)],
-              heading: Direction.right,
-            ),
-            ArrowPiece(id: 1, cells: const [Cell(5, 3), Cell(4, 3), Cell(4, 2)], heading: Direction.up),
-            ArrowPiece(id: 2, cells: const [Cell(1, 3), Cell(2, 3)], heading: Direction.right),
+            ArrowPiece(id: 0, cells: const [Cell(0, 2), Cell(1, 2), Cell(2, 2)], heading: Direction.right),
+            ArrowPiece(id: 1, cells: const [Cell(6, 4), Cell(5, 4)], heading: Direction.left),
           ],
-          walls: {const Cell(2, 2), const Cell(3, 2)},
+          mirrors: {const Cell(4, 2): Mirror.slash, const Cell(2, 4): Mirror.backslash},
         ),
       // A locked arrow with a clear run, and its key across the board. The
       // script taps the lock first (it rattles and points at the key), then
@@ -79,7 +76,7 @@ Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
 /// the key before the key goes.
 List<int> demoScriptFor(ChapterRule rule) => switch (rule) {
       ChapterRule.lines => const [0, 1],
-      ChapterRule.shapes => const [0, 1, 2],
+      ChapterRule.mirrors => const [0, 1],
       ChapterRule.locks => const [0, 1, 0],
       ChapterRule.fog => const [0, 1, 2],
       ChapterRule.pairs => const [0, 2],

@@ -47,7 +47,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get chapterName1 => 'रेखाएँ';
 
   @override
-  String get chapterName2 => 'दीवारें';
+  String get chapterName2 => 'आईने';
 
   @override
   String get chapterName3 => 'ताले';
@@ -74,7 +74,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get chapterBlurb2 =>
-      'बोर्ड में दीवारें। तीर उनके किनारे से निकलते हैं।';
+      'बोर्ड पर आईने। तीर टकराकर मुड़ता है और आगे बढ़ता है।';
 
   @override
   String get chapterBlurb3 => 'ताले वाले तीर अपनी चाबी का इंतज़ार करते हैं।';
@@ -86,10 +86,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get chapterBlurb5 => 'बँधे तीर साथ निकलते हैं।';
 
   @override
-  String get introTitleShapes => 'दीवारें';
+  String get introTitleMirrors => 'आईने';
 
   @override
-  String get introBodyShapes => 'तीर दीवारों के किनारे से निकलते हैं।';
+  String get introBodyMirrors => 'तीर आईने से टकराकर मुड़ जाते हैं।';
 
   @override
   String get introTitleLocks => 'ताले';
@@ -114,7 +114,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get introGotIt => 'समझ गया';
 
   @override
-  String get tutorialShapes => 'तीर दीवारों के किनारे से निकलते हैं।';
+  String get tutorialMirrors => 'तीर आईने से टकराकर मुड़ जाते हैं।';
 
   @override
   String get tutorialLocks => 'ताले वाला तीर अपनी चाबी का इंतज़ार करता है।';
@@ -1004,6 +1004,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get arrowPathClear => 'किनारे तक रास्ता साफ़ है।';
+
+  @override
+  String get arrowPathMirror => 'इसका रास्ता आईने से टकराकर मुड़ता है।';
 
   @override
   String arrowPathBlocked(int distance) {

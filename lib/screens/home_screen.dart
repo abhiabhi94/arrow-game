@@ -821,7 +821,7 @@ class _ChapterBand extends StatelessWidget {
     final blurb = chapterBlurb(l10n, chapter.index);
     final icon = switch (chapter.rule) {
       ChapterRule.lines => Icons.east_rounded,
-      ChapterRule.shapes => Icons.crop_square_rounded,
+      ChapterRule.mirrors => Icons.flip_rounded,
       ChapterRule.locks => Icons.vpn_key_rounded,
       ChapterRule.fog => Icons.blur_on_rounded,
       ChapterRule.pairs => Icons.link_rounded,

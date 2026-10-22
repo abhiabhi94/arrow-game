@@ -6,7 +6,6 @@
 /// never sees the same one twice. The day is the local calendar day.
 library;
 
-import '../engine/board_shape.dart';
 import '../models/level_spec.dart';
 import 'chapters.dart';
 
@@ -34,22 +33,21 @@ int dailySeed(int day, int salt) {
   return h & 0x3FFFFFFF;
 }
 
-/// The board for [day] in [chapter], seeded with [salt]. The shape and the
-/// counts of the chapter's twists turn with the day, so a week of boards
-/// in one chapter still differs board to board.
+/// The board for [day] in [chapter], seeded with [salt]. The number of
+/// mirrors and the counts of the chapter's twists turn with the day, so a
+/// week of boards in one chapter still differs board to board.
 LevelSpec dailySpec({required int day, required Chapter chapter, required int salt}) {
   final seed = dailySeed(day, salt);
-  final shapes = <BoardShape>[BoardShape.hole, BoardShape.pillars, BoardShape.bars, BoardShape.blocks];
-  final shape = chapter.index >= 2 ? shapes[seed % shapes.length] : BoardShape.plain;
+  final mirrors = chapter.index >= 2 ? 8 + seed % 5 : 0; // 8..12
   final twist = 3 + (seed >> 4) % 3; // 3..5 of the chapter's own
   final features = switch (chapter.rule) {
     ChapterRule.lines => LevelFeatures.none,
-    ChapterRule.shapes => LevelFeatures(shape: shape),
-    ChapterRule.locks => LevelFeatures(shape: shape, locks: twist),
-    ChapterRule.fog => LevelFeatures(shape: shape, locks: 2, hidden: twist),
-    ChapterRule.pairs => LevelFeatures(shape: shape, locks: 2, hidden: 2, pairs: twist),
+    ChapterRule.mirrors => LevelFeatures(mirrors: mirrors),
+    ChapterRule.locks => LevelFeatures(mirrors: mirrors, locks: twist),
+    ChapterRule.fog => LevelFeatures(mirrors: mirrors, locks: 2, hidden: twist),
+    ChapterRule.pairs => LevelFeatures(mirrors: mirrors, locks: 2, hidden: 2, pairs: twist),
   };
-  // About a hundred arrows at ~11.3 free cells each; a shape takes ~12%.
+  // About a hundred arrows at ~11.3 free cells each.
   final plain = chapter.index == 1;
   return LevelSpec(
     level: LevelSpec.dailyLevel,
