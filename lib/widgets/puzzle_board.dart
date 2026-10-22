@@ -12,6 +12,7 @@ import '../models/bump_motion.dart';
 import '../models/game_state.dart';
 import '../models/reaction_motion.dart';
 import '../ui/colors.dart';
+import 'board_glyphs.dart';
 import 'board_semantics.dart';
 
 /// How far the arrow that was hit is shoved along, in cells, at full jolt.
@@ -146,7 +147,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   void _startExit(int id) {
     final puzzle = widget.state.puzzle!;
     final arrow = puzzle.arrows[id];
-    final travel = arrow.length + arrow.exitRay(puzzle.width, puzzle.height).length;
+    final travel = arrow.length + puzzle.rayOf(id).length;
     // Quick but still readable as a slide: a short arrow at the edge is gone
     // in about a quarter second; a long crossing of a big board never drags.
     final controller = AnimationController(
@@ -167,7 +168,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   void _startBump(int id) {
     _bump?.dispose();
     final puzzle = widget.state.puzzle!;
-    final motion = BumpMotion.forTap(puzzle, id, widget.state.blockedCell!);
+    final motion = BumpMotion.forTap(puzzle, id, widget.state.blockedCell);
     final controller = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: motion.totalMs),
@@ -454,32 +455,75 @@ class _BoardPainter extends CustomPainter {
       }
     }
 
+    final glyphs = BoardGlyphs(
+      ink: palette.arrowInk,
+      paper: palette.backgroundSoft,
+      badge: palette.accentSun,
+      onBadge: palette.onAccent,
+      wall: palette.wall,
+      wallEdge: palette.gridLine,
+      textDirection: textDirection,
+    );
+    // Walls: holes in the page. Drawn under everything, and cut out of the
+    // clip below, so an arrow sliding into one is swallowed by it.
+    final holes = Path();
+    for (final wall in puzzle.walls) {
+      final cell = Rect.fromLTWH(wall.x * cs, wall.y * cs, cs, cs);
+      glyphs.wallCell(canvas, cell);
+      holes.addRect(cell);
+    }
+
     // The bump: the tapped arrow runs into the arrow in its way, which takes
-    // the hit — its cell flashes and it is shoved a touch — then springs back.
+    // the hit — its cell flashes and it is shoved a touch — then springs
+    // back. Held by a lock instead, it jabs at the lock and the key arrow
+    // flashes: that is what has to go first.
     final blocked = state.blockedCell;
+    final lockedBy = state.blockedKey;
     final bumpT = bump;
     final motion = bumpMotion;
     final bumping =
-        blocked != null && bumpT != null && motion != null && bumpId == state.lastMoveId;
+        (blocked != null || lockedBy != null) && bumpT != null && motion != null && bumpId == state.lastMoveId;
     final flash = bumping ? motion.flashAt(bumpT) : 0.0;
-    final shove = bumping ? motion.shoveAt(bumpT) * travel : 0.0;
-    final hitId = bumping ? puzzle.arrowAt(blocked) : null;
+    final shove = bumping && blocked != null ? motion.shoveAt(bumpT) * travel : 0.0;
+    final hitId = bumping && blocked != null ? puzzle.arrowAt(blocked) : null;
     if (bumping && flash > 0) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(blocked.x * cs, blocked.y * cs, cs, cs).deflate(cs * 0.08),
-          Radius.circular(cs * 0.2),
-        ),
-        Paint()..color = palette.blockedFlash.withValues(alpha: palette.blockedFlash.a * flash),
-      );
+      final flashPaint = Paint()
+        ..color = palette.blockedFlash.withValues(alpha: palette.blockedFlash.a * flash);
+      if (blocked != null) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(blocked.x * cs, blocked.y * cs, cs, cs).deflate(cs * 0.08),
+            Radius.circular(cs * 0.2),
+          ),
+          flashPaint,
+        );
+      } else if (lockedBy != null && !state.removed.contains(lockedBy)) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(_bounds(puzzle.arrows[lockedBy], cs).inflate(cs * 0.1), Radius.circular(cs * 0.3)),
+          flashPaint,
+        );
+      }
     }
 
     canvas.save();
-    canvas.clipRect(rect);
+    if (puzzle.walls.isEmpty) {
+      canvas.clipRect(rect);
+    } else {
+      canvas.clipPath(Path.combine(PathOperation.difference, Path()..addRect(rect), holes));
+    }
+    // Tethers first, under the arrows they join. A pair in flight has
+    // left together; the line is not drawn after them.
+    for (final e in puzzle.pairs.entries) {
+      final a = e.key;
+      final b = e.value;
+      if (a > b || state.removed.contains(a) || state.removed.contains(b)) continue;
+      final (ca, cb) = _nearestCells(puzzle.arrows[a], puzzle.arrows[b]);
+      glyphs.tether(canvas, _center(ca, cs), _center(cb, cs), cs);
+    }
     for (final arrow in puzzle.arrows) {
       final exiting = exits[arrow.id];
       if (state.removed.contains(arrow.id) && exiting == null) continue;
-      final travel = arrow.length + arrow.exitRay(puzzle.width, puzzle.height).length;
+      final travel = arrow.length + puzzle.rayOf(arrow.id).length;
       var offset = 0.0;
       if (exiting != null) {
         offset = Curves.easeIn.transform(exiting) * travel;
@@ -503,7 +547,7 @@ class _BoardPainter extends CustomPainter {
         canvas.rotate(slumpTiltFor(arrow.id, slump!));
         canvas.translate(-pivot.dx, -pivot.dy);
       }
-      _paintArrow(canvas, arrow, cs, offset, false);
+      _paintArrow(canvas, arrow, cs, offset, false, glyphs);
       if (slumping) canvas.restore();
       if (shoved) canvas.restore();
     }
@@ -586,6 +630,7 @@ class _BoardPainter extends CustomPainter {
       old.state.puzzle != state.puzzle ||
       old.state.removed != state.removed ||
       old.state.bumped != state.bumped ||
+      old.state.revealed != state.revealed ||
       old.state.hintArrowId != state.hintArrowId ||
       old.state.phase != state.phase ||
       old.focusedId != focusedId ||
@@ -601,7 +646,7 @@ class _BoardPainter extends CustomPainter {
     if (id == null || state.removed.contains(id)) return;
     final arrow = puzzle.arrows[id];
     canvas.drawRect(Offset.zero & size, Paint()..color = palette.hintVeil);
-    _paintArrow(canvas, arrow, cs, 0, true);
+    _paintArrow(canvas, arrow, cs, 0, true, null);
 
     final ping = hintPing;
     if (ping == null) return;
@@ -618,15 +663,54 @@ class _BoardPainter extends CustomPainter {
     );
   }
 
+  /// The closest two cells of [a] and [b], for the tether between them.
+  static (Cell, Cell) _nearestCells(ArrowPiece a, ArrowPiece b) {
+    var best = (a.cells.first, b.cells.first);
+    var bestD = 1 << 30;
+    for (final ca in a.cells) {
+      for (final cb in b.cells) {
+        final d = (ca.x - cb.x).abs() + (ca.y - cb.y).abs();
+        if (d < bestD) {
+          bestD = d;
+          best = (ca, cb);
+        }
+      }
+    }
+    return best;
+  }
+
   /// Draws [arrow] shifted [offset] cells forward along its own track (its
-  /// cells, then its exit ray, then straight on past the edge).
-  void _paintArrow(Canvas canvas, ArrowPiece arrow, double cs, double offset, bool hinted) {
-    final track = <Cell>[...arrow.cells, ...arrow.exitRay(puzzle.width, puzzle.height)];
-    // Extend past the edge so sampling never runs out.
+  /// cells, then its exit ray, then straight on past the edge — or into the
+  /// wall it falls into, where the clip swallows it). With [glyphs] the
+  /// arrow's twist is drawn on it too: its padlock or key, its question mark
+  /// while its head is hidden; the hint's redraw passes none.
+  void _paintArrow(
+    Canvas canvas,
+    ArrowPiece arrow,
+    double cs,
+    double offset,
+    bool hinted,
+    BoardGlyphs? glyphs,
+  ) {
+    final ray = puzzle.rayOf(arrow.id);
+    final track = <Cell>[...arrow.cells, ...ray];
+    // Extend past the edge (or on into the hole) so sampling never runs out.
     var beyond = track.last;
     for (var i = 0; i < arrow.length + 2; i++) {
       beyond = beyond.step(arrow.heading);
       track.add(beyond);
+    }
+    // Where the arrow is gone for good: past the far side of the wall it is
+    // sliding into, nothing of it may be drawn (the track runs on into free
+    // cells behind a thin wall). Off the edge the clip takes care of it.
+    final sink = arrow.length + ray.length;
+    var hidden = double.infinity;
+    if (track[sink].isInside(puzzle.width, puzzle.height) && puzzle.isWall(track[sink])) {
+      var run = 0;
+      while (sink + run < track.length && puzzle.isWall(track[sink + run])) {
+        run++;
+      }
+      hidden = sink + run - 0.5;
     }
     Offset at(double u) {
       final i = u.floor().clamp(0, track.length - 2);
@@ -638,25 +722,34 @@ class _BoardPainter extends CustomPainter {
     // Scales with the cell but stays a pen line on small boards, where a
     // cell is huge and a proportional stroke would turn into a slab.
     final stroke = min(cs * 0.12, 3.0);
-    final points = <Offset>[for (var i = 0; i < arrow.length; i++) at(offset + i)];
     final headAt = offset + arrow.length - 1;
+    if (headAt >= hidden) return;
+    final points = <Offset>[
+      for (var i = 0; i < arrow.length; i++)
+        if (offset + i < hidden) at(offset + i),
+    ];
     final head = at(headAt);
     // The head's travel direction: where the track goes next.
     final ahead = at(headAt + 0.5);
     var dir = ahead - head;
     if (dir.distance < 0.001) dir = _unit(arrow.heading);
     dir = dir / dir.distance;
+    final headShown = state.headShown(arrow.id);
 
-    // Body ends a bit short of the head so the triangle caps it cleanly.
+    // Body ends a bit short of the head so the triangle caps it cleanly;
+    // a hidden head is no head, so the body runs to the cell's centre.
     final headLen = min(cs * 0.3, 8.0);
-    final bodyEnd = head - dir * (headLen * 0.55);
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    final bodyEnd = headShown ? head - dir * (headLen * 0.55) : head;
+    var path = Path()..moveTo(points.first.dx, points.first.dy);
     for (var i = 1; i < points.length - 1; i++) {
       path.lineTo(points[i].dx, points[i].dy);
     }
     if (points.length > 1) {
       path.lineTo(bodyEnd.dx, bodyEnd.dy);
     }
+    // A hidden head is drawn as a dashed body with no head at either end:
+    // the player can see where it lies, not which way it goes.
+    if (!headShown) path = BoardGlyphs.dashed(path, stroke * 1.6, stroke * 1.4);
 
     if (hinted) {
       // The ink is capped at 3 px, so a halo proportional to it is a hair on
@@ -688,29 +781,51 @@ class _BoardPainter extends CustomPainter {
       canvas.drawLine(head - dir * (cs * 0.25), bodyEnd, paint);
     }
 
-    final tip = head + dir * (headLen * 0.8);
-    final base = head - dir * (headLen * 0.55);
-    final side = Offset(-dir.dy, dir.dx) * (headLen * 0.75);
-    final tri = Path()
-      ..moveTo(tip.dx, tip.dy)
-      ..lineTo(base.dx + side.dx, base.dy + side.dy)
-      ..lineTo(base.dx - side.dx, base.dy - side.dy)
-      ..close();
-    canvas.drawPath(
-      tri,
-      Paint()
-        ..color = ink
-        ..style = PaintingStyle.fill
-        ..strokeJoin = StrokeJoin.round,
-    );
-    canvas.drawPath(
-      tri,
-      Paint()
-        ..color = ink
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke * 0.5
-        ..strokeJoin = StrokeJoin.round,
-    );
+    if (headShown) {
+      final tip = head + dir * (headLen * 0.8);
+      final base = head - dir * (headLen * 0.55);
+      final side = Offset(-dir.dy, dir.dx) * (headLen * 0.75);
+      final tri = Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(base.dx + side.dx, base.dy + side.dy)
+        ..lineTo(base.dx - side.dx, base.dy - side.dy)
+        ..close();
+      canvas.drawPath(
+        tri,
+        Paint()
+          ..color = ink
+          ..style = PaintingStyle.fill
+          ..strokeJoin = StrokeJoin.round,
+      );
+      canvas.drawPath(
+        tri,
+        Paint()
+          ..color = ink
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = stroke * 0.5
+          ..strokeJoin = StrokeJoin.round,
+      );
+    }
+
+    if (glyphs == null) return;
+    // The twist, on the arrow's middle cell, travelling with it.
+    final mid = at(offset + arrow.length ~/ 2);
+    final g = BoardGlyphs.glyphSize(cs);
+    if (!headShown) {
+      glyphs.question(canvas, mid, g);
+    }
+    final key = puzzle.keyOf(arrow.id);
+    if (key != null) {
+      glyphs.padlock(
+        canvas,
+        mid,
+        g,
+        open: state.removed.contains(key),
+        number: puzzle.lockNumber(arrow.id),
+      );
+    } else if (puzzle.locksOpenedBy(arrow.id).isNotEmpty) {
+      glyphs.key(canvas, mid, g, puzzle.lockNumber(arrow.id)!);
+    }
   }
 
   static Offset _center(Cell c, double cs) => Offset((c.x + 0.5) * cs, (c.y + 0.5) * cs);
@@ -726,9 +841,11 @@ class _BoardPainter extends CustomPainter {
       old.state.puzzle != state.puzzle ||
       old.state.removed != state.removed ||
       old.state.hintArrowId != state.hintArrowId ||
+      old.state.revealed != state.revealed ||
       old.hintPing != hintPing ||
       old.slump != slump ||
       old.state.blockedCell != state.blockedCell ||
+      old.state.blockedKey != state.blockedKey ||
       old.state.moveToken != state.moveToken ||
       old.showGrid != showGrid ||
       old.palette != palette ||

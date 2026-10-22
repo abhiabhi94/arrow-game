@@ -44,6 +44,141 @@ class AppLocalizationsHi extends AppLocalizations {
   String get homeJourney => 'आपका सफ़र';
 
   @override
+  String get chapterName1 => 'रेखाएँ';
+
+  @override
+  String get chapterName2 => 'आकार';
+
+  @override
+  String get chapterName3 => 'ताले';
+
+  @override
+  String get chapterName4 => 'धुंध';
+
+  @override
+  String get chapterName5 => 'जोड़ियाँ';
+
+  @override
+  String chapterHeading(int number, String name) {
+    return 'अध्याय $number · $name';
+  }
+
+  @override
+  String chapterLevels(int first, int last) {
+    return 'लेवल $first–$last';
+  }
+
+  @override
+  String get chapterBlurb1 =>
+      'एक ही नियम: जिस तीर का रास्ता साफ़ हो उसे छुओ और वह निकल जाता है।';
+
+  @override
+  String get chapterBlurb2 =>
+      'बोर्ड में छेद। तीर छेद में वैसे ही गिर जाता है जैसे किनारे से निकलता है।';
+
+  @override
+  String get chapterBlurb3 =>
+      'कुछ तीरों पर ताला है। वे उसी नंबर की चाबी का भी इंतज़ार करते हैं।';
+
+  @override
+  String get chapterBlurb4 =>
+      'कुछ तीर अपना सिरा छिपाते हैं। पास का कोई तीर निकलते ही वह दिख जाता है।';
+
+  @override
+  String get chapterBlurb5 =>
+      'कुछ तीर आपस में बँधे हैं। एक छुअन से दोनों निकलते हैं — तो दोनों के रास्ते साफ़ चाहिए।';
+
+  @override
+  String get introTitleShapes => 'नया: छेद';
+
+  @override
+  String get introBodyShapes =>
+      'भूरे खाने पन्ने के छेद हैं। उन पर कोई तीर नहीं बैठता, और जो तीर छेद में फिसलता है वह निकल जाता है — छेद भी किनारे की तरह एक रास्ता है।';
+
+  @override
+  String get introTitleLocks => 'नया: ताले';
+
+  @override
+  String get introBodyLocks =>
+      'ताले वाला तीर दो चीज़ों का इंतज़ार करता है: साफ़ रास्ता, और उसी नंबर की चाबी का पहले निकलना। जल्दी छुओगे तो वह खड़खड़ाएगा — और एक जान जाएगी।';
+
+  @override
+  String get introTitleFog => 'नया: छिपे सिरे';
+
+  @override
+  String get introBodyFog =>
+      'बिंदीदार तीर जिस पर ? है, वह छिपा रहा है कि किस ओर है। उसके पास का कोई तीर निकालो और सिरा दिख जाएगा। संकेत भी उसे दिखा देता है।';
+
+  @override
+  String get introTitlePairs => 'नया: जोड़ियाँ';
+
+  @override
+  String get introBodyPairs =>
+      'बिंदीदार रेखा से जुड़े दो तीर बँधे हैं: एक छुअन से दोनों एक साथ निकलते हैं। अगर एक भी रुका है तो टक्कर होगी — इसलिए दोनों रास्ते देखो।';
+
+  @override
+  String get introGotIt => 'समझ गया';
+
+  @override
+  String get tutorialShapes =>
+      'भूरे खाने छेद हैं: तीर उनमें फिसलकर निकल जाता है।';
+
+  @override
+  String get tutorialLocks =>
+      'ताले वाला तीर अपने नंबर की चाबी का इंतज़ार करता है।';
+
+  @override
+  String get tutorialFog =>
+      'बिंदीदार तीर अपना सिरा छिपाता है। पास का तीर निकालो तो दिशा दिखेगी।';
+
+  @override
+  String get tutorialPairs =>
+      'बँधे तीर साथ निकलते हैं: दोनों रास्ते साफ़ चाहिए।';
+
+  @override
+  String get dailyEyebrow => 'आज का बोर्ड';
+
+  @override
+  String get dailyTitle => 'आज का बोर्ड';
+
+  @override
+  String dailyBody(int minutes, int arrows, String chapter) {
+    return '$minutes मिनट, $arrows तीर, $chapter के नियम। हर दिन एक नया बोर्ड — सिर्फ़ आपका।';
+  }
+
+  @override
+  String dailyStreak(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days दिन का सिलसिला',
+      one: '1 दिन का सिलसिला',
+      zero: 'अभी कोई सिलसिला नहीं',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dailyBestToday(String time) {
+    return 'आज का सबसे अच्छा $time';
+  }
+
+  @override
+  String get dailyClearedToday => 'आज पूरा हुआ';
+
+  @override
+  String get dailyPlay => 'आज खेलें';
+
+  @override
+  String get dailyReplay => 'फिर से खेलें';
+
+  @override
+  String get dailyLevelTitle => 'आज का बोर्ड';
+
+  @override
+  String get dailyClearedBody => 'आज का बोर्ड हो गया। कल नए बोर्ड के लिए आइए।';
+
+  @override
   String get onboardSkip => 'छोड़ें';
 
   @override
@@ -887,6 +1022,39 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get arrowBumpedBefore =>
       'पहले टकरा चुका है; यहाँ फिर टकराने पर जान नहीं जाएगी।';
+
+  @override
+  String arrowHiddenLabel(int length, int row, int column) {
+    String _temp0 = intl.Intl.pluralLogic(
+      length,
+      locale: localeName,
+      other: '$length खाने',
+      one: '1 खाना',
+    );
+    return 'छिपे सिरे वाला तीर, $_temp0 लंबा, पंक्ति $row, स्तंभ $column से। पास का कोई तीर निकलते ही दिखेगा कि यह किस ओर है।';
+  }
+
+  @override
+  String get arrowPathClearHole => 'छेद तक रास्ता साफ़ है।';
+
+  @override
+  String arrowLocked(int number) {
+    return 'ताला $number: यह चाबी $number के निकलने का भी इंतज़ार करता है।';
+  }
+
+  @override
+  String arrowUnlocked(int number) {
+    return 'ताला $number खुल गया है।';
+  }
+
+  @override
+  String arrowKey(int number) {
+    return 'चाबी $number: यह ताला $number खोलती है।';
+  }
+
+  @override
+  String get arrowTethered =>
+      'दूसरे तीर से बँधा है: दोनों साथ निकलते हैं, इसलिए दोनों के रास्ते साफ़ होने चाहिए।';
 
   @override
   String get arrowTapHint => 'इसे बाहर निकालें';

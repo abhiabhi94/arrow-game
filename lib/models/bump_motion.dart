@@ -14,15 +14,20 @@ class BumpMotion {
 
   /// The bump of arrow [id] on [puzzle] against [blockedCell], the first
   /// occupied cell on its ray: the head runs up to that cell and stops just
-  /// short of its centre, so the tip touches the blocker's edge.
-  factory BumpMotion.forTap(Puzzle puzzle, int id, Cell blockedCell) {
-    final ray = puzzle.arrows[id].exitRay(puzzle.width, puzzle.height);
-    final steps = ray.indexOf(blockedCell) + 1;
+  /// short of its centre, so the tip touches the blocker's edge. With no
+  /// cell — the arrow was held by a lock, its path clear — it is a short
+  /// jab forward against the lock, [kLockJab] of a cell.
+  factory BumpMotion.forTap(Puzzle puzzle, int id, Cell? blockedCell) {
+    if (blockedCell == null) return const BumpMotion(travel: kLockJab);
+    final steps = puzzle.rayOf(id).indexOf(blockedCell) + 1;
     return BumpMotion(travel: steps - kStopShort);
   }
 
   /// How far short of the blocker's centre the head stops, in cells.
   static const double kStopShort = 0.6;
+
+  /// How far a locked arrow jabs forward before the lock throws it back.
+  static const double kLockJab = 0.35;
 
   /// The back leg, a fixed spring home — also how long the screen shakes.
   static const int backMs = 480;

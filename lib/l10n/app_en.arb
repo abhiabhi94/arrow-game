@@ -27,6 +27,88 @@
     }
   },
   "homeJourney": "Your journey",
+  "chapterName1": "Lines",
+  "chapterName2": "Shapes",
+  "chapterName3": "Locks",
+  "chapterName4": "Fog",
+  "chapterName5": "Pairs",
+  "chapterHeading": "Chapter {number} · {name}",
+  "@chapterHeading": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chapterLevels": "Levels {first}–{last}",
+  "@chapterLevels": {
+    "placeholders": {
+      "first": {
+        "type": "int"
+      },
+      "last": {
+        "type": "int"
+      }
+    }
+  },
+  "chapterBlurb1": "One rule: tap an arrow with a clear path and it slides out.",
+  "chapterBlurb2": "Boards with holes in them. An arrow falls into a hole just as it slides off the edge.",
+  "chapterBlurb3": "Some arrows wear a padlock. They also wait for the key with the same number.",
+  "chapterBlurb4": "Some arrows hide their head. It shows once an arrow beside them leaves.",
+  "chapterBlurb5": "Some arrows are tethered. One tap sends both out — so both paths must be clear.",
+  "introTitleShapes": "New: holes",
+  "introBodyShapes": "The grey squares are holes in the page. No arrow sits on one, and an arrow that slides into one is gone — a hole is a way out, just like the edge.",
+  "introTitleLocks": "New: locks",
+  "introBodyLocks": "An arrow with a padlock waits for two things: a clear path, and the key with the same number to leave first. Tap it too soon and it rattles — that costs a life.",
+  "introTitleFog": "New: hidden heads",
+  "introBodyFog": "A dashed arrow with a ? is hiding which way it points. Slide out an arrow beside it and the head appears. A hint shows it too.",
+  "introTitlePairs": "New: pairs",
+  "introBodyPairs": "Two arrows joined by a dotted line are tethered: one tap sends both out at once. If either one is blocked, the tap bumps — so check both paths.",
+  "introGotIt": "Got it",
+  "tutorialShapes": "The grey squares are holes: an arrow slides into one and is gone.",
+  "tutorialLocks": "A padlocked arrow waits for the key with its number.",
+  "tutorialFog": "A dashed arrow hides its head. Free an arrow beside it to see which way it points.",
+  "tutorialPairs": "Tethered arrows leave together: both paths must be clear.",
+  "dailyEyebrow": "Daily board",
+  "dailyTitle": "Today's board",
+  "dailyBody": "{minutes} minutes, {arrows} arrows, {chapter} rules. A fresh deal every day — yours alone.",
+  "@dailyBody": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "arrows": {
+        "type": "int"
+      },
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "dailyStreak": "{days, plural, =0{No streak yet} =1{1 day streak} other{{days} day streak}}",
+  "@dailyStreak": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyBestToday": "Best today {time}",
+  "@dailyBestToday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "dailyClearedToday": "Cleared today",
+  "dailyPlay": "Play today",
+  "dailyReplay": "Play it again",
+  "dailyLevelTitle": "Daily board",
+  "dailyClearedBody": "Today's board is done. Come back tomorrow for a new one.",
   "onboardSkip": "Skip",
   "onboardNext": "Next",
   "onboardStart": "Let's play!",
@@ -501,6 +583,47 @@
   },
   "arrowHinted": "Hint: this one can go.",
   "arrowBumpedBefore": "Bumped before; another bump here is free.",
+  "arrowHiddenLabel": "Arrow with a hidden head, {length, plural, =1{1 cell} other{{length} cells}} long, from row {row}, column {column}. Which way it points shows once an arrow beside it leaves.",
+  "@arrowHiddenLabel": {
+    "description": "A hidden-head arrow, as a screen reader reads it: no direction and no path, since a sighted player cannot see them either.",
+    "placeholders": {
+      "length": {
+        "type": "int"
+      },
+      "row": {
+        "type": "int"
+      },
+      "column": {
+        "type": "int"
+      }
+    }
+  },
+  "arrowPathClearHole": "Clear path into a hole.",
+  "arrowLocked": "Lock {number}: it also waits for key {number} to leave.",
+  "@arrowLocked": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "arrowUnlocked": "Lock {number} is open.",
+  "@arrowUnlocked": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "arrowKey": "Key {number}: it opens lock {number}.",
+  "@arrowKey": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "arrowTethered": "Tethered to another arrow: the two leave together, so both paths must be clear.",
   "arrowTapHint": "Slide it out",
   "@arrowTapHint": {
     "description": "The action a screen reader offers on an arrow (\"double tap to …\")."

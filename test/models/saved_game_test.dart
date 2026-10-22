@@ -8,12 +8,15 @@ void main() {
   test('snapshots a state and survives a JSON round trip', () {
     final state = GameState.fresh(sampleSpec, samplePuzzle()).copyWith(
       removed: const {2, 0},
+      revealed: const {1},
       mistakes: 1,
       hintsLeft: 2,
       elapsedMs: 12345,
     );
     final saved = SavedGame.fromState(state);
     expect(saved.level, 1);
+    expect(saved.revealed, [1]);
+    expect(saved.toJson()['revealed'], [1]);
     expect(saved.seed, sampleSpec.seed);
     expect(saved.removed, [0, 2]);
     expect(saved.arrowsOut, 2);

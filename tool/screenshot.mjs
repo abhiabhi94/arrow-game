@@ -24,6 +24,7 @@
 //             same build shoot the same frame
 //   --grid    seeds the grid-lines preference on (the lattice under the arrows)
 //   --resume  seeds a saved game on the first level (home shows Continue, the level its Welcome back card)
+//   --daily   opens today's daily board from its home card and captures it (daily-*.png)
 //   --onboarding  boots into the first-launch walkthrough instead of home
 //   --viewport WxH  renders the desktop layout instead of a phone (the web build
 //             is also served on GitHub Pages, where people play it on a laptop);
@@ -134,6 +135,8 @@ const labels = lang === 'hindi'
       riddleSubmit: /यही मेरा जवाब है$/,
       riddleSolved: /तीरों पर वापस$/,
       board: /^पहेली बोर्ड,? (\d+) गुणा (\d+)/,
+      gotIt: /^समझ गया$/,
+      daily: /^आज का बोर्ड\./,
     }
   : {
       settings: /^settings/i,
@@ -146,6 +149,8 @@ const labels = lang === 'hindi'
       riddleSubmit: /That's my answer$/,
       riddleSolved: /Back to the arrows$/,
       board: /^Puzzle board,? (\d+) by (\d+)/,
+      gotIt: /^Got it$/,
+      daily: /^Daily board\./,
     };
 
 if (!fs.existsSync(path.join(buildDir, 'index.html'))) {
@@ -302,6 +307,18 @@ try {
     await goBack(page);
   }
 
+  // The daily board: its card sits under the hero on the home screen.
+  if (args.daily) {
+    await page.mouse.move(195, 500);
+    const card = page.getByRole('button', { name: labels.daily }).first();
+    await card.click();
+    await settle(page, 2500);
+    if (args.dump) console.log(await dumpSemantics(page));
+    await shoot(page, `daily-${tag}`);
+    await goBack(page);
+    await settle(page, 800);
+  }
+
   // The journey trail is a long scroll view. Playwright cannot scroll a
   // Flutter scroll view through the semantics tree, and a single big wheel
   // delta is clamped, so nudge the wheel until the node's box is in view.
@@ -342,6 +359,14 @@ try {
     await settle(page, 1200);
     if (args.dump) console.log(await dumpSemantics(page));
     const id = String(level).padStart(2, '0');
+    // A chapter's first level opens on a card about the twist it brings:
+    // capture it, then put it away so the board flows below run as usual.
+    const gotIt = page.getByRole('button', { name: labels.gotIt }).first();
+    if (await gotIt.count()) {
+      await shoot(page, `level-${id}-intro-${tag}`);
+      await gotIt.click();
+      await settle(page, 600);
+    }
     await shoot(page, `level-${id}-${tag}`);
     if (crash && level === levels[0]) {
       await page.clock.pauseAt(Date.now() + 1000);
