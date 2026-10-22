@@ -359,11 +359,19 @@ try {
     }
     await tile.click();
     await settle(page, 1200);
+    // A big level takes seconds to deal on the web: wait for the board, or
+    // for a chapter card, which stands in front of it (the card is modal to
+    // a reader too, so the board is not in the tree while it is up). Asking
+    // for the card too early read as "no card" on level 40, and the hint
+    // click then sat behind the card until it timed out.
+    const board = page.getByLabel(labels.board).or(page.getByRole('button', { name: labels.board })).first();
+    const gotIt = page.getByRole('button', { name: labels.gotIt }).first();
+    await gotIt.or(board).first().waitFor({ state: 'attached', timeout: 60_000 });
     if (args.dump) console.log(await dumpSemantics(page));
     const id = String(level).padStart(2, '0');
-    // A chapter's first level opens on a card about the twist it brings:
-    // capture it, then put it away so the board flows below run as usual.
-    const gotIt = page.getByRole('button', { name: labels.gotIt }).first();
+    // A chapter's first level (or the first level opened past one) opens on
+    // a card about the twist it brings: capture it, then put it away so the
+    // board flows below run as usual.
     if (await gotIt.count()) {
       await shoot(page, `level-${id}-intro-${tag}`);
       await gotIt.click();
