@@ -585,7 +585,11 @@ Key patterns:
   them, so a saved board from before is refused and the level restarts) is
   shown Mirrors, Locks and Fog one after another when they next open a
   level, "Got it" marking each seen and the last one resuming the clock.
-  The daily board brings the cards of the chapter it borrows from. Never
+  The daily board brings the cards of the chapter it borrows from. That
+  catch-up is a bridge, not the game: `kIntroCatchUp` turns it off, and
+  `test/providers/intro_provider_test.dart` fails the first release build
+  past `kIntroCatchUpLastBuild` (18, four releases after the chapters
+  shipped in build 15) until the flag and the catch-up branch are deleted. Never
   over a resumed game, and the pause is deferred a frame since a provider
   may not change while the tree builds; the teaching levels also get a line
   under the board like levels 1–2. The home trail is headed by a
