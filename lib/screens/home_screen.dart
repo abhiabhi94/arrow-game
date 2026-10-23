@@ -24,10 +24,10 @@ import 'game_screen.dart';
 import 'settings_screen.dart';
 
 /// Vertical distance between trail nodes.
-const double kTrailSpacing = 104;
+const double kTrailSpacing = 90;
 
 /// The room a chapter heading takes on the trail, above its first level.
-const double kChapterBandHeight = 108;
+const double kChapterBandHeight = 104;
 
 /// The home screen: a stars tally, a "next up" hero card, and the journey — a
 /// winding trail of every level node (locked ones numbered too) with lock / stars / current state.
@@ -485,8 +485,12 @@ class _NextUpCard extends StatelessWidget {
   }
 }
 
-/// A winding path of level nodes. Node `i` sits at a horizontal offset that
-/// follows a gentle sine wave, so the trail meanders down the screen.
+/// The journey: a section per chapter — its heading, blurb and progress —
+/// and under it the chapter's levels on a soft ribbon of road that winds
+/// down the page, mint behind the player and faint ahead, with the next
+/// level marked by a bubble beside its node. The first cut was a thin
+/// dotted line from node to node down a lot of empty page, and a caption
+/// under every node: a list.
 class _Trail extends StatelessWidget {
   const _Trail({
     required this.progress,
@@ -498,22 +502,30 @@ class _Trail extends StatelessWidget {
   final bool Function(int level) isUnlocked;
   final int current;
 
-  static double fractionFor(int level) => 0.5 + 0.36 * sin((level - 1) * 1.05);
+  /// Where across the width [level]'s node sits: a slow sine that starts
+  /// over at every chapter, so each section opens at the centre and winds
+  /// twice down to its twentieth level.
+  static double fractionFor(int level) =>
+      0.5 + 0.38 * sin(((level - 1) % kChapterLength) * 0.62);
 
   /// How far down the trail [level]'s node sits: its place in the line plus
   /// a band of [bandHeight] for every chapter heading above it.
   static double topOf(int level, double bandHeight) =>
       (level - 1) * kTrailSpacing + chapterOf(level).index * bandHeight;
 
+  static const double nodeSize = 60;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    // The band holds two lines of text, so it grows with the system font.
-    final bandHeight = MediaQuery.textScalerOf(context).scale(kChapterBandHeight);
+    // The band holds two lines of text and a bar, so it grows with the
+    // system font.
+    final bandHeight = MediaQuery.textScalerOf(
+      context,
+    ).scale(kChapterBandHeight);
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        const nodeSize = 62.0;
         final points = <Offset>[
           for (var level = 1; level <= totalLevels; level++)
             Offset(
@@ -521,16 +533,27 @@ class _Trail extends StatelessWidget {
               topOf(level, bandHeight) + nodeSize / 2 + 8,
             ),
         ];
+        // One road per chapter: it starts under the chapter's heading and
+        // ends at its last level, rather than running on behind the next
+        // heading.
+        final roads = <_Road>[
+          for (final chapter in chapters)
+            _Road(
+              firstLevel: chapter.firstLevel,
+              points: points.sublist(chapter.firstLevel - 1, chapter.lastLevel),
+            ),
+        ];
         final height = topOf(totalLevels, bandHeight) + nodeSize + 48;
         return SizedBox(
           width: width,
           height: height,
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
               Positioned.fill(
                 child: CustomPaint(
                   painter: _TrailPainter(
-                    points: points,
+                    roads: roads,
                     clearedUpTo: _clearedPrefix(),
                     color: p.outlineSoft,
                     doneColor: p.accentMint,
@@ -546,6 +569,7 @@ class _Trail extends StatelessWidget {
                   child: _ChapterBand(
                     chapter: chapter,
                     reached: isUnlocked(chapter.firstLevel),
+                    cleared: _clearedIn(chapter),
                   ),
                 ),
               for (var level = 1; level <= totalLevels; level++)
@@ -557,8 +581,21 @@ class _Trail extends StatelessWidget {
                     size: nodeSize,
                     progress: progress[level] ?? LevelProgress.empty(level),
                     unlocked: isUnlocked(level),
-                    isCurrent: level == current && !(progress[level]?.completed ?? false),
+                    isCurrent:
+                        level == current &&
+                        !(progress[level]?.completed ?? false),
                   ),
+                ),
+              if (current >= 1 &&
+                  current <= totalLevels &&
+                  !(progress[current]?.completed ?? false))
+                _NextUpBubble(
+                  level: current,
+                  node: points[current - 1],
+                  nodeSize: nodeSize,
+                  // Beside the node, on the side with the room.
+                  onRight: fractionFor(current) < 0.5,
+                  width: width,
                 ),
             ],
           ),
@@ -567,8 +604,8 @@ class _Trail extends StatelessWidget {
     );
   }
 
-  /// How many levels from the start are cleared in a row (the trail is
-  /// painted "done" that far).
+  /// How many levels from the start are cleared in a row (the road is
+  /// painted "walked" that far).
   int _clearedPrefix() {
     var n = 0;
     while (n < totalLevels && (progress[n + 1]?.completed ?? false)) {
@@ -576,49 +613,87 @@ class _Trail extends StatelessWidget {
     }
     return n;
   }
+
+  int _clearedIn(Chapter chapter) {
+    var n = 0;
+    for (var level = chapter.firstLevel; level <= chapter.lastLevel; level++) {
+      if (progress[level]?.completed ?? false) n++;
+    }
+    return n;
+  }
 }
 
+/// A chapter's stretch of the road: its nodes' centres, in order.
+class _Road {
+  const _Road({required this.firstLevel, required this.points});
+
+  final int firstLevel;
+  final List<Offset> points;
+}
+
+/// The road under the nodes: one smooth ribbon per chapter through its
+/// nodes (a Catmull-Rom spline, so the line arrives at a node on the
+/// tangent it leaves on), wide and soft, in the mint as far as the player
+/// has walked and faint ahead. The nodes sit on top of it, so the joins
+/// are under them.
 class _TrailPainter extends CustomPainter {
   _TrailPainter({
-    required this.points,
+    required this.roads,
     required this.clearedUpTo,
     required this.color,
     required this.doneColor,
   });
 
-  final List<Offset> points;
+  final List<_Road> roads;
   final int clearedUpTo;
   final Color color;
   final Color doneColor;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (var i = 0; i + 1 < points.length; i++) {
-      final a = points[i];
-      final b = points[i + 1];
-      final midY = (a.dy + b.dy) / 2;
-      final path = Path()
-        ..moveTo(a.dx, a.dy)
-        ..cubicTo(a.dx, midY, b.dx, midY, b.dx, b.dy);
-      final paint = Paint()
-        ..color = i < clearedUpTo ? doneColor : color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5
-        ..strokeCap = StrokeCap.round;
-      _drawDashed(canvas, path, paint);
-    }
+  static const double kRoadWidth = 18;
+
+  /// The cubic from node [i] to node [i + 1] of [points], its tangents
+  /// taken from the neighbours either side, appended to [path].
+  static void _stretch(Path path, List<Offset> points, int i) {
+    final a = points[i];
+    final b = points[i + 1];
+    final before = i == 0 ? a : points[i - 1];
+    final after = i + 2 >= points.length ? b : points[i + 2];
+    final ta = (b - before) / 2;
+    final tb = (after - a) / 2;
+    path.cubicTo(
+      a.dx + ta.dx / 3,
+      a.dy + ta.dy / 3,
+      b.dx - tb.dx / 3,
+      b.dy - tb.dy / 3,
+      b.dx,
+      b.dy,
+    );
   }
 
-  static void _drawDashed(Canvas canvas, Path path, Paint paint) {
-    const dash = 10.0;
-    const gap = 9.0;
-    for (final metric in path.computeMetrics()) {
-      var d = 0.0;
-      while (d < metric.length) {
-        final end = min(d + dash, metric.length);
-        canvas.drawPath(metric.extractPath(d, end), paint);
-        d += dash + gap;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final ahead = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = kRoadWidth
+      ..strokeCap = StrokeCap.round;
+    final walked = Paint.from(ahead)..color = doneColor.withValues(alpha: 0.45);
+    for (final road in roads) {
+      // One path per shade, each stroked once, so nothing stacks where
+      // the stretches meet.
+      final done = Path();
+      final todo = Path();
+      final started = <Path>{};
+      for (var i = 0; i + 1 < road.points.length; i++) {
+        final level = road.firstLevel + i;
+        final path = level <= clearedUpTo ? done : todo;
+        if (started.add(path)) {
+          path.moveTo(road.points[i].dx, road.points[i].dy);
+        }
+        _stretch(path, road.points, i);
       }
+      canvas.drawPath(todo, ahead);
+      canvas.drawPath(done, walked);
     }
   }
 
@@ -627,8 +702,141 @@ class _TrailPainter extends CustomPainter {
       old.clearedUpTo != clearedUpTo ||
       old.color != color ||
       old.doneColor != doneColor ||
-      old.points.length != points.length ||
-      (old.points.isNotEmpty && old.points.first != points.first);
+      old.roads.length != roads.length ||
+      (old.roads.isNotEmpty &&
+          old.roads.first.points.first != roads.first.points.first) ||
+      (old.roads.isNotEmpty &&
+          old.roads.last.points.last != roads.last.points.last);
+}
+
+/// The marker on the next level: a small card beside its node with the
+/// level's name, and a pointer to the node. It is the one caption on the
+/// trail, so the eye finds where to go next without reading every node.
+class _NextUpBubble extends StatelessWidget {
+  const _NextUpBubble({
+    required this.level,
+    required this.node,
+    required this.nodeSize,
+    required this.onRight,
+    required this.width,
+  });
+
+  final int level;
+  final Offset node;
+  final double nodeSize;
+  final bool onRight;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final l10n = AppLocalizations.of(context)!;
+    const gap = 14.0;
+    const pointer = 8.0;
+    final room = onRight
+        ? width - (node.dx + nodeSize / 2) - gap - 12
+        : node.dx - nodeSize / 2 - gap - 12;
+    final card = Container(
+      constraints: BoxConstraints(maxWidth: max(96, room)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: p.primary,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: p.primary.withValues(alpha: 0.3),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.levelUpNext.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+              color: Colors.white.withValues(alpha: 0.85),
+            ),
+          ),
+          Text(
+            levelName(l10n, level),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+    final tip = CustomPaint(
+      size: const Size(pointer, pointer * 2),
+      painter: _PointerPainter(color: p.primary, toRight: !onRight),
+    );
+    final bubble = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: onRight ? [tip, card] : [card, tip],
+    );
+    // The node is the button; the bubble is a picture of its state.
+    final body = ExcludeSemantics(
+      child: GestureDetector(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => GameScreen(level: level)),
+        ),
+        child: bubble,
+      ),
+    );
+    final child = reduceMotionOf(context)
+        ? body
+        : body
+              .animate(delay: 500.ms)
+              .fadeIn(duration: 250.ms)
+              .slideX(
+                begin: onRight ? -0.15 : 0.15,
+                curve: Curves.easeOutCubic,
+              );
+    return Positioned(
+      top: node.dy - 24,
+      left: onRight ? node.dx + nodeSize / 2 + gap - pointer : null,
+      right: onRight ? null : width - (node.dx - nodeSize / 2 - gap + pointer),
+      child: child,
+    );
+  }
+}
+
+/// The bubble's pointer: a small triangle on the side facing the node.
+class _PointerPainter extends CustomPainter {
+  const _PointerPainter({required this.color, required this.toRight});
+
+  final Color color;
+  final bool toRight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = toRight
+        ? (Path()
+            ..moveTo(0, 0)
+            ..lineTo(size.width, size.height / 2)
+            ..lineTo(0, size.height)
+            ..close())
+        : (Path()
+            ..moveTo(size.width, 0)
+            ..lineTo(0, size.height / 2)
+            ..lineTo(size.width, size.height)
+            ..close());
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_PointerPainter old) =>
+      old.color != color || old.toRight != toRight;
 }
 
 class _LevelNode extends StatelessWidget {
@@ -677,8 +885,10 @@ class _LevelNode extends StatelessWidget {
         color: fill,
         shape: BoxShape.circle,
         border: Border.all(
-          color: isCurrent ? p.primaryLight : (cleared ? p.accentMint : p.outlineSoft),
-          width: isCurrent ? 4 : 1.5,
+          color: isCurrent
+              ? p.primaryLight
+              : (cleared ? p.accentMint : p.outlineSoft),
+          width: isCurrent ? 4 : 2,
         ),
         boxShadow: [
           if (isCurrent)
@@ -686,13 +896,23 @@ class _LevelNode extends StatelessWidget {
               color: p.primary.withValues(alpha: 0.4),
               blurRadius: 18,
               offset: const Offset(0, 6),
+            )
+          else if (cleared)
+            BoxShadow(
+              color: p.accentMint.withValues(alpha: 0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
         ],
       ),
       child: Center(
         child: Text(
           '$level',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: fg),
+          style: TextStyle(
+            fontSize: 21,
+            fontWeight: FontWeight.w800,
+            color: fg,
+          ),
         ),
       ),
     );
@@ -743,50 +963,57 @@ class _LevelNode extends StatelessWidget {
           customBorder: const CircleBorder(),
           onTap: unlocked
               ? () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => GameScreen(level: level),
-                    ),
-                  )
+                  MaterialPageRoute<void>(
+                    builder: (_) => GameScreen(level: level),
+                  ),
+                )
               : null,
-          // No fixed height: the caption under the node grows with the system
-          // font size, and the node is positioned by its top on the trail.
+          // No fixed height: the stars under a cleared node grow with the
+          // system font size, and the node is positioned by its top.
           child: SizedBox(
             width: size + 40,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 node,
-                const SizedBox(height: 4),
-                if (cleared)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (var i = 0; i < 3; i++)
-                        Icon(
-                          Icons.star_rounded,
-                          size: 13,
-                          color: i < progress.stars ? p.star : p.starEmpty,
-                        ),
-                      if (best != null) ...[
-                        const SizedBox(width: 4),
-                        Text(
-                          formatDurationMs(best),
-                          style: TextStyle(fontSize: 10, color: p.textMuted),
-                        ),
-                      ],
-                    ],
-                  )
-                else if (unlocked)
-                  Text(
-                    levelName(l10n, level),
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isCurrent ? p.primaryInk : p.textMuted,
+                // The stars are the one thing under a node: the next
+                // level's name is in its bubble, and the rest are numbers.
+                if (cleared) ...[
+                  const SizedBox(height: 2),
+                  // On a small pill, since the row sits over the road.
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    decoration: BoxDecoration(
+                      color: p.surface.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < 3; i++)
+                          Icon(
+                            Icons.star_rounded,
+                            size: 14,
+                            color: i < progress.stars ? p.star : p.starEmpty,
+                          ),
+                        if (best != null) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            formatDurationMs(best),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: p.textMuted,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
+                ],
               ],
             ),
           ),
@@ -801,15 +1028,19 @@ class _LevelNode extends StatelessWidget {
   }
 }
 
-
-/// A chapter heading on the trail: its number and name, the levels it
-/// spans and a line on the twist it brings, over its first level. Muted
-/// until the chapter is reached.
+/// A chapter's section heading on the trail: its icon, number and name,
+/// the levels it spans and a line on the twist it brings, and a bar of
+/// how much of it is cleared. Muted until the chapter is reached.
 class _ChapterBand extends StatelessWidget {
-  const _ChapterBand({required this.chapter, required this.reached});
+  const _ChapterBand({
+    required this.chapter,
+    required this.reached,
+    required this.cleared,
+  });
 
   final Chapter chapter;
   final bool reached;
+  final int cleared;
 
   @override
   Widget build(BuildContext context) {
@@ -827,53 +1058,99 @@ class _ChapterBand extends StatelessWidget {
       ChapterRule.pairs => Icons.link_rounded,
     };
     final ink = reached ? p.textInk : p.textMuted;
+    final share = cleared / kChapterLength;
     return Semantics(
       header: true,
       label: '$heading. $levels. $blurb',
       excludeSemantics: true,
-      child: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 360),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: p.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: reached ? p.primaryLight : p.outlineSoft, width: 1.5),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: reached ? p.primary : p.cardTint,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: reached ? Colors.white : p.textMuted, size: 22),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: reached ? p.primary : p.cardTint,
+                shape: BoxShape.circle,
+                border: reached
+                    ? null
+                    : Border.all(color: p.outlineSoft, width: 1.5),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      heading,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: ink),
-                    ),
-                    Text(
-                      '$levels · $blurb',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: p.textMuted, height: 1.3),
-                    ),
-                  ],
-                ),
+              child: Icon(
+                icon,
+                color: reached ? Colors.white : p.textMuted,
+                size: 22,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          heading,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: ink,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$cleared/$kChapterLength',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: cleared == kChapterLength
+                              ? p.successInk
+                              : p.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$levels · $blurb',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: p.textMuted,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 5,
+                    width: double.infinity,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ColoredBox(color: p.outlineSoft),
+                          FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: share,
+                            child: ColoredBox(color: p.accentMint),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

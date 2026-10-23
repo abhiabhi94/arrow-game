@@ -54,6 +54,7 @@ dart run tool/make_levels.dart        # prints levels 21-100 from the chapter ru
 dart run tool/pick_variants.dart      # the first variant of each level from 21 that keeps every pinned rule
 dart run tool/level_report.dart 41 3  # a level (and its next 3 variants): arrows placed, twists placed, fill, open moves
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
+node tool/screenshot.mjs --levels 4 --cleared 3                     # levels 1-3 cleared: the walked road, stars, the chapter's bar, the Up next bubble
 node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + keyboard
 node tool/screenshot.mjs --levels 1 --crash 2,4                     # a bump mid-crash (fake clock): jolt + red flash
 node tool/screenshot.mjs --levels 21 --crash 5,5,650                # a bump that turned at a mirror, 650 ms in: pressed on the blocker
@@ -87,7 +88,9 @@ and captures the bump 330 ms in (or `x,y,ms`) on Playwright's fake clock
 for the tap — a click on the board's accessibility node would otherwise be a
 semantic tap at the board's centre; a fresh profile opened straight at a
 late level is owed every chapter card it skipped, and the driver puts
-them all away before the board flows. `--riddle x,y,…` spends every life on
+them all away before the board flows. `--cleared N` records levels 1..N as cleared (stars and a best time), so
+the trail shows its walked road, the stars and a chapter's progress.
+`--riddle x,y,…` spends every life on
 three different blocked heads (level 1: `2,4,2,3,2,2`) and captures the
 "Out of lives" card, the riddle behind it, the riddle with its hint out and
 the answer accepted — it seeds an unshuffled pack so the riddle is always the
@@ -499,6 +502,15 @@ Key patterns:
   two read as one piece before the tether is found; the tether is drawn
   from the halves' moving track points (`_trackPoint`) so it travels with
   them on a slide and on a bump, in the glow while they move.
+  **An arrow is drawn along its track** (`_pathAlong`): the body's cells,
+  its ray and on past the edge, straight between the cell centres and
+  rounded through every bend (`_along` runs a quadratic through each
+  corner, `kBend` of a cell either side), so an arrow sliding round its
+  own turn or a mirror's swings round it like a train on rails, the same
+  shape the whole way — the first cut joined the body's cell points with
+  straight lines, so as it slid the line across a corner cut the corner
+  and the body pinched at every turn, which is what "the exit is not
+  smooth" was.
   Glyphs are `BoardGlyphs.glyphSize(cs)`:
   most of a cell, never under 10 px, so the zoom is how they are read on a
   dense board. The screen reader hears the same (`board_semantics.dart`):
@@ -573,9 +585,24 @@ Key patterns:
 - **Onboarding:** `OnboardingScreen` — two tiny boards played for real
   (`tutorialPuzzleOne/Two`) plus a summary; `Settings.onboardingDone` gates
   it in `main.dart`; Settings → "How to play" replays it (`replay: true`).
-- **Home:** a gradient "Next up" hero card and a winding trail of level
-  nodes (`_Trail` + `_TrailPainter`), locked/current/cleared states with
-  stars and best time. A locked node still shows its number (a small lock
+- **Home:** a gradient "Next up" hero card and the journey (`_Trail`): a
+  section per chapter — `_ChapterBand`, the chapter's icon, heading,
+  blurb and a bar of how much of it is cleared — and under it the
+  chapter's levels on a soft ribbon of road (`_TrailPainter`: one
+  Catmull-Rom spline per chapter through its nodes, `kRoadWidth` wide,
+  stroked once per shade so nothing stacks at the joins; the mint as far
+  as the player has walked, `outlineSoft` ahead), the nodes on top of it
+  (cleared in the mint with their stars and best time on a small pill,
+  the next one in the primary with a glow, locked ones with a lock
+  badge), on a slow sine that starts over at each chapter
+  (`fractionFor`, about ten levels to a sweep). The next level alone
+  gets a caption: `_NextUpBubble`, a card beside its node on the side
+  with the room, with the level's name and a pointer; it is a picture of
+  the node's state (excluded from semantics, the node is the button)
+  and a tap on it plays the level. The first cut was a thin dotted line
+  from node to node down a lot of empty page, each stretch its own
+  S-curve, a caption under every node and a bordered card for each
+  chapter heading: a list. A locked node still shows its number (a small lock
   badge sits on it) and the journey heading reads "N of 100 cleared", so the
   player can see what is ahead and where the trail ends. The header (`_HomeHeader`, a
   `SliverPersistentHeaderDelegate`) is **pinned**: the trail is a hundred
