@@ -8,11 +8,29 @@ A playful cross-platform (Android + iOS) **arrow exit puzzle** built with
 Flutter (in the spirit of "Arrow Exit Puzzle"). Bent arrow pieces sit on a
 grid; tapping one slides it along its own path, the way its head points, until
 it leaves the board. An arrow whose exit path runs into another arrow bumps
-back and costs a life. 100 fixed, procedurally generated levels on a steep
-curve (5 arrows on 5×6 → 59 on 19×26 by level 8 → 144 on 32×50 by level
-20 → 224 on 42×63 by level 40 → 304 on 47×73 by level 60 → 384 on 52×84 by
-level 80 → 464 on 57×92), drawn in a
-single ink like a printed puzzle, 3 lives per level (spend them all and a
+back and costs a life. 100 fixed, procedurally generated levels in **five
+chapters of twenty** (`data/chapters.dart`), each built on one twist and
+keeping the ones before it: **Lines** (1–20, the plain rectangle, 5 arrows on
+5×6 → 144 on 32×50), **Mirrors** (21–40: a diagonal in a cell turns an
+arrow's path a right angle, so the way out is read off the board), **Locks** (41–60: a
+padlocked arrow also waits for the key with its number; tapping it early
+costs nothing and points at the key), **Fog** (61–80: a dashed arrow hides
+its head until a neighbour leaves; tapping it while hidden costs nothing
+and points at the neighbour that would uncover it), **Pairs** (81–100: two
+tethered arrows, washed in one tint, leave on one tap, so both paths must
+be clear). Every chapter opens on a
+small teaching board under a card that is one line and a self-playing
+demo of the twist, then climbs steadily from 30 arrows at its second
+level to 150 at its twentieth (the same top for every chapter: the twist
+is what makes a later chapter harder), with a clock that grows chapter by
+chapter and never passes ten minutes. A **daily board**
+(home card; `data/daily.dart`) is a fresh ~5-minute deal every day (80
+arrows) with the twists of the chapter the player has reached, seeded from
+the date and a per-install salt so no two phones share one; it keeps a
+streak. Everything
+is drawn in a single ink like a printed puzzle (the sun-coloured key badge
+and the pointer from a tapped lock to its key are the one new colour),
+3 lives per level (spend them all and a
 card asks for a riddle: crack it and the level carries on for one more
 mistake, then asks again — or start fresh), a clock on every level ("Time's
 up" → replay the same level), 3 hints per level, zoom in/out, a grid-lines
@@ -31,9 +49,17 @@ tool/coverage.sh 92             # coverage gate (fails under threshold)
 
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
 node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-viewport screenshots -> shots/
+node tool/screenshot.mjs --levels 21,41,61,81 --daily                # each chapter's card (mid-demo) + teaching board, and today's daily board
+dart run tool/make_levels.dart        # prints levels 21-100 from the chapter rules (paste into lib/data/level_specs.dart)
+dart run tool/pick_variants.dart      # the first variant of each level from 21 that keeps every pinned rule
+dart run tool/level_report.dart 41 3  # a level (and its next 3 variants): arrows placed, twists placed, fill, open moves
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
 node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + keyboard
 node tool/screenshot.mjs --levels 1 --crash 2,4                     # a bump mid-crash (fake clock): jolt + red flash
+node tool/screenshot.mjs --levels 21 --crash 5,5,650                # a bump that turned at a mirror, 650 ms in: pressed on the blocker
+node tool/screenshot.mjs --levels 41 --crash 4,0,1300               # the key leaving: the lock popped open, glowing (700 ms: the spark on its way)
+node tool/screenshot.mjs --levels 61 --crash 2,9,500                # a tap on a hidden arrow: the pointer to the arrow that uncovers it
+node tool/screenshot.mjs --levels 81 --crash 4,4,450                # a pair bumping: both halves pressed forward, the tether lit
 node tool/screenshot.mjs --levels 1 --riddle 2,4,2,3,2,2            # spend all 3 lives -> Out of lives, the riddle, its hint, solved
 node tool/screenshot.mjs --lang hi --settings --levels 1 --riddle 2,4,2,3,2,2 --riddle-answer aam  # the same in Hindi
 node tool/screenshot.mjs --levels 1 --riddle-hint 2,4                # spend the 3 hints -> the riddle button, its riddle, the hint it buys
@@ -56,10 +82,12 @@ hint glow, light/dark) at 390×844 and writes PNGs to `shots/`; `--viewport
 WxH` renders the desktop layout instead and `--keys` presses keys on each
 opened level (both exercised in CI, since the web build is also played on a
 laptop via GitHub Pages); `--crash x,y` taps a grid cell on the first level
-and captures the bump 260 ms in on Playwright's fake clock (a screenshot
-takes longer than the bump), with the semantics layer made pointer-transparent
+and captures the bump 330 ms in (or `x,y,ms`) on Playwright's fake clock
+(a screenshot takes longer than the bump), with the semantics layer made pointer-transparent
 for the tap — a click on the board's accessibility node would otherwise be a
-semantic tap at the board's centre. `--riddle x,y,…` spends every life on
+semantic tap at the board's centre; a fresh profile opened straight at a
+late level is owed every chapter card it skipped, and the driver puts
+them all away before the board flows. `--riddle x,y,…` spends every life on
 three different blocked heads (level 1: `2,4,2,3,2,2`) and captures the
 "Out of lives" card, the riddle behind it, the riddle with its hint out and
 the answer accepted — it seeds an unshuffled pack so the riddle is always the
@@ -206,7 +234,8 @@ lib/
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot),
                        riddle (question, answers, hint)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider,
-                       saved_game_provider (the one level in progress), riddle_provider (the deck)
+                       saved_game_provider (the one level in progress), riddle_provider (the deck),
+                       intro_provider (which chapter cards have been shown)
   services/            haptics_service (injectable HapticEngine), sfx_service (whoosh + bump),
                        audio_service (looping music)
   data/audio_credits.dart  attribution for the bundled track
@@ -224,9 +253,66 @@ Key patterns:
 - **DI:** `sharedPreferencesProvider` throws until overridden in `main()`; all
   repositories/providers read prefs through it. Tests override it with a mock.
 - **Persistence:** `shared_preferences` only, keys prefixed `arrow_*`.
-- **Rules:** an arrow can exit iff every cell of its `exitRay` (head → board
-  edge, in its heading) is free of other arrows still on the board. Arrows
-  leave entirely, so "who blocks whom" is fixed; solvable ⇔ acyclic.
+- **Rules:** an arrow can exit iff every cell of its ray (`Puzzle.rayOf`:
+  head → board edge, in its heading) is free of other arrows still on the
+  board. Arrows leave entirely, so "who blocks whom" is fixed; solvable ⇔
+  acyclic. The chapter twists are four small additions to that one
+  relation (`engine/puzzle.dart`): **mirrors** (`Puzzle.mirrors`, cell →
+  `Mirror.slash` / `Mirror.backslash`, `engine/mirror.dart`) are cells no
+  arrow sits on; a ray entering one turns a right angle and carries on
+  (`traceRay`: `/` sends right→up, up→right, left→down, down→left; `\`
+  the other way), so `rayOf` is a bent path, `exitHeadingOf` is the way
+  the arrow leaves the edge, `bends(id)` says whether it turned, and a
+  mirror on a ray blocks nothing (`blockersOf` skips `kMirror`). Four
+  mirrors can send a ray round in a ring and a bent ray can come back
+  through the arrow's own body; `traceRay` returns null for the ring, the
+  generator rejects both and `Puzzle` asserts. The chapter was walls
+  first (solid cells the arrows went around): a wall could never stand in
+  an arrow's way, since an arrow aimed at one could never leave, so the
+  walls only shaped the board and taught nothing — a mirror is the piece
+  that *does* something to a path.
+  **locks** (`locks`: locked id → key id) add one edge, the locked arrow
+  waits for its key wherever it is (`dependenciesOf` = ray blockers + key +
+  the partner's; `blockOf` says what stopped a tap: a cell, or a key, in
+  that order); **hidden** heads change nothing in the rules, only what is
+  drawn until `revealedBy(removed)` (a neighbour has left) or a hint lights
+  the arrow (`GameState.revealed`, saved in the snapshot); **pairs**
+  (`pairs`, symmetric) merge two nodes — `exitGroup` leaves together,
+  `canExit` needs both ways clear, a pair is one move in `openMoveProfile`.
+  `Puzzle.lockNumber` numbers lock and key alike so they can be matched by
+  eye. **A tap on a locked arrow whose path is clear costs nothing**
+  (`MoveOutcome.locked`: no mistake, no `bumped`, no crash on the screen —
+  a locked arrow looks locked, so it is not a slip): the arrow rattles
+  (`BumpMotion.kLockJab`, no cell) and the board draws a dashed line in the
+  sun colour from the lock to its key with a ring pulsing twice on the key
+  (`_paintPointer`, `kKeyPingMs`), which is how the pair is found on a
+  200-arrow board rather than by reading the numbers. **A tap on a hidden
+  arrow whose way is not clear costs nothing either** (`MoveOutcome.hidden`,
+  checked before `blockOf`: the player could not see where it goes, so it
+  is a guess, not a slip — a hidden arrow whose way *is* clear still
+  leaves): the same rattle, and the same pointer to every arrow beside it
+  that could uncover it — `Puzzle.revealersOf`: its neighbours that are
+  able to leave before it, so not its partner and nothing that waits for
+  it down the chain; empty on the rare arrow only a hint can uncover. When
+  the key leaves, the lock opens **after** the key's slide is over, not as
+  it starts (`_pendingUnlocks` keeps it drawn shut until `_afterExit`):
+  a spark in the sun colour flies from where the key was to the lock
+  (`_paintSparks`, the first `kSparkShare` of `kUnlockMs`), then the
+  padlock swings open with a ring and the arrow glows and fades
+  (`_unlocks`, `BoardGlyphs.padlock(openness:)`) — cause, then effect.
+  A head uncovered by a neighbour leaving comes out of the fog the same
+  way, once that slide is over (`_pendingReveals`, owed by the exiting
+  arrow's id): the dashes firm into a line, the head springs in, a ring
+  and a glow (`_reveals`, `kRevealMs`); a head lit by a hint appears at
+  once. A pair leaves on one clock: `_startExit` starts a slide for every
+  member of `exitGroup`, the tether drawn between them the whole way in
+  the glow. On a pair the half whose way was blocked is the one that bumps
+  (`GameState.lastMoveId`), and both halves go in `bumped` — and **both
+  halves move**: the painter runs the bump offset on every member of the
+  bumping arrow's `exitGroup`, the free half pulled the same distance
+  along its own track and sprung back with the other, the tether lit
+  between them, so the second arrow is seen to be tied to the first
+  rather than appearing to bump on its own.
 - **Generation:** `puzzle_generator.dart` places arrows one by one on flat
   typed-data grids, roughly inside-out (deep heads sampled first so the free
   area stays an outer ring). A head may face free cells *or point straight
@@ -250,7 +336,23 @@ Key patterns:
   count, and the levels open with ≤ 5 free arrows and offer ~2 taps at a
   typical moment (`test/engine/puzzle_generator_test.dart` pins that).
   `puzzleForLevel(spec)` seeds `Random` from `LevelSpec.seed`, so each
-  level is a fixed puzzle. It runs on a background isolate
+  level is a fixed puzzle. The mirrors go on *first* (`_placeMirrors`:
+  `LevelFeatures.mirrors` of them, spread over the interior at random,
+  `kMirrorMargin` cells clear of the edge, never within a cell of one
+  another, each lying either way), marked never-free; every ray is then
+  traced through them (`_rayCells`, null for a ring or a ray back through
+  the head), and a head whose straight run meets a mirror is
+  `kMirrorHeadWeight` (3×) likelier to be tried, which is what puts the
+  mirrors on the arrows' paths (~80–95% of a level's mirrors are on some
+  arrow's way out; `level_report` prints `hit` and `bend`, and the
+  generator test pins ≥ 60% hit). The twists go on last (`_FeaturePlanner`, after the board is
+  full and before the candidates are compared, so tightness counts them):
+  locks first (a lock on `a` keyed by `k` only where `a` does not already
+  wait for `k` and `k` does not wait for `a`, preferring a key that is itself
+  held up and `kLockReach` cells away), then pairs (two touching arrows that
+  neither waits for the other), then hidden heads (only an arrow some
+  neighbour can leave before, preferring one not free at the start). One
+  twist per arrow. `LevelFeatures` on `LevelSpec` says how many of each. It runs on a background isolate
   (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
   it runs inline (~0.4 s for level 20, about 2.5 s for level 60 and ~4 s for
   the 52×84 level 80, which takes 1.7× level 60's time in the VM, and level
@@ -278,9 +380,19 @@ Key patterns:
   `tick()` when `autoTick` is true; tests pass `autoTick: false`.
 - **Bump:** `models/bump_motion.dart` (pure Dart) describes the blocked
   tap — the arrow accelerates up to the arrow in its way (stopping
-  `kStopShort` of a cell before its centre, 180–460 ms by distance) and
-  eases back over 480 ms; the blocker flashes and is shoved a touch at
-  impact. The board draws `offsetAt/shoveAt/flashAt`. The game screen runs
+  `kStopShort` of a cell before its centre, 280–900 ms by distance: about
+  a tenth of a second a cell, since a bump over in a blink is a missed
+  life, and a bump that turned at a mirror can run a long way), stays
+  pressed against it for `holdMs` (200) so *what* was hit is seen, and
+  glides back over 600 ms on a smoothstep — an ease-out cubic put two
+  thirds of the return in its first 150 ms and the return was never
+  seen; the blocker flashes and is shoved a touch at impact. The board
+  draws `offsetAt/shoveAt/flashAt`, in cells: the painter's `travel` is
+  the reduce-motion switch (0 or 1) and nothing else multiplies the
+  offset. From the accessibility release until the chapters shipped, a
+  local `travel` (the arrow's whole run) shadowed it, so every bump flew
+  to the board's edge and back in a blink — the "it goes to the edge"
+  and "the bump is too fast to see" reports were the same bug. The game screen runs
   the same motion in its own controller to throw the whole screen sideways
   (`joltAt` × `kCrashJoltPx`) and bloom a red edge over it (`flashAt` on a
   radial gradient of `blockedFlash`), so a lost life registers even when
@@ -361,30 +473,70 @@ Key patterns:
   block). `ResultCard.mood` gives the card's emoji the matching manner:
   `cheer` over-spins and boings in, `sulk` flops down and shakes its head.
 - **Board look:** one ink (`palette.arrowInk`), thin strokes (≤5 px), small
-  heads, no frame — the arrows sit straight on the page. The hint glow and
-  the blocked flash are the only colour on the board. Slide-out and bump are
-  animated in `PuzzleBoard` (240–600 ms slide, ease-in; the bump 180–460 ms
-  in and 480 ms back). Strokes cap at
-  3 px and heads at 8 px so the small early boards read as pen lines.
+  heads, no frame — the arrows sit straight on the page. The hint glow, the
+  blocked flash, the sun-coloured number badge on a key and its lock and
+  the pointer to a key are the only colour on the board. The twists are
+  drawn by `widgets/board_glyphs.dart` so the board and the chapter cards
+  agree: a mirror is a diagonal bar of ink with a hairline of paper for
+  the shine over a wash in `palette.mirror` (the thickest line on the
+  board, since which way it lies is the whole message), and an arrow
+  sliding out bends through it — `_paintArrow`'s track is the body, the
+  bent ray, then on past the edge in `exitHeadingOf`; as the head reaches
+  each mirror the glass flashes in the glow with a ring (`_bounces`,
+  `kBounceMs`, started from the exit controller's listener on the
+  painter's own offset formula) and the slide takes `kBounceDwellMs` longer
+  per turn, so a bounce is watched rather than inferred (and heard:
+  `PuzzleBoard.onBounce` fires as the head reaches each mirror, which the
+  game screen routes to `GameNotifier.bounce` → `SfxService.bounce`); a
+  bump's shove goes the way the arrow was travelling at impact — a locked
+  arrow wears a padlock on its middle cell that swings open and fades once
+  its key has left, a key wears a key glyph, both with the lock's number
+  in a badge, a hidden head is a dashed body with no head and a ? disc, a
+  pair a dotted tether between their nearest cells (off the heads where
+  there is a choice) with a ring at each end, over a wash in
+  `palette.pairWash` (a pale mint, `BoardGlyphs.washPair`) under every
+  cell of both halves, so on a board of a hundred arrows in one ink the
+  two read as one piece before the tether is found; the tether is drawn
+  from the halves' moving track points (`_trackPoint`) so it travels with
+  them on a slide and on a bump, in the glow while they move.
+  Glyphs are `BoardGlyphs.glyphSize(cs)`:
+  most of a cell, never under 10 px, so the zoom is how they are read on a
+  dense board. The screen reader hears the same (`board_semantics.dart`):
+  a hidden arrow gives neither its direction nor its path, a lock says its
+  number and whether it is open, a key its number, a pair that it is
+  tethered, an arrow whose path turns says so, a hidden one that a tap on
+  it is free and points the way, and a blocker's distance is counted
+  along the bent path. Slide-out and bump are animated in `PuzzleBoard`
+  (240–600 ms slide, ease-in, plus 140 ms a mirror; the bump 280–900 ms
+  in, 200 ms held and 600 ms back; a lock opening 1200 ms from the end of
+  the key's slide, a head out of the fog 1000 ms from the end of its
+  neighbour's). Strokes cap at 3 px and heads at 8 px so the small early
+  boards read as pen lines.
 - **Sound effects:** `SfxService` (`services/sfx_service.dart`, injectable
   `SfxBackend`, a pool of low-latency players built once behind a single
   `_building` future — `play` is fire-and-forget, so an unguarded
   `if (_pool.isEmpty)` let two quick taps each fill the pool — and warmed up
   from `main.dart` at launch, never while effects are off) plays `assets/audio/whoosh.wav`
   on every exit — the pitch climbs a notch per quick successive exit and
-  resets after 1.5 s — and `assets/audio/bump.wav` (a knock) on a blocked
-  tap, which also ends the streak. Both WAVs are synthesised by
+  resets after 1.5 s — `assets/audio/bump.wav` (a knock) on a blocked
+  tap, which also ends the streak, and `assets/audio/bounce.wav` as an
+  arrow on its way out turns at a mirror (the board says when, head on
+  the glass; it rides the whoosh's streak pitch and touches nothing
+  else). The WAVs are synthesised by
   `tool/make_sfx.py` (pure Python, no deps): the whoosh is swept band-passed
   noise (no tone — a chirp reads as a laser), the bump a sharp crack over a
   sagging thump and a low rumble with a lighter rebound knock — half a
-  second and near full scale, since it announces a lost life.
+  second and near full scale, since it announces a lost life — and the
+  bounce a small bright "bwip", a glassy note bending up a fourth with a
+  tick of air at the start, a fifth of a second, since it plays inside
+  the whoosh.
   It also plays `assets/audio/win.wav` when a level is cleared (four plucked
   notes up a major triad — the one moment the game sings) and
   `assets/audio/lose.wav` on a spent allowance or a run-out clock (a comic
   deflation: a note sagging a minor sixth with a wobble, onto a small flat
   thud). On a life-losing bump the sting waits `kEndingStingMs` after the
-  knock so the two read as two things. `Settings.sfxOn` gates all four (on by
-  default).
+  knock so the two read as two things. `Settings.sfxOn` gates all five (on by
+  default); there is no setting of their own for any of them.
 - **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
   "Game" by The_Mountain (Pixabay Content License, `assets/audio/game.mp3`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
@@ -440,72 +592,82 @@ Key patterns:
   the web icons (`web/favicon.png`, `web/icons/*.png` — flutter_launcher_icons
   is Android + iOS only); then `dart run flutter_launcher_icons`.
 - **Difficulty:** every knob is in `data/level_specs.dart` — size, arrow
-  count, lengths, clock and `openMoves` (3 on levels 1–3, 2 from level 4:
-  how many taps the generator leaves available at once); the tests in
-  `test/data/level_specs_test.dart` and `test/engine/puzzle_generator_test.dart`
-  pin the curve (sizes never shrink, the cap never widens, every level
-  generates its full arrow count, solvable, tight, later levels more
-  tangled). Tune numbers there; keep the generator test green — it is what
-  guarantees a level is playable. The clock is brisk: ~1.7 s an arrow on
-  levels 1–4, 2.1 s on 5–9 and 2.5 s from 10 (plus ~17 s) — 26 s on level
-  1, 9½ minutes on level 40, about 11½ on level 60, 12¾ on level 80, about 15 on
-  the finale — so
-  a level is a sprint of quick reads. Those are the numbers the curve was drawn with,
-  less 5%: every level's clock was tightened by that much in one pass, so
-  the shape is unchanged and the whole game is that much brisker.
-  **Levels 41–60** keep climbing four arrows a level (228 → 304) while the
-  board barely grows (42×64 → 47×73), and the count is not the only thing
-  that climbs — it was, once, and the last twenty levels felt like one
-  level played twenty times. Three more things move: the shortest arrow is
-  4 cells rather than 3 (the generator cannot place the full count at 5 on
-  those boards, and `openMoves: 1` makes boards *looser*, since every closer
-  it places is itself a new open arrow), the clock tightens from ~2.54 s an
-  arrow at level 41 to 2.30 s at 60 (the limits still grow, just slower
-  than the arrow count), and each level is dealt from the **variant**
-  (`LevelSpec.variant`, folded into the seed) whose board is the tightest
-  the generator offered, chosen so the moves open at a typical moment fall
-  level by level (about 2.5 at 41 to about 2.1 at 60, against 2.4–3.0 on
-  levels 20–40) and no level opens with more than three arrows to tap. The
-  generator's own tightness plateaus from about level 20 — its candidate
-  pool is only `kMinCandidates` boards on the big levels, and among them
-  the mean open moves scatter between ~2.1 and ~3.2 — so re-dealing is
-  where the endgame's tightness comes from; `dart run
-  tool/level_report.dart <level> <n>` prints a level's next n variants.
-  `test/engine/puzzle_generator_test.dart` pins the descent, so a generator
-  change that loosens a late level means re-picking its variant, not
-  loosening the test. The saved game records the board's seed and a
-  snapshot from another board (a re-dealt level, or one written before the
-  seed was stored) is not resumed. The last levels are long only because
-  there are 300–400 arrows to read, and the saved-game slot means such a
-  board can be put down and picked up.
-  **Levels 61–80** are the last act and the clock is what makes it one.
-  The count climbs on four a level (308 → 384), the board keeps pace with
-  it (47×74 → 52×84, ~11.2–11.4 cells an arrow throughout so the fill
-  stays ~0.9), the longest run stretches to 16 cells, and every level is
-  dealt from its tightest variant under the same hunt-never-eases test.
-  What is new is that the pace per arrow keeps falling past the endgame's
-  2.30 s — 2.29 s at 61 to 2.00 s at 80 — so the limit grows from 11:40
-  at level 60 to only 12:48 on the finale for eighty more arrows
-  (`test/data/level_specs_test.dart` pins the 2.00 s floor and that the
-  last act's clock grows by under a tenth while its count grows by a
-  quarter). The arrows-per-open-move hunt keeps climbing through 80
-  because the count does even where the variants' mean open moves plateau;
-  the generator's own tightness does not improve past level 20.
-  **Levels 81–100** are the encore on the same rules: four more arrows a
-  level (388 → 464) on a board that keeps pace (52×84 → 57×92, ~11.3 cells
-  an arrow), longest runs to 17 then 18 cells, each level dealt from a
-  variant whose hunt clears a floor rising one a level (130 at 81 → 149 at
-  100, and the finale beats level 80) rather than beating its neighbour:
-  level 80 was a lucky deal, and on these boards only about one deal in two
-  hundred keeps every rule at all (`tool/level_report.dart <level> <n>`;
-  the encore test in `test/engine/puzzle_generator_test.dart`), and a clock
-  that holds level 80's pace, 2.00 → 1.96 s an arrow (12:55.6 at 81 to
-  15:10 at 100). It was first squeezed to 1.72 s (13:20 on the finale), and
-  a real run of level 100 timed out at 437 of 464 arrows, level 88 likewise:
-  on boards this size the read is the difficulty, so don't tighten the
-  encore's clock again without playing it. The spec test pins the 1.95 s
-  floor and that the encore's clock still grows slower than its count. The minimum arrow length stays
-  4: at 5 the generator cannot place the full count on these boards.
+  count, lengths, clock, `openMoves` (3 on levels 1–3 and on every teaching
+  board, 2 otherwise: how many taps the generator leaves available at once),
+  `features` (mirrors, locks, hidden, pairs) and `variant`. Levels 1–20 are
+  untouched from the first release. **Levels 21–100 are printed by
+  `tool/make_levels.dart`** from the chapter rules rather than tuned a row
+  at a time — the first hundred levels were the same level played eighty
+  times, climbing to 464 arrows and a fifteen-minute read with nothing new
+  after level 20 — so change the rules there, paste the rows, then run
+  `tool/pick_variants.dart` and write its picks in: each level is dealt
+  from the first variant whose board keeps every pinned rule (full count,
+  every twist placed, the choice held at the start and at its widest and
+  narrow on average). `test/data/level_specs_test.dart` pins the shape (a
+  12-arrow teaching board with the new twist alone at each chapter's first
+  level, then a steady climb of six or seven arrows a level from ~30 at
+  its second to 150 at its twentieth, every chapter topping out at the
+  same count — the first cut jumped from the teaching board to 150 and
+  climbed to 265, a cliff after every card and a slog by the end — no
+  clock over ten minutes, the pace per arrow *growing* chapter by chapter —
+  3.0 s in Mirrors to 3.4 s in Pairs, since every twist is one more thing
+  to read on every arrow — plus 1 s a mirror, 4 s a lock and 3 s a hidden
+  head or tether, the whole thing capped at 599 s, so a later chapter's
+  level is never shorter on the clock than the chapter before's; mirrors
+  one per eight arrows through their own chapter and one per fourteen
+  after, never under two) and
+  `test/engine/puzzle_generator_test.dart` pins that every level deals its
+  full count with its twists, solvable, tight, and that the hunt (arrows on
+  the board per open move) climbs chapter by chapter. Keep the generator
+  test green — it is what guarantees a level is playable. The board is
+  sized to ~11.3 free cells an arrow (`freeCellCount`: the rectangle less
+  the mirrors), which fills to ~0.88.
+- **Chapters and the daily board:** `data/chapters.dart` is the map (five of
+  `kChapterLength` = 20, `chapterOf`, `ruleTaughtAt`, `chapterForProgress`);
+  `data/chapter_demos.dart` holds the tiny solvable boards each chapter card
+  plays and the script of taps that shows the twist
+  (`demoScriptFor`; the
+  lock demo taps the lock first on purpose, for the rattle and the pointer,
+  and the fog demo taps the hidden arrow first for the same reason).
+  `widgets/chapter_demo.dart` runs that script on a real `GameNotifier`
+  every `kDemoStep`, rests `kDemoRest` on the cleared board and starts over,
+  so the card is a title, one line and a loop of the rule being played
+  (still, with motion reduced; a picture to the finger and the reader).
+  The game screen shows the card (`_IntroCard`) over the paused board
+  once per install: `providers/intro_provider.dart` (prefs
+  `arrow_intros_seen`, cleared by Reset progress) remembers which cards
+  have been dismissed, and `IntroNotifier.due(level:)` is every chapter
+  past the first at or before the level whose card has not been, in trail
+  order — so a chapter's first level brings its card, and a player who was
+  already at level 65 when the chapters arrived (the levels re-dealt under
+  them, so a saved board from before is refused and the level restarts) is
+  shown Mirrors, Locks and Fog one after another when they next open a
+  level, "Got it" marking each seen and the last one resuming the clock.
+  The daily board brings the cards of the chapter it borrows from. That
+  catch-up is a bridge, not the game: `kIntroCatchUp` turns it off, and
+  `test/providers/intro_provider_test.dart` fails the first release build
+  past `kIntroCatchUpLastBuild` (18, four releases after the chapters
+  shipped in build 15) until the flag and the catch-up branch are deleted. Never
+  over a resumed game, and the pause is deferred a frame since a provider
+  may not change while the tree builds; the teaching levels also get a line
+  under the board like levels 1–2. The home trail is headed by a
+  `_ChapterBand` per chapter (`_Trail.topOf` adds a band's height per
+  chapter, scaled with the system font). The **daily board**
+  (`data/daily.dart`, `providers/daily_provider.dart`, prefs `arrow_daily_*`)
+  is `LevelSpec.dailyLevel` (0) in `gameProvider` — dealt from
+  `DailyNotifier.spec`, its clear recorded to the streak rather than the
+  trail: seed = `dailySeed(day, salt)` with the day the local calendar day
+  (`dayIndexOf`) and the salt drawn once per install, 80 arrows on a
+  24×37 board (3.75 s an arrow of a flat five-minute clock), the
+  mirror count (8–12) and twist counts turning with the day, the chapter fixed the first time
+  the day's board is looked at (`arrow_daily_<day>_chapter`) so clearing a
+  level mid-day does not re-deal it. The streak counts consecutive days
+  with a clear (`liveStreak` is zero once a day is missed); best time and
+  stars per day, and the card counts down to the next board
+  (`DailyNotifier.untilNextBoard`, local midnight; `_DailyCard` ticks once
+  a minute). A daily snapshot in the saved-game slot carries today's
+  seed, so yesterday's never fits; the home hero ignores it and the daily
+  card says Continue. Reset progress wipes the standing but keeps the salt.
 - **Lives / stars:** `models/level_progress.dart`. `maxLives` is 3 on every
   level and `starsForMistakes(mistakes)` is the plain rule (flawless three,
   one slip two, two slips one). Spending the allowance is not the end of the
@@ -796,6 +958,10 @@ composite action check the `uses:` inside it too.
 
 ## Pending follow-ups
 
+- **Visual tuning of the twists on real phones:** the glyph sizes, the
+  tether's dots and the padlock's open pose were drawn to read at the
+  web harness's 390×844 and in the widget tests; a round on a dense level
+  (60, 80, 100) on a phone may want the glyph floor or the badge size moved.
 - **Localization:** English and Hindi are authored (`lib/l10n/app_en.arb`,
   `app_hi.arb`) and Settings has the picker, so a third language is a third
   `.arb` file, a `LanguageChoice` value, and a bank of 150 riddles in

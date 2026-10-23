@@ -1,8 +1,10 @@
 // Prints, for each level, how the generator copes: arrows placed vs asked,
 // board fill, average arrow length, dependency depth, arrows free at the
 // start, moves open at a typical moment (and at most), arrows on the board
-// per open move (hunt — see Puzzle.arrowsPerOpenMove), how exposed the
-// playable arrows are to a slipped finger (risk — see Puzzle.openTapRisk),
+// per open move (hunt — see Puzzle.arrowsPerOpenMove), how many of the
+// mirrors are on some arrow's way out and how many arrows bounce (hit,
+// bend), how exposed the playable arrows are to a slipped finger (risk —
+// see Puzzle.openTapRisk),
 // the clock per arrow and generation time. Run after touching level_specs.dart or the generator:
 //
 //   dart run tool/level_report.dart            # all levels, the level's board
@@ -29,8 +31,18 @@ void main(List<String> args) {
       sw.stop();
       final cells = p.arrows.fold<int>(0, (s, a) => s + a.length);
       final profile = p.openMoveProfile();
+      final f = spec.features;
+      final bent = p.arrows.where((a) => p.bends(a.id)).length;
+      final used = p.mirrors.keys.where((m) => p.arrows.any((a) => p.rayOf(a.id).contains(m))).length;
+      final twists = <String>[
+        if (f.mirrors > 0) 'mirrors ${p.mirrors.length}/${f.mirrors} (hit $used, bend $bent)',
+        if (f.locks > 0) 'locks ${p.locks.length}/${f.locks}',
+        if (f.hidden > 0) 'hidden ${p.hidden.length}/${f.hidden}',
+        if (f.pairs > 0) 'pairs ${p.pairs.length ~/ 2}/${f.pairs}',
+      ];
       final line =
-          'fill ${(cells / spec.cellCount).toStringAsFixed(2)} '
+          '${twists.isEmpty ? '' : '[${twists.join(' ')}] '}'
+          'fill ${(cells / spec.freeCellCount).toStringAsFixed(2)} '
           'len ${(cells / p.arrowCount).toStringAsFixed(1)} '
           'depth ${p.dependencyDepth} free ${p.removable(const {}).length} '
           'open ${p.meanOpenMoves.toStringAsFixed(2)} (max ${profile.reduce(max)}, want ${spec.openMoves}) '
@@ -45,14 +57,4 @@ void main(List<String> args) {
   }
 }
 
-LevelSpec _variant(LevelSpec s, int variant) => LevelSpec(
-      level: s.level,
-      width: s.width,
-      height: s.height,
-      arrows: s.arrows,
-      minLength: s.minLength,
-      maxLength: s.maxLength,
-      timeLimitMs: s.timeLimitMs,
-      openMoves: s.openMoves,
-      variant: variant,
-    );
+LevelSpec _variant(LevelSpec s, int variant) => s.withVariant(variant);

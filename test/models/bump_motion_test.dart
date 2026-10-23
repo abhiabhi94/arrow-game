@@ -9,15 +9,18 @@ void main() {
     // Arrow 2's ray is (1,1),(1,0); arrow 0 sits on (1,1): one step away.
     final m = BumpMotion.forTap(samplePuzzle(), 2, const Cell(1, 1));
     expect(m.travel, closeTo(1 - BumpMotion.kStopShort, 1e-9));
-    expect(m.forwardMs, 180);
-    expect(m.totalMs, m.forwardMs + BumpMotion.backMs);
-    expect(m.impactAt, closeTo(180 / 660, 1e-9));
+    expect(m.forwardMs, 280);
+    expect(m.totalMs, m.forwardMs + BumpMotion.holdMs + BumpMotion.backMs);
+    expect(m.impactAt, closeTo(280 / 1080, 1e-9));
+    expect(m.releaseAt, closeTo(480 / 1080, 1e-9));
   });
 
-  test('a long run takes longer to arrive, within bounds', () {
-    expect(const BumpMotion(travel: 0.4).forwardMs, greaterThanOrEqualTo(180));
-    expect(const BumpMotion(travel: 3.4).forwardMs, 378);
-    expect(const BumpMotion(travel: 30).forwardMs, 460);
+  test('a long run takes longer to arrive, within bounds: slow enough to follow', () {
+    expect(const BumpMotion(travel: 0.4).forwardMs, greaterThanOrEqualTo(280));
+    expect(const BumpMotion(travel: 3.4).forwardMs, 506);
+    expect(const BumpMotion(travel: 30).forwardMs, 900);
+    // About a tenth of a second a cell on a middling run.
+    expect(const BumpMotion(travel: 5).forwardMs / 5, greaterThanOrEqualTo(100));
   });
 
   test('accelerates in, peaks at impact, eases home; the jolt follows', () {
@@ -27,7 +30,15 @@ void main() {
     expect(m.offsetAt(-1), 0);
     expect(m.offsetAt(impact / 2), lessThan(m.travel / 2)); // accelerating
     expect(m.offsetAt(impact), closeTo(m.travel, 1e-9));
-    expect(m.offsetAt((1 + impact) / 2), inExclusiveRange(0, m.travel));
+    // Pressed against the blocker until the release.
+    final release = m.releaseAt;
+    expect(m.offsetAt((impact + release) / 2), closeTo(m.travel, 1e-9));
+    expect(m.shoveAt((impact + release) / 2), 1);
+    expect(m.offsetAt((1 + release) / 2), inExclusiveRange(0, m.travel));
+    // A glide, not a snap: halfway through the back leg it is halfway home,
+    // and a fifth of the way in it has barely left the blocker.
+    expect(m.offsetAt((1 + release) / 2), closeTo(m.travel / 2, 1e-9));
+    expect(m.offsetAt(release + (1 - release) * 0.2), greaterThan(m.travel * 0.85));
     expect(m.offsetAt(1), closeTo(0, 1e-9));
     for (var t = 0.0; t + 0.01 <= impact; t += 0.01) {
       expect(m.offsetAt(t + 0.01), greaterThanOrEqualTo(m.offsetAt(t)));

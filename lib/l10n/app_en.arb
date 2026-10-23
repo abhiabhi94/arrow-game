@@ -27,6 +27,107 @@
     }
   },
   "homeJourney": "Your journey",
+  "chapterName1": "Lines",
+  "chapterName2": "Mirrors",
+  "chapterName3": "Locks",
+  "chapterName4": "Fog",
+  "chapterName5": "Pairs",
+  "chapterHeading": "Chapter {number} · {name}",
+  "@chapterHeading": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chapterLevels": "Levels {first}–{last}",
+  "@chapterLevels": {
+    "placeholders": {
+      "first": {
+        "type": "int"
+      },
+      "last": {
+        "type": "int"
+      }
+    }
+  },
+  "chapterBlurb1": "One rule: tap an arrow with a clear path and it slides out.",
+  "chapterBlurb2": "Mirrors on the board. An arrow bounces off and goes on.",
+  "chapterBlurb3": "Locked arrows wait for their key.",
+  "chapterBlurb4": "Some heads are hidden until a neighbour leaves.",
+  "chapterBlurb5": "Tethered arrows leave together.",
+  "introTitleMirrors": "Mirrors",
+  "introBodyMirrors": "Arrows bounce off mirrors.",
+  "introTitleLocks": "Locks",
+  "introBodyLocks": "The key goes first. Then the lock opens.",
+  "introTitleFog": "Hidden heads",
+  "introBodyFog": "Clear an arrow beside it to see where it points.",
+  "introTitlePairs": "Pairs",
+  "introBodyPairs": "One tap, both go. Both paths must be clear.",
+  "introGotIt": "Got it",
+  "tutorialMirrors": "Arrows bounce off mirrors.",
+  "tutorialLocks": "A locked arrow waits for its key.",
+  "tutorialFog": "Clear an arrow beside a dashed one to see its head. Tapping a dashed one is free.",
+  "tutorialPairs": "Tethered arrows leave together.",
+  "dailyEyebrow": "Daily board",
+  "dailyTitle": "Today's board",
+  "dailyBody": "{minutes} minutes, {arrows} arrows, {chapter} rules. A fresh deal every day — yours alone.",
+  "@dailyBody": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "arrows": {
+        "type": "int"
+      },
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "dailyStreak": "{days, plural, =0{No streak yet} =1{1 day streak} other{{days} day streak}}",
+  "@dailyStreak": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyBestToday": "Best today {time}",
+  "@dailyBestToday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "dailyClearedToday": "Cleared today",
+  "dailyNextInHours": "Next board in {hours}h {minutes}m",
+  "@dailyNextInHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyNextInMinutes": "Next board in {minutes}m",
+  "@dailyNextInMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyPlay": "Play today",
+  "dailyReplay": "Play it again",
+  "dailyLevelTitle": "Daily board",
+  "dailyClearedBody": "Today's board is done. Come back tomorrow for a new one.",
   "onboardSkip": "Skip",
   "onboardNext": "Next",
   "onboardStart": "Let's play!",
@@ -491,6 +592,7 @@
     }
   },
   "arrowPathClear": "Clear path to the edge.",
+  "arrowPathMirror": "Its path bounces off a mirror.",
   "arrowPathBlocked": "{distance, plural, =1{Another arrow is right in front of it.} other{Another arrow is {distance} cells ahead.}}",
   "@arrowPathBlocked": {
     "placeholders": {
@@ -501,6 +603,46 @@
   },
   "arrowHinted": "Hint: this one can go.",
   "arrowBumpedBefore": "Bumped before; another bump here is free.",
+  "arrowHiddenLabel": "Arrow with a hidden head, {length, plural, =1{1 cell} other{{length} cells}} long, from row {row}, column {column}. Which way it points shows once an arrow beside it leaves. Tapping it costs nothing: the board points at the arrow that uncovers it.",
+  "@arrowHiddenLabel": {
+    "description": "A hidden-head arrow, as a screen reader reads it: no direction and no path, since a sighted player cannot see them either.",
+    "placeholders": {
+      "length": {
+        "type": "int"
+      },
+      "row": {
+        "type": "int"
+      },
+      "column": {
+        "type": "int"
+      }
+    }
+  },
+  "arrowLocked": "Lock {number}: it also waits for key {number} to leave.",
+  "@arrowLocked": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "arrowUnlocked": "Lock {number} is open.",
+  "@arrowUnlocked": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "arrowKey": "Key {number}: it opens lock {number}.",
+  "@arrowKey": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "arrowTethered": "Tethered to another arrow: the two leave together, so both paths must be clear.",
   "arrowTapHint": "Slide it out",
   "@arrowTapHint": {
     "description": "The action a screen reader offers on an arrow (\"double tap to …\")."

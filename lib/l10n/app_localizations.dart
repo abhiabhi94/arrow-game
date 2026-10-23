@@ -164,6 +164,228 @@ abstract class AppLocalizations {
   /// **'Your journey'**
   String get homeJourney;
 
+  /// No description provided for @chapterName1.
+  ///
+  /// In en, this message translates to:
+  /// **'Lines'**
+  String get chapterName1;
+
+  /// No description provided for @chapterName2.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirrors'**
+  String get chapterName2;
+
+  /// No description provided for @chapterName3.
+  ///
+  /// In en, this message translates to:
+  /// **'Locks'**
+  String get chapterName3;
+
+  /// No description provided for @chapterName4.
+  ///
+  /// In en, this message translates to:
+  /// **'Fog'**
+  String get chapterName4;
+
+  /// No description provided for @chapterName5.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairs'**
+  String get chapterName5;
+
+  /// No description provided for @chapterHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Chapter {number} · {name}'**
+  String chapterHeading(int number, String name);
+
+  /// No description provided for @chapterLevels.
+  ///
+  /// In en, this message translates to:
+  /// **'Levels {first}–{last}'**
+  String chapterLevels(int first, int last);
+
+  /// No description provided for @chapterBlurb1.
+  ///
+  /// In en, this message translates to:
+  /// **'One rule: tap an arrow with a clear path and it slides out.'**
+  String get chapterBlurb1;
+
+  /// No description provided for @chapterBlurb2.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirrors on the board. An arrow bounces off and goes on.'**
+  String get chapterBlurb2;
+
+  /// No description provided for @chapterBlurb3.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked arrows wait for their key.'**
+  String get chapterBlurb3;
+
+  /// No description provided for @chapterBlurb4.
+  ///
+  /// In en, this message translates to:
+  /// **'Some heads are hidden until a neighbour leaves.'**
+  String get chapterBlurb4;
+
+  /// No description provided for @chapterBlurb5.
+  ///
+  /// In en, this message translates to:
+  /// **'Tethered arrows leave together.'**
+  String get chapterBlurb5;
+
+  /// No description provided for @introTitleMirrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirrors'**
+  String get introTitleMirrors;
+
+  /// No description provided for @introBodyMirrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrows bounce off mirrors.'**
+  String get introBodyMirrors;
+
+  /// No description provided for @introTitleLocks.
+  ///
+  /// In en, this message translates to:
+  /// **'Locks'**
+  String get introTitleLocks;
+
+  /// No description provided for @introBodyLocks.
+  ///
+  /// In en, this message translates to:
+  /// **'The key goes first. Then the lock opens.'**
+  String get introBodyLocks;
+
+  /// No description provided for @introTitleFog.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden heads'**
+  String get introTitleFog;
+
+  /// No description provided for @introBodyFog.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear an arrow beside it to see where it points.'**
+  String get introBodyFog;
+
+  /// No description provided for @introTitlePairs.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairs'**
+  String get introTitlePairs;
+
+  /// No description provided for @introBodyPairs.
+  ///
+  /// In en, this message translates to:
+  /// **'One tap, both go. Both paths must be clear.'**
+  String get introBodyPairs;
+
+  /// No description provided for @introGotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get introGotIt;
+
+  /// No description provided for @tutorialMirrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrows bounce off mirrors.'**
+  String get tutorialMirrors;
+
+  /// No description provided for @tutorialLocks.
+  ///
+  /// In en, this message translates to:
+  /// **'A locked arrow waits for its key.'**
+  String get tutorialLocks;
+
+  /// No description provided for @tutorialFog.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear an arrow beside a dashed one to see its head. Tapping a dashed one is free.'**
+  String get tutorialFog;
+
+  /// No description provided for @tutorialPairs.
+  ///
+  /// In en, this message translates to:
+  /// **'Tethered arrows leave together.'**
+  String get tutorialPairs;
+
+  /// No description provided for @dailyEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily board'**
+  String get dailyEyebrow;
+
+  /// No description provided for @dailyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s board'**
+  String get dailyTitle;
+
+  /// No description provided for @dailyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} minutes, {arrows} arrows, {chapter} rules. A fresh deal every day — yours alone.'**
+  String dailyBody(int minutes, int arrows, String chapter);
+
+  /// No description provided for @dailyStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =0{No streak yet} =1{1 day streak} other{{days} day streak}}'**
+  String dailyStreak(int days);
+
+  /// No description provided for @dailyBestToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Best today {time}'**
+  String dailyBestToday(String time);
+
+  /// No description provided for @dailyClearedToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared today'**
+  String get dailyClearedToday;
+
+  /// No description provided for @dailyNextInHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Next board in {hours}h {minutes}m'**
+  String dailyNextInHours(int hours, int minutes);
+
+  /// No description provided for @dailyNextInMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Next board in {minutes}m'**
+  String dailyNextInMinutes(int minutes);
+
+  /// No description provided for @dailyPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play today'**
+  String get dailyPlay;
+
+  /// No description provided for @dailyReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play it again'**
+  String get dailyReplay;
+
+  /// No description provided for @dailyLevelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily board'**
+  String get dailyLevelTitle;
+
+  /// No description provided for @dailyClearedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s board is done. Come back tomorrow for a new one.'**
+  String get dailyClearedBody;
+
   /// No description provided for @onboardSkip.
   ///
   /// In en, this message translates to:
@@ -1646,6 +1868,12 @@ abstract class AppLocalizations {
   /// **'Clear path to the edge.'**
   String get arrowPathClear;
 
+  /// No description provided for @arrowPathMirror.
+  ///
+  /// In en, this message translates to:
+  /// **'Its path bounces off a mirror.'**
+  String get arrowPathMirror;
+
   /// No description provided for @arrowPathBlocked.
   ///
   /// In en, this message translates to:
@@ -1663,6 +1891,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bumped before; another bump here is free.'**
   String get arrowBumpedBefore;
+
+  /// A hidden-head arrow, as a screen reader reads it: no direction and no path, since a sighted player cannot see them either.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrow with a hidden head, {length, plural, =1{1 cell} other{{length} cells}} long, from row {row}, column {column}. Which way it points shows once an arrow beside it leaves. Tapping it costs nothing: the board points at the arrow that uncovers it.'**
+  String arrowHiddenLabel(int length, int row, int column);
+
+  /// No description provided for @arrowLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock {number}: it also waits for key {number} to leave.'**
+  String arrowLocked(int number);
+
+  /// No description provided for @arrowUnlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock {number} is open.'**
+  String arrowUnlocked(int number);
+
+  /// No description provided for @arrowKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Key {number}: it opens lock {number}.'**
+  String arrowKey(int number);
+
+  /// No description provided for @arrowTethered.
+  ///
+  /// In en, this message translates to:
+  /// **'Tethered to another arrow: the two leave together, so both paths must be clear.'**
+  String get arrowTethered;
 
   /// The action a screen reader offers on an arrow ("double tap to …").
   ///

@@ -25,27 +25,47 @@ String boardLabel(AppLocalizations l10n, GameState state) {
   );
 }
 
-/// The label of arrow [id] on the board of [state].
+/// The label of arrow [id] on the board of [state]. A hidden head is as
+/// hidden to a reader as to the eye: no direction and no path until it is
+/// uncovered (and the label says a tap on it is free, and shows the way).
+/// The chapter twists are read out after the arrow itself — that its path
+/// turns at a mirror, its lock (and whether the key has gone), that it is
+/// a key, its tether. A blocker's distance is counted along the path,
+/// bends and all.
 String arrowLabel(AppLocalizations l10n, GameState state, int id) {
   final puzzle = state.puzzle!;
   final arrow = puzzle.arrows[id];
   final blocked = puzzle.firstBlockedCell(id, state.removed);
-  final path = blocked == null
-      ? l10n.arrowPathClear
-      : l10n.arrowPathBlocked(
-          (blocked.x - arrow.head.x).abs() + (blocked.y - arrow.head.y).abs(),
-        );
-  final parts = <String>[
-    l10n.arrowLabel(
-      directionName(l10n, arrow.heading),
-      arrow.length,
-      arrow.head.y + 1,
-      arrow.head.x + 1,
-      path,
-    ),
-    if (state.hintArrowId == id) l10n.arrowHinted,
-    if (state.bumped.contains(id) && blocked != null) l10n.arrowBumpedBefore,
-  ];
+  final key = puzzle.keyOf(id);
+  final number = puzzle.lockNumber(id);
+  final parts = <String>[];
+  if (!state.headShown(id)) {
+    parts.add(l10n.arrowHiddenLabel(arrow.length, arrow.tail.y + 1, arrow.tail.x + 1));
+  } else {
+    final path = blocked == null
+        ? l10n.arrowPathClear
+        : l10n.arrowPathBlocked(puzzle.rayOf(id).indexOf(blocked) + 1);
+    parts.add(
+      l10n.arrowLabel(
+        directionName(l10n, arrow.heading),
+        arrow.length,
+        arrow.head.y + 1,
+        arrow.head.x + 1,
+        path,
+      ),
+    );
+    if (puzzle.bends(id)) parts.add(l10n.arrowPathMirror);
+  }
+  if (key != null && number != null) {
+    parts.add(state.removed.contains(key) ? l10n.arrowUnlocked(number) : l10n.arrowLocked(number));
+  } else if (number != null) {
+    parts.add(l10n.arrowKey(number));
+  }
+  if (puzzle.partnerOf(id) != null) parts.add(l10n.arrowTethered);
+  if (state.hintArrowId == id) parts.add(l10n.arrowHinted);
+  if (state.bumped.contains(id) && puzzle.blockOf(id, state.removed) != null) {
+    parts.add(l10n.arrowBumpedBefore);
+  }
   return parts.join(' ');
 }
 

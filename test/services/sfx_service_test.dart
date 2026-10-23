@@ -56,11 +56,30 @@ void main() {
     ]);
   });
 
+  test('a bounce rides the whoosh streak and leaves it alone', () {
+    final backend = RecordingSfxBackend();
+    var now = DateTime(2026, 1, 1, 12);
+    final s = SfxService(() => true, backend: backend, now: () => now);
+    s.bounce();
+    s.whoosh();
+    now = now.add(const Duration(milliseconds: 200));
+    s.whoosh();
+    s.bounce();
+    expect(s.streak, 1);
+    expect(backend.calls, [
+      '$kBounceSound@1.00',
+      '$kWhooshSound@1.00',
+      '$kWhooshSound@1.06',
+      '$kBounceSound@1.06',
+    ]);
+  });
+
   test('stays silent when disabled', () {
     final backend = RecordingSfxBackend();
     final s = SfxService(() => false, backend: backend);
     s.whoosh();
     s.bump();
+    s.bounce();
     s.whoosh();
     expect(backend.calls, isEmpty);
   });

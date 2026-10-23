@@ -1,5 +1,5 @@
-/// Short sound effects: the whoosh of an arrow leaving the board and the
-/// knock of one that can't. Respects the user's sound-effects setting and
+/// Short sound effects: the whoosh of an arrow leaving the board, the
+/// knock of one that can't and the bright note of one turning at a mirror. Respects the user's sound-effects setting and
 /// wraps audioplayers behind an injectable [SfxBackend] so the logic is
 /// unit-testable without the plugin.
 library;
@@ -9,10 +9,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/settings_provider.dart';
 
-/// The exit whoosh, the blocked knock and the two endings, relative to
-/// `assets/` (see `tool/make_sfx.py`).
+/// The exit whoosh, the blocked knock, the mirror bounce and the two
+/// endings, relative to `assets/` (see `tool/make_sfx.py`).
 const String kWhooshSound = 'audio/whoosh.wav';
 const String kBumpSound = 'audio/bump.wav';
+const String kBounceSound = 'audio/bounce.wav';
 const String kWinSound = 'audio/win.wav';
 const String kLoseSound = 'audio/lose.wav';
 
@@ -127,6 +128,15 @@ class SfxService {
     _lastZip = null;
     if (!_enabled()) return;
     backend.play(kBumpSound, rate: 1.0);
+  }
+
+  /// An arrow on its way out turning at a mirror: a small bright note in
+  /// the middle of the whoosh, played as the head reaches the glass (the
+  /// board says when). It rides the whoosh's streak — a run of quick exits
+  /// climbs, and so do the bounces in it — and touches nothing else.
+  void bounce() {
+    if (!_enabled()) return;
+    backend.play(kBounceSound, rate: 1.0 + _streak * kWhooshStreakStep);
   }
 
   /// The level cleared.

@@ -18,6 +18,7 @@ import '../models/level_spec.dart';
 import '../models/saved_game.dart';
 import '../services/haptics_service.dart';
 import '../services/sfx_service.dart';
+import 'daily_provider.dart';
 import 'progress_provider.dart';
 import 'saved_game_provider.dart';
 import 'settings_provider.dart';
@@ -98,10 +99,12 @@ class GameNotifier extends StateNotifier<GameState> {
     final saved = savedGame;
     if (saved != null && _fits(saved, puzzle)) {
       final spent = saved.mistakes >= maxLives + saved.continues;
+      final removed = saved.removed.toSet();
       state = GameState.fresh(spec, puzzle).copyWith(
         phase: spent ? GamePhase.outOfLives : GamePhase.paused,
-        removed: saved.removed.toSet(),
+        removed: removed,
         bumped: saved.bumped.toSet(),
+        revealed: <int>{...saved.revealed, ...puzzle.revealedBy(removed)},
         mistakes: saved.mistakes,
         hintsLeft: saved.hintsLeft,
         elapsedMs: saved.elapsedMs,
@@ -134,18 +137,25 @@ class GameNotifier extends StateNotifier<GameState> {
 
   void _snapshot() => onSnapshot?.call(state);
 
-  /// Taps arrow [id]: it slides out if its exit path is clear, otherwise it
-  /// bumps and costs a life.
+  /// Taps arrow [id]: it slides out if its exit path is clear (and its
+  /// lock is open, and its tethered partner's way is clear too); held by a
+  /// lock it rattles for free; with its head still hidden it rattles for
+  /// free too and the board points at what would uncover it; otherwise it
+  /// bumps and costs a life. An arrow leaving uncovers any hidden heads
+  /// beside it.
   void tapArrow(int id) {
     if (!state.isPlaying || state.removed.contains(id)) return;
     final puzzle = state.puzzle!;
     final token = state.moveToken + 1;
     if (puzzle.canExit(id, state.removed)) {
-      final removed = <int>{...state.removed, id};
+      final removed = <int>{...state.removed, ...puzzle.exitGroup(id)};
       final cleared = removed.length == puzzle.arrowCount;
       if (cleared) _stopTimer();
       state = state.copyWith(
         removed: removed,
+        revealed: puzzle.hidden.isEmpty
+            ? state.revealed
+            : <int>{...state.revealed, ...puzzle.revealedBy(removed)},
         phase: cleared ? GamePhase.cleared : GamePhase.playing,
         clearHint: true,
         lastMoveId: id,
@@ -164,6 +174,37 @@ class GameNotifier extends StateNotifier<GameState> {
       _snapshot();
       return;
     }
+    // A hidden head is a guess, not a slip: the player cannot see which
+    // way it goes, so a tap on it is not charged. It rattles, and the board
+    // points at the arrows beside it that would uncover it.
+    if (!state.headShown(id)) {
+      state = state.copyWith(clearBlocked: true).copyWith(
+        clearHint: true,
+        lastMoveId: id,
+        lastOutcome: MoveOutcome.hidden,
+        moveToken: token,
+      );
+      haptics?.tap();
+      _snapshot();
+      return;
+    }
+    // What stopped it: a cell on its way, its lock, or its partner's.
+    final block = puzzle.blockOf(id, state.removed)!;
+    if (block.isLock) {
+      // A lock is not a mistake: the arrow is simply not ready. The tap
+      // rattles it and the board points at the key — nothing is charged,
+      // since a locked arrow looks locked.
+      state = state.copyWith(clearBlocked: true).copyWith(
+        clearHint: true,
+        lastMoveId: block.arrow,
+        lastOutcome: MoveOutcome.locked,
+        blockedKey: block.key,
+        moveToken: token,
+      );
+      haptics?.tap();
+      _snapshot();
+      return;
+    }
     // One bump the board does not charge for: a second run at an arrow that
     // has already bumped. That lesson is paid for, and a 200-arrow board is
     // far too big to hold every dead end in your head.
@@ -173,21 +214,22 @@ class GameNotifier extends StateNotifier<GameState> {
     // exactly one more, never an open licence.
     final lost = !free && mistakes >= maxLives;
     if (lost) _stopTimer();
-    final blockedCell = puzzle.firstBlockedCell(id, state.removed)!;
-    state = state.copyWith(
+    // Cleared first: a cell bump after a lock tap (or the reverse) must
+    // not keep the other's marker.
+    state = state.copyWith(clearBlocked: true).copyWith(
       mistakes: mistakes,
-      bumped: <int>{...state.bumped, id},
+      bumped: <int>{...state.bumped, ...puzzle.exitGroup(id)},
       phase: lost ? GamePhase.outOfLives : GamePhase.playing,
       clearHint: true,
-      lastMoveId: id,
+      lastMoveId: block.arrow,
       lastOutcome: MoveOutcome.blocked,
-      blockedCell: blockedCell,
+      blockedCell: block.cell,
       moveToken: token,
     );
     haptics?.tap();
     // The knock and the buzz land when the arrow actually hits, not when
     // the finger does — the board plays the same motion.
-    final motion = BumpMotion.forTap(puzzle, id, blockedCell);
+    final motion = BumpMotion.forTap(puzzle, block.arrow, block.cell);
     _impact?.cancel();
     _impact = Timer(Duration(milliseconds: motion.forwardMs), () {
       _impact = null;
@@ -210,6 +252,11 @@ class GameNotifier extends StateNotifier<GameState> {
     _snapshot();
   }
 
+  /// The board reports an arrow on its way out turning at a mirror (the
+  /// moment its head reaches the glass): the bounce note plays. Nothing in
+  /// the state moves — the turn is in the path the tap already followed.
+  void bounce() => sfx?.bounce();
+
   /// Spends a hint to point at an arrow that can go now. No-op while a hint
   /// is already showing, when none are left, or outside play.
   void useHint() {
@@ -218,10 +265,19 @@ class GameNotifier extends StateNotifier<GameState> {
     }
     final id = state.puzzle!.hintFor(state.removed);
     if (id == null) return;
-    state = state.copyWith(hintArrowId: id, hintsLeft: state.hintsLeft - 1);
+    state = state.copyWith(
+      hintArrowId: id,
+      hintsLeft: state.hintsLeft - 1,
+      revealed: _revealing(id),
+    );
     haptics?.tap();
     _snapshot();
   }
+
+  /// A hint that lands on a hidden arrow uncovers its head for good: the
+  /// glow has to show which way it goes, or the hint says nothing.
+  Set<int> _revealing(int id) =>
+      state.headShown(id) ? state.revealed : <int>{...state.revealed, id};
 
   /// A hint bought with a riddle once the allowance is spent (the game
   /// screen's riddle gate): points at an arrow that can go now without
@@ -233,7 +289,7 @@ class GameNotifier extends StateNotifier<GameState> {
     if (!state.isPlaying || state.hintArrowId != null) return;
     final id = state.puzzle!.hintFor(state.removed);
     if (id == null) return;
-    state = state.copyWith(hintArrowId: id);
+    state = state.copyWith(hintArrowId: id, revealed: _revealing(id));
     haptics?.tap();
     _snapshot();
   }
@@ -328,18 +384,33 @@ const int kExtraTimeFactor = 2;
 /// with a saved game comes back where it was left, paused, with the choice
 /// to continue or start over. With "extra time" on in Settings the level is
 /// dealt with its clock doubled — the same board, the same stars.
+///
+/// Level [LevelSpec.dailyLevel] (0) is today's daily board: dealt by the
+/// daily standing rather than the level table, and a clear goes to the
+/// daily streak rather than the trail.
 final gameProvider = StateNotifierProvider.autoDispose.family<GameNotifier, GameState, int>((
   ref,
   level,
 ) {
   final saves = ref.read(savedGameProvider.notifier);
   final extraTime = ref.read(settingsProvider).extraTime;
+  final daily = level == LevelSpec.dailyLevel;
+  final LevelSpec spec;
+  final ClearedCallback onCleared;
+  if (daily) {
+    final standing = ref.read(dailyProvider.notifier)..refresh();
+    spec = standing.spec;
+    onCleared = (_, elapsedMs, stars) => standing.recordCompletion(elapsedMs, stars);
+  } else {
+    spec = specForLevel(level);
+    onCleared = ref.read(progressProvider.notifier).recordCompletion;
+  }
   return GameNotifier(
-    specForLevel(level).withClockFactor(extraTime ? kExtraTimeFactor : 1),
+    spec.withClockFactor(extraTime ? kExtraTimeFactor : 1),
     savedGame: saves.forLevel(level),
     haptics: ref.watch(hapticsProvider),
     sfx: ref.watch(sfxProvider),
-    onCleared: ref.read(progressProvider.notifier).recordCompletion,
+    onCleared: onCleared,
     onSnapshot: saves.record,
   );
 });

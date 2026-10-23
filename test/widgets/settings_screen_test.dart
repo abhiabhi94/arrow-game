@@ -1,4 +1,6 @@
+import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/models/settings.dart';
+import 'package:arrow_game/providers/intro_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
 import 'package:arrow_game/providers/riddle_provider.dart';
 import 'package:arrow_game/providers/saved_game_provider.dart';
@@ -85,10 +87,12 @@ void main() {
         'arrow_level_1_stars': 3,
         RiddleDeckRepository.solvedKey: 5,
         SavedGameRepository.key: '{"level":2,"seed":15855,"removed":[1],"mistakes":0,"hintsLeft":3,"elapsedMs":10}',
+        IntroRepository.key: ['mirrors'],
       },
     );
     final progress = container.read(progressProvider.notifier);
     expect(progress.totalStars, 3);
+    expect(container.read(introProvider), {ChapterRule.mirrors});
     expect(container.read(riddleDeckProvider).solved, 5);
     expect(container.read(savedGameProvider)?.level, 2);
 
@@ -106,8 +110,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(progress.totalStars, 0);
     expect(container.read(savedGameProvider), isNull);
-    // The riddle tally is progress too.
+    // The riddle tally is progress too, and so are the chapter cards seen.
     expect(container.read(riddleDeckProvider).solved, 0);
+    expect(container.read(introProvider), isEmpty);
   });
 
   testWidgets('a desktop window keeps the cards phone-wide and centred', (tester) async {

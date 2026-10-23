@@ -1,5 +1,12 @@
+import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/data/level_specs.dart';
+import 'package:arrow_game/models/level_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Where [level] sits in its chapter's shape.
+enum Beat { teach, climb }
+
+Beat beatOf(int level) => (level - 1) % kChapterLength == 0 ? Beat.teach : Beat.climb;
 
 void main() {
   test('there are 100 levels, numbered 1..100 in order', () {
@@ -13,106 +20,151 @@ void main() {
     expect(() => specForLevel(101), throwsRangeError);
   });
 
-  test('boards, arrow counts and lengths never shrink; the clock is reasonable', () {
-    for (var level = 2; level <= totalLevels; level++) {
+  test('the first chapter is the plain rectangle, growing every level', () {
+    for (var level = 2; level <= kChapterLength; level++) {
       final prev = specForLevel(level - 1);
       final cur = specForLevel(level);
+      expect(cur.features.isPlain, isTrue, reason: 'level $level');
       expect(cur.cellCount, greaterThanOrEqualTo(prev.cellCount), reason: 'level $level');
       expect(cur.arrows, greaterThanOrEqualTo(prev.arrows), reason: 'level $level');
-      expect(cur.minLength, greaterThanOrEqualTo(prev.minLength), reason: 'level $level');
-      expect(cur.maxLength, greaterThanOrEqualTo(prev.maxLength), reason: 'level $level');
       expect(cur.timeLimitMs, greaterThanOrEqualTo(prev.timeLimitMs), reason: 'level $level');
-      // The choice only ever narrows.
       expect(cur.openMoves, lessThanOrEqualTo(prev.openMoves), reason: 'level $level');
-      // Something must get harder every level.
-      expect(
-        cur.cellCount > prev.cellCount || cur.arrows > prev.arrows || cur.maxLength > prev.maxLength,
-        isTrue,
-        reason: 'level $level',
-      );
+      expect(cur.variant, 0, reason: 'level $level keeps its first board');
     }
-    for (final s in levelSpecs) {
-      // Twenty-odd seconds at least, never past a quarter of an hour; at
-      // least 1.5 s an arrow.
-      expect(s.timeLimitMs, inInclusiveRange(24000, 915000), reason: 'level ${s.level}');
-      expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(1500), reason: 'level ${s.level}');
-    }
-    // The curve is steep: a handful to learn on, dozens by level 8, well
-    // over a hundred by level 20, past three hundred by level 60 and close
-    // to four hundred by the end, with the longest runs stretching as the
-    // boards grow.
     expect(specForLevel(1).arrows, lessThanOrEqualTo(6));
     expect(specForLevel(8).arrows, greaterThanOrEqualTo(50));
     expect(specForLevel(20).arrows, greaterThanOrEqualTo(140));
-    expect(specForLevel(40).arrows, greaterThanOrEqualTo(220));
-    expect(specForLevel(60).arrows, greaterThanOrEqualTo(300));
-    expect(specForLevel(80).arrows, greaterThanOrEqualTo(380));
-    expect(specForLevel(100).arrows, greaterThanOrEqualTo(460));
-    expect(specForLevel(40).maxLength, greaterThan(specForLevel(20).maxLength));
-    expect(specForLevel(60).maxLength, greaterThan(specForLevel(40).maxLength));
-    expect(specForLevel(80).maxLength, greaterThan(specForLevel(60).maxLength));
-    expect(specForLevel(100).maxLength, greaterThan(specForLevel(80).maxLength));
-    // From level 4 on the player gets two moves to find, never a spread.
     expect(specForLevel(4).openMoves, 2);
-    expect(specForLevel(totalLevels).openMoves, 2);
     // The clock is brisk but never a lottery: from level 10 on at least
-    // 2.4 s an arrow (it was 2.5 before every level lost 5% of its clock).
-    for (final s in levelSpecs.where((s) => s.level >= 10 && s.level <= 40)) {
+    // 2.4 s an arrow.
+    for (final s in levelSpecs.where((s) => s.level >= 10 && s.level <= 20)) {
       expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(2400), reason: 'level ${s.level}');
     }
-    // The endgame tightens the pace a little every level, from ~2.54 s an
-    // arrow at 41 down to 2.30 s at 60, the last act keeps squeezing it to
-    // 2.00 s at 80, and the encore holds it there, easing it only to 1.96 s
-    // on the finale — never under each stretch's floor, and never more than a
-    // few hundredths of a second a level, so the limits still grow with the
-    // count, just slower: 11 minutes 40 seconds on level 60, 12 minutes 48
-    // on level 80 and about 15 minutes 10 on the finale. (The encore was
-    // first squeezed to 1.72 s, and 464 arrows in 13:20 ran out with a few
-    // dozen still on the board: at that size the read, not the clock, is the
-    // difficulty.) The clock is part of the difficulty, not a match for it.
-    for (var level = 41; level <= totalLevels; level++) {
-      final pace = specForLevel(level).timeLimitMs / specForLevel(level).arrows;
-      expect(pace, greaterThanOrEqualTo(level <= 60 ? 2300 : (level <= 80 ? 2000 : 1950)), reason: 'level $level');
-      if (level > 41) {
-        final before = specForLevel(level - 1).timeLimitMs / specForLevel(level - 1).arrows;
-        expect(pace, lessThan(before), reason: 'level $level');
-        expect(before - pace, lessThan(30), reason: 'level $level');
-      }
-    }
-    expect(specForLevel(41).timeLimitMs, 580000);
-    expect(specForLevel(60).timeLimitMs, 700000);
-    expect(specForLevel(80).timeLimitMs, 768000);
-    expect(specForLevel(totalLevels).timeLimitMs, 910000);
-    // Eighty more arrows for barely a minute more: the last act's clock
-    // grows by under a tenth while its arrow count grows by a quarter.
-    expect(specForLevel(80).timeLimitMs / specForLevel(60).timeLimitMs, lessThan(1.1));
-    expect(specForLevel(80).arrows / specForLevel(60).arrows, greaterThan(1.25));
-    // The encore keeps the pace: its clock still grows a little slower than
-    // its count, which grows by a fifth.
-    expect(
-      specForLevel(100).timeLimitMs / specForLevel(80).timeLimitMs,
-      lessThan(specForLevel(100).arrows / specForLevel(80).arrows),
-    );
-    expect(specForLevel(100).arrows / specForLevel(80).arrows, greaterThan(1.2));
   });
 
-  test('the endgame has no short arrows and is dealt from a chosen variant', () {
-    for (var level = 1; level <= 40; level++) {
-      expect(specForLevel(level).variant, 0, reason: 'level $level keeps its first board');
+  test('every chapter past the first opens easy and climbs steadily to the same top', () {
+    for (final chapter in chapters.skip(1)) {
+      final climb = <LevelSpec>[];
+      for (var level = chapter.firstLevel; level <= chapter.lastLevel; level++) {
+        final s = specForLevel(level);
+        switch (beatOf(level)) {
+          case Beat.teach:
+            // Small, roomy, the new twist alone (chapters_test pins that).
+            expect(s.arrows, 12, reason: 'level $level');
+            expect(s.openMoves, 3, reason: 'level $level');
+            expect(s.cellCount, lessThanOrEqualTo(10 * 13), reason: 'level $level');
+            expect(s.minLength, 2, reason: 'level $level');
+            expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(4000), reason: 'level $level');
+          case Beat.climb:
+            climb.add(s);
+        }
+      }
+      // The second level is a modest board — no cliff after the card — and
+      // the twentieth the chapter's biggest, with a steady step between
+      // (six or seven arrows a level) and the longest run never shortening.
+      expect(climb.first.arrows, inInclusiveRange(25, 40), reason: 'chapter ${chapter.index} opens');
+      expect(climb.last.arrows, inInclusiveRange(140, 160), reason: 'chapter ${chapter.index} ends');
+      for (var i = 1; i < climb.length; i++) {
+        expect(climb[i].arrows - climb[i - 1].arrows, inInclusiveRange(5, 8), reason: 'level ${climb[i].level}');
+        expect(climb[i].maxLength, greaterThanOrEqualTo(climb[i - 1].maxLength), reason: 'level ${climb[i].level}');
+        expect(climb[i].timeLimitMs, greaterThan(climb[i - 1].timeLimitMs), reason: 'level ${climb[i].level}');
+      }
+      // Every chapter tops out at the same count: what makes a later chapter
+      // harder is its twist, not more arrows.
+      expect(climb.last.arrows, specForLevel(40).arrows, reason: 'chapter ${chapter.index} finale');
     }
-    for (var level = 41; level <= totalLevels; level++) {
-      expect(specForLevel(level).minLength, 4, reason: 'level $level');
+  });
+
+  test('the count is capped and the clock stays under ten minutes', () {
+    for (final s in levelSpecs) {
+      expect(s.arrows, lessThanOrEqualTo(160), reason: 'level ${s.level}');
+      expect(s.timeLimitMs, lessThan(600000), reason: 'level ${s.level}');
+      expect(s.timeLimitMs, greaterThanOrEqualTo(24000), reason: 'level ${s.level}');
+      // Room for the arrows: ~11.3 free cells each on the climb.
+      if (beatOf(s.level) == Beat.climb && s.level > kChapterLength) {
+        expect(s.freeCellCount / s.arrows, inInclusiveRange(11.0, 13.5), reason: 'level ${s.level}');
+      }
+    }
+    // No level past the plain chapter is bigger than its finale.
+    final top = specForLevel(20).arrows;
+    for (final s in levelSpecs.where((s) => s.level > kChapterLength)) {
+      expect(s.arrows, lessThanOrEqualTo(top + 10), reason: 'level ${s.level}');
+    }
+  });
+
+  test('the pace per arrow grows chapter by chapter and pays for every twist', () {
+    // A mirror, a lock, a hidden head or a tether is one more thing to read
+    // on every arrow, so a later chapter gives *more* time an arrow for the
+    // arrows themselves — never under three seconds past the plain chapter
+    // — and every twist on the board buys seconds on top.
+    double pace(LevelSpec s) {
+      final f = s.features;
+      final think = (f.mirrors * 1 + f.locks * 4 + f.hidden * 3 + f.pairs * 3) * 1000;
+      return (s.timeLimitMs - think) / s.arrows;
+    }
+
+    for (var i = 2; i <= 20; i++) {
+      for (var c = 2; c < chapters.length; c++) {
+        final here = specForLevel(chapters[c - 1].firstLevel + i - 1);
+        final next = specForLevel(chapters[c].firstLevel + i - 1);
+        expect(pace(next), greaterThan(pace(here)), reason: 'level ${next.level}');
+      }
+      for (final chapter in chapters.skip(1)) {
+        expect(pace(specForLevel(chapter.firstLevel + i - 1)), greaterThanOrEqualTo(3000), reason: 'level ${chapter.firstLevel + i - 1}');
+      }
+    }
+    // Twists cost time: the Locks finale has eight locks and the clock to
+    // match, over its own pace alone.
+    final finale60 = specForLevel(60);
+    expect(finale60.features.locks, 8);
+    expect(finale60.timeLimitMs, greaterThan(finale60.arrows * 3200 + 15000));
+    // The twists buy time, so a late chapter's level is never shorter on
+    // the clock than the same level of the chapter before.
+    for (var i = 2; i <= 20; i++) {
+      for (var c = 2; c < chapters.length; c++) {
+        expect(
+          specForLevel(chapters[c].firstLevel + i - 1).timeLimitMs,
+          greaterThan(specForLevel(chapters[c - 1].firstLevel + i - 1).timeLimitMs),
+          reason: 'level ${chapters[c].firstLevel + i - 1}',
+        );
+      }
+    }
+  });
+
+  test('lengths: short pieces early, none in the later chapters', () {
+    for (final s in levelSpecs.where((s) => s.level > kChapterLength)) {
+      final chapter = chapterOf(s.level);
+      if (beatOf(s.level) == Beat.climb) {
+        expect(s.minLength, chapter.index <= 2 ? 3 : 4, reason: 'level ${s.level}');
+      }
+    }
+    expect(specForLevel(100).maxLength, greaterThan(specForLevel(40).maxLength));
+  });
+
+  test('mirrors stand on every board from the Mirrors chapter on, a handful to a couple of dozen', () {
+    for (final s in levelSpecs.where((s) => s.level > kChapterLength)) {
+      final f = s.features;
+      if (ruleTaughtAt(s.level) != null && chapterOf(s.level).rule != ChapterRule.mirrors) {
+        expect(f.mirrors, 0, reason: 'level ${s.level} teaches another twist alone');
+        continue;
+      }
+      expect(f.mirrors, inInclusiveRange(2, 25), reason: 'level ${s.level}');
+      // Thickest through their own chapter: about one for every eight
+      // arrows there, one for every fourteen after, never fewer than two.
+      if (beatOf(s.level) == Beat.climb) {
+        final want = (s.arrows / (chapterOf(s.level).index == 2 ? 8 : 14)).round();
+        expect(f.mirrors, want < 2 ? 2 : want, reason: 'level ${s.level}');
+      }
     }
   });
 
   test('seed and toString', () {
     expect(specForLevel(1).seed, isNot(specForLevel(2).seed));
-    // Seeds are distinct across every level and variant the table could use
-    // (the encore's picks run past a thousand).
+    // Seeds are distinct across every level and variant the table could use.
     final seeds = <int>{};
     for (final s in levelSpecs) {
       for (var v = 0; v < 1100; v++) {
-        expect(seeds.add(s.seed + v * 1_000_003), isTrue, reason: 'level ${s.level} variant $v');
+        expect(seeds.add(s.withVariant(0).seed + v * 1_000_003), isTrue, reason: 'level ${s.level} variant $v');
       }
     }
     expect(specForLevel(1).toString(), 'LevelSpec(1: 5x6, 5 arrows, 26000ms)');

@@ -5,15 +5,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/chapters.dart';
 import '../data/level_specs.dart';
 import '../engine/direction.dart';
 import '../l10n/app_localizations.dart';
 import '../models/board_cursor.dart';
 import '../models/bump_motion.dart';
 import '../models/game_state.dart';
+import '../models/level_spec.dart';
 import '../models/reaction_motion.dart';
 import '../models/riddle.dart';
+import '../providers/daily_provider.dart';
 import '../providers/game_provider.dart';
+import '../providers/intro_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/riddle_provider.dart';
 import '../providers/settings_provider.dart';
@@ -23,6 +27,7 @@ import '../ui/motion.dart';
 import '../utils/format.dart';
 import '../utils/labels.dart';
 import '../widgets/board_toolbar.dart';
+import '../widgets/chapter_demo.dart';
 import '../widgets/lives_indicator.dart';
 import '../widgets/puzzle_board.dart';
 import '../widgets/result_card.dart';
@@ -46,11 +51,19 @@ double maxZoomFor(double cellPx) =>
     cellPx <= 0 ? kMaxZoom : max(kMaxZoom, kFingerCellPx / cellPx).clamp(kMaxZoom, 8.0);
 
 /// The gameplay screen: HUD (clock, arrows out, lives), the zoomable board,
-/// the toolbar (hint / grid / zoom), and the pause/result overlays.
+/// the toolbar (hint / grid / zoom), and the pause/result overlays. A
+/// chapter's first level opens on an illustrated card of the twist it
+/// brings, the first time it is played.
 class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key, required this.level});
 
+  /// Today's daily board rather than a level of the trail.
+  const GameScreen.daily({super.key}) : level = LevelSpec.dailyLevel;
+
+  /// A level of the trail, or [LevelSpec.dailyLevel] for the daily board.
   final int level;
+
+  bool get isDaily => level == LevelSpec.dailyLevel;
 
   @override
   ConsumerState<GameScreen> createState() => _GameScreenState();
@@ -121,6 +134,48 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   /// Whether the screen keeps still — read in build, used by the listener.
   bool _calm = false;
+
+  /// The chapter cards still to show over the paused board, in trail
+  /// order: every twist this level is at or past whose card the player has
+  /// not yet dismissed (`introProvider`). Usually one, on a chapter's first
+  /// level; several for a player who was already past a chapter when it
+  /// arrived. The first is the one up.
+  List<ChapterRule> _intros = const <ChapterRule>[];
+  bool _introsChecked = false;
+
+  ChapterRule? get _introRule => _intros.isEmpty ? null : _intros.first;
+
+  /// The twist [level] teaches, if it is a chapter's first level.
+  ChapterRule? get _taught => widget.isDaily ? null : ruleTaughtAt(widget.level);
+
+  /// Puts the chapter cards up over a freshly dealt board. A board coming
+  /// back from a saved game (paused, with the resume offer) has been seen:
+  /// no card.
+  void _maybeIntro(GameState state) {
+    if (_introsChecked || state.phase != GamePhase.playing) return;
+    final intro = ref.read(introProvider.notifier);
+    final due = widget.isDaily
+        ? intro.due(chapter: ref.read(dailyProvider).chapter)
+        : intro.due(level: widget.level);
+    _introsChecked = true;
+    if (due.isEmpty) return;
+    _intros = due;
+    // The card is up from this build; the clock stops after it, since a
+    // provider may not change while the tree is being built.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _intros.isEmpty) return;
+      ref.read(gameProvider(widget.level).notifier).pause();
+    });
+  }
+
+  /// "Got it": the card is marked seen for good, and the next one owed
+  /// takes its place, or the level resumes.
+  void _introDone() {
+    final rule = _intros.first;
+    ref.read(introProvider.notifier).markSeen(rule);
+    setState(() => _intros = _intros.sublist(1));
+    if (_intros.isEmpty) ref.read(gameProvider(widget.level).notifier).resume();
+  }
 
   /// The phase a riddle for [prize] is asked in; leaving it takes the card
   /// away.
@@ -217,7 +272,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final state = ref.read(gameProvider(widget.level));
-    if (state.phase != GamePhase.loading) _reclaimRiddle(state);
+    if (state.phase != GamePhase.loading) {
+      _reclaimRiddle(state);
+      _maybeIntro(state);
+    }
     _crash.addStatusListener((status) {
       if (status == AnimationStatus.completed && _endingHeld && mounted) {
         setState(() => _endingHeld = false);
@@ -255,7 +313,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// drawn in the viewport the board actually has.
   double get _maxZoom {
     if (_viewport.isEmpty) return kMaxZoom;
-    final spec = specForLevel(widget.level);
+    final spec = ref.read(gameProvider(widget.level)).spec;
     return maxZoomFor(min(_viewport.width / spec.width, _viewport.height / spec.height));
   }
 
@@ -346,8 +404,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final progress = ref.read(progressProvider.notifier);
     _calm = reduceMotionOf(context);
     ref.listen(provider, (prev, next) {
+      // A locked tap is not a crash: the board rattles the arrow and points
+      // at the key, and the screen keeps still.
       if (next.lastOutcome == MoveOutcome.blocked && next.moveToken != prev?.moveToken) {
-        final motion = BumpMotion.forTap(next.puzzle!, next.lastMoveId!, next.blockedCell!);
+        final motion = BumpMotion.forTap(next.puzzle!, next.lastMoveId!, next.blockedCell);
         _crashMotion = motion;
         _crash
           ..duration = Duration(milliseconds: motion.totalMs)
@@ -364,13 +424,21 @@ class _GameScreenState extends ConsumerState<GameScreen>
       // in) takes the riddle with it, so backing out never leaves a card
       // floating over the board.
       if (prev?.phase == GamePhase.loading && next.phase != GamePhase.loading) {
-        setState(() => _reclaimRiddle(next));
+        setState(() {
+          _reclaimRiddle(next);
+          _maybeIntro(next);
+        });
       }
       if (_riddleId != null && next.phase != _phaseOf(_riddlePrize)) {
         _putRiddleAway();
       }
       if (next.phase == GamePhase.cleared && prev?.phase != GamePhase.cleared) {
-        _newBest = progress.progressFor(widget.level).isNewBest(next.elapsedMs);
+        if (widget.isDaily) {
+          final best = ref.read(dailyProvider).bestTodayMs;
+          _newBest = best == null || next.elapsedMs < best;
+        } else {
+          _newBest = progress.progressFor(widget.level).isNewBest(next.elapsedMs);
+        }
         _gridJustUnlocked =
             widget.level == kGridLinesUnlockAfterLevel &&
             !progress.progressFor(widget.level).completed;
@@ -406,9 +474,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
           title: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(l10n.levelNumber(widget.level)),
+              Text(widget.isDaily ? l10n.dailyLevelTitle : l10n.levelNumber(widget.level)),
               Text(
-                levelName(l10n, widget.level),
+                widget.isDaily
+                    ? chapterName(l10n, ref.watch(dailyProvider).chapter.index)
+                    : levelName(l10n, widget.level),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: p.textMuted),
@@ -500,6 +570,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                               state: state,
                                               showGrid: gridUnlocked && settings.gridLinesOn,
                                               onTapArrow: notifier.tapArrow,
+                                              onBounce: notifier.bounce,
                                               zoom: _scale,
                                               focusedArrowId: _cursor,
                                               reduceMotion: _calm,
@@ -511,11 +582,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
                             },
                           ),
                         ),
-                        if (widget.level <= 2)
+                        if (_tutorialLine(l10n) case final line?)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                             child: Text(
-                              widget.level == 1 ? l10n.tutorialTap : l10n.tutorialBlocked,
+                              line,
                               textAlign: TextAlign.center,
                               style: TextStyle(color: p.textMuted, fontSize: 13),
                             ),
@@ -577,6 +648,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   colors: [p.primary, p.accentCoral, p.accentSun, p.accentMint],
                 ),
               ),
+              // A chapter's first level (or the first level opened past
+              // one): the twist it brings, drawn on a card over the paused
+              // board.
+              if (_introRule != null)
+                _IntroCard(key: ValueKey<ChapterRule>(_introRule!), rule: _introRule!, onDone: _introDone)
+              else
               switch (state.phase) {
                 // The free hints are spent and the player wants another: the
                 // level waits, paused, while the riddle is cracked.
@@ -623,11 +700,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   mood: EmojiMood.cheer,
                   emoji: state.stars == 3 ? '🏆' : '🎉',
                   title: l10n.clearedTitle,
-                  body: switch (state.stars) {
-                    3 => l10n.clearedFlawless,
-                    2 => l10n.clearedGood,
-                    _ => l10n.clearedOkay,
-                  },
+                  body: widget.isDaily
+                      ? l10n.dailyClearedBody
+                      : switch (state.stars) {
+                          3 => l10n.clearedFlawless,
+                          2 => l10n.clearedGood,
+                          _ => l10n.clearedOkay,
+                        },
                   content: Column(
                     children: [
                       StarsRow(stars: state.stars, size: 44, animated: true),
@@ -650,7 +729,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                             style: TextStyle(fontWeight: FontWeight.w700, color: p.primaryInk),
                           ),
                         ),
-                      if (widget.level == totalLevels)
+                      if (!widget.isDaily && widget.level == totalLevels)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
@@ -662,7 +741,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     ],
                   ),
                   actions: [
-                    if (widget.level < totalLevels)
+                    if (!widget.isDaily && widget.level < totalLevels)
                       FilledButton(
                         onPressed: () => _openLevel(widget.level + 1),
                         child: Text(l10n.clearedNext),
@@ -726,6 +805,52 @@ class _GameScreenState extends ConsumerState<GameScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+extension on _GameScreenState {
+  /// The line under the board on the levels that teach something: the
+  /// first two, and each chapter's first.
+  String? _tutorialLine(AppLocalizations l10n) {
+    if (widget.isDaily) return null;
+    if (widget.level == 1) return l10n.tutorialTap;
+    if (widget.level == 2) return l10n.tutorialBlocked;
+    return switch (_taught) {
+      null || ChapterRule.lines => null,
+      ChapterRule.mirrors => l10n.tutorialMirrors,
+      ChapterRule.locks => l10n.tutorialLocks,
+      ChapterRule.fog => l10n.tutorialFog,
+      ChapterRule.pairs => l10n.tutorialPairs,
+    };
+  }
+}
+
+/// The chapter card: the twist's name, one line on how it plays, and a
+/// small board that plays it over and over (`ChapterDemoBoard`). Watching
+/// beats reading: the line is as short as it can be.
+class _IntroCard extends StatelessWidget {
+  const _IntroCard({super.key, required this.rule, required this.onDone});
+
+  final ChapterRule rule;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final (emoji, title, body) = switch (rule) {
+      ChapterRule.lines => ('➡️', l10n.chapterName1, l10n.chapterBlurb1),
+      ChapterRule.mirrors => ('🪞', l10n.introTitleMirrors, l10n.introBodyMirrors),
+      ChapterRule.locks => ('🔒', l10n.introTitleLocks, l10n.introBodyLocks),
+      ChapterRule.fog => ('🌫️', l10n.introTitleFog, l10n.introBodyFog),
+      ChapterRule.pairs => ('🔗', l10n.introTitlePairs, l10n.introBodyPairs),
+    };
+    return ResultCard(
+      emoji: emoji,
+      title: title,
+      body: body,
+      content: ChapterDemoBoard(rule: rule),
+      actions: [FilledButton(onPressed: onDone, child: Text(l10n.introGotIt))],
     );
   }
 }

@@ -125,6 +125,10 @@ void main() {
     // Nothing moves after the end.
     n.tick(1000);
     expect(n.state.elapsedMs, 1200);
+    // A bounce the board reports is a sound and nothing more.
+    n.bounce();
+    expect(sfxBackend.calls.last, '$kBounceSound@1.00');
+    expect(n.state.moveToken, 3);
     n.dispose();
   });
 
@@ -146,7 +150,7 @@ void main() {
       // The finger gets a tick at once; the crash lands when the arrow does.
       expect(engine.calls, ['selection']);
       expect(sfxBackend.calls, isEmpty);
-      async.elapse(const Duration(milliseconds: 160)); // 180 ms in for 0.4 of a cell
+      async.elapse(const Duration(milliseconds: 260)); // 280 ms in for 0.4 of a cell
       expect(sfxBackend.calls, isEmpty);
       async.elapse(const Duration(milliseconds: 25));
       expect(engine.calls, ['selection', 'crash']);

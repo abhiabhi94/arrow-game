@@ -44,6 +44,142 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeJourney => 'Your journey';
 
   @override
+  String get chapterName1 => 'Lines';
+
+  @override
+  String get chapterName2 => 'Mirrors';
+
+  @override
+  String get chapterName3 => 'Locks';
+
+  @override
+  String get chapterName4 => 'Fog';
+
+  @override
+  String get chapterName5 => 'Pairs';
+
+  @override
+  String chapterHeading(int number, String name) {
+    return 'Chapter $number · $name';
+  }
+
+  @override
+  String chapterLevels(int first, int last) {
+    return 'Levels $first–$last';
+  }
+
+  @override
+  String get chapterBlurb1 =>
+      'One rule: tap an arrow with a clear path and it slides out.';
+
+  @override
+  String get chapterBlurb2 =>
+      'Mirrors on the board. An arrow bounces off and goes on.';
+
+  @override
+  String get chapterBlurb3 => 'Locked arrows wait for their key.';
+
+  @override
+  String get chapterBlurb4 => 'Some heads are hidden until a neighbour leaves.';
+
+  @override
+  String get chapterBlurb5 => 'Tethered arrows leave together.';
+
+  @override
+  String get introTitleMirrors => 'Mirrors';
+
+  @override
+  String get introBodyMirrors => 'Arrows bounce off mirrors.';
+
+  @override
+  String get introTitleLocks => 'Locks';
+
+  @override
+  String get introBodyLocks => 'The key goes first. Then the lock opens.';
+
+  @override
+  String get introTitleFog => 'Hidden heads';
+
+  @override
+  String get introBodyFog => 'Clear an arrow beside it to see where it points.';
+
+  @override
+  String get introTitlePairs => 'Pairs';
+
+  @override
+  String get introBodyPairs => 'One tap, both go. Both paths must be clear.';
+
+  @override
+  String get introGotIt => 'Got it';
+
+  @override
+  String get tutorialMirrors => 'Arrows bounce off mirrors.';
+
+  @override
+  String get tutorialLocks => 'A locked arrow waits for its key.';
+
+  @override
+  String get tutorialFog =>
+      'Clear an arrow beside a dashed one to see its head. Tapping a dashed one is free.';
+
+  @override
+  String get tutorialPairs => 'Tethered arrows leave together.';
+
+  @override
+  String get dailyEyebrow => 'Daily board';
+
+  @override
+  String get dailyTitle => 'Today\'s board';
+
+  @override
+  String dailyBody(int minutes, int arrows, String chapter) {
+    return '$minutes minutes, $arrows arrows, $chapter rules. A fresh deal every day — yours alone.';
+  }
+
+  @override
+  String dailyStreak(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days day streak',
+      one: '1 day streak',
+      zero: 'No streak yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dailyBestToday(String time) {
+    return 'Best today $time';
+  }
+
+  @override
+  String get dailyClearedToday => 'Cleared today';
+
+  @override
+  String dailyNextInHours(int hours, int minutes) {
+    return 'Next board in ${hours}h ${minutes}m';
+  }
+
+  @override
+  String dailyNextInMinutes(int minutes) {
+    return 'Next board in ${minutes}m';
+  }
+
+  @override
+  String get dailyPlay => 'Play today';
+
+  @override
+  String get dailyReplay => 'Play it again';
+
+  @override
+  String get dailyLevelTitle => 'Daily board';
+
+  @override
+  String get dailyClearedBody =>
+      'Today\'s board is done. Come back tomorrow for a new one.';
+
+  @override
   String get onboardSkip => 'Skip';
 
   @override
@@ -874,6 +1010,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arrowPathClear => 'Clear path to the edge.';
 
   @override
+  String get arrowPathMirror => 'Its path bounces off a mirror.';
+
+  @override
   String arrowPathBlocked(int distance) {
     String _temp0 = intl.Intl.pluralLogic(
       distance,
@@ -889,6 +1028,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get arrowBumpedBefore => 'Bumped before; another bump here is free.';
+
+  @override
+  String arrowHiddenLabel(int length, int row, int column) {
+    String _temp0 = intl.Intl.pluralLogic(
+      length,
+      locale: localeName,
+      other: '$length cells',
+      one: '1 cell',
+    );
+    return 'Arrow with a hidden head, $_temp0 long, from row $row, column $column. Which way it points shows once an arrow beside it leaves. Tapping it costs nothing: the board points at the arrow that uncovers it.';
+  }
+
+  @override
+  String arrowLocked(int number) {
+    return 'Lock $number: it also waits for key $number to leave.';
+  }
+
+  @override
+  String arrowUnlocked(int number) {
+    return 'Lock $number is open.';
+  }
+
+  @override
+  String arrowKey(int number) {
+    return 'Key $number: it opens lock $number.';
+  }
+
+  @override
+  String get arrowTethered =>
+      'Tethered to another arrow: the two leave together, so both paths must be clear.';
 
   @override
   String get arrowTapHint => 'Slide it out';

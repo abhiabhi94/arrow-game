@@ -1,6 +1,7 @@
 import 'package:arrow_game/engine/arrow_piece.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/engine/direction.dart';
+import 'package:arrow_game/engine/mirror.dart';
 import 'package:arrow_game/engine/puzzle.dart';
 import 'package:arrow_game/models/level_spec.dart';
 
@@ -77,4 +78,45 @@ LevelSpec blockedSpecFor(int level) => LevelSpec(
   minLength: 2,
   maxLength: 4,
   timeLimitMs: 30000,
+);
+
+/// A 6x5 board with one of every chapter twist, for the rules about them:
+///   0: (0,0)(1,0)(2,0) → right, ray (3,0),(4,0),(5,0): free — and the key
+///      of the lock on 1.
+///   1: (0,2)(1,2) → right, ray (2,2),(3,2) then up off the mirror at
+///      (3,2): (3,1),(3,0) — clear, but locked; its key is 0.
+///   2: (5,4)(5,3) ↑ up, ray (5,2),(5,1),(5,0): free.
+///   3: (0,4)(1,4)(2,4) → right, ray (3,4),(4,4): blocked by 4. Tethered
+///      to 2: the pair waits for 4.
+///   4: (4,4)(4,3) ↑ up, ray (4,2),(4,1),(4,0): free. Hidden; its only
+///      neighbour is 2 (at (5,4)/(5,3)), which cannot leave before it, so
+///      only a hint uncovers it.
+///   A `/` mirror at (3,2), on 1's ray only.
+/// Solve: 0, then 1 (unlocked), 4 (always free), then the pair 2+3.
+Puzzle featurePuzzle({Set<int> hidden = const {4}}) => Puzzle(
+  width: 6,
+  height: 5,
+  arrows: [
+    ArrowPiece(id: 0, cells: const [Cell(0, 0), Cell(1, 0), Cell(2, 0)], heading: Direction.right),
+    ArrowPiece(id: 1, cells: const [Cell(0, 2), Cell(1, 2)], heading: Direction.right),
+    ArrowPiece(id: 2, cells: const [Cell(5, 4), Cell(5, 3)], heading: Direction.up),
+    ArrowPiece(id: 3, cells: const [Cell(0, 4), Cell(1, 4), Cell(2, 4)], heading: Direction.right),
+    ArrowPiece(id: 4, cells: const [Cell(4, 4), Cell(4, 3)], heading: Direction.up),
+  ],
+  mirrors: {const Cell(3, 2): Mirror.slash},
+  locks: const {1: 0},
+  pairs: const {2: 3},
+  hidden: hidden,
+);
+
+/// A spec matching [featurePuzzle] under [level].
+LevelSpec featureSpecFor(int level) => LevelSpec(
+  level: level,
+  width: 6,
+  height: 5,
+  arrows: 5,
+  minLength: 2,
+  maxLength: 3,
+  timeLimitMs: 30000,
+  features: const LevelFeatures(mirrors: 1, locks: 1, hidden: 1, pairs: 1),
 );

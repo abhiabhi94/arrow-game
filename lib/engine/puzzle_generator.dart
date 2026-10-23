@@ -28,6 +28,7 @@ import '../models/level_spec.dart';
 import 'arrow_piece.dart';
 import 'cell.dart';
 import 'direction.dart';
+import 'mirror.dart';
 import 'puzzle.dart';
 
 /// Candidate boards generated per puzzle, scaled down for big boards so a
@@ -57,6 +58,22 @@ const double kCloseStepBias = 6.0;
 /// How far past the level's nominal maximum a tail may grow while soaking
 /// up gaps in the final pass.
 const int kGapTailSlack = 8;
+
+/// The owner mark of a mirror cell while building: never free, never an
+/// arrow, slid through with a turn.
+const int _kMirror = -2;
+
+/// How much likelier a head whose way out turns at a mirror is to be tried,
+/// so the mirrors on a board are on somebody's path rather than ornaments.
+const int kMirrorHeadWeight = 3;
+
+/// The clear band along the edge no mirror stands in, in cells: a bounce
+/// right at the edge is a turn nobody sees.
+const int kMirrorMargin = 2;
+
+/// How far apart (head to head, in cells) a lock and its key are placed when
+/// the board allows it, so finding the key is a search rather than a glance.
+const int kLockReach = 5;
 
 class PuzzleGenerator {
   PuzzleGenerator({Random? random}) : _random = random ?? Random();
@@ -120,14 +137,25 @@ class _Builder {
         owner = Int32List(spec.width * spec.height)..fillRange(0, spec.width * spec.height, -1),
         rayOwners = List<List<int>>.generate(spec.width * spec.height, (_) => <int>[]),
         scratch = Uint8List(spec.width * spec.height),
-        seen = Uint8List(spec.arrows + 1);
+        seen = Uint8List(spec.arrows + 1),
+        depth = Int32List(spec.width * spec.height) {
+    _placeMirrors();
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        depth[idx(x, y)] = min(min(x, y), min(w - 1 - x, h - 1 - y));
+      }
+    }
+  }
 
   final LevelSpec spec;
   final Random random;
   final int w;
   final int h;
 
-  /// Cell → placement index of the arrow on it, or -1.
+  /// The mirrors, where they were put.
+  final Map<Cell, Mirror> mirrors = <Cell, Mirror>{};
+
+  /// Cell → placement index of the arrow on it, -1 when free, [_kMirror].
   final Int32List owner;
 
   /// Per cell, the placement indices of the arrows whose exit ray covers it.
@@ -139,6 +167,41 @@ class _Builder {
   /// Visited marks for [_reaches].
   final Uint8List seen;
 
+  /// Per cell, how many steps it is from the edge of the board: the
+  /// "inside". Inside-out placement works from this.
+  final Int32List depth;
+
+  /// Stands the level's mirrors on the board before any arrow: spread over
+  /// the interior, never within a cell of one another (two touching
+  /// diagonals read as one zigzag), each lying either way at random. A
+  /// mirror is a bend in the road for whichever arrows are later aimed
+  /// through it; [kMirrorHeadWeight] sees to it that some are.
+  void _placeMirrors() {
+    final want = spec.features.mirrors;
+    if (want == 0) return;
+    final spots = <int>[
+      for (var y = kMirrorMargin; y < h - kMirrorMargin; y++)
+        for (var x = kMirrorMargin; x < w - kMirrorMargin; x++) idx(x, y),
+    ]..shuffle(random);
+    for (final k in spots) {
+      if (mirrors.length >= want) break;
+      final x = k % w;
+      final y = k ~/ w;
+      var clear = true;
+      for (var dy = -1; dy <= 1 && clear; dy++) {
+        for (var dx = -1; dx <= 1; dx++) {
+          if (inside(x + dx, y + dy) && owner[idx(x + dx, y + dy)] == _kMirror) {
+            clear = false;
+            break;
+          }
+        }
+      }
+      if (!clear) continue;
+      owner[k] = _kMirror;
+      mirrors[Cell(x, y)] = random.nextBool() ? Mirror.slash : Mirror.backslash;
+    }
+  }
+
   final List<ArrowPiece> placed = <ArrowPiece>[];
 
   /// Per placed arrow, the placed arrows on its ray — what it waits for.
@@ -149,7 +212,7 @@ class _Builder {
 
   bool inside(int x, int y) => x >= 0 && y >= 0 && x < w && y < h;
   int idx(int x, int y) => y * w + x;
-  bool free(int x, int y) => inside(x, y) && owner[idx(x, y)] < 0;
+  bool free(int x, int y) => inside(x, y) && owner[idx(x, y)] == -1;
 
   /// Whether the board currently offers more open arrows than the level
   /// wants, so the next arrow should close some.
@@ -179,15 +242,25 @@ class _Builder {
     return false;
   }
 
-  /// Every cell from just past ([x],[y]) to the edge in [d], packed.
-  List<int> _rayCells(int x, int y, Direction d) {
+  /// Every cell from just past ([x],[y]) to the edge in [d], turning at the
+  /// mirrors, packed. Null when the way never reaches the edge (sent round
+  /// in a ring) or comes back through the head or the cell behind it,
+  /// where the arrow would be in its own way.
+  List<int>? _rayCells(int x, int y, Direction d) {
+    final trace = traceRay(head: Cell(x, y), heading: d, width: w, height: h, mirrorAt: (c) => mirrors[c]);
+    if (trace == null) return null;
     final (dx, dy) = d.vector;
     final out = <int>[];
-    for (var cx = x + dx, cy = y + dy; inside(cx, cy); cx += dx, cy += dy) {
-      out.add(idx(cx, cy));
+    for (final c in trace.cells) {
+      if (c.x == x && c.y == y || c.x == x - dx && c.y == y - dy) return null;
+      out.add(idx(c.x, c.y));
     }
     return out;
   }
+
+  /// [_rayCells] from [piece]'s head: a placed arrow's way out, which was
+  /// checked when it was placed.
+  List<int> _rayOf(ArrowPiece piece) => _rayCells(piece.head.x, piece.head.y, piece.heading)!;
 
   /// Free cells at the start of [ray] before the first arrow on it.
   int _freeAhead(List<int> ray) {
@@ -231,7 +304,11 @@ class _Builder {
       for (var i = 0; i < ordered.length; i++)
         ArrowPiece(id: i, cells: ordered[i].cells, heading: ordered[i].heading),
     ];
-    return Puzzle(width: w, height: h, arrows: arrows);
+    final plain = Puzzle(width: w, height: h, arrows: arrows, mirrors: mirrors);
+    if (spec.features.locks == 0 && spec.features.hidden == 0 && spec.features.pairs == 0) {
+      return plain;
+    }
+    return _FeaturePlanner(plain, spec.features, random).plan();
   }
 
   /// Registers that arrow [by] now sits on cell [k]: every arrow whose ray
@@ -248,7 +325,7 @@ class _Builder {
   void _commit(ArrowPiece piece) {
     final index = placed.length;
     placed.add(piece);
-    final ray = _rayCells(piece.head.x, piece.head.y, piece.heading);
+    final ray = _rayOf(piece);
     final ahead = <int>[];
     for (final k in ray) {
       if (owner[k] >= 0 && !ahead.contains(owner[k])) ahead.add(owner[k]);
@@ -282,9 +359,8 @@ class _Builder {
     // weighted so deep heads come first: filling from the inside out keeps
     // the free area an outer ring every later ray can reach. While the board
     // should close open rays, heads on or next to one weigh extra so the
-    // walk starts where it can do that. A head on the edge facing out can
-    // never be blocked — a free tap for the whole game — so while closing
-    // those are a last resort.
+    // walk starts where it can do that; a head whose way out turns at a
+    // mirror weighs extra always, so the mirrors are on the arrows' paths.
     final closing = wantClosing;
     final heads = <int>[]; // packed: idx * 4 + heading
     final weights = <int>[];
@@ -294,16 +370,18 @@ class _Builder {
       for (var y = 0; y < h; y++) {
         for (var x = 0; x < w; x++) {
           final k = idx(x, y);
-          if (owner[k] >= 0) continue;
+          if (owner[k] != -1) continue;
           for (final d in Direction.values) {
             final (dx, dy) = d.vector;
             if (!free(x - dx, y - dy)) continue;
+            // A head on the edge facing out can never be blocked — a free
+            // tap for the whole game — so while closing it is a last resort.
             if (!allowEdgeHeads && !inside(x + dx, y + dy)) continue;
-            final depth = min(min(x, w - 1 - x), min(y, h - 1 - y));
-            var weight = (depth + 1) * (depth + 1);
+            var weight = (depth[k] + 1) * (depth[k] + 1);
             if (closing && (openOn(k) > 0 || openOn(idx(x - dx, y - dy)) > 0)) {
               weight *= 4;
             }
+            if (mirrors.isNotEmpty && _aimsAtMirror(x, y, d)) weight *= kMirrorHeadWeight;
             heads.add(k * 4 + d.index);
             weights.add(weight);
             totalWeight += weight;
@@ -340,6 +418,7 @@ class _Builder {
       final hy = (packed ~/ 4) ~/ w;
       final heading = Direction.values[packed % 4];
       final ray = _rayCells(hx, hy, heading);
+      if (ray == null) continue;
       final body = _growBody(hx, hy, heading, ray, _targetLength(id), closing);
       if (body.length < spec.minLength || !_acyclic(body, ray)) continue;
       // Crossing existing rays makes this arrow a blocker now and a longer
@@ -355,6 +434,18 @@ class _Builder {
       }
     }
     return best == null ? null : (best, bestScore);
+  }
+
+  /// Whether the straight run from ([x],[y]) in [d] meets a mirror before
+  /// anything else: the cheap test for a head that will bounce.
+  bool _aimsAtMirror(int x, int y, Direction d) {
+    final (dx, dy) = d.vector;
+    for (var cx = x + dx, cy = y + dy; inside(cx, cy); cx += dx, cy += dy) {
+      final o = owner[idx(cx, cy)];
+      if (o == _kMirror) return true;
+      if (o >= 0) return false;
+    }
+    return false;
   }
 
   /// What [body] earns for the rays it lies across: a little per ray, and
@@ -393,15 +484,17 @@ class _Builder {
     // Open arrows with a ray to lie across (a head on the edge has none).
     final open = <int>[
       for (var i = 0; i < placed.length; i++)
-        if (waits[i].isEmpty && placed[i].exitRay(w, h).isNotEmpty) i,
+        if (waits[i].isEmpty && _rayOf(placed[i]).isNotEmpty) i,
     ];
     ArrowPiece? best;
     var bestScore = -1000000000;
     for (var attempt = 0; attempt < kClosingChoices && open.isNotEmpty; attempt++) {
       final o = open[random.nextInt(open.length)];
-      final ray = placed[o].exitRay(w, h);
-      final start = ray[random.nextInt(ray.length)];
-      final path = _growFrom(start, target);
+      final ray = _rayOf(placed[o]);
+      final k = ray[random.nextInt(ray.length)];
+      // An open arrow's ray is all free cells — but for a mirror on it.
+      if (owner[k] != -1) continue;
+      final path = _growFrom(Cell(k % w, k ~/ w), target);
       if (path.length < spec.minLength) continue;
       for (final piece in _orientations(id, path)) {
         final score = piece.length + _crossingScore(piece.cells, kCloseBonus);
@@ -469,7 +562,7 @@ class _Builder {
       final head = cells.last;
       final heading = cells[cells.length - 2].directionTo(head)!;
       final ray = _rayCells(head.x, head.y, heading);
-      if (ray.isEmpty) continue;
+      if (ray == null || ray.isEmpty) continue;
       if (cells.any((c) => ray.contains(idx(c.x, c.y)))) continue;
       if (!_acyclic(cells, ray)) continue;
       out.add(ArrowPiece(id: id, cells: cells, heading: heading));
@@ -485,7 +578,7 @@ class _Builder {
       final (dx, dy) = d.vector;
       final nx = x + dx;
       final ny = y + dy;
-      if (!inside(nx, ny) || owner[idx(nx, ny)] >= 0 || scratch[idx(nx, ny)] != 0) n++;
+      if (!inside(nx, ny) || owner[idx(nx, ny)] != -1 || scratch[idx(nx, ny)] != 0) n++;
     }
     return n;
   }
@@ -585,6 +678,133 @@ class _Builder {
         );
         _cover(idx(next.x, next.y), i);
         grew = true;
+      }
+    }
+  }
+}
+
+/// Lays the chapter twists onto a finished board: locks, then pairs, then
+/// hidden heads, each only where the "waits for" graph stays a DAG — a lock
+/// is one more edge, a pair merges two nodes — so a board with features is
+/// solvable for the same reason a plain one is. Each twist is also placed
+/// where it *matters*: a lock whose key would have left first anyway, or a
+/// hidden head nothing can ever uncover, teaches nothing.
+class _FeaturePlanner {
+  _FeaturePlanner(this.puzzle, this.features, this.random)
+      : deps = <Set<int>>[for (final a in puzzle.arrows) puzzle.blockersOf(a.id)],
+        taken = List<bool>.filled(puzzle.arrowCount, false);
+
+  final Puzzle puzzle;
+  final LevelFeatures features;
+  final Random random;
+
+  /// Per arrow, what it waits for so far (rays, then the locks added).
+  final List<Set<int>> deps;
+
+  /// Arrows already carrying a twist: one twist per arrow, so a piece is
+  /// never two things at once.
+  final List<bool> taken;
+
+  final Map<int, int> locks = <int, int>{};
+  final Map<int, int> pairs = <int, int>{};
+  final Set<int> hidden = <int>{};
+
+  Puzzle plan() {
+    _addLocks();
+    _addPairs();
+    _addHidden();
+    return Puzzle(
+      width: puzzle.width,
+      height: puzzle.height,
+      arrows: puzzle.arrows,
+      mirrors: puzzle.mirrors,
+      locks: locks,
+      hidden: hidden,
+      pairs: pairs,
+    );
+  }
+
+  /// Whether [from] waits, however indirectly, for [goal] — following what
+  /// each arrow waits for and, across a tether, its partner.
+  bool _reaches(int from, int goal) {
+    final seen = <int>{};
+    final stack = <int>[from];
+    while (stack.isNotEmpty) {
+      final i = stack.removeLast();
+      if (i == goal) return true;
+      if (!seen.add(i)) continue;
+      stack.addAll(deps[i]);
+      final partner = pairs[i];
+      if (partner != null) stack.add(partner);
+    }
+    return false;
+  }
+
+  List<int> _shuffled() => List<int>.generate(puzzle.arrowCount, (i) => i)..shuffle(random);
+
+  static int _distance(ArrowPiece a, ArrowPiece b) =>
+      (a.head.x - b.head.x).abs() + (a.head.y - b.head.y).abs();
+
+  /// A lock on [a] keyed by [k] is worth having when [a] does not already
+  /// wait for [k] (else nothing changes) and [k] does not wait for [a] (a
+  /// cycle); it is best when [k] is itself held up by something, so the
+  /// lock is still shut at the moment [a]'s path clears, and when the key
+  /// sits well away from the lock.
+  void _addLocks() {
+    final far = puzzle.arrowCount > 12;
+    for (final a in _shuffled()) {
+      if (locks.length >= features.locks) return;
+      if (taken[a]) continue;
+      int? best;
+      var bestScore = -1;
+      for (final k in _shuffled()) {
+        if (k == a || taken[k] || _reaches(a, k) || _reaches(k, a)) continue;
+        final score = (deps[k].isNotEmpty ? 2 : 0) +
+            (!far || _distance(puzzle.arrows[a], puzzle.arrows[k]) >= kLockReach ? 1 : 0);
+        if (score > bestScore) {
+          bestScore = score;
+          best = k;
+          if (score == 3) break;
+        }
+      }
+      if (best == null) continue;
+      locks[a] = best;
+      deps[a].add(best);
+      taken[a] = true;
+      taken[best] = true;
+    }
+  }
+
+  /// A tether joins two touching arrows that neither waits for the other,
+  /// so the merged node keeps the graph a DAG.
+  void _addPairs() {
+    for (final a in _shuffled()) {
+      if (pairs.length ~/ 2 >= features.pairs) return;
+      if (taken[a]) continue;
+      final around = puzzle.neighboursOf(a).toList()..shuffle(random);
+      for (final b in around) {
+        if (taken[b] || _reaches(a, b) || _reaches(b, a)) continue;
+        pairs[a] = b;
+        pairs[b] = a;
+        taken[a] = true;
+        taken[b] = true;
+        break;
+      }
+    }
+  }
+
+  /// A head is hidden only on an arrow that some neighbour can uncover —
+  /// one that does not have to wait for it — and, by preference, one that
+  /// is not free to go at the start, so the guess is never the first move.
+  void _addHidden() {
+    for (final preferWaiting in <bool>[true, false]) {
+      for (final h in _shuffled()) {
+        if (hidden.length >= features.hidden) return;
+        if (taken[h] || (preferWaiting && deps[h].isEmpty)) continue;
+        final uncovers = puzzle.neighboursOf(h).any((n) => !taken[n] && !_reaches(n, h));
+        if (!uncovers) continue;
+        hidden.add(h);
+        taken[h] = true;
       }
     }
   }

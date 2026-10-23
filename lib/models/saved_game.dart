@@ -16,6 +16,7 @@ class SavedGame {
     required this.hintsLeft,
     required this.elapsedMs,
     this.bumped = const <int>[],
+    this.revealed = const <int>[],
     this.continues = 0,
   });
 
@@ -25,6 +26,7 @@ class SavedGame {
         seed: state.spec.seed,
         removed: List<int>.unmodifiable(state.removed.toList()..sort()),
         bumped: List<int>.unmodifiable(state.bumped.toList()..sort()),
+        revealed: List<int>.unmodifiable(state.revealed.toList()..sort()),
         mistakes: state.mistakes,
         hintsLeft: state.hintsLeft,
         elapsedMs: state.elapsedMs,
@@ -54,12 +56,16 @@ class SavedGame {
     // Both were added after the first release, so a snapshot without them is
     // still good: it just forgets which dead ends were already paid for.
     final bumped = json['bumped'];
+    final revealed = json['revealed'];
     return SavedGame(
       level: level,
       seed: seed,
       removed: List<int>.unmodifiable(removed.cast<int>()),
       bumped: bumped is List && bumped.every((e) => e is int)
           ? List<int>.unmodifiable(bumped.cast<int>())
+          : const <int>[],
+      revealed: revealed is List && revealed.every((e) => e is int)
+          ? List<int>.unmodifiable(revealed.cast<int>())
           : const <int>[],
       mistakes: mistakes,
       hintsLeft: hintsLeft,
@@ -87,6 +93,11 @@ class SavedGame {
   /// cost a life.
   final List<int> bumped;
 
+  /// Ids of the hidden arrows whose head has been uncovered, ascending. The
+  /// ones a departed neighbour uncovered are worked out again from
+  /// [removed]; this keeps the ones a hint lit.
+  final List<int> revealed;
+
   /// How many times the player spent the allowance and chose to play on.
   final int continues;
   final int mistakes;
@@ -103,6 +114,7 @@ class SavedGame {
         'seed': seed,
         'removed': removed,
         'bumped': bumped,
+        'revealed': revealed,
         'mistakes': mistakes,
         'hintsLeft': hintsLeft,
         'elapsedMs': elapsedMs,
@@ -121,7 +133,9 @@ class SavedGame {
       other.removed.length == removed.length &&
       other.removed.every(removed.contains) &&
       other.bumped.length == bumped.length &&
-      other.bumped.every(bumped.contains);
+      other.bumped.every(bumped.contains) &&
+      other.revealed.length == revealed.length &&
+      other.revealed.every(revealed.contains);
 
   @override
   int get hashCode => Object.hash(

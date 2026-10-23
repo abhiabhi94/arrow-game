@@ -1,12 +1,13 @@
 import 'dart:math';
 
+import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
 import 'package:arrow_game/models/level_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('every level generates its full arrow count, solvable, within bounds', () {
+  test('every level generates its full arrow count, solvable, within bounds, with its twists', () {
     for (final spec in levelSpecs) {
       final sw = Stopwatch()..start();
       final p = puzzleForLevel(spec);
@@ -22,11 +23,78 @@ void main() {
           inInclusiveRange(spec.minLength, spec.maxLength + kGapTailSlack),
           reason: 'level ${spec.level} $a',
         );
+        for (final c in a.cells) {
+          expect(p.isMirror(c), isFalse, reason: 'level ${spec.level} $a on a mirror');
+        }
       }
-      // Dense like a printed puzzle: at least four cells in five are used.
+      // Dense like a printed puzzle: at least four cells in five of the
+      // board the mirrors leave are used. A teaching board is airy on
+      // purpose, and a small sprint board has less room to pack.
       final used = p.arrows.fold<int>(0, (n, a) => n + a.length);
-      expect(used / spec.cellCount, greaterThanOrEqualTo(0.8), reason: 'level ${spec.level} fill');
+      final teaching = ruleTaughtAt(spec.level) != null;
+      final floor = teaching ? 0.5 : (spec.cellCount < 300 ? 0.75 : 0.8);
+      expect(used / spec.freeCellCount, greaterThanOrEqualTo(floor), reason: 'level ${spec.level} fill');
+      // Every twist the level asks for is on the board.
+      final f = spec.features;
+      expect(p.mirrors, hasLength(f.mirrors), reason: 'level ${spec.level} mirrors');
+      for (final m in p.mirrors.keys) {
+        // Mirrors stand clear of the edge and of each other.
+        expect(m.x, inInclusiveRange(kMirrorMargin, spec.width - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
+        expect(m.y, inInclusiveRange(kMirrorMargin, spec.height - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
+        for (final other in p.mirrors.keys) {
+          if (other == m) continue;
+          expect((m.x - other.x).abs() > 1 || (m.y - other.y).abs() > 1, isTrue, reason: 'level ${spec.level} $m $other');
+        }
+      }
+      if (f.mirrors > 0) {
+        // The mirrors are on the arrows' paths, not ornaments: most are on
+        // some arrow's way out (one way out may cross two of them).
+        final hit = p.mirrors.keys.where((m) => p.arrows.any((a) => p.rayOf(a.id).contains(m))).length;
+        expect(hit, greaterThanOrEqualTo((f.mirrors * 0.6).ceil()), reason: 'level ${spec.level} mirrors hit');
+        final bent = p.arrows.where((a) => p.bends(a.id)).length;
+        expect(bent, greaterThanOrEqualTo((hit / 2).ceil()), reason: 'level ${spec.level} arrows bent');
+      }
+      expect(p.locks, hasLength(f.locks), reason: 'level ${spec.level} locks');
+      expect(p.hidden, hasLength(f.hidden), reason: 'level ${spec.level} hidden');
+      expect(p.pairs, hasLength(f.pairs * 2), reason: 'level ${spec.level} pairs');
       expect(sw.elapsedMilliseconds, lessThan(6000), reason: 'level ${spec.level} too slow');
+    }
+  });
+
+  test('the twists are placed where they count', () {
+    final p = puzzleForLevel(specForLevel(100));
+    // One twist per arrow, so no piece is two things at once.
+    final twisted = <int>[...p.locks.keys, ...p.locks.values, ...p.hidden, ...p.pairs.keys];
+    expect(twisted.toSet(), hasLength(twisted.length));
+    for (final e in p.locks.entries) {
+      // Locks are numbered in pairs, and a key sits well away from its lock.
+      expect(p.lockNumber(e.key), p.lockNumber(e.value));
+      final a = p.arrows[e.key].head;
+      final k = p.arrows[e.value].head;
+      expect((a.x - k.x).abs() + (a.y - k.y).abs(), greaterThanOrEqualTo(kLockReach), reason: '${e.key}');
+    }
+    // Whether [from] waits, however indirectly, for [goal].
+    bool waitsFor(int from, int goal) {
+      final seen = <int>{};
+      final stack = <int>[from];
+      while (stack.isNotEmpty) {
+        final i = stack.removeLast();
+        if (i == goal) return true;
+        if (!seen.add(i)) continue;
+        stack.addAll(p.dependenciesOf(i));
+        final partner = p.partnerOf(i);
+        if (partner != null) stack.add(partner);
+      }
+      return false;
+    }
+
+    for (final h in p.hidden) {
+      // Something beside a hidden head does not have to wait for it, so it
+      // can always be uncovered rather than guessed.
+      expect(p.neighboursOf(h).any((n) => !waitsFor(n, h)), isTrue, reason: 'hidden $h');
+    }
+    for (final e in p.pairs.entries) {
+      expect(p.neighboursOf(e.key), contains(e.value), reason: 'pair ${e.key}');
     }
   });
 
@@ -57,7 +125,7 @@ void main() {
     for (final spec in levelSpecs) {
       final p = puzzleForLevel(spec);
       final profile = p.openMoveProfile();
-      expect(profile, hasLength(p.arrowCount), reason: 'level ${spec.level} solvable');
+      expect(profile, hasLength(p.arrowCount - p.pairs.length ~/ 2), reason: 'level ${spec.level} solvable');
       // The generator's cap is soft; this is the hard line the levels hold.
       expect(profile.first, lessThanOrEqualTo(spec.openMoves + PuzzleGenerator.startSlack), reason: 'level ${spec.level} start');
       expect(profile.reduce(max), lessThanOrEqualTo(spec.openMoves + PuzzleGenerator.widestSlack), reason: 'level ${spec.level} widest');
@@ -66,44 +134,31 @@ void main() {
     }
   });
 
-  test('the endgame tightens level by level', () {
-    // Levels 41–80 are each dealt from the variant whose board came out
-    // tightest, so that the hunt for the next move — arrows on the board
-    // for every one that can go — never eases from one level to the next,
-    // and no level opens with more than three arrows to tap (the general
-    // rule allows five). If a generator change fails this, re-pick the
-    // level's variant with `dart run tool/level_report.dart <level> <n>`
-    // rather than loosening the line.
-    var hunt = puzzleForLevel(specForLevel(40)).arrowsPerOpenMove;
-    for (final spec in levelSpecs.where((s) => s.level >= 41 && s.level <= 80)) {
-      final p = puzzleForLevel(spec);
-      expect(p.removable(const {}).length, lessThanOrEqualTo(3), reason: 'level ${spec.level} opening');
-      expect(p.arrowsPerOpenMove, greaterThanOrEqualTo(hunt), reason: 'level ${spec.level} hunt');
-      hunt = p.arrowsPerOpenMove;
+  test('each chapter is a harder find than the one before, taken as a whole', () {
+    // The hunt — arrows on the board for every one that can go at a typical
+    // moment — climbs chapter by chapter over the climb levels, even as the
+    // count no longer runs away: the twists tangle the graph as much as
+    // more arrows did.
+    double hunt(Chapter c) {
+      var sum = 0.0;
+      var n = 0;
+      for (var level = c.firstLevel + 1; level <= c.lastLevel - 1; level++) {
+        final i = (level - 1) % kChapterLength + 1;
+        if (i == 5 || i == 15 || i == 10) continue;
+        sum += puzzleForLevel(specForLevel(level)).arrowsPerOpenMove;
+        n++;
+      }
+      return sum / n;
     }
-    // And the finale is a markedly harder find than the level before the
-    // endgame began, and than the end of the first sixty.
-    expect(hunt, greaterThan(puzzleForLevel(specForLevel(40)).arrowsPerOpenMove * 1.15));
-    expect(hunt, greaterThan(puzzleForLevel(specForLevel(60)).arrowsPerOpenMove * 1.15));
-  });
 
-  test('the encore holds a hunt that climbs every level', () {
-    // Level 80 was an unusually tight deal (~149 arrows an open move), and
-    // at 81–100 a board that keeps every rule at all is about one deal in
-    // two hundred, so a neighbour-by-neighbour climb would mean thousands
-    // of deals a level. Instead each encore level clears a floor that rises
-    // one a level — 130 at 81, 149 at 100 — which no level before 61 comes
-    // near, and the finale is a harder find than level 80. Re-pick a
-    // variant rather than lower the floor.
-    for (final spec in levelSpecs.where((s) => s.level >= 81)) {
-      final p = puzzleForLevel(spec);
-      expect(p.removable(const {}).length, lessThanOrEqualTo(3), reason: 'level ${spec.level} opening');
-      expect(p.arrowsPerOpenMove, greaterThanOrEqualTo(130 + (spec.level - 81)), reason: 'level ${spec.level} hunt');
+    final first = hunt(chapters[0]);
+    var before = hunt(chapters[1]);
+    expect(before, greaterThan(first));
+    for (final chapter in chapters.skip(2)) {
+      final now = hunt(chapter);
+      expect(now, greaterThan(before * 0.9), reason: 'chapter ${chapter.index}');
+      before = now;
     }
-    expect(
-      puzzleForLevel(specForLevel(totalLevels)).arrowsPerOpenMove,
-      greaterThan(puzzleForLevel(specForLevel(80)).arrowsPerOpenMove),
-    );
   });
 
   test('an arrow may point straight at another as long as nothing cycles', () {

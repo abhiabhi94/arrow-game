@@ -23,6 +23,11 @@ sagging note bends down a minor sixth with a wobble in its tail, over a
 puff of air, and lands on a small flat thud. Silly rather than harsh: the
 level is not over, and nobody needs punishing.
 
+bounce.wav — an arrow turning at a mirror: a small bright "bwip", a glassy
+note that bends up a fourth in its first 60 ms and rings for a fifth of a
+second, with a tick of air at the start where the arrow meets the glass.
+Cute on purpose, and short: it plays in the middle of the exit whoosh.
+
 WAV (16-bit mono, 44.1 kHz) plays everywhere audioplayers does, iOS included.
 """
 import math
@@ -180,6 +185,33 @@ def lose_sound(seconds=0.95):
     return [v / peak * 0.92 for v in out]
 
 
+def bounce_sound(seconds=0.22):
+    """A mirror bounce: a bright little note (E6 bending up to A6 as the
+    arrow turns) with a glassy second harmonic, a soft tick of air at the
+    start, and a quick ring-out. The pitch going *up* is the turn — the
+    arrow leaves the glass livelier than it arrived."""
+    random.seed(17)
+    n = int(RATE * seconds)
+    tick = BandPass(q=1.6)
+    out = []
+    phase = 0.0
+    for i in range(n):
+        t = i / RATE
+        # E6 (1318.5 Hz) up a fourth to A6 (1760 Hz) over the first 60 ms,
+        # easing in to the top note.
+        bend = min(1.0, t / 0.06)
+        bend = bend * bend * (3 - 2 * bend)
+        freq = 1318.5 * (1760.0 / 1318.5) ** bend
+        phase += 2 * math.pi * freq / RATE
+        env = min(1.0, t / 0.004) * math.exp(-t * 16.0)
+        note = env * (math.sin(phase) + 0.3 * math.sin(2 * phase) * math.exp(-t * 20.0))
+        # The tick: a short splash of air around 4 kHz, gone in ~10 ms.
+        air = 0.5 * tick.tick(random.uniform(-1.0, 1.0), 4000.0) * math.exp(-t * 180.0)
+        out.append(math.tanh(1.1 * (note + air)))
+    peak = max(abs(v) for v in out)
+    return [v / peak * 0.8 for v in out]
+
+
 def write(path, samples):
     path.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(path), "wb") as w:
@@ -196,3 +228,4 @@ if __name__ == "__main__":
     write(root / "assets" / "audio" / "bump.wav", bump_sound())
     write(root / "assets" / "audio" / "win.wav", win_sound())
     write(root / "assets" / "audio" / "lose.wav", lose_sound())
+    write(root / "assets" / "audio" / "bounce.wav", bounce_sound())

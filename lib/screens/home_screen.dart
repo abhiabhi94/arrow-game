@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' show lerpDouble;
 
@@ -5,9 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/chapters.dart';
+import '../data/daily.dart';
 import '../data/level_specs.dart';
 import '../l10n/app_localizations.dart';
 import '../models/level_progress.dart';
+import '../models/level_spec.dart';
+import '../providers/daily_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/saved_game_provider.dart';
 import '../ui/colors.dart';
@@ -20,6 +25,9 @@ import 'settings_screen.dart';
 
 /// Vertical distance between trail nodes.
 const double kTrailSpacing = 104;
+
+/// The room a chapter heading takes on the trail, above its first level.
+const double kChapterBandHeight = 108;
 
 /// The home screen: a stars tally, a "next up" hero card, and the journey — a
 /// winding trail of every level node (locked ones numbered too) with lock / stars / current state.
@@ -35,8 +43,15 @@ class HomeScreen extends ConsumerWidget {
     final nextLevel = notifier.highestUnlocked;
     final allCleared = notifier.levelsCleared == totalLevels;
     // A level left mid-way takes the hero card: it is where the player was.
+    // A daily board left mid-way is the daily card's to offer.
     final saved = ref.watch(savedGameProvider);
-    final heroLevel = saved?.level ?? nextLevel;
+    final savedLevel = saved != null && saved.level != LevelSpec.dailyLevel ? saved : null;
+    final heroLevel = savedLevel?.level ?? nextLevel;
+    final daily = ref.watch(dailyProvider);
+    final dailyNotifier = ref.read(dailyProvider.notifier)..refresh();
+    final dailySaved = saved != null &&
+        saved.level == LevelSpec.dailyLevel &&
+        saved.seed == dailyNotifier.spec.seed;
 
     return Scaffold(
       body: SafeArea(
@@ -77,17 +92,31 @@ class HomeScreen extends ConsumerWidget {
                         child: _NextUpCard(
                           level: heroLevel,
                           allCleared: allCleared,
-                          resume: saved == null
+                          resume: savedLevel == null
                               ? null
                               : l10n.homeResumeProgress(
-                                  saved.arrowsOut,
-                                  specForLevel(saved.level).arrows,
-                                  formatDurationMs(saved.elapsedMs),
+                                  savedLevel.arrowsOut,
+                                  specForLevel(savedLevel.level).arrows,
+                                  formatDurationMs(savedLevel.elapsedMs),
                                 ),
                           onPlay: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(
                               builder: (_) => GameScreen(level: heroLevel),
                             ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 4),
+                        child: _DailyCard(
+                          standing: daily,
+                          arrows: dailyNotifier.spec.arrows,
+                          untilNext: dailyNotifier.untilNextBoard,
+                          resuming: dailySaved,
+                          onPlay: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(builder: (_) => const GameScreen.daily()),
                           ),
                         ),
                       ),
@@ -471,9 +500,16 @@ class _Trail extends StatelessWidget {
 
   static double fractionFor(int level) => 0.5 + 0.36 * sin((level - 1) * 1.05);
 
+  /// How far down the trail [level]'s node sits: its place in the line plus
+  /// a band of [bandHeight] for every chapter heading above it.
+  static double topOf(int level, double bandHeight) =>
+      (level - 1) * kTrailSpacing + chapterOf(level).index * bandHeight;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
+    // The band holds two lines of text, so it grows with the system font.
+    final bandHeight = MediaQuery.textScalerOf(context).scale(kChapterBandHeight);
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -482,10 +518,10 @@ class _Trail extends StatelessWidget {
           for (var level = 1; level <= totalLevels; level++)
             Offset(
               (width - nodeSize) * fractionFor(level) + nodeSize / 2,
-              (level - 1) * kTrailSpacing + nodeSize / 2 + 8,
+              topOf(level, bandHeight) + nodeSize / 2 + 8,
             ),
         ];
-        final height = (totalLevels - 1) * kTrailSpacing + nodeSize + 48;
+        final height = topOf(totalLevels, bandHeight) + nodeSize + 48;
         return SizedBox(
           width: width,
           height: height,
@@ -501,6 +537,17 @@ class _Trail extends StatelessWidget {
                   ),
                 ),
               ),
+              for (final chapter in chapters)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: topOf(chapter.firstLevel, bandHeight) - bandHeight + 8,
+                  height: bandHeight - 8,
+                  child: _ChapterBand(
+                    chapter: chapter,
+                    reached: isUnlocked(chapter.firstLevel),
+                  ),
+                ),
               for (var level = 1; level <= totalLevels; level++)
                 Positioned(
                   left: points[level - 1].dx - nodeSize / 2,
@@ -751,5 +798,255 @@ class _LevelNode extends StatelessWidget {
         .animate(delay: (min(level, 12) * 30).ms)
         .fadeIn(duration: 200.ms)
         .scale(begin: const Offset(0.85, 0.85));
+  }
+}
+
+
+/// A chapter heading on the trail: its number and name, the levels it
+/// spans and a line on the twist it brings, over its first level. Muted
+/// until the chapter is reached.
+class _ChapterBand extends StatelessWidget {
+  const _ChapterBand({required this.chapter, required this.reached});
+
+  final Chapter chapter;
+  final bool reached;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final l10n = AppLocalizations.of(context)!;
+    final name = chapterName(l10n, chapter.index);
+    final heading = l10n.chapterHeading(chapter.index, name);
+    final levels = l10n.chapterLevels(chapter.firstLevel, chapter.lastLevel);
+    final blurb = chapterBlurb(l10n, chapter.index);
+    final icon = switch (chapter.rule) {
+      ChapterRule.lines => Icons.east_rounded,
+      ChapterRule.mirrors => Icons.flip_rounded,
+      ChapterRule.locks => Icons.vpn_key_rounded,
+      ChapterRule.fog => Icons.blur_on_rounded,
+      ChapterRule.pairs => Icons.link_rounded,
+    };
+    final ink = reached ? p.textInk : p.textMuted;
+    return Semantics(
+      header: true,
+      label: '$heading. $levels. $blurb',
+      excludeSemantics: true,
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 360),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: p.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: reached ? p.primaryLight : p.outlineSoft, width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: reached ? p.primary : p.cardTint,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: reached ? Colors.white : p.textMuted, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      heading,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: ink),
+                    ),
+                    Text(
+                      '$levels · $blurb',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: p.textMuted, height: 1.3),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The daily board's card: today's deal in the chapter the player has
+/// reached, the streak, today's best, and the way in. One button to a
+/// screen reader.
+class _DailyCard extends StatefulWidget {
+  const _DailyCard({
+    required this.standing,
+    required this.arrows,
+    required this.untilNext,
+    required this.resuming,
+    required this.onPlay,
+  });
+
+  final DailyStanding standing;
+  final int arrows;
+
+  /// Time to the next board when the card was built; the card counts it
+  /// down a minute at a time.
+  final Duration untilNext;
+
+  /// Today's board was left mid-way: the button says Continue.
+  final bool resuming;
+  final VoidCallback onPlay;
+
+  @override
+  State<_DailyCard> createState() => _DailyCardState();
+}
+
+class _DailyCardState extends State<_DailyCard> {
+  Timer? _ticker;
+  late DateTime _builtAt;
+
+  @override
+  void initState() {
+    super.initState();
+    _builtAt = DateTime.now();
+    // Once a minute is as fine as the countdown reads.
+    _ticker = Timer.periodic(const Duration(minutes: 1), (_) => setState(() {}));
+  }
+
+  @override
+  void didUpdateWidget(_DailyCard old) {
+    super.didUpdateWidget(old);
+    if (old.untilNext != widget.untilNext) _builtAt = DateTime.now();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  /// The countdown as "5h 12m" (or "12m" under an hour).
+  String _countdown(AppLocalizations l10n) {
+    final left = widget.untilNext - DateTime.now().difference(_builtAt);
+    // Rounded up: "1m" until the minute is really over.
+    final minutes = max(0, (left.inSeconds + 59) ~/ 60);
+    return minutes >= 60 ? l10n.dailyNextInHours(minutes ~/ 60, minutes % 60) : l10n.dailyNextInMinutes(minutes);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final l10n = AppLocalizations.of(context)!;
+    final standing = widget.standing;
+    final resuming = widget.resuming;
+    final onPlay = widget.onPlay;
+    final chapter = chapterName(l10n, standing.chapter.index);
+    final body = l10n.dailyBody(kDailyMinutes, widget.arrows, chapter);
+    final streak = l10n.dailyStreak(standing.liveStreak);
+    final best = standing.bestTodayMs;
+    final next = _countdown(l10n);
+    final status = best == null
+        ? '$streak · $next'
+        : '${l10n.dailyClearedToday} · ${l10n.dailyBestToday(formatDurationMs(best))} · $streak · $next';
+    final action = resuming
+        ? l10n.homeContinue
+        : standing.clearedToday
+            ? l10n.dailyReplay
+            : l10n.dailyPlay;
+    return Semantics(
+      label: [l10n.dailyEyebrow, l10n.dailyTitle, body, status, action].join('. '),
+      button: true,
+      excludeSemantics: true,
+      child: Material(
+        color: p.surface,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onPlay,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: p.outlineSoft, width: 1.5),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(color: p.cardTint, borderRadius: BorderRadius.circular(14)),
+                  child: Icon(Icons.today_rounded, color: p.primaryInk, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.dailyEyebrow.toUpperCase(),
+                        style: TextStyle(
+                          color: p.primaryInk,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        body,
+                        style: TextStyle(color: p.textInk, fontWeight: FontWeight.w600, fontSize: 13, height: 1.3),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        status,
+                        style: TextStyle(
+                          color: standing.clearedToday ? p.successInk : p.textMuted,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Under the text rather than beside it, so a large
+                      // system font wraps the card taller instead of wider.
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: p.primary,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                action,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

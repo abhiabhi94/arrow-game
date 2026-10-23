@@ -24,6 +24,7 @@
 //             same build shoot the same frame
 //   --grid    seeds the grid-lines preference on (the lattice under the arrows)
 //   --resume  seeds a saved game on the first level (home shows Continue, the level its Welcome back card)
+//   --daily   opens today's daily board from its home card and captures it (daily-*.png)
 //   --onboarding  boots into the first-launch walkthrough instead of home
 //   --viewport WxH  renders the desktop layout instead of a phone (the web build
 //             is also served on GitHub Pages, where people play it on a laptop);
@@ -52,11 +53,13 @@
 //   --lang    seeds the language setting ('en' or 'hi'), so the shots show the
 //             app in that language whatever the browser's locale is; the
 //             language lands in the filename
-//   --crash x,y  taps grid cell (x, y) on the first level and captures the
-//             moment after impact (level-NN-crash-*.png): the screen jolt and
-//             the red flash of a bump. On level 1, cell 2,4 is a blocked head.
-//             A screenshot takes longer than the bump, so this run drives the
-//             page on Playwright's fake clock and steps it to the frame.
+//   --crash x,y[,ms]  taps grid cell (x, y) on the first level and captures
+//             the moment after impact (level-NN-crash-*.png): the screen jolt
+//             and the red flash of a bump. On level 1, cell 2,4 is a blocked
+//             head. A screenshot takes longer than the bump, so this run
+//             drives the page on Playwright's fake clock and steps it to the
+//             frame — ms in after the tap, 330 by default (a short run has
+//             just hit); a long run, one that turns at a mirror, wants more.
 //
 // Prereq: `flutter build web --debug --no-web-resources-cdn`
 //   debug   = all levels unlocked (same as the "Arrow Testing" Android build)
@@ -134,6 +137,9 @@ const labels = lang === 'hindi'
       riddleSubmit: /यही मेरा जवाब है$/,
       riddleSolved: /तीरों पर वापस$/,
       board: /^पहेली बोर्ड,? (\d+) गुणा (\d+)/,
+      gotIt: /^समझ गया$/,
+      welcomeBack: /^जारी रखें$/,
+      daily: /^आज का बोर्ड\./,
     }
   : {
       settings: /^settings/i,
@@ -146,6 +152,9 @@ const labels = lang === 'hindi'
       riddleSubmit: /That's my answer$/,
       riddleSolved: /Back to the arrows$/,
       board: /^Puzzle board,? (\d+) by (\d+)/,
+      gotIt: /^Got it$/,
+      welcomeBack: /^Continue$/,
+      daily: /^Daily board\./,
     };
 
 if (!fs.existsSync(path.join(buildDir, 'index.html'))) {
@@ -302,6 +311,18 @@ try {
     await goBack(page);
   }
 
+  // The daily board: its card sits under the hero on the home screen.
+  if (args.daily) {
+    await page.mouse.move(195, 500);
+    const card = page.getByRole('button', { name: labels.daily }).first();
+    await card.click();
+    await settle(page, 2500);
+    if (args.dump) console.log(await dumpSemantics(page));
+    await shoot(page, `daily-${tag}`);
+    await goBack(page);
+    await settle(page, 800);
+  }
+
   // The journey trail is a long scroll view. Playwright cannot scroll a
   // Flutter scroll view through the semantics tree, and a single big wheel
   // delta is clamped, so nudge the wheel until the node's box is in view.
@@ -340,17 +361,37 @@ try {
     }
     await tile.click();
     await settle(page, 1200);
+    // A big level takes seconds to deal on the web: wait for the board, or
+    // for a card standing in front of it — a chapter card, or the welcome
+    // back of a resumed game (a card is modal to a reader too, so the board
+    // is not in the tree while one is up). Asking for the chapter card too
+    // early read as "no card" on level 40, and the hint click then sat
+    // behind the card until it timed out.
+    const board = page.getByLabel(labels.board).or(page.getByRole('button', { name: labels.board })).first();
+    const gotIt = page.getByRole('button', { name: labels.gotIt }).first();
+    const welcome = page.getByRole('button', { name: labels.welcomeBack }).first();
+    await gotIt.or(welcome).or(board).first().waitFor({ state: 'attached', timeout: 60_000 });
     if (args.dump) console.log(await dumpSemantics(page));
     const id = String(level).padStart(2, '0');
+    // A chapter's first level (or the first level opened past one) opens on
+    // a card about the twist it brings: capture it, then put it away so the
+    // board flows below run as usual. A fresh install opened straight at a
+    // late level is owed every card it skipped, one after another, so keep
+    // putting them away until the board is clear (the first is the shot).
+    for (let card = 0; await gotIt.count(); card++) {
+      if (card === 0) await shoot(page, `level-${id}-intro-${tag}`);
+      await gotIt.click();
+      await settle(page, 600);
+    }
     await shoot(page, `level-${id}-${tag}`);
     if (crash && level === levels[0]) {
       await page.clock.pauseAt(Date.now() + 1000);
       await tapCell(page, crash);
-      // 260 ms in: a short run hit at 180 ms, the screen is mid-shake and
-      // the red edge is still most of the way up.
-      await page.clock.runFor(260);
+      // 330 ms in: a short run hit at 280 ms and is pressed against the
+      // blocker, the screen mid-shake and the red edge all the way up.
+      await page.clock.runFor(crash.ms);
       await shoot(page, `level-${id}-crash-${tag}`);
-      await page.clock.runFor(900);
+      await page.clock.runFor(1600);
       await page.clock.resume();
     }
     if (riddleCells && level === levels[0]) {
@@ -519,12 +560,13 @@ async function shoot(page, name) {
   console.log('  wrote', path.relative(process.cwd(), file));
 }
 
-/// `--crash 2,4` -> { x, y }; nothing when the flag is absent.
+/// `--crash 2,4` -> { x, y, ms: 330 }, `--crash 5,5,650` -> { x, y, ms };
+/// nothing when the flag is absent.
 function parseCell(value) {
   if (!value || value === true) return null;
-  const m = /^(\d+),(\d+)$/.exec(String(value));
-  if (!m) { console.error(`Bad --crash ${value}; expected a grid cell, e.g. 2,4`); process.exit(2); }
-  return { x: Number(m[1]), y: Number(m[2]) };
+  const m = /^(\d+),(\d+)(?:,(\d+))?$/.exec(String(value));
+  if (!m) { console.error(`Bad --crash ${value}; expected a grid cell, e.g. 2,4 or 2,4,650`); process.exit(2); }
+  return { x: Number(m[1]), y: Number(m[2]), ms: m[3] ? Number(m[3]) : 330 };
 }
 
 /// `--lang hi` -> the LanguageChoice name the app persists; nothing when the
