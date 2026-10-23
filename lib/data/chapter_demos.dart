@@ -46,15 +46,18 @@ Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
           ],
           locks: const {0: 1},
         ),
-      // A hidden head beside an arrow that can go: that one leaves, the
-      // head appears, then it leaves too.
+      // A hidden head beside an arrow that can go, and an arrow standing
+      // in the hidden one's way. The script taps the hidden one first (it
+      // rattles, for free, and points at the arrow above it), then that
+      // one leaves and the head comes out of the fog, then the arrow in
+      // its way goes, then it does.
       ChapterRule.fog => Puzzle(
           width: 7,
           height: 4,
           arrows: [
             ArrowPiece(id: 0, cells: const [Cell(1, 0), Cell(2, 0), Cell(3, 0), Cell(4, 0)], heading: Direction.right),
-            ArrowPiece(id: 1, cells: const [Cell(1, 1), Cell(2, 1), Cell(3, 1), Cell(4, 1)], heading: Direction.right),
-            ArrowPiece(id: 2, cells: const [Cell(2, 3), Cell(3, 3)], heading: Direction.right),
+            ArrowPiece(id: 1, cells: const [Cell(1, 1), Cell(2, 1), Cell(3, 1)], heading: Direction.right),
+            ArrowPiece(id: 2, cells: const [Cell(5, 3), Cell(5, 2), Cell(5, 1)], heading: Direction.up),
           ],
           hidden: const {1},
         ),
@@ -72,13 +75,14 @@ Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
     };
 
 /// The taps the card plays on [demoPuzzleFor]'s board, in order. A tap on a
-/// locked arrow first is deliberate: it shows the rattle and the pointer to
-/// the key before the key goes.
+/// locked (or hidden) arrow first is deliberate: it shows the rattle and the
+/// pointer to the key (or to the arrow that uncovers the head) before that
+/// one goes.
 List<int> demoScriptFor(ChapterRule rule) => switch (rule) {
       ChapterRule.lines => const [0, 1],
       ChapterRule.mirrors => const [0, 1],
       ChapterRule.locks => const [0, 1, 0],
-      ChapterRule.fog => const [0, 1, 2],
+      ChapterRule.fog => const [1, 0, 2, 1],
       ChapterRule.pairs => const [0, 2],
     };
 

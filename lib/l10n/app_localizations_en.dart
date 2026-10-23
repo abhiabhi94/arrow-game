@@ -120,7 +120,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorialFog =>
-      'Clear an arrow beside a dashed one to see its head.';
+      'Clear an arrow beside a dashed one to see its head. Tapping a dashed one is free.';
 
   @override
   String get tutorialPairs => 'Tethered arrows leave together.';
@@ -1037,7 +1037,7 @@ class AppLocalizationsEn extends AppLocalizations {
       other: '$length cells',
       one: '1 cell',
     );
-    return 'Arrow with a hidden head, $_temp0 long, from row $row, column $column. Which way it points shows once an arrow beside it leaves.';
+    return 'Arrow with a hidden head, $_temp0 long, from row $row, column $column. Which way it points shows once an arrow beside it leaves. Tapping it costs nothing: the board points at the arrow that uncovers it.';
   }
 
   @override

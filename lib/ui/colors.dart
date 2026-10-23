@@ -70,6 +70,10 @@ const Color _lGridLine = Color(0xFFC8C3EC);
 // the cell reads as glass under the diagonal of ink — the arrows and the
 // diagonal stay the only ink.
 const Color _lMirror = Color(0xFFDCD9EF);
+// A wash under both halves of a tethered pair, so the two read as one piece
+// on a board of a hundred arrows in one ink: a pale mint, a shade off the
+// page and nothing like the sun of the key badges or the glow of a hint.
+const Color _lPairWash = Color(0xFFD5F0E4);
 const Color _lHintGlow = Color(0xCCFFB300);
 const Color _lBlockedFlash = Color(0x80FF6B6B);
 // Laid over the board while a hint shows, so the hinted arrow is the only
@@ -126,6 +130,7 @@ const Color _dTextFaint = Color(0xFF6E6A8F);
 
 const Color _dGridLine = Color(0xFF423D66);
 const Color _dMirror = Color(0xFF2A2641);
+const Color _dPairWash = Color(0xFF1C3A31);
 const Color _dHintGlow = Color(0xD9FFCE52);
 const Color _dBlockedFlash = Color(0x99FF7B7B);
 const Color _dHintVeil = Color(0xC2131120);
@@ -168,6 +173,7 @@ class ArrowPalette {
     required this.textFaint,
     required this.gridLine,
     required this.mirror,
+    required this.pairWash,
     required this.hintGlow,
     required this.hintVeil,
     required this.blockedFlash,
@@ -212,6 +218,9 @@ class ArrowPalette {
 
   /// The pane of a mirror cell, under its diagonal.
   final Color mirror;
+
+  /// The wash under the cells of a tethered pair.
+  final Color pairWash;
   final Color hintGlow;
 
   /// Dims the rest of the board while a hint points at one arrow.
@@ -251,6 +260,7 @@ class ArrowPalette {
     textFaint: _lTextFaint,
     gridLine: _lGridLine,
     mirror: _lMirror,
+    pairWash: _lPairWash,
     hintGlow: _lHintGlow,
     hintVeil: _lHintVeil,
     blockedFlash: _lBlockedFlash,
@@ -287,6 +297,7 @@ class ArrowPalette {
     textFaint: _dTextFaint,
     gridLine: _dGridLine,
     mirror: _dMirror,
+    pairWash: _dPairWash,
     hintGlow: _dHintGlow,
     hintVeil: _dHintVeil,
     blockedFlash: _dBlockedFlash,

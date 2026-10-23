@@ -125,6 +125,10 @@ void main() {
     // Nothing moves after the end.
     n.tick(1000);
     expect(n.state.elapsedMs, 1200);
+    // A bounce the board reports is a sound and nothing more.
+    n.bounce();
+    expect(sfxBackend.calls.last, '$kBounceSound@1.00');
+    expect(n.state.moveToken, 3);
     n.dispose();
   });
 

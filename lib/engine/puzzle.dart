@@ -16,7 +16,8 @@
 ///   leave, wherever on the board that key is. One more edge in the graph.
 /// * **Hidden heads** ([hidden]): the arrow is drawn without its head until
 ///   a neighbouring arrow leaves (see [revealedBy]) or a hint lights it. The
-///   rules are untouched; what changes is what the player can see.
+///   rules are untouched; what changes is what the player can see — and a
+///   tap on it while it is hidden is not charged (see [revealersOf]).
 /// * **Pairs** ([pairs]): two tethered arrows leave together on one tap, so
 ///   both of their paths have to be clear, and each waits for whatever the
 ///   other waits for. The graph treats the pair as one node.
@@ -297,6 +298,34 @@ class Puzzle {
         for (final h in hidden)
           if (neighboursOf(h).any(removed.contains)) h,
       };
+
+  /// The arrows that can uncover [id]'s head: its neighbours that are able
+  /// to leave before it — not its tethered partner, which leaves with it,
+  /// and none that waits, however far down the chain, for [id] (or its
+  /// partner) to go first. What the board points at after a tap on a
+  /// hidden arrow. Empty only when nothing but a hint will do.
+  Set<int> revealersOf(int id) {
+    final group = exitGroup(id);
+    return <int>{
+      for (final n in neighboursOf(id))
+        if (!group.contains(n) && !_waitsFor(n, group)) n,
+    };
+  }
+
+  /// Whether [id] waits, directly or down the chain, for any of [targets].
+  bool _waitsFor(int id, List<int> targets) {
+    final seen = <int>{};
+    final stack = <int>[id];
+    while (stack.isNotEmpty) {
+      final cur = stack.removeLast();
+      if (!seen.add(cur)) continue;
+      for (final d in dependenciesOf(cur)) {
+        if (targets.contains(d)) return true;
+        stack.add(d);
+      }
+    }
+    return false;
+  }
 
   /// How long the longest "must go before" chain is (1 for a lone arrow).
   /// Only meaningful for a solvable puzzle.

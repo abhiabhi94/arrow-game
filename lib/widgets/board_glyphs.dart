@@ -8,8 +8,8 @@ import '../engine/mirror.dart';
 /// The small marks the board draws for the chapter twists, in one place so
 /// the game board and the chapter-intro illustrations draw them the same
 /// way: a padlock on a locked arrow, a numbered key badge on its key, a
-/// question mark on a hidden head, a link at either end of a tether, and
-/// the diagonal of a mirror. All are sized from the cell and
+/// question mark on a hidden head, a link at either end of a tether (over
+/// a wash under both halves), and the diagonal of a mirror. All are sized from the cell and
 /// floored in pixels so they stay legible on a dense board, where a cell is
 /// a dozen pixels and the player zooms in to read them.
 ///
@@ -24,6 +24,7 @@ class BoardGlyphs {
     required this.badge,
     required this.onBadge,
     required this.mirrorWash,
+    required this.pairWash,
     required this.textDirection,
   });
 
@@ -32,6 +33,7 @@ class BoardGlyphs {
   final Color badge;
   final Color onBadge;
   final Color mirrorWash;
+  final Color pairWash;
   final TextDirection textDirection;
 
   /// The size of a glyph on a cell [cs] across: most of the cell, never a
@@ -185,12 +187,26 @@ class BoardGlyphs {
     _text(canvas, '?', c, g * 0.56, ink, bold: true);
   }
 
+  /// The wash under a tethered pair: every one of [cells] (the cells of
+  /// both halves) tinted, so on a dense board the two arrows read as one
+  /// piece before the tether between them is even found.
+  void washPair(Canvas canvas, Iterable<Rect> cells) {
+    final path = Path()..fillType = PathFillType.nonZero;
+    // Each cell a touch larger than itself, so neighbours overlap and the
+    // wash is one blob with no pinholes where four corners meet.
+    for (final cell in cells) {
+      path.addRRect(RRect.fromRectAndRadius(cell.inflate(cell.width * 0.07), Radius.circular(cell.width * 0.2)));
+    }
+    canvas.drawPath(path, Paint()..color = pairWash);
+  }
+
   /// A tether between two cells of a pair: a dotted line with a ring at
-  /// each end.
-  void tether(Canvas canvas, Offset a, Offset b, double cs) {
-    final stroke = max(1.5, min(cs * 0.14, 3.5));
+  /// each end. In [colour] (the glow, say) while the pair is on the move,
+  /// so what pulls the second half along is seen; the ink otherwise.
+  void tether(Canvas canvas, Offset a, Offset b, double cs, {Color? colour}) {
+    final stroke = max(1.5, min(cs * 0.14, 3.5)) * (colour == null ? 1 : 1.4);
     final paint = Paint()
-      ..color = ink
+      ..color = colour ?? ink
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;

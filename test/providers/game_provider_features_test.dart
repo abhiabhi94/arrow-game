@@ -102,6 +102,53 @@ void main() {
     });
   });
 
+  test('a tap on a hidden arrow whose way is not clear costs nothing and points at what uncovers it', () {
+    fakeAsync((async) {
+      final engine = RecordingHapticEngine();
+      // 2 hidden: its own way is clear but its partner 3 runs into 4, and
+      // 4 — its one neighbour — is free to go, so 4 is what uncovers it.
+      final n = GameNotifier(
+        featureSpecFor(1),
+        puzzle: featurePuzzle(hidden: const {2}),
+        haptics: HapticsService(() => true, engine: engine),
+        autoTick: false,
+      );
+      n.tapArrow(2);
+      expect(n.state.lastOutcome, MoveOutcome.hidden);
+      expect(n.state.lastMoveId, 2);
+      expect(n.state.mistakes, 0);
+      expect(n.state.livesLeft, 3);
+      expect(n.state.bumped, isEmpty);
+      expect(n.state.blockedCell, isNull);
+      expect(n.state.blockedKey, isNull);
+      expect(n.state.moveToken, 1);
+      expect(n.state.puzzle!.revealersOf(2), {4});
+      async.elapse(const Duration(seconds: 1));
+      expect(engine.calls, ['selection']);
+      // The board plays the same short jab as a lock.
+      expect(BumpMotion.forTap(n.state.puzzle!, 2, null).travel, BumpMotion.kLockJab);
+      // Once 4 has gone the head shows — and with 4 out of the partner's
+      // way the pair can go: a tap is a tap again.
+      n.tapArrow(4);
+      expect(n.state.revealed, {2});
+      n.tapArrow(2);
+      expect(n.state.lastOutcome, MoveOutcome.exited);
+      expect(n.state.removed, {2, 3, 4});
+      expect(n.state.mistakes, 0);
+      async.elapse(const Duration(seconds: 2));
+      n.dispose();
+    });
+  });
+
+  test('a hidden arrow whose way is clear still goes on a tap', () {
+    final n = _notifier();
+    // 4 is hidden and free: a lucky guess slides it out.
+    n.tapArrow(4);
+    expect(n.state.lastOutcome, MoveOutcome.exited);
+    expect(n.state.removed, {4});
+    n.dispose();
+  });
+
   test('a hint that lands on a hidden arrow uncovers it', () {
     final n = _notifier();
     // The only neighbour of 4 is 2, and 2 cannot leave before 4, so on this

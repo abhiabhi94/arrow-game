@@ -305,7 +305,7 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialFog.
   ///
   /// In en, this message translates to:
-  /// **'Clear an arrow beside a dashed one to see its head.'**
+  /// **'Clear an arrow beside a dashed one to see its head. Tapping a dashed one is free.'**
   String get tutorialFog;
 
   /// No description provided for @tutorialPairs.
@@ -1895,7 +1895,7 @@ abstract class AppLocalizations {
   /// A hidden-head arrow, as a screen reader reads it: no direction and no path, since a sighted player cannot see them either.
   ///
   /// In en, this message translates to:
-  /// **'Arrow with a hidden head, {length, plural, =1{1 cell} other{{length} cells}} long, from row {row}, column {column}. Which way it points shows once an arrow beside it leaves.'**
+  /// **'Arrow with a hidden head, {length, plural, =1{1 cell} other{{length} cells}} long, from row {row}, column {column}. Which way it points shows once an arrow beside it leaves. Tapping it costs nothing: the board points at the arrow that uncovers it.'**
   String arrowHiddenLabel(int length, int row, int column);
 
   /// No description provided for @arrowLocked.

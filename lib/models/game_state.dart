@@ -18,8 +18,11 @@ enum GamePhase { loading, playing, paused, cleared, outOfLives, timeUp }
 
 /// What the most recent tap did, for UI feedback. [locked] is a tap on an
 /// arrow whose path is clear but whose key has not left: it costs nothing
-/// and the board points at the key.
-enum MoveOutcome { none, exited, blocked, locked }
+/// and the board points at the key. [hidden] is a tap on an arrow whose
+/// head is still under cover and whose way is not clear: it costs nothing
+/// either (the player could not see where it goes) and the board points at
+/// the arrows that would uncover it.
+enum MoveOutcome { none, exited, blocked, locked, hidden }
 
 class GameState {
   const GameState({
@@ -105,7 +108,8 @@ class GameState {
   /// cell it bumped into. [moveToken] bumps on every tap so the UI can replay
   /// feedback even when two consecutive taps look the same. On a tethered
   /// pair [lastMoveId] is the half whose way was not clear, which may not
-  /// be the half under the finger.
+  /// be the half under the finger; on a hidden tap it is the hidden arrow
+  /// itself.
   final int? lastMoveId;
   final MoveOutcome lastOutcome;
   final Cell? blockedCell;

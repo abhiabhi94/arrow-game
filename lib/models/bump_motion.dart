@@ -31,10 +31,13 @@ class BumpMotion {
 
   /// The pause pressed against the blocker, tip to its edge, before the
   /// spring home: the moment the eye needs to see *what* was hit.
-  static const int holdMs = 140;
+  static const int holdMs = 200;
 
-  /// The back leg, a fixed spring home — also how long the screen shakes.
-  static const int backMs = 520;
+  /// The back leg, a fixed glide home — also how long the screen shakes.
+  /// It is a glide and not a snap: the first cut eased out of the hold
+  /// with a cubic, which put two thirds of the way home in the first
+  /// 150 ms, and the return was over before it was seen.
+  static const int backMs = 600;
 
   /// Shakes of the screen over the back leg.
   static const int kJoltCycles = 3;
@@ -60,8 +63,9 @@ class BumpMotion {
   double get releaseAt => (forwardMs + holdMs) / totalMs;
 
   /// The head's offset along its track, in cells, at progress [t] (0..1):
-  /// accelerating into the blocker, pressed against it, then easing back
-  /// home.
+  /// accelerating into the blocker, pressed against it, then gliding back
+  /// home at an even pace (a smoothstep: soft off the blocker, soft into
+  /// place, and moving the whole way between).
   double offsetAt(double t) {
     final impact = impactAt;
     if (t <= 0) return 0;
@@ -73,7 +77,7 @@ class BumpMotion {
     if (t < release) return travel;
     final u = ((t - release) / (1 - release)).clamp(0.0, 1.0);
     final back = 1 - u;
-    return travel * back * back * back;
+    return travel * back * back * (3 - 2 * back);
   }
 
   /// How hard the blocker is being shoved at [t]: a jolt at impact, held

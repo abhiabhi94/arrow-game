@@ -15,8 +15,10 @@ keeping the ones before it: **Lines** (1–20, the plain rectangle, 5 arrows on
 arrow's path a right angle, so the way out is read off the board), **Locks** (41–60: a
 padlocked arrow also waits for the key with its number; tapping it early
 costs nothing and points at the key), **Fog** (61–80: a dashed arrow hides
-its head until a neighbour leaves), **Pairs** (81–100: two tethered arrows
-leave on one tap, so both paths must be clear). Every chapter opens on a
+its head until a neighbour leaves; tapping it while hidden costs nothing
+and points at the neighbour that would uncover it), **Pairs** (81–100: two
+tethered arrows, washed in one tint, leave on one tap, so both paths must
+be clear). Every chapter opens on a
 small teaching board under a card that is one line and a self-playing
 demo of the twist, then climbs steadily from 30 arrows at its second
 level to 150 at its twentieth (the same top for every chapter: the twist
@@ -55,6 +57,9 @@ node tool/screenshot.mjs --levels 3 --resume                        # + a saved 
 node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + keyboard
 node tool/screenshot.mjs --levels 1 --crash 2,4                     # a bump mid-crash (fake clock): jolt + red flash
 node tool/screenshot.mjs --levels 21 --crash 5,5,650                # a bump that turned at a mirror, 650 ms in: pressed on the blocker
+node tool/screenshot.mjs --levels 41 --crash 4,0,1300               # the key leaving: the lock popped open, glowing (700 ms: the spark on its way)
+node tool/screenshot.mjs --levels 61 --crash 2,9,500                # a tap on a hidden arrow: the pointer to the arrow that uncovers it
+node tool/screenshot.mjs --levels 81 --crash 4,4,450                # a pair bumping: both halves pressed forward, the tether lit
 node tool/screenshot.mjs --levels 1 --riddle 2,4,2,3,2,2            # spend all 3 lives -> Out of lives, the riddle, its hint, solved
 node tool/screenshot.mjs --lang hi --settings --levels 1 --riddle 2,4,2,3,2,2 --riddle-answer aam  # the same in Hindi
 node tool/screenshot.mjs --levels 1 --riddle-hint 2,4                # spend the 3 hints -> the riddle button, its riddle, the hint it buys
@@ -80,7 +85,9 @@ laptop via GitHub Pages); `--crash x,y` taps a grid cell on the first level
 and captures the bump 330 ms in (or `x,y,ms`) on Playwright's fake clock
 (a screenshot takes longer than the bump), with the semantics layer made pointer-transparent
 for the tap — a click on the board's accessibility node would otherwise be a
-semantic tap at the board's centre. `--riddle x,y,…` spends every life on
+semantic tap at the board's centre; a fresh profile opened straight at a
+late level is owed every chapter card it skipped, and the driver puts
+them all away before the board flows. `--riddle x,y,…` spends every life on
 three different blocked heads (level 1: `2,4,2,3,2,2`) and captures the
 "Out of lives" card, the riddle behind it, the riddle with its hint out and
 the answer accepted — it seeds an unshuffled pack so the riddle is always the
@@ -278,14 +285,34 @@ Key patterns:
   a locked arrow looks locked, so it is not a slip): the arrow rattles
   (`BumpMotion.kLockJab`, no cell) and the board draws a dashed line in the
   sun colour from the lock to its key with a ring pulsing twice on the key
-  (`_paintKeyPointer`, `kKeyPingMs`), which is how the pair is found on a
-  200-arrow board rather than by reading the numbers. When the key leaves,
-  its padlock swings open with a ring (`_unlocks`, `kUnlockMs`,
-  `BoardGlyphs.padlock(openness:)`); when a hidden head is uncovered it
-  springs in with a ring (`_reveals`, `kRevealMs`). A pair leaves on one
-  clock: `_startExit` starts a slide for every member of `exitGroup`. On a
-  pair the half whose way was blocked is the one that bumps
-  (`GameState.lastMoveId`), and both halves go in `bumped`.
+  (`_paintPointer`, `kKeyPingMs`), which is how the pair is found on a
+  200-arrow board rather than by reading the numbers. **A tap on a hidden
+  arrow whose way is not clear costs nothing either** (`MoveOutcome.hidden`,
+  checked before `blockOf`: the player could not see where it goes, so it
+  is a guess, not a slip — a hidden arrow whose way *is* clear still
+  leaves): the same rattle, and the same pointer to every arrow beside it
+  that could uncover it — `Puzzle.revealersOf`: its neighbours that are
+  able to leave before it, so not its partner and nothing that waits for
+  it down the chain; empty on the rare arrow only a hint can uncover. When
+  the key leaves, the lock opens **after** the key's slide is over, not as
+  it starts (`_pendingUnlocks` keeps it drawn shut until `_afterExit`):
+  a spark in the sun colour flies from where the key was to the lock
+  (`_paintSparks`, the first `kSparkShare` of `kUnlockMs`), then the
+  padlock swings open with a ring and the arrow glows and fades
+  (`_unlocks`, `BoardGlyphs.padlock(openness:)`) — cause, then effect.
+  A head uncovered by a neighbour leaving comes out of the fog the same
+  way, once that slide is over (`_pendingReveals`, owed by the exiting
+  arrow's id): the dashes firm into a line, the head springs in, a ring
+  and a glow (`_reveals`, `kRevealMs`); a head lit by a hint appears at
+  once. A pair leaves on one clock: `_startExit` starts a slide for every
+  member of `exitGroup`, the tether drawn between them the whole way in
+  the glow. On a pair the half whose way was blocked is the one that bumps
+  (`GameState.lastMoveId`), and both halves go in `bumped` — and **both
+  halves move**: the painter runs the bump offset on every member of the
+  bumping arrow's `exitGroup`, the free half pulled the same distance
+  along its own track and sprung back with the other, the tether lit
+  between them, so the second arrow is seen to be tied to the first
+  rather than appearing to bump on its own.
 - **Generation:** `puzzle_generator.dart` places arrows one by one on flat
   typed-data grids, roughly inside-out (deep heads sampled first so the free
   area stays an outer ring). A head may face free cells *or point straight
@@ -356,9 +383,16 @@ Key patterns:
   `kStopShort` of a cell before its centre, 280–900 ms by distance: about
   a tenth of a second a cell, since a bump over in a blink is a missed
   life, and a bump that turned at a mirror can run a long way), stays
-  pressed against it for `holdMs` (140) so *what* was hit is seen, and
-  eases back over 520 ms; the blocker flashes and is shoved a touch at
-  impact. The board draws `offsetAt/shoveAt/flashAt`. The game screen runs
+  pressed against it for `holdMs` (200) so *what* was hit is seen, and
+  glides back over 600 ms on a smoothstep — an ease-out cubic put two
+  thirds of the return in its first 150 ms and the return was never
+  seen; the blocker flashes and is shoved a touch at impact. The board
+  draws `offsetAt/shoveAt/flashAt`, in cells: the painter's `travel` is
+  the reduce-motion switch (0 or 1) and nothing else multiplies the
+  offset. From the accessibility release until the chapters shipped, a
+  local `travel` (the arrow's whole run) shadowed it, so every bump flew
+  to the board's edge and back in a blink — the "it goes to the edge"
+  and "the bump is too fast to see" reports were the same bug. The game screen runs
   the same motion in its own controller to throw the whole screen sideways
   (`joltAt` × `kCrashJoltPx`) and bloom a red edge over it (`flashAt` on a
   radial gradient of `blockedFlash`), so a lost life registers even when
@@ -451,42 +485,58 @@ Key patterns:
   each mirror the glass flashes in the glow with a ring (`_bounces`,
   `kBounceMs`, started from the exit controller's listener on the
   painter's own offset formula) and the slide takes `kBounceDwellMs` longer
-  per turn, so a bounce is watched rather than inferred; a bump's shove
-  goes the way the arrow was travelling at impact — a locked arrow wears a
-  padlock on its middle cell that swings open and fades once its key has
-  left, a key wears a key glyph,
-  both with the lock's number in a badge, a hidden head is a dashed body
-  with no head and a ? disc, a pair a dotted tether between their nearest
-  cells (off the heads where there is a choice) with a ring at each end.
+  per turn, so a bounce is watched rather than inferred (and heard:
+  `PuzzleBoard.onBounce` fires as the head reaches each mirror, which the
+  game screen routes to `GameNotifier.bounce` → `SfxService.bounce`); a
+  bump's shove goes the way the arrow was travelling at impact — a locked
+  arrow wears a padlock on its middle cell that swings open and fades once
+  its key has left, a key wears a key glyph, both with the lock's number
+  in a badge, a hidden head is a dashed body with no head and a ? disc, a
+  pair a dotted tether between their nearest cells (off the heads where
+  there is a choice) with a ring at each end, over a wash in
+  `palette.pairWash` (a pale mint, `BoardGlyphs.washPair`) under every
+  cell of both halves, so on a board of a hundred arrows in one ink the
+  two read as one piece before the tether is found; the tether is drawn
+  from the halves' moving track points (`_trackPoint`) so it travels with
+  them on a slide and on a bump, in the glow while they move.
   Glyphs are `BoardGlyphs.glyphSize(cs)`:
   most of a cell, never under 10 px, so the zoom is how they are read on a
   dense board. The screen reader hears the same (`board_semantics.dart`):
   a hidden arrow gives neither its direction nor its path, a lock says its
   number and whether it is open, a key its number, a pair that it is
-  tethered, an arrow whose path turns says so, and a blocker's distance is
-  counted along the bent path. Slide-out and bump are
-  animated in `PuzzleBoard` (240–600 ms slide, ease-in, plus 140 ms a
-  mirror; the bump 280–900 ms in, 140 ms held and 520 ms back). Strokes cap at
-  3 px and heads at 8 px so the small early boards read as pen lines.
+  tethered, an arrow whose path turns says so, a hidden one that a tap on
+  it is free and points the way, and a blocker's distance is counted
+  along the bent path. Slide-out and bump are animated in `PuzzleBoard`
+  (240–600 ms slide, ease-in, plus 140 ms a mirror; the bump 280–900 ms
+  in, 200 ms held and 600 ms back; a lock opening 1200 ms from the end of
+  the key's slide, a head out of the fog 1000 ms from the end of its
+  neighbour's). Strokes cap at 3 px and heads at 8 px so the small early
+  boards read as pen lines.
 - **Sound effects:** `SfxService` (`services/sfx_service.dart`, injectable
   `SfxBackend`, a pool of low-latency players built once behind a single
   `_building` future — `play` is fire-and-forget, so an unguarded
   `if (_pool.isEmpty)` let two quick taps each fill the pool — and warmed up
   from `main.dart` at launch, never while effects are off) plays `assets/audio/whoosh.wav`
   on every exit — the pitch climbs a notch per quick successive exit and
-  resets after 1.5 s — and `assets/audio/bump.wav` (a knock) on a blocked
-  tap, which also ends the streak. Both WAVs are synthesised by
+  resets after 1.5 s — `assets/audio/bump.wav` (a knock) on a blocked
+  tap, which also ends the streak, and `assets/audio/bounce.wav` as an
+  arrow on its way out turns at a mirror (the board says when, head on
+  the glass; it rides the whoosh's streak pitch and touches nothing
+  else). The WAVs are synthesised by
   `tool/make_sfx.py` (pure Python, no deps): the whoosh is swept band-passed
   noise (no tone — a chirp reads as a laser), the bump a sharp crack over a
   sagging thump and a low rumble with a lighter rebound knock — half a
-  second and near full scale, since it announces a lost life.
+  second and near full scale, since it announces a lost life — and the
+  bounce a small bright "bwip", a glassy note bending up a fourth with a
+  tick of air at the start, a fifth of a second, since it plays inside
+  the whoosh.
   It also plays `assets/audio/win.wav` when a level is cleared (four plucked
   notes up a major triad — the one moment the game sings) and
   `assets/audio/lose.wav` on a spent allowance or a run-out clock (a comic
   deflation: a note sagging a minor sixth with a wobble, onto a small flat
   thud). On a life-losing bump the sting waits `kEndingStingMs` after the
-  knock so the two read as two things. `Settings.sfxOn` gates all four (on by
-  default).
+  knock so the two read as two things. `Settings.sfxOn` gates all five (on by
+  default); there is no setting of their own for any of them.
 - **Audio:** `AudioService` (injectable `AudioBackend`, audioplayers) loops
   "Game" by The_Mountain (Pixabay Content License, `assets/audio/game.mp3`), credited on
   the Credits screen (`data/audio_credits.dart`). `main.dart` applies the
@@ -575,8 +625,10 @@ Key patterns:
 - **Chapters and the daily board:** `data/chapters.dart` is the map (five of
   `kChapterLength` = 20, `chapterOf`, `ruleTaughtAt`, `chapterForProgress`);
   `data/chapter_demos.dart` holds the tiny solvable boards each chapter card
-  plays and the script of taps that shows the twist (`demoScriptFor`; the
-  lock demo taps the lock first on purpose, for the rattle and the pointer).
+  plays and the script of taps that shows the twist
+  (`demoScriptFor`; the
+  lock demo taps the lock first on purpose, for the rattle and the pointer,
+  and the fog demo taps the hidden arrow first for the same reason).
   `widgets/chapter_demo.dart` runs that script on a real `GameNotifier`
   every `kDemoStep`, rests `kDemoRest` on the cleared board and starts over,
   so the card is a title, one line and a loop of the rule being played

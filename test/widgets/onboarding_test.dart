@@ -18,7 +18,7 @@ Future<void> _tapCell(WidgetTester tester, Cell cell) async {
   final rect = tester.getRect(board);
   final cs = rect.width / 4;
   await tester.tapAt(rect.topLeft + Offset((cell.x + 0.5) * cs, (cell.y + 0.5) * cs));
-  await _settle(tester, 1000);
+  await _settle(tester, 1200);
 }
 
 void main() {

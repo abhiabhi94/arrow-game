@@ -570,6 +570,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                               state: state,
                                               showGrid: gridUnlocked && settings.gridLinesOn,
                                               onTapArrow: notifier.tapArrow,
+                                              onBounce: notifier.bounce,
                                               zoom: _scale,
                                               focusedArrowId: _cursor,
                                               reduceMotion: _calm,

@@ -156,5 +156,48 @@ void main() {
       // The rules are untouched: a hidden arrow still plays.
       expect(p.canExit(1, const {}), isTrue);
     });
+
+    test('the arrows that can uncover a head are the neighbours able to leave before it', () {
+      // 1 (hidden) lies under 0 and over 2; 2 points up into 1, so it can
+      // only go after 1 — only 0 can uncover the head. 3, tethered to 1 and
+      // touching it, leaves with it and uncovers nothing.
+      final p = Puzzle(
+        width: 5,
+        height: 5,
+        arrows: [
+          ArrowPiece(id: 0, cells: const [Cell(0, 0), Cell(1, 0), Cell(2, 0)], heading: Direction.right),
+          ArrowPiece(id: 1, cells: const [Cell(0, 1), Cell(1, 1)], heading: Direction.right),
+          ArrowPiece(id: 2, cells: const [Cell(1, 3), Cell(1, 2)], heading: Direction.up),
+          ArrowPiece(id: 3, cells: const [Cell(2, 2), Cell(2, 1)], heading: Direction.up),
+          ArrowPiece(id: 4, cells: const [Cell(4, 4), Cell(4, 3)], heading: Direction.up),
+        ],
+        hidden: const {1},
+        pairs: const {1: 3},
+      );
+      expect(p.neighboursOf(1), {0, 2, 3});
+      expect(p.blockersOf(2), {0, 1});
+      expect(p.revealersOf(1), {0});
+      // A chain counts too: 0 points straight into 1, and 2 points into 0,
+      // so 2 can only go after 1 down the line and cannot be the one to
+      // uncover it, though it lies right beside it. 4, beside it and free,
+      // is the one.
+      final chained = Puzzle(
+        width: 5,
+        height: 5,
+        arrows: [
+          ArrowPiece(id: 0, cells: const [Cell(2, 1), Cell(1, 1)], heading: Direction.left),
+          ArrowPiece(id: 1, cells: const [Cell(0, 2), Cell(0, 1)], heading: Direction.up),
+          ArrowPiece(id: 2, cells: const [Cell(1, 3), Cell(1, 2)], heading: Direction.up),
+          ArrowPiece(id: 3, cells: const [Cell(4, 4), Cell(4, 3)], heading: Direction.up),
+          ArrowPiece(id: 4, cells: const [Cell(0, 3), Cell(0, 4)], heading: Direction.down),
+        ],
+        hidden: const {1},
+      );
+      expect(chained.neighboursOf(1), {0, 2, 4});
+      expect(chained.blockersOf(0), {1});
+      expect(chained.blockersOf(2), {0});
+      expect(chained.blockersOf(4), isEmpty);
+      expect(chained.revealersOf(1), {4});
+    });
   });
 }

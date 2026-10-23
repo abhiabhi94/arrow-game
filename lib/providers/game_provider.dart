@@ -139,8 +139,10 @@ class GameNotifier extends StateNotifier<GameState> {
 
   /// Taps arrow [id]: it slides out if its exit path is clear (and its
   /// lock is open, and its tethered partner's way is clear too); held by a
-  /// lock it rattles for free; otherwise it bumps and costs a life. An
-  /// arrow leaving uncovers any hidden heads beside it.
+  /// lock it rattles for free; with its head still hidden it rattles for
+  /// free too and the board points at what would uncover it; otherwise it
+  /// bumps and costs a life. An arrow leaving uncovers any hidden heads
+  /// beside it.
   void tapArrow(int id) {
     if (!state.isPlaying || state.removed.contains(id)) return;
     final puzzle = state.puzzle!;
@@ -169,6 +171,20 @@ class GameNotifier extends StateNotifier<GameState> {
       } else {
         haptics?.hit();
       }
+      _snapshot();
+      return;
+    }
+    // A hidden head is a guess, not a slip: the player cannot see which
+    // way it goes, so a tap on it is not charged. It rattles, and the board
+    // points at the arrows beside it that would uncover it.
+    if (!state.headShown(id)) {
+      state = state.copyWith(clearBlocked: true).copyWith(
+        clearHint: true,
+        lastMoveId: id,
+        lastOutcome: MoveOutcome.hidden,
+        moveToken: token,
+      );
+      haptics?.tap();
       _snapshot();
       return;
     }
@@ -235,6 +251,11 @@ class GameNotifier extends StateNotifier<GameState> {
     });
     _snapshot();
   }
+
+  /// The board reports an arrow on its way out turning at a mirror (the
+  /// moment its head reaches the glass): the bounce note plays. Nothing in
+  /// the state moves — the turn is in the path the tap already followed.
+  void bounce() => sfx?.bounce();
 
   /// Spends a hint to point at an arrow that can go now. No-op while a hint
   /// is already showing, when none are left, or outside play.

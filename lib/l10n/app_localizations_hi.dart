@@ -120,7 +120,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get tutorialLocks => 'ताले वाला तीर अपनी चाबी का इंतज़ार करता है।';
 
   @override
-  String get tutorialFog => 'बिंदीदार तीर के पास का तीर निकालो, सिरा दिखेगा।';
+  String get tutorialFog =>
+      'बिंदीदार तीर के पास का तीर निकालो, सिरा दिखेगा। बिंदीदार तीर छूने पर जान नहीं जाती।';
 
   @override
   String get tutorialPairs => 'बँधे तीर साथ निकलते हैं।';
@@ -1034,7 +1035,7 @@ class AppLocalizationsHi extends AppLocalizations {
       other: '$length खाने',
       one: '1 खाना',
     );
-    return 'छिपे सिरे वाला तीर, $_temp0 लंबा, पंक्ति $row, स्तंभ $column से। पास का कोई तीर निकलते ही दिखेगा कि यह किस ओर है।';
+    return 'छिपे सिरे वाला तीर, $_temp0 लंबा, पंक्ति $row, स्तंभ $column से। पास का कोई तीर निकलते ही दिखेगा कि यह किस ओर है। इसे छूने पर जान नहीं जाती: बोर्ड उस तीर की ओर इशारा करता है जो इसे खोलेगा।';
   }
 
   @override

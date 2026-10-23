@@ -11,8 +11,8 @@ void main() {
     expect(m.travel, closeTo(1 - BumpMotion.kStopShort, 1e-9));
     expect(m.forwardMs, 280);
     expect(m.totalMs, m.forwardMs + BumpMotion.holdMs + BumpMotion.backMs);
-    expect(m.impactAt, closeTo(280 / 940, 1e-9));
-    expect(m.releaseAt, closeTo(420 / 940, 1e-9));
+    expect(m.impactAt, closeTo(280 / 1080, 1e-9));
+    expect(m.releaseAt, closeTo(480 / 1080, 1e-9));
   });
 
   test('a long run takes longer to arrive, within bounds: slow enough to follow', () {
@@ -35,6 +35,10 @@ void main() {
     expect(m.offsetAt((impact + release) / 2), closeTo(m.travel, 1e-9));
     expect(m.shoveAt((impact + release) / 2), 1);
     expect(m.offsetAt((1 + release) / 2), inExclusiveRange(0, m.travel));
+    // A glide, not a snap: halfway through the back leg it is halfway home,
+    // and a fifth of the way in it has barely left the blocker.
+    expect(m.offsetAt((1 + release) / 2), closeTo(m.travel / 2, 1e-9));
+    expect(m.offsetAt(release + (1 - release) * 0.2), greaterThan(m.travel * 0.85));
     expect(m.offsetAt(1), closeTo(0, 1e-9));
     for (var t = 0.0; t + 0.01 <= impact; t += 0.01) {
       expect(m.offsetAt(t + 0.01), greaterThanOrEqualTo(m.offsetAt(t)));

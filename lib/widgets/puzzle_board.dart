@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show listEquals, setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
@@ -32,14 +33,23 @@ const double kSettleFraction = 0.3;
 /// How long one ping of the hint ring takes.
 const Duration kHintPingPeriod = Duration(milliseconds: 1100);
 
-/// How long the pointer from a tapped lock to its key stays up.
+/// How long the pointer from a tapped lock to its key (or from a tapped
+/// hidden arrow to the arrows that would uncover it) stays up.
 const int kKeyPingMs = 1800;
 
-/// How long a padlock takes to swing open, with its ring.
-const int kUnlockMs = 700;
+/// How long a lock takes to open once its key has left: a spark flies from
+/// where the key was to the lock, then the padlock swings open with a ring
+/// and the arrow glows. Starts when the key's slide is over, not when it
+/// starts, so the key is seen to go and *then* the lock to open.
+const int kUnlockMs = 1200;
 
-/// How long a hidden head takes to spring into view, with its ring.
-const int kRevealMs = 650;
+/// The share of [kUnlockMs] the spark takes to reach the lock.
+const double kSparkShare = 0.35;
+
+/// How long a hidden head takes to come out of the fog once the neighbour
+/// that uncovers it has gone: the dashes firm into a line, the head springs
+/// in with a ring, and the arrow glows. Starts when that slide is over.
+const int kRevealMs = 1000;
 
 /// How long the flash on a mirror lasts as an arrow bounces through it.
 const int kBounceMs = 600;
@@ -72,6 +82,7 @@ class PuzzleBoard extends StatefulWidget {
     required this.state,
     required this.showGrid,
     required this.onTapArrow,
+    this.onBounce,
     this.zoom = 1,
     this.focusedArrowId,
     this.reduceMotion = false,
@@ -80,6 +91,10 @@ class PuzzleBoard extends StatefulWidget {
   final GameState state;
   final bool showGrid;
   final ValueChanged<int> onTapArrow;
+
+  /// Called as the head of an arrow sliding out reaches a mirror — the
+  /// moment the glass flashes — so a sound can land on the turn.
+  final VoidCallback? onBounce;
 
   /// The scale the board is being viewed at, so touch slop stays the same
   /// size on screen however far in the player has pinched.
@@ -120,18 +135,27 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   BumpMotion? _bumpMotion;
   AnimationController? _bump;
 
-  /// Runs after a tap on a locked arrow: a dashed line from the lock to its
-  /// key and a ring pulsing on the key, so the player sees what has to go
-  /// first without reading a number.
-  AnimationController? _keyPing;
+  /// Runs after a tap on a locked arrow, or on one whose head is hidden: a
+  /// dashed line from the tapped arrow to each of [_pointerTargets] (the
+  /// key; the arrows that would uncover the head) and a ring pulsing on
+  /// each, so the player sees what has to go first without reading a
+  /// number or guessing.
+  AnimationController? _pointer;
+  List<int> _pointerTargets = const <int>[];
 
-  /// Padlocks popping open, by the locked arrow's id: the key has just
-  /// left, and the lock swings open with a ring.
+  /// Padlocks popping open, by the locked arrow's id: the key has gone,
+  /// and a spark flies from where it was to the lock, which swings open
+  /// with a ring. [_pendingUnlocks] are the locks whose key is still
+  /// sliding out: drawn shut until it has gone.
   final Map<int, AnimationController> _unlocks = <int, AnimationController>{};
+  final Set<int> _pendingUnlocks = <int>{};
 
-  /// Heads appearing, by the hidden arrow's id: a neighbour has just left
-  /// (or a hint lit it), and the head springs into view with a ring.
+  /// Heads appearing, by the hidden arrow's id: a neighbour has gone (or a
+  /// hint lit it), and the fog lifts off the arrow. [_pendingReveals] are
+  /// the heads owed to an arrow still sliding out, by that arrow's id:
+  /// drawn hidden until it has gone.
   final Map<int, AnimationController> _reveals = <int, AnimationController>{};
+  final Map<int, Set<int>> _pendingReveals = <int, Set<int>>{};
 
   /// Mirrors flashing, by packed cell (`y * width + x`): an arrow on its way
   /// out has just turned there, and the glass lights up with a ring so the
@@ -163,23 +187,32 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
       return;
     }
     final moved = s.moveToken != old.state.moveToken && s.lastMoveId != null;
+    final uncovered = s.revealed.difference(old.state.revealed);
     if (moved) {
       final id = s.lastMoveId!;
       switch (s.lastOutcome) {
         case MoveOutcome.exited:
+          // The heads this exit uncovers appear once it has gone, and so
+          // do the locks it opens: cause, then effect.
+          if (uncovered.isNotEmpty) _pendingReveals[id] = uncovered;
           _startExit(id);
-          _startUnlocks(id);
         case MoveOutcome.blocked:
           _startBump(id);
         case MoveOutcome.locked:
           _startBump(id);
-          _startKeyPing();
+          _startPointer(<int>[s.blockedKey!]);
+        case MoveOutcome.hidden:
+          _startBump(id);
+          _startPointer(s.puzzle!.revealersOf(id).toList()..sort());
         case MoveOutcome.none:
           break;
       }
     }
-    for (final id in s.revealed.difference(old.state.revealed)) {
-      _startReveal(id);
+    if (!(moved && s.lastOutcome == MoveOutcome.exited)) {
+      // Lit by a hint (or restored): the head is there at once.
+      for (final id in uncovered) {
+        _startReveal(id);
+      }
     }
     // After the move, not before: the bump that spends the last life has to
     // have started before the slump can know to wait for it.
@@ -202,6 +235,14 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     // A turn at a mirror buys a little more, so the bounce is watched.
     final dwell = turns * kBounceDwellMs;
     final duration = Duration(milliseconds: (140 + travel * 30 + dwell).clamp(240, 600 + dwell));
+    // The locks this exit opens stay shut until it is over.
+    for (final member in group) {
+      for (final lock in puzzle.locksOpenedBy(member)) {
+        if (!widget.state.removed.contains(lock)) _pendingUnlocks.add(lock);
+      }
+      // A lock leaving opens nothing of its own; it is simply gone.
+      _pendingUnlocks.remove(member);
+    }
     for (final member in group) {
       final controller = AnimationController(vsync: this, duration: duration);
       _exits[member]?.dispose();
@@ -221,6 +262,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
         while (ahead.isNotEmpty && offset >= ahead.first.$1) {
           final cell = ahead.removeAt(0).$2;
           _startOneShot(_bounces, cell.y * puzzle.width + cell.x, kBounceMs);
+          widget.onBounce?.call();
         }
         setState(() {});
       });
@@ -228,19 +270,23 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
         if (!mounted) return;
         setState(() {
           _exits.remove(member)?.dispose();
+          _afterExit(member);
         });
       });
     }
   }
 
-  /// The padlocks [id] was the key of swing open as it leaves.
-  void _startUnlocks(int id) {
+  /// [id] has left the board: the padlocks it was the key of swing open,
+  /// and the heads its going uncovered come out of the fog.
+  void _afterExit(int id) {
     final puzzle = widget.state.puzzle!;
-    for (final member in puzzle.exitGroup(id)) {
-      for (final lock in puzzle.locksOpenedBy(member)) {
-        if (widget.state.removed.contains(lock)) continue;
-        _startOneShot(_unlocks, lock, kUnlockMs);
-      }
+    for (final lock in puzzle.locksOpenedBy(id)) {
+      if (!_pendingUnlocks.remove(lock)) continue;
+      if (widget.state.removed.contains(lock)) continue;
+      _startOneShot(_unlocks, lock, kUnlockMs);
+    }
+    for (final hidden in _pendingReveals.remove(id) ?? const <int>{}) {
+      _startReveal(hidden);
     }
   }
 
@@ -261,16 +307,21 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     });
   }
 
-  /// Points at the key of the arrow just tapped.
-  void _startKeyPing() {
-    _keyPing?.dispose();
+  /// Points from the arrow just tapped at [targets]: its key, or the
+  /// arrows that would uncover its head.
+  void _startPointer(List<int> targets) {
+    _pointer?.dispose();
     final controller = AnimationController(vsync: this, duration: const Duration(milliseconds: kKeyPingMs));
-    _keyPing = controller;
+    _pointer = controller;
+    _pointerTargets = targets;
     controller.addListener(() => setState(() {}));
     controller.forward().whenComplete(() {
       if (!mounted) return;
       setState(() {
-        if (_keyPing == controller) _keyPing = null;
+        if (_pointer == controller) {
+          _pointer = null;
+          _pointerTargets = const <int>[];
+        }
         controller.dispose();
       });
     });
@@ -355,8 +406,11 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
       }
       slot.clear();
     }
-    _keyPing?.dispose();
-    _keyPing = null;
+    _pendingUnlocks.clear();
+    _pendingReveals.clear();
+    _pointer?.dispose();
+    _pointer = null;
+    _pointerTargets = const <int>[];
     _bump?.dispose();
     _bump = null;
     _bumpId = null;
@@ -477,9 +531,12 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
                     bumpId: _bumpId,
                     bump: _bump?.value,
                     bumpMotion: _bumpMotion,
-                    keyPing: _keyPing?.value,
+                    pointer: _pointer?.value,
+                    pointerTargets: _pointerTargets,
                     unlocks: <int, double>{for (final e in _unlocks.entries) e.key: e.value.value},
                     reveals: <int, double>{for (final e in _reveals.entries) e.key: e.value.value},
+                    pendingUnlocks: Set<int>.of(_pendingUnlocks),
+                    pendingReveals: <int>{for (final owed in _pendingReveals.values) ...owed},
                     bounces: <int, double>{for (final e in _bounces.entries) e.key: e.value.value},
                     travel: widget.reduceMotion ? 0 : 1,
                     focusedId: widget.focusedArrowId,
@@ -508,9 +565,12 @@ class _BoardPainter extends CustomPainter {
     required this.bumpId,
     required this.bump,
     required this.bumpMotion,
-    required this.keyPing,
+    required this.pointer,
+    required this.pointerTargets,
     required this.unlocks,
     required this.reveals,
+    required this.pendingUnlocks,
+    required this.pendingReveals,
     required this.bounces,
     required this.travel,
     required this.focusedId,
@@ -550,23 +610,56 @@ class _BoardPainter extends CustomPainter {
   /// The slump's progress (0..1) on a losing ending, else null.
   final double? slump;
 
-  /// The bumping arrow, its progress (0..1) and its motion.
+  /// The bumping arrow, its progress (0..1) and its motion. Its tethered
+  /// partner moves with it.
   final int? bumpId;
   final double? bump;
   final BumpMotion? bumpMotion;
 
-  /// The pointer to the key after a locked tap, 0..1, or null.
-  final double? keyPing;
+  /// The pointer after a locked or a hidden tap, 0..1, or null, and the
+  /// arrows it points at.
+  final double? pointer;
+  final List<int> pointerTargets;
 
-  /// Padlocks popping open (locked id → progress) and heads appearing
-  /// (hidden id → progress).
+  /// Padlocks popping open (locked id → progress) and heads coming out of
+  /// the fog (hidden id → progress); and the ones owed to an arrow still
+  /// sliding out, drawn shut and hidden until it has gone.
   final Map<int, double> unlocks;
   final Map<int, double> reveals;
+  final Set<int> pendingUnlocks;
+  final Set<int> pendingReveals;
 
   /// Mirrors mid-flash, by packed cell: an arrow has just turned there.
   final Map<int, double> bounces;
 
   Puzzle get puzzle => state.puzzle!;
+
+  /// Whether a bump is being drawn now: the last tap ran into a cell, a
+  /// lock or a hidden head, and the board is still moving from it.
+  bool get _bumping =>
+      bump != null &&
+      bumpMotion != null &&
+      bumpId == state.lastMoveId &&
+      (state.blockedCell != null || state.blockedKey != null || state.lastOutcome == MoveOutcome.hidden);
+
+  /// The arrows moving with the bump: the one that bumped and its partner.
+  List<int> get _bumpGroup => _bumping ? puzzle.exitGroup(bumpId!) : const <int>[];
+
+  /// How far along its track [arrow] is drawn right now, in cells: sliding
+  /// out, bumping (with its partner), or at rest.
+  double _offsetOf(ArrowPiece arrow) {
+    final exiting = exits[arrow.id];
+    if (exiting != null) {
+      return Curves.easeIn.transform(exiting) * (arrow.length + puzzle.rayOf(arrow.id).length);
+    }
+    if (_bumpGroup.contains(arrow.id)) {
+      // In cells already; [travel] only switches it off with motion
+      // reduced. (The first cut multiplied by the arrow's whole run by
+      // mistake, so every bump flew to the edge and back in a blink.)
+      return bumpMotion!.offsetAt(bump!) * travel;
+    }
+    return 0;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -599,8 +692,21 @@ class _BoardPainter extends CustomPainter {
       badge: palette.accentSun,
       onBadge: palette.onAccent,
       mirrorWash: palette.mirror,
+      pairWash: palette.pairWash,
       textDirection: textDirection,
     );
+    // The wash under every pair still on the board, so the two halves read
+    // as one piece. It stays on the cells while the pair bumps (the home
+    // it springs back to) and goes once the pair is on its way out.
+    for (final e in puzzle.pairs.entries) {
+      final a = e.key;
+      final b = e.value;
+      if (a > b || state.removed.contains(a) || state.removed.contains(b)) continue;
+      glyphs.washPair(canvas, <Rect>[
+        for (final id in <int>[a, b])
+          for (final c in puzzle.arrows[id].cells) Rect.fromLTWH(c.x * cs, c.y * cs, cs, cs),
+      ]);
+    }
     // Mirrors: drawn under everything, so an arrow slides over the glass as
     // it turns.
     for (final e in puzzle.mirrors.entries) {
@@ -610,14 +716,14 @@ class _BoardPainter extends CustomPainter {
     // The bump: the tapped arrow runs into the arrow in its way, which takes
     // the hit — its cell flashes and it is shoved a touch — then springs
     // back. Held by a lock instead, it only rattles (the same motion, a
-    // fraction of a cell), and the key is pointed at below.
+    // fraction of a cell), and the key is pointed at below; the same for a
+    // tap on a hidden head, which points at what would uncover it.
     final blocked = state.blockedCell;
+    final bumping = _bumping;
     final bumpT = bump;
     final motion = bumpMotion;
-    final bumping =
-        (blocked != null || state.blockedKey != null) && bumpT != null && motion != null && bumpId == state.lastMoveId;
-    final flash = bumping && blocked != null ? motion.flashAt(bumpT) : 0.0;
-    final shove = bumping && blocked != null ? motion.shoveAt(bumpT) * travel : 0.0;
+    final flash = bumping && blocked != null ? motion!.flashAt(bumpT!) : 0.0;
+    final shove = bumping && blocked != null ? motion!.shoveAt(bumpT!) * travel : 0.0;
     final hitId = bumping && blocked != null ? puzzle.arrowAt(blocked) : null;
     if (flash > 0) {
       canvas.drawRRect(
@@ -631,25 +737,33 @@ class _BoardPainter extends CustomPainter {
 
     canvas.save();
     canvas.clipRect(rect);
-    // Tethers first, under the arrows they join. A pair in flight has
-    // left together; the line is not drawn after them.
+    // Tethers first, under the arrows they join — and moving with them: a
+    // pair on its way out, or bumping, is drawn joined the whole way, the
+    // tether in the glow, so the second half is seen to be pulled along.
     for (final e in puzzle.pairs.entries) {
       final a = e.key;
       final b = e.value;
-      if (a > b || state.removed.contains(a) || state.removed.contains(b)) continue;
-      final (ca, cb) = _nearestCells(puzzle.arrows[a], puzzle.arrows[b]);
-      glyphs.tether(canvas, _center(ca, cs), _center(cb, cs), cs);
+      if (a > b) continue;
+      bool gone(int id) => state.removed.contains(id) && !exits.containsKey(id);
+      if (gone(a) || gone(b)) continue;
+      final arrowA = puzzle.arrows[a];
+      final arrowB = puzzle.arrows[b];
+      final (ca, cb) = _nearestCells(arrowA, arrowB);
+      final offsetA = _offsetOf(arrowA);
+      final offsetB = _offsetOf(arrowB);
+      final moving = offsetA > 0 || offsetB > 0;
+      glyphs.tether(
+        canvas,
+        _trackPoint(arrowA, arrowA.cells.indexOf(ca) + offsetA, cs),
+        _trackPoint(arrowB, arrowB.cells.indexOf(cb) + offsetB, cs),
+        cs,
+        colour: moving ? palette.hintGlow : null,
+      );
     }
     for (final arrow in puzzle.arrows) {
       final exiting = exits[arrow.id];
       if (state.removed.contains(arrow.id) && exiting == null) continue;
-      final travel = arrow.length + puzzle.rayOf(arrow.id).length;
-      var offset = 0.0;
-      if (exiting != null) {
-        offset = Curves.easeIn.transform(exiting) * travel;
-      } else if (bumping && bumpId == arrow.id) {
-        offset = motion.offsetAt(bumpT) * travel;
-      }
+      final offset = _offsetOf(arrow);
       final shoved = bumping && arrow.id == hitId && shove > 0;
       if (shoved) {
         // Shoved the way the bumping arrow was going when it hit — past a
@@ -674,7 +788,8 @@ class _BoardPainter extends CustomPainter {
       if (shoved) canvas.restore();
     }
     _paintBounces(canvas, cs, glyphs);
-    _paintKeyPointer(canvas, cs, glyphs);
+    _paintSparks(canvas, cs);
+    _paintPointer(canvas, cs, glyphs);
     _paintHint(canvas, size, cs);
     canvas.restore();
     // Outside the clip: the ring sits a little proud of the cells, and an
@@ -708,45 +823,96 @@ class _BoardPainter extends CustomPainter {
     }
   }
 
-  /// After a tap on a locked arrow: a dashed line from the lock to its key
-  /// and a ring swelling out of the key, twice, so "that one first" needs
-  /// no number read.
-  void _paintKeyPointer(Canvas canvas, double cs, BoardGlyphs glyphs) {
-    final t = keyPing;
-    final lock = state.lastMoveId;
-    final key = state.blockedKey;
-    if (t == null || lock == null || key == null || state.removed.contains(key)) return;
-    final from = _center(puzzle.arrows[lock].cells[puzzle.arrows[lock].length ~/ 2], cs);
-    final to = _center(puzzle.arrows[key].cells[puzzle.arrows[key].length ~/ 2], cs);
+  /// The first part of a lock opening: a spark in the sun colour flies
+  /// from where the key was to the lock, a dashed trail fading behind it,
+  /// so the two are seen to be the two ends of one thing before the
+  /// padlock pops.
+  void _paintSparks(Canvas canvas, double cs) {
+    for (final e in unlocks.entries) {
+      if (e.value >= kSparkShare) continue;
+      final key = puzzle.keyOf(e.key);
+      if (key == null) continue;
+      final u = Curves.easeInOut.transform(e.value / kSparkShare);
+      final from = _middle(puzzle.arrows[key], cs);
+      final to = _middle(puzzle.arrows[e.key], cs);
+      final at = Offset.lerp(from, to, u)!;
+      final stroke = max(2.0, min(cs * 0.16, 4.0));
+      final trail = Path()
+        ..moveTo(from.dx, from.dy)
+        ..lineTo(at.dx, at.dy);
+      canvas.drawPath(
+        BoardGlyphs.dashed(trail, stroke * 1.5, stroke * 1.5),
+        Paint()
+          ..color = palette.accentSun.withValues(alpha: 0.9 * (1 - u * 0.6))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = stroke
+          ..strokeCap = StrokeCap.round,
+      );
+      final r = max(cs * 0.3, 6.0);
+      canvas.drawCircle(at, r * 1.8, Paint()..color = palette.hintGlow.withValues(alpha: 0.35));
+      canvas.drawCircle(at, r, Paint()..color = palette.accentSun);
+      canvas.drawCircle(
+        at,
+        r,
+        Paint()
+          ..color = palette.arrowInk
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(1.0, r * 0.18),
+      );
+    }
+  }
+
+  /// After a tap on a locked arrow, or on a hidden one: a dashed line from
+  /// it to each arrow it waits on — the key; the arrows beside it that
+  /// would uncover its head — and a ring swelling out of each, twice, so
+  /// "that one first" needs no number read and no guess made.
+  void _paintPointer(Canvas canvas, double cs, BoardGlyphs glyphs) {
+    final t = pointer;
+    final from = state.lastMoveId;
+    if (t == null || from == null) return;
+    final targets = <int>[
+      for (final id in pointerTargets)
+        if (!state.removed.contains(id)) id,
+    ];
+    if (targets.isEmpty) return;
+    final origin = _middle(puzzle.arrows[from], cs);
     final fade = t < 0.75 ? 1.0 : 1 - (t - 0.75) / 0.25;
     final stroke = max(2.0, min(cs * 0.16, 4.0));
-    final line = Path()
-      ..moveTo(from.dx, from.dy)
-      ..lineTo(to.dx, to.dy);
-    canvas.drawPath(
-      BoardGlyphs.dashed(line, stroke * 1.5, stroke * 1.5),
-      Paint()
-        ..color = palette.accentSun.withValues(alpha: fade)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round,
-    );
     // Two pings over the run.
     final phase = (t * 2) % 1;
     final ease = Curves.easeOutCubic.transform(phase);
     final from0 = max(cs * 0.8, 14.0);
     final to0 = max(from0 + 8, min(cs * 2.4, 50.0));
-    canvas.drawCircle(
-      to,
-      from0 + (to0 - from0) * ease,
-      Paint()
-        ..color = palette.accentSun.withValues(alpha: (0.95 - 0.8 * ease) * fade)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = max(2.5, min(cs * 0.26, 5.0)),
-    );
-    // The key itself, brought forward.
-    _paintArrow(canvas, puzzle.arrows[key], cs, 0, false, glyphs);
+    for (final id in targets) {
+      final to = _middle(puzzle.arrows[id], cs);
+      final line = Path()
+        ..moveTo(origin.dx, origin.dy)
+        ..lineTo(to.dx, to.dy);
+      canvas.drawPath(
+        BoardGlyphs.dashed(line, stroke * 1.5, stroke * 1.5),
+        Paint()
+          ..color = palette.accentSun.withValues(alpha: fade)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = stroke
+          ..strokeCap = StrokeCap.round,
+      );
+      canvas.drawCircle(
+        to,
+        from0 + (to0 - from0) * ease,
+        Paint()
+          ..color = palette.accentSun.withValues(alpha: (0.95 - 0.8 * ease) * fade)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(2.5, min(cs * 0.26, 5.0)),
+      );
+    }
+    // The targets themselves, brought forward.
+    for (final id in targets) {
+      _paintArrow(canvas, puzzle.arrows[id], cs, _offsetOf(puzzle.arrows[id]), false, glyphs);
+    }
   }
+
+  /// The centre of [arrow]'s middle cell, where its glyph sits.
+  static Offset _middle(ArrowPiece arrow, double cs) => _center(arrow.cells[arrow.length ~/ 2], cs);
 
   /// The direction arrow [id] is travelling as it enters [cell] on its ray.
   Direction _travelInto(int id, Cell cell) {
@@ -881,12 +1047,37 @@ class _BoardPainter extends CustomPainter {
     return best;
   }
 
-  /// Draws [arrow] shifted [offset] cells forward along its own track (its
-  /// cells, then its exit ray — which turns at a mirror, so the arrow bends
-  /// through the glass as it goes — then straight on past the edge, where
-  /// the clip swallows it). With [glyphs] the arrow's twist is drawn on it
-  /// too: its padlock or key, its question mark while its head is hidden;
-  /// the hint's redraw passes none.
+  /// [arrow]'s track: its cells, then its exit ray — which turns at a
+  /// mirror, so the arrow bends through the glass as it goes — then
+  /// straight on past the edge (where the clip swallows it), far enough
+  /// that sampling never runs out.
+  List<Cell> _trackOf(ArrowPiece arrow) {
+    final track = <Cell>[...arrow.cells, ...puzzle.rayOf(arrow.id)];
+    var beyond = track.last;
+    final exitHeading = puzzle.exitHeadingOf(arrow.id);
+    for (var i = 0; i < arrow.length + 2; i++) {
+      beyond = beyond.step(exitHeading);
+      track.add(beyond);
+    }
+    return track;
+  }
+
+  /// The point [u] cells along [arrow]'s track (0 is its tail's cell).
+  Offset _trackPoint(ArrowPiece arrow, double u, double cs) => _along(_trackOf(arrow), u, cs);
+
+  static Offset _along(List<Cell> track, double u, double cs) {
+    final i = u.floor().clamp(0, track.length - 2);
+    final f = (u - i).clamp(0.0, 1.0);
+    return Offset.lerp(_center(track[i], cs), _center(track[i + 1], cs), f)!;
+  }
+
+  /// Draws [arrow] shifted [offset] cells forward along its own track. With
+  /// [glyphs] the arrow's twist is drawn on it too: its padlock or key, its
+  /// question mark while its head is hidden; the hint's redraw passes none.
+  /// A head coming out of the fog and a lock popping open are drawn here as
+  /// well: the dashes firm into a line and the head springs in, or the
+  /// padlock swings open, each with a ring and a glow over the whole arrow
+  /// that fades as the moment passes.
   void _paintArrow(
     Canvas canvas,
     ArrowPiece arrow,
@@ -895,20 +1086,8 @@ class _BoardPainter extends CustomPainter {
     bool hinted,
     BoardGlyphs? glyphs,
   ) {
-    final ray = puzzle.rayOf(arrow.id);
-    final track = <Cell>[...arrow.cells, ...ray];
-    // Extend past the edge so sampling never runs out.
-    var beyond = track.last;
-    final exitHeading = puzzle.exitHeadingOf(arrow.id);
-    for (var i = 0; i < arrow.length + 2; i++) {
-      beyond = beyond.step(exitHeading);
-      track.add(beyond);
-    }
-    Offset at(double u) {
-      final i = u.floor().clamp(0, track.length - 2);
-      final f = (u - i).clamp(0.0, 1.0);
-      return Offset.lerp(_center(track[i], cs), _center(track[i + 1], cs), f)!;
-    }
+    final track = _trackOf(arrow);
+    Offset at(double u) => _along(track, u, cs);
 
     final ink = palette.arrowInk;
     // Scales with the cell but stays a pen line on small boards, where a
@@ -922,16 +1101,24 @@ class _BoardPainter extends CustomPainter {
     var dir = ahead - head;
     if (dir.distance < 0.001) dir = _unit(arrow.heading);
     dir = dir / dir.distance;
-    final headShown = state.headShown(arrow.id);
-    // A head that has just been uncovered springs in from nothing.
+    // Hidden until the arrow that uncovers it has gone.
+    final headShown = state.headShown(arrow.id) && !pendingReveals.contains(arrow.id);
+    // A head that has just been uncovered springs in from nothing over the
+    // first part of the reveal; the dashes firm into a line meanwhile.
     final reveal = reveals[arrow.id];
-    final headScale = reveal == null ? 1.0 : Curves.elasticOut.transform(reveal);
+    final headScale = reveal == null ? 1.0 : Curves.elasticOut.transform(min(1, reveal / 0.6));
+    final solidity = reveal == null ? 1.0 : min(1.0, reveal / 0.4);
+    // A lock whose key has gone: shut while the spark is on its way, then
+    // swinging open.
+    final key = puzzle.keyOf(arrow.id);
+    final pop = unlocks[arrow.id];
+    final popT = pop == null ? null : ((pop - kSparkShare) / (1 - kSparkShare)).clamp(0.0, 1.0);
 
     // Body ends a bit short of the head so the triangle caps it cleanly;
     // a hidden head is no head, so the body runs to the cell's centre.
     final headLen = min(cs * 0.3, 8.0) * headScale;
     final bodyEnd = headShown ? head - dir * (headLen * 0.55) : head;
-    var path = Path()..moveTo(points.first.dx, points.first.dy);
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
     for (var i = 1; i < points.length - 1; i++) {
       path.lineTo(points[i].dx, points[i].dy);
     }
@@ -940,23 +1127,30 @@ class _BoardPainter extends CustomPainter {
     }
     // A hidden head is drawn as a dashed body with no head at either end:
     // the player can see where it lies, not which way it goes.
-    if (!headShown) path = BoardGlyphs.dashed(path, stroke * 1.6, stroke * 1.4);
+    final dashedPath = !headShown || solidity < 1 ? BoardGlyphs.dashed(path, stroke * 1.6, stroke * 1.4) : null;
 
-    if (hinted) {
+    // The glow: the hint's halo at full strength, or the moment's — a head
+    // out of the fog, a lock open (lit as the spark lands, not before) —
+    // fading as it passes.
+    final moment = max(reveal == null ? 0.0 : 1 - reveal, popT == null || pop! < kSparkShare ? 0.0 : 1 - popT);
+    if (hinted || moment > 0) {
       // The ink is capped at 3 px, so a halo proportional to it is a hair on
       // a dense board: it gets its own floor in pixels.
+      final glowColor = hinted ? palette.hintGlow : palette.hintGlow.withValues(alpha: palette.hintGlow.a * moment);
       final glow = Paint()
-        ..color = palette.hintGlow
+        ..color = glowColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = max(stroke * 2.4, min(cs * 0.6, 6.0))
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
       canvas.drawPath(path, glow);
-      canvas.drawCircle(
-        head,
-        max(headLen * 1.1, min(cs * 0.55, 10.0)),
-        Paint()..color = palette.hintGlow,
-      );
+      if (headShown) {
+        canvas.drawCircle(
+          head,
+          max(headLen * 1.1, min(cs * 0.55, 10.0)),
+          Paint()..color = glowColor,
+        );
+      }
     }
 
     final paint = Paint()
@@ -966,7 +1160,15 @@ class _BoardPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     if (points.length > 1) {
-      canvas.drawPath(path, paint);
+      if (!headShown) {
+        canvas.drawPath(dashedPath!, paint);
+      } else if (dashedPath != null) {
+        // The fog lifting: the dashes fade as the line comes through.
+        canvas.drawPath(dashedPath, Paint.from(paint)..color = ink.withValues(alpha: 1 - solidity));
+        canvas.drawPath(path, Paint.from(paint)..color = ink.withValues(alpha: solidity));
+      } else {
+        canvas.drawPath(path, paint);
+      }
     } else {
       // A one-cell arrow is just its head plus a stub.
       canvas.drawLine(head - dir * (cs * 0.25), bodyEnd, paint);
@@ -1018,14 +1220,13 @@ class _BoardPainter extends CustomPainter {
     if (!headShown) {
       glyphs.question(canvas, mid, g);
     }
-    final key = puzzle.keyOf(arrow.id);
     if (key != null) {
-      final opened = state.removed.contains(key);
-      final pop = unlocks[arrow.id];
-      // Shut, swinging open, or open: the swing is the pop's first half.
-      final openness = !opened ? 0.0 : (pop == null ? 1.0 : Curves.easeOutBack.transform(min(1, pop * 2)));
-      if (pop != null) {
-        final t = Curves.easeOutCubic.transform(pop);
+      final opened = state.removed.contains(key) && !pendingUnlocks.contains(arrow.id);
+      // Shut, swinging open, or open: the swing is the first half of the
+      // pop once the spark has arrived.
+      final openness = !opened ? 0.0 : (popT == null ? 1.0 : Curves.easeOutBack.transform(min(1, popT * 2)));
+      if (popT != null && popT > 0) {
+        final t = Curves.easeOutCubic.transform(popT);
         canvas.drawCircle(
           mid,
           g * 0.5 + max(cs * 1.4, 26.0) * t,
@@ -1065,9 +1266,12 @@ class _BoardPainter extends CustomPainter {
       !_sameMap(old.exits, exits) ||
       old.bumpId != bumpId ||
       old.bump != bump ||
-      old.keyPing != keyPing ||
+      old.pointer != pointer ||
+      !listEquals(old.pointerTargets, pointerTargets) ||
       !_sameMap(old.unlocks, unlocks) ||
       !_sameMap(old.reveals, reveals) ||
+      !setEquals(old.pendingUnlocks, pendingUnlocks) ||
+      !setEquals(old.pendingReveals, pendingReveals) ||
       !_sameMap(old.bounces, bounces) ||
       old.travel != travel ||
       old.focusedId != focusedId;

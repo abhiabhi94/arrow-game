@@ -17,6 +17,7 @@ Future<void Function(GameState)> _pumpBoard(
   GameState initial, {
   bool reduceMotion = false,
   ThemeMode themeMode = ThemeMode.light,
+  VoidCallback? onBounce,
 }) async {
   var state = initial;
   late StateSetter setter;
@@ -33,6 +34,7 @@ Future<void Function(GameState)> _pumpBoard(
               state: state,
               showGrid: true,
               onTapArrow: (_) {},
+              onBounce: onBounce,
               reduceMotion: reduceMotion,
             );
           },
@@ -68,7 +70,11 @@ void main() {
     expect(labels.where((l) => l.contains('Tethered to another arrow')), hasLength(2));
     // The hidden one gives away neither its direction nor its path.
     final hidden = labels.singleWhere((l) => l.startsWith('Arrow with a hidden head'));
-    expect(hidden, 'Arrow with a hidden head, 2 cells long, from row 5, column 5. Which way it points shows once an arrow beside it leaves.');
+    expect(
+      hidden,
+      'Arrow with a hidden head, 2 cells long, from row 5, column 5. Which way it points shows once an arrow beside it leaves. '
+      'Tapping it costs nothing: the board points at the arrow that uncovers it.',
+    );
     expect(hidden, isNot(contains('pointing')));
     expect(labels, contains(contains('Clear path to the edge.')));
     handle.dispose();
@@ -120,7 +126,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 900));
     expect(tester.takeException(), isNull);
     await tester.pump(const Duration(milliseconds: 900));
-    // The key leaves over the edge; the padlock swings open with a ring.
+    // The key leaves over the edge; once it has gone a spark flies to the
+    // padlock, which swings open with a ring.
     push(fresh.copyWith(
       removed: const {0},
       lastMoveId: 0,
@@ -129,6 +136,10 @@ void main() {
     ));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 300)); // the spark
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 500)); // the pop
     expect(tester.takeException(), isNull);
     await tester.pump(const Duration(milliseconds: 500));
     // Arrow 1 leaves; a hidden head (4) is lit by a hint and springs in.
@@ -144,7 +155,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 150));
     expect(tester.takeException(), isNull);
     await tester.pump(const Duration(milliseconds: 600));
-    // The pair's partner runs into 4: a cell bump on the partner.
+    // The pair's partner runs into 4: a cell bump on the partner, and
+    // both halves move together, the tether between them.
     push(fresh.copyWith(
       removed: const {0, 1},
       mistakes: 1,
@@ -186,6 +198,65 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
     await tester.pump(const Duration(milliseconds: 700));
+  });
+
+  testWidgets('a tap on a hidden arrow rattles it and points at the arrows that uncover it', (tester) async {
+    final puzzle = featurePuzzle(hidden: const {2});
+    final fresh = GameState.fresh(featureSpecFor(1), puzzle);
+    final push = await _pumpBoard(tester, fresh);
+    push(fresh.copyWith(lastMoveId: 2, lastOutcome: MoveOutcome.hidden, moveToken: 1));
+    await tester.pump();
+    // The jab, the dashed line to 4 and the two pings, then it all fades.
+    for (final ms in <int>[100, 300, 600, 900, 300]) {
+      await tester.pump(Duration(milliseconds: ms));
+      expect(tester.takeException(), isNull);
+    }
+    // 4 leaves: nothing to point at any more, and 2's head comes out of
+    // the fog once the slide is over.
+    push(fresh.copyWith(
+      removed: const {4},
+      revealed: const {2},
+      lastMoveId: 4,
+      lastOutcome: MoveOutcome.exited,
+      moveToken: 2,
+    ));
+    await tester.pump();
+    for (final ms in <int>[100, 400, 500, 600, 400]) {
+      await tester.pump(Duration(milliseconds: ms));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('the bounce is reported once per mirror as the head reaches it', (tester) async {
+    var bounces = 0;
+    final puzzle = featurePuzzle();
+    final fresh = GameState.fresh(featureSpecFor(1), puzzle).copyWith(removed: const {0});
+    final push = await _pumpBoard(tester, fresh, onBounce: () => bounces++);
+    // Arrow 1's way out turns at the mirror two cells past its head.
+    push(fresh.copyWith(
+      removed: const {0, 1},
+      lastMoveId: 1,
+      lastOutcome: MoveOutcome.exited,
+      moveToken: 1,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(bounces, 0); // not yet at the glass
+    await tester.pump(const Duration(milliseconds: 900));
+    expect(bounces, 1);
+    await tester.pump(const Duration(milliseconds: 900));
+    expect(bounces, 1);
+    // A straight exit never bounces.
+    push(fresh.copyWith(
+      removed: const {0, 1, 4},
+      lastMoveId: 4,
+      lastOutcome: MoveOutcome.exited,
+      moveToken: 2,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 900));
+    expect(bounces, 1);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('the hint veil redraws a hidden arrow without its twist', (tester) async {

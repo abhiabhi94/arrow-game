@@ -113,7 +113,7 @@ Future<void> _tapCell(WidgetTester tester, Cell cell, {int width = 4}) async {
   final rect = tester.getRect(board);
   final cs = rect.width / width;
   await tester.tapAt(rect.topLeft + Offset((cell.x + 0.5) * cs, (cell.y + 0.5) * cs));
-  await _settle(tester, 1000); // let the slide / bump animation finish
+  await _settle(tester, 1200); // let the slide / bump animation finish
 }
 
 void main() {
@@ -414,8 +414,8 @@ void main() {
     await tester.tapAt(rect.topLeft + Offset(1.5 * cs, 2.5 * cs)); // arrow 2's head
     expect(notifier.state.mistakes, 1);
     // Mid-flight, at impact and on the way home the board keeps painting.
-    // Arrow 2 runs 0.4 of a cell: 280 ms in, 140 ms pressed against the
-    // blocker, 520 ms back.
+    // Arrow 2 runs 0.4 of a cell: 280 ms in, 200 ms pressed against the
+    // blocker, 600 ms back.
     final flash = find.byKey(const ValueKey<String>('crash-flash'));
     double flashOpacity() => tester.widget<Opacity>(flash).opacity;
     await tester.pump();

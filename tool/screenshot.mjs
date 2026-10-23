@@ -375,9 +375,11 @@ try {
     const id = String(level).padStart(2, '0');
     // A chapter's first level (or the first level opened past one) opens on
     // a card about the twist it brings: capture it, then put it away so the
-    // board flows below run as usual.
-    if (await gotIt.count()) {
-      await shoot(page, `level-${id}-intro-${tag}`);
+    // board flows below run as usual. A fresh install opened straight at a
+    // late level is owed every card it skipped, one after another, so keep
+    // putting them away until the board is clear (the first is the shot).
+    for (let card = 0; await gotIt.count(); card++) {
+      if (card === 0) await shoot(page, `level-${id}-intro-${tag}`);
       await gotIt.click();
       await settle(page, 600);
     }

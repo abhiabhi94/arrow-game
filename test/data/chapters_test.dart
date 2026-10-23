@@ -94,11 +94,13 @@ void main() {
       expect(spec.width, p.width);
       expect(spec.arrows, p.arrowCount);
       // The script clears the board in order: every tap but a deliberate
-      // first tap on a lock slides something out.
+      // first tap on a lock (or on a hidden head) slides something out.
       final removed = <int>{};
       for (final id in demoScriptFor(rule)) {
         if (p.canExit(id, removed)) {
           removed.addAll(p.exitGroup(id));
+        } else if (p.hidden.contains(id) && !p.revealedBy(removed).contains(id)) {
+          expect(p.revealersOf(id), isNotEmpty, reason: '$rule tap $id');
         } else {
           expect(p.blockOf(id, removed)!.isLock, isTrue, reason: '$rule tap $id');
         }
