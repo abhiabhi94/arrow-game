@@ -24,6 +24,7 @@
 //             same build shoot the same frame
 //   --grid    seeds the grid-lines preference on (the lattice under the arrows)
 //   --resume  seeds a saved game on the first level (home shows Continue, the level its Welcome back card)
+//   --cleared N  seeds levels 1..N as cleared (the trail's walked road, stars, a chapter's progress)
 //   --daily   opens today's daily board from its home card and captures it (daily-*.png)
 //   --onboarding  boots into the first-launch walkthrough instead of home
 //   --viewport WxH  renders the desktop layout instead of a phone (the web build
@@ -109,6 +110,9 @@ const hint = Boolean(args.hint);
 const still = Boolean(args.still);
 const grid = Boolean(args.grid);
 const resume = Boolean(args.resume);
+// --cleared N: levels 1..N recorded as cleared (stars and a best time), so
+// the trail shows the walked road, the stars and a chapter's progress.
+const cleared = args.cleared ? Number(args.cleared) : 0;
 const scale = Number(args.scale ?? 2);
 const port = Number(args.port ?? 0);
 const strict = !args['no-strict'];
@@ -252,6 +256,14 @@ const prefs = {
         'flutter.arrow_riddle_cursor': '0',
       }
     : {}),
+  ...Object.fromEntries(
+    Array.from({ length: cleared }, (_, i) => i + 1).flatMap((level) => [
+      [`flutter.arrow_level_${level}_done`, 'true'],
+      [`flutter.arrow_level_${level}_stars`, String(3 - (level % 3))],
+      [`flutter.arrow_level_${level}_best`, String(20_000 + level * 1_500)],
+      [`flutter.arrow_level_${level}_count`, '1'],
+    ]),
+  ),
   ...(resume && levels.length
     ? { 'flutter.arrow_saved_game': JSON.stringify(JSON.stringify({ level: levels[0], seed: levels[0] * 7919 + 17, removed: [0, 1], mistakes: 1, hintsLeft: 2, elapsedMs: 30_000 })) }
     : {}),
