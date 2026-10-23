@@ -47,13 +47,13 @@ LevelSpec dailySpec({required int day, required Chapter chapter, required int sa
     ChapterRule.fog => LevelFeatures(mirrors: mirrors, locks: 2, hidden: twist),
     ChapterRule.pairs => LevelFeatures(mirrors: mirrors, locks: 2, hidden: 2, pairs: twist),
   };
-  // About a hundred arrows at ~11.3 free cells each.
-  final plain = chapter.index == 1;
+  // Eighty arrows at ~11.3 free cells each: 3.75 s an arrow of the five
+  // minutes, the trail's own pace with room for the twists.
   return LevelSpec(
     level: LevelSpec.dailyLevel,
-    width: plain ? 27 : 29,
-    height: plain ? 42 : 44,
-    arrows: plain ? 90 : 100,
+    width: 24,
+    height: 37,
+    arrows: 80,
     minLength: 3,
     maxLength: 10 + chapter.index,
     timeLimitMs: kDailyTimeLimitMs,

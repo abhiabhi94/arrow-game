@@ -18,13 +18,14 @@ costs nothing and points at the key), **Fog** (61–80: a dashed arrow hides
 its head until a neighbour leaves), **Pairs** (81–100: two tethered arrows
 leave on one tap, so both paths must be clear). Every chapter opens on a
 small teaching board under a card that is one line and a self-playing
-demo of the twist, has a
-12×16 sprint at its 5th and 15th level, a boss at its 10th and a finale at
-its 20th, and climbs one arrow a level between them (~150 at level 22 to
-~230 at 99, finales to ~265, no clock over ten minutes). A **daily board**
-(home card; `data/daily.dart`) is a fresh ~5-minute deal every day with the
-twists of the chapter the player has reached, seeded from the date and a
-per-install salt so no two phones share one; it keeps a streak. Everything
+demo of the twist, then climbs steadily from 30 arrows at its second
+level to 150 at its twentieth (the same top for every chapter: the twist
+is what makes a later chapter harder), with a clock that grows chapter by
+chapter and never passes ten minutes. A **daily board**
+(home card; `data/daily.dart`) is a fresh ~5-minute deal every day (80
+arrows) with the twists of the chapter the player has reached, seeded from
+the date and a per-install salt so no two phones share one; it keeps a
+streak. Everything
 is drawn in a single ink like a printed puzzle (the sun-coloured key badge
 and the pointer from a tapped lock to its key are the one new colour),
 3 lives per level (spend them all and a
@@ -552,14 +553,19 @@ Key patterns:
   `tool/pick_variants.dart` and write its picks in: each level is dealt
   from the first variant whose board keeps every pinned rule (full count,
   every twist placed, the choice held at the start and at its widest and
-  narrow on average). `test/data/level_specs_test.dart` pins the rhythm (a
+  narrow on average). `test/data/level_specs_test.dart` pins the shape (a
   12-arrow teaching board with the new twist alone at each chapter's first
-  level, 12×16 sprints at its 5th and 15th, the boss and finale its biggest,
-  a climb of one arrow a level, the count capped at 270, no clock over ten
-  minutes, the pace per arrow easing chapter by chapter — 2.4 s in Mirrors
-  to 2.0 s in Pairs — plus 1 s a mirror, 4 s a lock and 3 s a hidden head
-  or tether, the whole thing capped at 599 s; mirrors one per eight arrows
-  through their own chapter and one per fourteen after, 3 on a sprint) and
+  level, then a steady climb of six or seven arrows a level from ~30 at
+  its second to 150 at its twentieth, every chapter topping out at the
+  same count — the first cut jumped from the teaching board to 150 and
+  climbed to 265, a cliff after every card and a slog by the end — no
+  clock over ten minutes, the pace per arrow *growing* chapter by chapter —
+  3.0 s in Mirrors to 3.4 s in Pairs, since every twist is one more thing
+  to read on every arrow — plus 1 s a mirror, 4 s a lock and 3 s a hidden
+  head or tether, the whole thing capped at 599 s, so a later chapter's
+  level is never shorter on the clock than the chapter before's; mirrors
+  one per eight arrows through their own chapter and one per fourteen
+  after, never under two) and
   `test/engine/puzzle_generator_test.dart` pins that every level deals its
   full count with its twists, solvable, tight, and that the hunt (arrows on
   the board per open move) climbs chapter by chapter. Keep the generator
@@ -599,8 +605,8 @@ Key patterns:
   is `LevelSpec.dailyLevel` (0) in `gameProvider` — dealt from
   `DailyNotifier.spec`, its clear recorded to the streak rather than the
   trail: seed = `dailySeed(day, salt)` with the day the local calendar day
-  (`dayIndexOf`) and the salt drawn once per install, ~100 arrows on a
-  29×44 board (90 on 27×42 plain) with a flat five-minute clock, the
+  (`dayIndexOf`) and the salt drawn once per install, 80 arrows on a
+  24×37 board (3.75 s an arrow of a flat five-minute clock), the
   mirror count (8–12) and twist counts turning with the day, the chapter fixed the first time
   the day's board is looked at (`arrow_daily_<day>_chapter`) so clearing a
   level mid-day does not re-deal it. The streak counts consecutive days

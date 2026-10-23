@@ -52,7 +52,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('DAILY BOARD'), findsOneWidget);
-    expect(find.text('5 minutes, 90 arrows, Lines rules. A fresh deal every day — yours alone.'), findsOneWidget);
+    expect(find.text('5 minutes, 80 arrows, Lines rules. A fresh deal every day — yours alone.'), findsOneWidget);
     expect(find.text('No streak yet · Next board in 15h 0m'), findsOneWidget);
     expect(find.text('Play today'), findsOneWidget);
 

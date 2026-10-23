@@ -1,7 +1,8 @@
 // Finds, for each level given (default: every level from 21), the first
 // variant whose board keeps every rule the level table is tested for: the
-// full arrow count, every twist placed, and the player's choice held
-// within the generator's slack at the start and at its widest. Prints a
+// full arrow count, every twist placed, most of the mirrors on some arrow's
+// way out, and the player's choice held within the generator's slack at
+// the start and at its widest. Prints a
 // `level variant` line per level — the ones that are not `0` go into
 // `LevelSpec.variant` in lib/data/level_specs.dart. Run after touching the
 // table or the generator:
@@ -43,6 +44,13 @@ bool fits(LevelSpec spec, Puzzle p) {
   final f = spec.features;
   if (p.locks.length < f.locks || p.hidden.length < f.hidden || p.pairs.length ~/ 2 < f.pairs) {
     return false;
+  }
+  // The mirrors are on the arrows' paths (the generator test's line: at
+  // least 60% of them, and half as many arrows bouncing as mirrors hit).
+  if (f.mirrors > 0) {
+    final hit = p.mirrors.keys.where((m) => p.arrows.any((a) => p.rayOf(a.id).contains(m))).length;
+    final bent = p.arrows.where((a) => p.bends(a.id)).length;
+    if (hit < (f.mirrors * 0.6).ceil() || bent < (hit / 2).ceil()) return false;
   }
   // The choice is held at the start and at its widest, and is narrow on
   // average too (the generator test's line: within one of `openMoves`).

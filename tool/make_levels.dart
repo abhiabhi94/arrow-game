@@ -5,30 +5,38 @@
 //   dart run tool/make_levels.dart > /tmp/rows.dart
 //
 // Each chapter is twenty levels on one new twist (Mirrors, Locks, Fog, Pairs)
-// stacked on the ones before it, and every chapter has the same rhythm:
+// stacked on the ones before it, and every chapter has the same shape:
 //
 //   level  1   a small, roomy teaching board with the new twist alone
-//   level  5   a sprint: a small, brisk board
-//   level 10   the chapter's boss: a bigger board, more of everything
-//   level 15   another sprint
-//   level 20   the chapter's finale: its biggest board
-//   the rest   the climb, a little bigger each time
+//   levels 2–20  the climb: [climbStart] arrows at the second level,
+//                [climbEnd] at the twentieth, a steady step between, and
+//                the chapter's own twist thickening along the way
 //
-// The arrow count climbs from ~150 at level 22 to ~230 at level 99 and the
-// finales run to ~265: the last levels are long because there is a lot to
-// read, not because the read never changes. The board is sized so the cells
-// an arrow may use (the rectangle less its mirrors) come to ~11.3 per
-// arrow, the fill the generator packs to ~0.88.
+// So a chapter opens easy and ends big, and the next one opens easy again
+// with one more thing to read: the twists are what make the later chapters
+// harder, not a bigger count. The first cut went from the twelve-arrow
+// teaching board straight to 150 arrows and climbed to 265 by level 100,
+// which played as a cliff after every card and a slog by the end. A board
+// is sized so the cells an arrow may use (the rectangle less its mirrors)
+// come to ~11.3 per arrow, which the generator fills to ~0.88.
 //
-// The clock is a pace per arrow — 2.4 s in Mirrors easing to 2.0 s in Pairs —
-// plus a few seconds for every mirror, lock, hidden head and tether on the
-// board, since each is a thing to look for, plus slack, and never over ten
-// minutes. Sprints run at 1.6 s an arrow; teaching boards at 3 s.
+// The clock is a pace per arrow that *grows* chapter by chapter — a mirror,
+// a lock, a hidden head or a tether is one more thing to read on every
+// arrow, so the twists buy time rather than cost it — plus a few seconds
+// for every one of them on the board, plus slack, and never over ten
+// minutes. Teaching boards run at 3 s an arrow.
 
 import 'dart:math';
 
 const int firstLevel = 21;
 const int lastLevel = 100;
+
+/// Arrows on a chapter's second level and on its twentieth.
+const int climbStart = 30;
+const int climbEnd = 150;
+
+/// Seconds an arrow, by chapter (index 1 = Mirrors … 4 = Pairs).
+const List<double> pace = <double>[0, 3.0, 3.2, 3.3, 3.4];
 
 /// Free cells the board is sized to offer per arrow.
 const double cellsPerArrow = 11.3;
@@ -41,41 +49,25 @@ void main() {
     final chapter = (level - 1) ~/ 20; // 1 = Mirrors, 2 = Locks, 3 = Fog, 4 = Pairs
     final i = level - (chapter * 20); // 1..20 within the chapter
     final teach = i == 1;
-    final sprint = i == 5 || i == 15;
-    final boss = i == 10;
-    final finale = i == 20;
+
+    // Arrow count: the teaching board, then a straight climb.
+    final arrows = teach ? 12 : (climbStart + (climbEnd - climbStart) * (i - 2) / 18).round();
 
     // Twists: the chapter's own climbs through it; earlier chapters' stay
     // at a steady few. Teaching boards carry a few of the new one, nothing
-    // else. Mirrors are counted per arrow (set below, once the count is).
+    // else.
     final climb = 2 + (i - 2) ~/ 3; // 2..8 over the chapter
-    final extra = (boss || finale) ? 2 : 0;
     var locks = 0, hidden = 0, pairs = 0;
     if (teach) {
       if (chapter == 2) locks = 2;
       if (chapter == 3) hidden = 2;
       if (chapter == 4) pairs = 2;
-    } else if (sprint) {
-      if (chapter >= 2) locks = chapter == 2 ? 2 : 1;
-      if (chapter >= 3) hidden = chapter == 3 ? 2 : 1;
-      if (chapter >= 4) pairs = 2;
     } else {
-      if (chapter == 2) locks = climb + extra;
+      if (chapter == 2) locks = climb;
       if (chapter >= 3) locks = 3;
-      if (chapter == 3) hidden = climb + extra;
+      if (chapter == 3) hidden = climb;
       if (chapter >= 4) hidden = 4;
-      if (chapter == 4) pairs = climb + extra;
-    }
-
-    // Arrow count.
-    final int arrows;
-    if (teach) {
-      arrows = 12;
-    } else if (sprint) {
-      arrows = 18 + chapter * 2;
-    } else {
-      final base = 150 + (level - 22) * 80 / 78;
-      arrows = (base * (boss ? 1.1 : finale ? 1.15 : 1.0)).round();
+      if (chapter == 4) pairs = climb;
     }
 
     // Mirrors: a good handful on every board from the Mirrors chapter on —
@@ -84,40 +76,23 @@ void main() {
     final int mirrors;
     if (teach) {
       mirrors = chapter == 1 ? 3 : 0;
-    } else if (sprint) {
-      mirrors = 3;
     } else {
-      mirrors = (arrows / (chapter == 1 ? 8 : 14)).round();
+      mirrors = max(2, (arrows / (chapter == 1 ? 8 : 14)).round());
     }
 
     // Lengths.
-    final minLength = teach || sprint ? 2 : (chapter == 1 ? 3 : 4);
-    final int maxLength;
-    if (teach) {
-      maxLength = 5;
-    } else if (sprint) {
-      maxLength = 7;
-    } else {
-      maxLength = 10 + chapter + (i >= 12 ? 1 : 0);
-    }
+    final minLength = teach ? 2 : (chapter == 1 ? 3 : 4);
+    final maxLength = teach ? 5 : 10 + chapter + (i >= 12 ? 1 : 0);
 
     // Board size: enough free cells for the arrows beside the mirrors.
-    final (width, height) = teach
-        ? (10, 13)
-        : sprint
-            ? (12, 16)
-            : _sizeFor(arrows, mirrors);
+    final (width, height) = teach ? (10, 13) : _sizeFor(arrows, mirrors);
 
     // Clock.
-    final pace = teach
-        ? 3.0
-        : sprint
-            ? 1.6
-            : <double>[0, 2.4, 2.25, 2.1, 2.0][chapter];
-    final slack = teach ? 25.0 : (sprint ? 8.0 : 15.0);
+    final slack = teach ? 25.0 : 15.0;
     final think = mirrors * 1.0 + locks * 4.0 + hidden * 3.0 + pairs * 3.0;
-    // Never a clock over ten minutes: the last finale is held at that.
-    final timeLimitMs = min(((arrows * pace + slack + think) * 1000).round(), 599000);
+    final seconds = arrows * (teach ? 3.0 : pace[chapter]) + slack + think;
+    // Never a clock over ten minutes.
+    final timeLimitMs = min((seconds * 1000).round(), 599000);
 
     final features = <String>[
       if (mirrors > 0) 'mirrors: $mirrors',
@@ -141,7 +116,7 @@ void main() {
 /// [arrows] at [cellsPerArrow] once [mirrors] have taken theirs.
 (int, int) _sizeFor(int arrows, int mirrors) {
   final want = arrows * cellsPerArrow + mirrors;
-  for (var width = 20; width < 80; width++) {
+  for (var width = 10; width < 80; width++) {
     final height = (width * aspect).round();
     if (width * height >= want) return (width, height);
     // Try one row taller before the next width, for a finer step.
@@ -149,4 +124,3 @@ void main() {
   }
   return (80, (80 * aspect).round());
 }
-
