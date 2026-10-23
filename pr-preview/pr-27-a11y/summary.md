@@ -1,42 +1,42 @@
 **16 screen(s) changed**, 7 unchanged.
 
-<details><summary><b>home-dark-grid</b> — 2 changed region(s)</summary>
+<details><summary><b>home-dark-grid</b> — 4 changed region(s)</summary>
 
 ![home-dark-grid](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-27-a11y/home-dark-grid.png)
 
 </details>
 
-<details><summary><b>home-light-1440x900</b> — 3 changed region(s)</summary>
+<details><summary><b>home-light-1440x900</b> — 4 changed region(s)</summary>
 
 ![home-light-1440x900](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-27-a11y/home-light-1440x900.png)
 
 </details>
 
-<details><summary><b>home-light-resume</b> — 2 changed region(s)</summary>
+<details><summary><b>home-light-resume</b> — 5 changed region(s)</summary>
 
 ![home-light-resume](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-27-a11y/home-light-resume.png)
 
 </details>
 
-<details><summary><b>home-light</b> — 2 changed region(s)</summary>
+<details><summary><b>home-light</b> — 4 changed region(s)</summary>
 
 ![home-light](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-27-a11y/home-light.png)
 
 </details>
 
-<details><summary><b>home-scrolled-dark-grid</b> — 12 changed region(s)</summary>
+<details><summary><b>home-scrolled-dark-grid</b> — 9 changed region(s)</summary>
 
 ![home-scrolled-dark-grid](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-27-a11y/home-scrolled-dark-grid.png)
 
 </details>
 
-<details><summary><b>home-scrolled-light-resume</b> — 7 changed region(s)</summary>
+<details><summary><b>home-scrolled-light-resume</b> — 10 changed region(s)</summary>
 
 ![home-scrolled-light-resume](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-27-a11y/home-scrolled-light-resume.png)
 
 </details>
 
-<details><summary><b>home-scrolled-light</b> — 12 changed region(s)</summary>
+<details><summary><b>home-scrolled-light</b> — 8 changed region(s)</summary>
 
 ![home-scrolled-light](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-27-a11y/home-scrolled-light.png)
 
