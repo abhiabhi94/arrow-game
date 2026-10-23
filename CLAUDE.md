@@ -499,6 +499,15 @@ Key patterns:
   two read as one piece before the tether is found; the tether is drawn
   from the halves' moving track points (`_trackPoint`) so it travels with
   them on a slide and on a bump, in the glow while they move.
+  **An arrow is drawn along its track** (`_pathAlong`): the body's cells,
+  its ray and on past the edge, straight between the cell centres and
+  rounded through every bend (`_along` runs a quadratic through each
+  corner, `kBend` of a cell either side), so an arrow sliding round its
+  own turn or a mirror's swings round it like a train on rails, the same
+  shape the whole way — the first cut joined the body's cell points with
+  straight lines, so as it slid the line across a corner cut the corner
+  and the body pinched at every turn, which is what "the exit is not
+  smooth" was.
   Glyphs are `BoardGlyphs.glyphSize(cs)`:
   most of a cell, never under 10 px, so the zoom is how they are read on a
   dense board. The screen reader hears the same (`board_semantics.dart`):
@@ -575,7 +584,15 @@ Key patterns:
   it in `main.dart`; Settings → "How to play" replays it (`replay: true`).
 - **Home:** a gradient "Next up" hero card and a winding trail of level
   nodes (`_Trail` + `_TrailPainter`), locked/current/cleared states with
-  stars and best time. A locked node still shows its number (a small lock
+  stars and best time. The nodes sit on a slow sine (`fractionFor`, about
+  ten levels to a sweep) and the road between them is one Catmull-Rom
+  spline through every station — the nodes, and the middle of each
+  chapter card's top and bottom edges, so the line goes in under the
+  card and comes out below it — dotted ahead of the player and a solid
+  mint line behind, from each node's rim to the next (`_Station.clearance`).
+  The first cut drew each stretch as its own S-curve, vertical at both
+  ends, with the dashes starting over at every node, on a sine that
+  turned every level: a row of hooks. A locked node still shows its number (a small lock
   badge sits on it) and the journey heading reads "N of 100 cleared", so the
   player can see what is ahead and where the trail ends. The header (`_HomeHeader`, a
   `SliverPersistentHeaderDelegate`) is **pinned**: the trail is a hundred

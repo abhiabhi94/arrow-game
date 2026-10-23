@@ -498,7 +498,11 @@ class _Trail extends StatelessWidget {
   final bool Function(int level) isUnlocked;
   final int current;
 
-  static double fractionFor(int level) => 0.5 + 0.36 * sin((level - 1) * 1.05);
+  /// Where across the width [level]'s node sits: a slow sine, about ten
+  /// levels to a sweep, so the trail winds rather than zigzags — at a
+  /// turn every level the line between two nodes was a hairpin, and the
+  /// road read as a row of hooks.
+  static double fractionFor(int level) => 0.5 + 0.38 * sin((level - 1) * 0.62);
 
   /// How far down the trail [level]'s node sits: its place in the line plus
   /// a band of [bandHeight] for every chapter heading above it.
@@ -521,6 +525,20 @@ class _Trail extends StatelessWidget {
               topOf(level, bandHeight) + nodeSize / 2 + 8,
             ),
         ];
+        // The road's stations: every node, and at each chapter heading the
+        // middle of the card's top and bottom edges, so the line goes in
+        // under the card and comes out below it, straight, rather than
+        // slanting behind it from wherever the last level happened to be.
+        final stations = <_Station>[];
+        for (var level = 1; level <= totalLevels; level++) {
+          final chapter = chapterOf(level);
+          if (chapter.firstLevel == level && level > 1) {
+            final cardTop = topOf(level, bandHeight) - bandHeight + 8;
+            stations.add(_Station(Offset(width / 2, cardTop), clearance: 10, level: null));
+            stations.add(_Station(Offset(width / 2, cardTop + bandHeight - 8), clearance: 10, level: null));
+          }
+          stations.add(_Station(points[level - 1], clearance: nodeSize / 2 + 4, level: level));
+        }
         final height = topOf(totalLevels, bandHeight) + nodeSize + 48;
         return SizedBox(
           width: width,
@@ -530,7 +548,7 @@ class _Trail extends StatelessWidget {
               Positioned.fill(
                 child: CustomPaint(
                   painter: _TrailPainter(
-                    points: points,
+                    stations: stations,
                     clearedUpTo: _clearedPrefix(),
                     color: p.outlineSoft,
                     doneColor: p.accentMint,
@@ -578,46 +596,91 @@ class _Trail extends StatelessWidget {
   }
 }
 
+/// A point the trail passes through: a level's node, or the top or bottom
+/// of a chapter card. [clearance] is how far from it, along the road, the
+/// drawing starts and stops, so the line meets the node's rim and not its
+/// centre.
+class _Station {
+  const _Station(this.point, {required this.clearance, required this.level});
+
+  final Offset point;
+  final double clearance;
+  final int? level;
+}
+
+/// The road between the nodes: one smooth curve through every station
+/// (a Catmull-Rom spline, so the line arrives at a node on the same
+/// tangent it leaves on — the first cut drew each stretch as its own
+/// S-curve, vertical at both ends, with the dashes starting over at every
+/// node), dotted ahead of the player and a solid line in the mint behind,
+/// the stretch walked so far.
 class _TrailPainter extends CustomPainter {
   _TrailPainter({
-    required this.points,
+    required this.stations,
     required this.clearedUpTo,
     required this.color,
     required this.doneColor,
   });
 
-  final List<Offset> points;
+  final List<_Station> stations;
   final int clearedUpTo;
   final Color color;
   final Color doneColor;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (var i = 0; i + 1 < points.length; i++) {
-      final a = points[i];
-      final b = points[i + 1];
-      final midY = (a.dy + b.dy) / 2;
-      final path = Path()
-        ..moveTo(a.dx, a.dy)
-        ..cubicTo(a.dx, midY, b.dx, midY, b.dx, b.dy);
-      final paint = Paint()
-        ..color = i < clearedUpTo ? doneColor : color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5
-        ..strokeCap = StrokeCap.round;
-      _drawDashed(canvas, path, paint);
-    }
+  /// Space between the dots' centres on the road ahead.
+  static const double kDotSpacing = 15;
+  static const double kDotRadius = 3;
+  static const double kLineWidth = 5;
+
+  /// The cubic from station [i] to station [i + 1], its tangents taken
+  /// from the neighbours either side.
+  Path _stretch(int i) {
+    final a = stations[i].point;
+    final b = stations[i + 1].point;
+    final before = i == 0 ? a : stations[i - 1].point;
+    final after = i + 2 >= stations.length ? b : stations[i + 2].point;
+    final ta = (b - before) / 2;
+    final tb = (after - a) / 2;
+    return Path()
+      ..moveTo(a.dx, a.dy)
+      ..cubicTo(
+        a.dx + ta.dx / 3,
+        a.dy + ta.dy / 3,
+        b.dx - tb.dx / 3,
+        b.dy - tb.dy / 3,
+        b.dx,
+        b.dy,
+      );
   }
 
-  static void _drawDashed(Canvas canvas, Path path, Paint paint) {
-    const dash = 10.0;
-    const gap = 9.0;
-    for (final metric in path.computeMetrics()) {
-      var d = 0.0;
-      while (d < metric.length) {
-        final end = min(d + dash, metric.length);
-        canvas.drawPath(metric.extractPath(d, end), paint);
-        d += dash + gap;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final line = Paint()
+      ..color = doneColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = kLineWidth
+      ..strokeCap = StrokeCap.round;
+    final dot = Paint()..color = color;
+    var lastLevel = 0;
+    for (var i = 0; i + 1 < stations.length; i++) {
+      final from = stations[i];
+      final to = stations[i + 1];
+      lastLevel = from.level ?? lastLevel;
+      // The stretch under a chapter card is covered by the card.
+      if (from.level == null && to.level == null) continue;
+      final metric = _stretch(i).computeMetrics().first;
+      final start = from.clearance;
+      final end = metric.length - to.clearance;
+      if (end <= start) continue;
+      if (lastLevel <= clearedUpTo) {
+        canvas.drawPath(metric.extractPath(start, end), line);
+        continue;
+      }
+      // Dots spaced evenly so that one sits at each end of the stretch.
+      final count = max(1, ((end - start) / kDotSpacing).round());
+      for (var d = 0; d <= count; d++) {
+        final at = start + (end - start) * d / count;
+        canvas.drawCircle(metric.getTangentForOffset(at)!.position, kDotRadius, dot);
       }
     }
   }
@@ -627,8 +690,9 @@ class _TrailPainter extends CustomPainter {
       old.clearedUpTo != clearedUpTo ||
       old.color != color ||
       old.doneColor != doneColor ||
-      old.points.length != points.length ||
-      (old.points.isNotEmpty && old.points.first != points.first);
+      old.stations.length != stations.length ||
+      (old.stations.isNotEmpty && old.stations.first.point != stations.first.point) ||
+      (old.stations.isNotEmpty && old.stations.last.point != stations.last.point);
 }
 
 class _LevelNode extends StatelessWidget {

@@ -1065,10 +1065,60 @@ class _BoardPainter extends CustomPainter {
   /// The point [u] cells along [arrow]'s track (0 is its tail's cell).
   Offset _trackPoint(ArrowPiece arrow, double u, double cs) => _along(_trackOf(arrow), u, cs);
 
+  /// How far either side of a bend in a track the line is rounded, in
+  /// cells: a body turns its corner on a curve rather than at a point.
+  static const double kBend = 0.35;
+
+  /// Whether [track] changes direction at its [k]th cell.
+  static bool _bendsAt(List<Cell> track, int k) {
+    if (k < 1 || k > track.length - 2) return false;
+    final before = track[k];
+    final a = track[k - 1];
+    final b = track[k + 1];
+    return a.x - before.x != before.x - b.x || a.y - before.y != before.y - b.y;
+  }
+
+  /// The point [u] cells along [track]: straight between cell centres, and
+  /// round each bend a curve through the corner (a quadratic from [kBend]
+  /// before the corner to [kBend] after it), so an arrow sliding through
+  /// its own turn or a mirror's swings round it like a train on rails.
   static Offset _along(List<Cell> track, double u, double cs) {
+    final k = u.round();
+    if ((u - k).abs() < kBend && _bendsAt(track, k)) {
+      final corner = _center(track[k], cs);
+      final a = Offset.lerp(_center(track[k - 1], cs), corner, 1 - kBend)!;
+      final b = Offset.lerp(corner, _center(track[k + 1], cs), kBend)!;
+      final t = (u - (k - kBend)) / (2 * kBend);
+      final s = 1 - t;
+      return a * (s * s) + corner * (2 * s * t) + b * (t * t);
+    }
     final i = u.floor().clamp(0, track.length - 2);
     final f = (u - i).clamp(0.0, 1.0);
     return Offset.lerp(_center(track[i], cs), _center(track[i + 1], cs), f)!;
+  }
+
+  /// The stretch of [track] from [from] to [to] cells along it, as a path:
+  /// straight runs between the corners and the corners rounded as
+  /// [_along] rounds them. The first cut joined the body's cell points
+  /// with straight lines, so as an arrow slid round a bend the line
+  /// between the point before the corner and the point after it cut
+  /// straight across — the body pinched at every turn as it went.
+  static Path _pathAlong(List<Cell> track, double from, double to, double cs) {
+    final start = _along(track, from, cs);
+    final path = Path()..moveTo(start.dx, start.dy);
+    const steps = 6;
+    for (var k = max(1, from.floor()); k <= min(track.length - 2, to.ceil()); k++) {
+      if (!_bendsAt(track, k) || k + kBend <= from || k - kBend >= to) continue;
+      final a = max(from, k - kBend);
+      final b = min(to, k + kBend);
+      for (var s = 0; s <= steps; s++) {
+        final p = _along(track, a + (b - a) * s / steps, cs);
+        path.lineTo(p.dx, p.dy);
+      }
+    }
+    final end = _along(track, to, cs);
+    path.lineTo(end.dx, end.dy);
+    return path;
   }
 
   /// Draws [arrow] shifted [offset] cells forward along its own track. With
@@ -1094,11 +1144,10 @@ class _BoardPainter extends CustomPainter {
     // cell is huge and a proportional stroke would turn into a slab.
     final stroke = min(cs * 0.12, 3.0);
     final headAt = offset + arrow.length - 1;
-    final points = <Offset>[for (var i = 0; i < arrow.length; i++) at(offset + i)];
     final head = at(headAt);
-    // The head's travel direction: where the track goes next.
-    final ahead = at(headAt + 0.5);
-    var dir = ahead - head;
+    // The head's travel direction: the track's tangent there, which turns
+    // smoothly through a rounded corner.
+    var dir = at(headAt + 0.15) - at(headAt - 0.15);
     if (dir.distance < 0.001) dir = _unit(arrow.heading);
     dir = dir / dir.distance;
     // Hidden until the arrow that uncovers it has gone.
@@ -1118,13 +1167,10 @@ class _BoardPainter extends CustomPainter {
     // a hidden head is no head, so the body runs to the cell's centre.
     final headLen = min(cs * 0.3, 8.0) * headScale;
     final bodyEnd = headShown ? head - dir * (headLen * 0.55) : head;
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-    for (var i = 1; i < points.length - 1; i++) {
-      path.lineTo(points[i].dx, points[i].dy);
-    }
-    if (points.length > 1) {
-      path.lineTo(bodyEnd.dx, bodyEnd.dy);
-    }
+    final longBody = arrow.length > 1;
+    final path = longBody
+        ? _pathAlong(track, offset, headAt - (headShown ? headLen * 0.55 / cs : 0), cs)
+        : (Path()..moveTo(bodyEnd.dx, bodyEnd.dy));
     // A hidden head is drawn as a dashed body with no head at either end:
     // the player can see where it lies, not which way it goes.
     final dashedPath = !headShown || solidity < 1 ? BoardGlyphs.dashed(path, stroke * 1.6, stroke * 1.4) : null;
@@ -1159,7 +1205,7 @@ class _BoardPainter extends CustomPainter {
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
-    if (points.length > 1) {
+    if (longBody) {
       if (!headShown) {
         canvas.drawPath(dashedPath!, paint);
       } else if (dashedPath != null) {
