@@ -48101,10 +48101,15 @@ A.aHW.prototype={
 $1(a){return A.b2B(a.e9($.aY_(),t.Df))},
 $S:249}
 A.oI.prototype={
-LI(){var s,r=A.co(this.a.a.h(0,"arrow_saved_game"))
-if(r==null)return null
-s=B.dd.a_7(r,null)
-return t.xE.b(s)?A.b2E(s):null}}
+LI(){var s,r,q,p,o=null,n=A.co(this.a.a.h(0,"arrow_saved_game"))
+if(n==null)return o
+s=B.dd.a_7(n,o)
+r=t.xE.b(s)?A.b2E(s):o
+if(r==null)return o
+q=r.a
+if(q!==0)p=q>=1&&q<=100
+else p=!0
+return p?r:o}}
 A.kR.prototype={
 aEN(a){var s,r,q,p,o,n,m,l=this,k=null
 if(!l.c||a.b==null)return A.e8(k,t.H)
