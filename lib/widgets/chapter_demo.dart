@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../data/chapter_demos.dart';
 import '../data/chapters.dart';
+import '../engine/cube.dart';
 import '../models/game_state.dart';
 import '../providers/game_provider.dart';
 import '../ui/motion.dart';
+import 'cube_stage.dart';
 import 'puzzle_board.dart';
 
 /// How long between the taps the demo plays, and how long it rests on the
@@ -19,7 +21,8 @@ const Duration kDemoRest = Duration(milliseconds: 1800);
 /// when the board is clear, so the rule is watched rather than read. The
 /// board is a picture to the finger and to a screen reader (the line above
 /// it says what it shows). With motion reduced it stands still on its
-/// first frame.
+/// first frame. The block's card turns the block to each arrow's face
+/// before it plays it.
 class ChapterDemoBoard extends StatefulWidget {
   const ChapterDemoBoard({super.key, required this.rule, this.height = 132});
 
@@ -40,6 +43,8 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
   late final void Function() _unsubscribe;
   Timer? _timer;
   int _step = 0;
+  CubeView _view = const CubeView();
+  CubeTurn? _lastTurn;
 
   @override
   void initState() {
@@ -68,7 +73,19 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
       _schedule(kDemoStep);
       return;
     }
-    _game.tapArrow(script[_step]);
+    final puzzle = _state.puzzle!;
+    final id = script[_step];
+    if (puzzle.isCube && puzzle.faceOf(id) != _view.front) {
+      // Round to the arrow's face first, then play it.
+      final turn = _view.pathTo(puzzle.faceOf(id)).first;
+      setState(() {
+        _view = _view.turned(turn);
+        _lastTurn = turn;
+      });
+      _schedule(kCubeTurn + const Duration(milliseconds: 400));
+      return;
+    }
+    _game.tapArrow(id);
     _step++;
     _schedule(_step >= script.length ? kDemoRest : kDemoStep);
   }
@@ -86,12 +103,25 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
         child: IgnorePointer(
           child: SizedBox(
             height: widget.height,
-            child: PuzzleBoard(
-              state: _state,
-              showGrid: true,
-              onTapArrow: (_) {},
-              reduceMotion: reduceMotionOf(context),
-            ),
+            child: _state.puzzle!.isCube
+                ? CubeStage(
+                    view: _view,
+                    lastTurn: _lastTurn,
+                    reduceMotion: reduceMotionOf(context),
+                    faceBuilder: (context, face) => PuzzleBoard(
+                      state: _state,
+                      face: face,
+                      showGrid: true,
+                      onTapArrow: (_) {},
+                      reduceMotion: reduceMotionOf(context),
+                    ),
+                  )
+                : PuzzleBoard(
+                    state: _state,
+                    showGrid: true,
+                    onTapArrow: (_) {},
+                    reduceMotion: reduceMotionOf(context),
+                  ),
           ),
         ),
       );

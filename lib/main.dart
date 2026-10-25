@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'l10n/app_localizations.dart';
 import 'models/settings.dart';
 import 'providers/app_providers.dart';
+import 'providers/progress_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -17,6 +18,9 @@ import 'ui/theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
+  // Progress from the old trail moves onto the new one before anything
+  // reads it (or the level left half-played).
+  await ProgressRepository(prefs).migrateLayout();
   runApp(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],

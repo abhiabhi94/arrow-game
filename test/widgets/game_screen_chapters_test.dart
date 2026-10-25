@@ -61,29 +61,29 @@ Future<void> _tapCell(WidgetTester tester, Cell cell) async {
 
 void main() {
   testWidgets('a chapter\'s first level opens on its card, over the paused board', (tester) async {
-    final container = await _pump(tester, const GameScreen(level: 21));
+    final container = await _pump(tester, const GameScreen(level: 11));
     expect(find.text('Mirrors'), findsOneWidget);
     expect(find.text('Arrows bounce off mirrors.'), findsNWidgets(2)); // the card's line and the one under the board
     expect(find.text('Got it'), findsOneWidget);
-    expect(container.read(gameProvider(21)).phase, GamePhase.paused);
+    expect(container.read(gameProvider(11)).phase, GamePhase.paused);
     // Two boards on screen: the level's and the card's picture.
     expect(find.byType(PuzzleBoard), findsNWidgets(2));
     await tester.tap(find.text('Got it'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Mirrors'), findsNothing);
-    expect(container.read(gameProvider(21)).phase, GamePhase.playing);
+    expect(container.read(gameProvider(11)).phase, GamePhase.playing);
     // The line under the board stays.
     expect(find.text('Arrows bounce off mirrors.'), findsOneWidget);
     // Pausing again does not bring the card back.
-    container.read(gameProvider(21).notifier).pause();
+    container.read(gameProvider(11).notifier).pause();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Mirrors'), findsNothing);
     expect(find.text('Paused'), findsOneWidget);
   });
 
-  for (final (level, title) in <(int, String)>[(41, 'The key goes first. Then the lock opens.'), (61, 'Clear an arrow beside it to see where it points.'), (81, 'One tap, both go. Both paths must be clear.')]) {
+  for (final (level, title) in <(int, String)>[(21, 'The key goes first. Then the lock opens.'), (31, 'Clear an arrow beside it to see where it points.'), (41, 'One tap, both go. Both paths must be clear.')]) {
     testWidgets('level $level opens on its chapter card', (tester) async {
       // The earlier chapters' cards were dismissed on their own levels.
       final before = chapters.where((c) => c.index >= 2 && c.lastLevel < level).map((c) => c.rule.name).toList();
@@ -97,39 +97,39 @@ void main() {
   testWidgets('a card once dismissed is not shown again, cleared or not; only the line stays', (tester) async {
     final container = await _pump(
       tester,
-      const GameScreen(level: 41),
+      const GameScreen(level: 21),
       seed: const {
-        'arrow_level_41_done': true,
+        'arrow_level_21_done': true,
         IntroRepository.key: ['mirrors', 'locks'],
       },
     );
     expect(find.text('The key goes first. Then the lock opens.'), findsNothing);
-    expect(container.read(gameProvider(41)).phase, GamePhase.playing);
+    expect(container.read(gameProvider(21)).phase, GamePhase.playing);
     expect(find.text('A locked arrow waits for its key.'), findsOneWidget);
   });
 
   testWidgets('a player already past a chapter is shown every card owed, one after another', (tester) async {
-    // Forty-five levels cleared before the chapters arrived: opening level
-    // 46 brings the Mirrors card, then the Locks card, then the level.
+    // Twenty-five levels cleared before the chapters arrived: opening level
+    // 26 brings the Mirrors card, then the Locks card, then the level.
     final container = await _pump(
       tester,
-      const GameScreen(level: 46),
-      seed: {for (var l = 1; l <= 45; l++) 'arrow_level_${l}_done': true},
+      const GameScreen(level: 26),
+      seed: {for (var l = 1; l <= 25; l++) 'arrow_level_${l}_done': true},
     );
     expect(find.text('Mirrors'), findsOneWidget);
     expect(find.text('Arrows bounce off mirrors.'), findsOneWidget);
-    expect(container.read(gameProvider(46)).phase, GamePhase.paused);
+    expect(container.read(gameProvider(26)).phase, GamePhase.paused);
     await tester.tap(find.text('Got it'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Mirrors'), findsNothing);
     expect(find.text('The key goes first. Then the lock opens.'), findsOneWidget);
-    expect(container.read(gameProvider(46)).phase, GamePhase.paused);
+    expect(container.read(gameProvider(26)).phase, GamePhase.paused);
     await tester.tap(find.text('Got it'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Got it'), findsNothing);
-    expect(container.read(gameProvider(46)).phase, GamePhase.playing);
+    expect(container.read(gameProvider(26)).phase, GamePhase.playing);
     // Both are remembered: the next level opens straight onto the board.
     expect(container.read(introProvider), {ChapterRule.mirrors, ChapterRule.locks});
     final prefs = container.read(sharedPreferencesProvider);
@@ -142,7 +142,7 @@ void main() {
     await _pump(
       tester,
       const GameScreen.daily(),
-      seed: {for (var l = 1; l <= 25; l++) 'arrow_level_${l}_done': true},
+      seed: {for (var l = 1; l <= 15; l++) 'arrow_level_${l}_done': true},
     );
     expect(find.text('Arrows bounce off mirrors.'), findsOneWidget);
     await tester.tap(find.text('Got it'));
@@ -155,11 +155,11 @@ void main() {
   testWidgets('a level coming back from a saved game shows the welcome, not the card', (tester) async {
     final resumed = await _pump(
       tester,
-      const GameScreen(level: 61),
+      const GameScreen(level: 31),
       seed: <String, Object>{
         SavedGameRepository.key: jsonEncode(const {
-          'level': 61,
-          'seed': 61 * 7919 + 17,
+          'level': 31,
+          'seed': 31 * 7919 + 17,
           'removed': [0],
           'mistakes': 0,
           'hintsLeft': 3,
@@ -169,12 +169,12 @@ void main() {
     );
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Clear an arrow beside it to see where it points.'), findsNothing);
-    expect(resumed.read(gameProvider(61)).resumeOffered, isTrue);
+    expect(resumed.read(gameProvider(31)).resumeOffered, isTrue);
     await tester.pump(const Duration(milliseconds: 400));
   });
 
   testWidgets('a plain level has no card and no line', (tester) async {
-    await _pump(tester, const GameScreen(level: 22), seed: const {IntroRepository.key: ['mirrors']});
+    await _pump(tester, const GameScreen(level: 12), seed: const {IntroRepository.key: ['mirrors']});
     expect(find.text('Got it'), findsNothing);
     expect(find.textContaining('mirrors'), findsNothing);
   });

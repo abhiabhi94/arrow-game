@@ -120,10 +120,11 @@ class DailyNotifier extends StateNotifier<DailyStanding> {
     final day = dayIndexOf(clock());
     var index = repo.chapterFor(day);
     if (index == null) {
-      index = chapterForProgress(levelsCleared()).index;
+      index = dailyChapterFor(levelsCleared()).index;
       repo.saveChapter(day, index);
     }
-    return repo.load(day, chapters[index.clamp(1, chapters.length) - 1]);
+    // The daily board is flat: never the block's chapter.
+    return repo.load(day, chapters[index.clamp(1, chapters.length - 1) - 1]);
   }
 
   /// Rolls the standing over to today if the day has changed since it was

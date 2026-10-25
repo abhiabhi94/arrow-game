@@ -126,4 +126,85 @@ void main() {
       expect(container.read(progressProvider.notifier).totalStars, 2);
     });
   });
+
+  group('moving to the new trail', () {
+    /// Old-trail progress: levels 1..[upTo] cleared, two stars each and a
+    /// best time of a minute.
+    Map<String, Object> oldTrail(int upTo) => <String, Object>{
+          for (var level = 1; level <= upTo; level++) ...{
+            'arrow_level_${level}_done': true,
+            'arrow_level_${level}_stars': level.isEven ? 3 : 2,
+            'arrow_level_${level}_best': 60000 + level,
+            'arrow_level_${level}_count': 1,
+          },
+        };
+
+    test('each new level stands in for an old one', () {
+      expect(ProgressRepository.oldLevelFor(1), 1);
+      expect(ProgressRepository.oldLevelFor(7), 7);
+      expect(ProgressRepository.oldLevelFor(8), 9);
+      expect(ProgressRepository.oldLevelFor(10), 15);
+      // Mirrors: its teaching board, then every other level of the climb.
+      expect(ProgressRepository.oldLevelFor(11), 21);
+      expect(ProgressRepository.oldLevelFor(12), 24);
+      expect(ProgressRepository.oldLevelFor(20), 40);
+      expect(ProgressRepository.oldLevelFor(41), 81);
+      expect(ProgressRepository.oldLevelFor(50), 100);
+    });
+
+    test('a player keeps their place: halfway through the old Mirrors is halfway through the new', () async {
+      final prefs = await _prefs(oldTrail(30));
+      final repo = ProgressRepository(prefs);
+      await repo.migrateLayout();
+      final n = ProgressNotifier(repo, unlockAllLevels: false);
+      // Old 1..20 (Lines) → new 1..10; old 21..30 → new 11..15.
+      expect(n.levelsCleared, 15);
+      expect(n.highestUnlocked, 16);
+      expect(n.progressFor(16).completed, isFalse);
+      // Stars come across; a best time only where the board did.
+      expect(n.progressFor(12).stars, 3); // old 24
+      expect(n.progressFor(3).bestTimeMs, 60003);
+      expect(n.progressFor(9).bestTimeMs, isNull);
+      expect(n.progressFor(9).timesCompleted, 1);
+      // Nothing old carries onto the block.
+      expect(prefs.getBool('arrow_level_30_done'), isNull);
+      expect(prefs.getInt(ProgressRepository.layoutKey), ProgressRepository.kTrailLayout);
+      n.dispose();
+    });
+
+    test('runs once, and a fresh install only notes the layout', () async {
+      final prefs = await _prefs(oldTrail(20));
+      final repo = ProgressRepository(prefs);
+      await repo.migrateLayout();
+      // Played on the new trail since: level 11 cleared.
+      await repo.save(repo.load(11).withCompletion(1000, 3));
+      await repo.migrateLayout();
+      expect(repo.load(10).completed, isTrue);
+      expect(repo.load(11).completed, isTrue);
+
+      final fresh = await _prefs();
+      await ProgressRepository(fresh).migrateLayout();
+      expect(fresh.getKeys(), {ProgressRepository.layoutKey});
+    });
+
+    test('a level left half-played on a board that has moved is dropped, one that has not is kept', () async {
+      final moved = await _prefs(<String, Object>{
+        ...oldTrail(12),
+        'arrow_saved_game': '{"level":13,"seed":102964,"removed":[0],"mistakes":0,"hintsLeft":3,"elapsedMs":100}',
+        'arrow_riddle_open': '13:life:4:en',
+      });
+      await ProgressRepository(moved).migrateLayout();
+      expect(moved.getString('arrow_saved_game'), isNull);
+      expect(moved.getString('arrow_riddle_open'), isNull);
+
+      final kept = await _prefs(<String, Object>{
+        ...oldTrail(4),
+        'arrow_saved_game': '{"level":5,"seed":39612,"removed":[0],"mistakes":0,"hintsLeft":3,"elapsedMs":100}',
+        'arrow_riddle_open': '5:life:4:en',
+      });
+      await ProgressRepository(kept).migrateLayout();
+      expect(kept.getString('arrow_saved_game'), isNotNull);
+      expect(kept.getString('arrow_riddle_open'), isNotNull);
+    });
+  });
 }

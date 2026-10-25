@@ -86,7 +86,15 @@ class PuzzleGenerator {
   /// holds the level's choice within [startSlack] and [widestSlack] of
   /// `openMoves` at the start and at its widest, then to the fewest moves
   /// open at a typical moment, then to tangle.
+  ///
+  /// A cube level is dealt face by face ([dealFace]), each face a board of
+  /// its own seeded from its [LevelSpec.faceSpecs] entry (not from this
+  /// generator's random), and the faces joined into one block with
+  /// `Puzzle.cube`.
   Puzzle generate(LevelSpec spec) {
+    if (spec.isCube) {
+      return Puzzle.cube(<Puzzle>[for (final face in spec.faceSpecs) dealFace(face)]);
+    }
     Puzzle? best;
     var bestHeld = false;
     var bestOpen = double.infinity;
@@ -111,6 +119,52 @@ class PuzzleGenerator {
       }
     }
     return best!;
+  }
+
+  /// One face of a cube level: the first of [kFaceDeals] boards, seeded one
+  /// after another from [face]'s seed, that [keepsRules] — a face is small
+  /// enough that a lone mirror can miss every arrow's way out, or a lock
+  /// find no key, and six faces have to hold at once, so a face is re-dealt
+  /// on its own rather than the whole level by its variant. Failing that,
+  /// the board with the most twists placed (then the first).
+  static Puzzle dealFace(LevelSpec face) {
+    Puzzle? best;
+    var bestPlaced = -1;
+    for (var r = 0; r < kFaceDeals; r++) {
+      final p = PuzzleGenerator(random: Random(face.seed + r * 7919)).generate(face);
+      if (keepsRules(face, p)) return p;
+      final placed = p.arrowCount * 100 + p.mirrors.length + p.locks.length + p.hidden.length + p.pairs.length;
+      if (placed > bestPlaced) {
+        best = p;
+        bestPlaced = placed;
+      }
+    }
+    return best!;
+  }
+
+  /// How many boards [dealFace] tries for a face.
+  static const int kFaceDeals = 24;
+
+  /// Whether [p] keeps every rule the level table is tested for under
+  /// [spec]: the full arrow count, every twist placed, most of the mirrors
+  /// on some arrow's way out (at least 60% of them, and half as many arrows
+  /// bouncing as mirrors hit), and the player's choice held at the start and
+  /// at its widest and narrow on average (within one of `openMoves`).
+  static bool keepsRules(LevelSpec spec, Puzzle p) {
+    if (p.arrowCount != spec.arrows) return false;
+    final f = spec.features;
+    if (p.mirrors.length != f.mirrors ||
+        p.locks.length < f.locks ||
+        p.hidden.length < f.hidden ||
+        p.pairs.length ~/ 2 < f.pairs) {
+      return false;
+    }
+    if (f.mirrors > 0) {
+      final hit = p.mirrors.keys.where((m) => p.arrows.any((a) => p.rayOf(a.id).contains(m))).length;
+      final bent = p.arrows.where((a) => p.bends(a.id)).length;
+      if (hit < (f.mirrors * 0.6).ceil() || bent < (hit / 2).ceil()) return false;
+    }
+    return holdsChoice(spec, p.openMoveProfile()) && p.meanOpenMoves <= spec.openMoves + 1;
   }
 
   /// Whether an [openMoveProfile] keeps the player's choice within the slack

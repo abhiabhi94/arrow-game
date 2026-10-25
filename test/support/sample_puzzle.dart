@@ -120,3 +120,28 @@ LevelSpec featureSpecFor(int level) => LevelSpec(
   timeLimitMs: 30000,
   features: const LevelFeatures(mirrors: 1, locks: 1, hidden: 1, pairs: 1),
 );
+
+/// A tiny block: six 4x4 faces. Face 0 is [samplePuzzle] (ids 0–2: 0 and 1
+/// free, 2 waits for 0); every other face holds one free arrow pointing
+/// right along its second row (ids 3–7, face 1–5 in order).
+Puzzle sampleCubePuzzle() => Puzzle.cube(<Puzzle>[
+  samplePuzzle(),
+  for (var f = 1; f < 6; f++)
+    Puzzle(
+      width: 4,
+      height: 4,
+      arrows: [ArrowPiece(id: 0, cells: const [Cell(1, 1), Cell(2, 1)], heading: Direction.right)],
+    ),
+]);
+
+/// A spec matching [sampleCubePuzzle], on level [level].
+LevelSpec sampleCubeSpecFor(int level) => LevelSpec(
+  level: level,
+  width: 4,
+  height: 4,
+  arrows: 8,
+  minLength: 2,
+  maxLength: 3,
+  timeLimitMs: 60000,
+  faces: 6,
+);

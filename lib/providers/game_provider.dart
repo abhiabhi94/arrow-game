@@ -257,13 +257,14 @@ class GameNotifier extends StateNotifier<GameState> {
   /// the state moves — the turn is in the path the tap already followed.
   void bounce() => sfx?.bounce();
 
-  /// Spends a hint to point at an arrow that can go now. No-op while a hint
-  /// is already showing, when none are left, or outside play.
-  void useHint() {
+  /// Spends a hint to point at an arrow that can go now — on the block, one
+  /// on the [face] in front when that face has one. No-op while a hint is
+  /// already showing, when none are left, or outside play.
+  void useHint({int? face}) {
     if (!state.isPlaying || state.hintsLeft <= 0 || state.hintArrowId != null) {
       return;
     }
-    final id = state.puzzle!.hintFor(state.removed);
+    final id = state.puzzle!.hintFor(state.removed, face: face);
     if (id == null) return;
     state = state.copyWith(
       hintArrowId: id,
@@ -285,9 +286,9 @@ class GameNotifier extends StateNotifier<GameState> {
   /// costs a riddle too. No-op while a hint is already showing or outside
   /// play — the screen resumes the level first, since the riddle was asked
   /// with the clock paused.
-  void earnHint() {
+  void earnHint({int? face}) {
     if (!state.isPlaying || state.hintArrowId != null) return;
-    final id = state.puzzle!.hintFor(state.removed);
+    final id = state.puzzle!.hintFor(state.removed, face: face);
     if (id == null) return;
     state = state.copyWith(hintArrowId: id, revealed: _revealing(id));
     haptics?.tap();

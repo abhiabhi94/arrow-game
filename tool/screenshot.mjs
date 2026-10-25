@@ -140,7 +140,8 @@ const labels = lang === 'hindi'
       riddleNudge: /एक और इशारा$/,
       riddleSubmit: /यही मेरा जवाब है$/,
       riddleSolved: /तीरों पर वापस$/,
-      board: /^पहेली बोर्ड,? (\d+) गुणा (\d+)/,
+      // A face of the block on a cube level is labelled as the face.
+      board: /^(?:पहेली बोर्ड|क्यूब की सतह \d+),? (\d+) गुणा (\d+)/,
       gotIt: /^समझ गया$/,
       welcomeBack: /^जारी रखें$/,
       daily: /^आज का बोर्ड\./,
@@ -155,7 +156,8 @@ const labels = lang === 'hindi'
       riddleNudge: /One more nudge$/,
       riddleSubmit: /That's my answer$/,
       riddleSolved: /Back to the arrows$/,
-      board: /^Puzzle board,? (\d+) by (\d+)/,
+      // A face of the block on a cube level is labelled as the face.
+      board: /^(?:Puzzle board|Face \d+ of the block),? (\d+) by (\d+)/,
       gotIt: /^Got it$/,
       welcomeBack: /^Continue$/,
       daily: /^Daily board\./,

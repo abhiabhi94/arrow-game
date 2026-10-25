@@ -58,8 +58,10 @@ class LevelSpec {
     this.openMoves = 2,
     this.variant = 0,
     this.features = LevelFeatures.none,
+    this.faces = 0,
     this._seed,
   })  : assert(level >= 0),
+        assert(faces == 0 || (faces >= 1 && width == height)),
         assert(openMoves >= 1),
         assert(variant >= 0),
         assert(width >= 3 && height >= 3),
@@ -73,11 +75,12 @@ class LevelSpec {
   /// The level number a daily board carries: it is on no trail.
   static const int dailyLevel = 0;
 
-  /// Board size in cells.
+  /// Board size in cells — on a cube level, the size of one face.
   final int width;
   final int height;
 
-  /// Arrows on the board (all must exit to clear the level).
+  /// Arrows on the board (all must exit to clear the level) — on a cube
+  /// level, on all its faces together.
   final int arrows;
 
   /// Arrow length range in cells.
@@ -98,8 +101,16 @@ class LevelSpec {
   /// `tool/level_report.dart <level> <extra>` shows how the variants compare.
   final int variant;
 
-  /// The chapter twists the board is dealt with.
+  /// The chapter twists the board is dealt with — on a cube level, on all
+  /// its faces together.
   final LevelFeatures features;
+
+  /// How many faces a cube level has (six), or 0 for a flat board. Each
+  /// face is a square [width]×[height] board of its own ([faceSpecs]); the
+  /// player plays one at a time and turns the block to reach the next.
+  final int faces;
+
+  bool get isCube => faces > 0;
 
   final int? _seed;
 
@@ -110,7 +121,38 @@ class LevelSpec {
 
   bool get isDaily => level == dailyLevel;
 
-  int get cellCount => width * height;
+  /// Cells on the board, every face of a cube counted.
+  int get cellCount => width * height * (isCube ? faces : 1);
+
+  /// A cube level's faces as boards of their own: the arrows and the twists
+  /// shared out between them as evenly as they go (the odd ones spread
+  /// round the block rather than heaped on the first face), each face
+  /// seeded from the level's seed and its number. Empty for a flat board.
+  List<LevelSpec> get faceSpecs {
+    if (!isCube) return const <LevelSpec>[];
+    int share(int total, int face, int offset) =>
+        total ~/ faces + ((face + offset) % faces < total % faces ? 1 : 0);
+    return <LevelSpec>[
+      for (var f = 0; f < faces; f++)
+        LevelSpec(
+          level: level,
+          width: width,
+          height: height,
+          arrows: share(arrows, f, 0),
+          minLength: minLength,
+          maxLength: maxLength,
+          timeLimitMs: timeLimitMs,
+          openMoves: openMoves,
+          features: LevelFeatures(
+            mirrors: share(features.mirrors, f, 1),
+            locks: share(features.locks, f, 3),
+            hidden: share(features.hidden, f, 5),
+            pairs: share(features.pairs, f, 2),
+          ),
+          seed: seed * 31 + (f + 1) * 104_729,
+        ),
+    ];
+  }
 
   /// Cells an arrow may use: the board less its mirrors.
   int get freeCellCount => cellCount - features.mirrors;
@@ -133,6 +175,7 @@ class LevelSpec {
       openMoves: openMoves,
       variant: variant,
       features: features,
+      faces: faces,
       seed: _seed,
     );
   }
@@ -149,10 +192,12 @@ class LevelSpec {
         openMoves: openMoves,
         variant: variant,
         features: features,
+        faces: faces,
         seed: _seed,
       );
 
   @override
-  String toString() =>
-      'LevelSpec($level: ${width}x$height, $arrows arrows, ${timeLimitMs}ms)';
+  String toString() => isCube
+      ? 'LevelSpec($level: $faces faces of ${width}x$height, $arrows arrows, ${timeLimitMs}ms)'
+      : 'LevelSpec($level: ${width}x$height, $arrows arrows, ${timeLimitMs}ms)';
 }

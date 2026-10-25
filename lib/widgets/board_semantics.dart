@@ -15,8 +15,18 @@ import '../l10n/app_localizations.dart';
 import '../models/game_state.dart';
 
 /// The label of the board as a whole.
-String boardLabel(AppLocalizations l10n, GameState state) {
+String boardLabel(AppLocalizations l10n, GameState state, {int? face}) {
   final puzzle = state.puzzle!;
+  if (face != null && puzzle.isCube) {
+    final ids = puzzle.arrowsOn(face);
+    return l10n.boardFaceLabel(
+      face + 1,
+      puzzle.faceWidth,
+      puzzle.height,
+      ids.where((id) => !state.removed.contains(id)).length,
+      ids.length,
+    );
+  }
   return l10n.boardLabel(
     puzzle.width,
     puzzle.height,
@@ -40,7 +50,7 @@ String arrowLabel(AppLocalizations l10n, GameState state, int id) {
   final number = puzzle.lockNumber(id);
   final parts = <String>[];
   if (!state.headShown(id)) {
-    parts.add(l10n.arrowHiddenLabel(arrow.length, arrow.tail.y + 1, arrow.tail.x + 1));
+    parts.add(l10n.arrowHiddenLabel(arrow.length, arrow.tail.y + 1, puzzle.onFace(arrow.tail).x + 1));
   } else {
     final path = blocked == null
         ? l10n.arrowPathClear
@@ -50,7 +60,7 @@ String arrowLabel(AppLocalizations l10n, GameState state, int id) {
         directionName(l10n, arrow.heading),
         arrow.length,
         arrow.head.y + 1,
-        arrow.head.x + 1,
+        puzzle.onFace(arrow.head).x + 1,
         path,
       ),
     );

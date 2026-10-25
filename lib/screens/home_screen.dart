@@ -504,9 +504,9 @@ class _Trail extends StatelessWidget {
 
   /// Where across the width [level]'s node sits: a slow sine that starts
   /// over at every chapter, so each section opens at the centre and winds
-  /// twice down to its twentieth level.
+  /// down about once every ten levels.
   static double fractionFor(int level) =>
-      0.5 + 0.38 * sin(((level - 1) % kChapterLength) * 0.62);
+      0.5 + 0.38 * sin((level - chapterOf(level).firstLevel) * 0.62);
 
   /// How far down the trail [level]'s node sits: its place in the line plus
   /// a band of [bandHeight] for every chapter heading above it.
@@ -1056,9 +1056,10 @@ class _ChapterBand extends StatelessWidget {
       ChapterRule.locks => Icons.vpn_key_rounded,
       ChapterRule.fog => Icons.blur_on_rounded,
       ChapterRule.pairs => Icons.link_rounded,
+      ChapterRule.cube => Icons.view_in_ar_rounded,
     };
     final ink = reached ? p.textInk : p.textMuted;
-    final share = cleared / kChapterLength;
+    final share = cleared / chapter.length;
     return Semantics(
       header: true,
       label: '$heading. $levels. $blurb',
@@ -1106,11 +1107,11 @@ class _ChapterBand extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '$cleared/$kChapterLength',
+                        '$cleared/${chapter.length}',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: cleared == kChapterLength
+                          color: cleared == chapter.length
                               ? p.successInk
                               : p.textMuted,
                         ),

@@ -12,8 +12,13 @@ void main() {
       final sw = Stopwatch()..start();
       final p = puzzleForLevel(spec);
       sw.stop();
-      expect(p.width, spec.width);
+      expect(p.width, spec.width * (spec.isCube ? spec.faces : 1));
       expect(p.height, spec.height);
+      expect(p.isCube, spec.isCube);
+      if (spec.isCube) {
+        expect(p.faceCount, spec.faces);
+        expect(p.faceWidth, spec.width);
+      }
       expect(p.arrowCount, spec.arrows, reason: 'level ${spec.level} arrow count');
       expect(p.isSolvable, isTrue, reason: 'level ${spec.level} solvable');
       for (final a in p.arrows) {
@@ -32,14 +37,25 @@ void main() {
       // purpose, and a small sprint board has less room to pack.
       final used = p.arrows.fold<int>(0, (n, a) => n + a.length);
       final teaching = ruleTaughtAt(spec.level) != null;
-      final floor = teaching ? 0.5 : (spec.cellCount < 300 ? 0.75 : 0.8);
-      expect(used / spec.freeCellCount, greaterThanOrEqualTo(floor), reason: 'level ${spec.level} fill');
+      if (spec.isCube) {
+        // A face of the block is a small board with a handful of arrows,
+        // so the first faces are roomier; the block as a whole still packs.
+        expect(used / spec.freeCellCount, greaterThanOrEqualTo(teaching ? 0.4 : 0.7), reason: 'level ${spec.level} fill');
+        for (var f = 0; f < p.faceCount; f++) {
+          final onFace = p.arrowsOn(f).fold<int>(0, (n, id) => n + p.arrows[id].length);
+          final free = spec.width * spec.height - p.mirrors.keys.where((m) => p.faceOfCell(m) == f).length;
+          expect(onFace / free, greaterThanOrEqualTo(teaching ? 0.3 : 0.6), reason: 'level ${spec.level} face $f fill');
+        }
+      } else {
+        final floor = teaching ? 0.5 : (spec.cellCount < 300 ? 0.75 : 0.8);
+        expect(used / spec.freeCellCount, greaterThanOrEqualTo(floor), reason: 'level ${spec.level} fill');
+      }
       // Every twist the level asks for is on the board.
       final f = spec.features;
       expect(p.mirrors, hasLength(f.mirrors), reason: 'level ${spec.level} mirrors');
       for (final m in p.mirrors.keys) {
-        // Mirrors stand clear of the edge and of each other.
-        expect(m.x, inInclusiveRange(kMirrorMargin, spec.width - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
+        // Mirrors stand clear of the edge (of their face) and of each other.
+        expect(p.onFace(m).x, inInclusiveRange(kMirrorMargin, spec.width - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
         expect(m.y, inInclusiveRange(kMirrorMargin, spec.height - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
         for (final other in p.mirrors.keys) {
           if (other == m) continue;
@@ -62,7 +78,7 @@ void main() {
   });
 
   test('the twists are placed where they count', () {
-    final p = puzzleForLevel(specForLevel(100));
+    final p = puzzleForLevel(specForLevel(50));
     // One twist per arrow, so no piece is two things at once.
     final twisted = <int>[...p.locks.keys, ...p.locks.values, ...p.hidden, ...p.pairs.keys];
     expect(twisted.toSet(), hasLength(twisted.length));
@@ -123,6 +139,13 @@ void main() {
 
   test('the choice stays narrow: a handful of taps at the start, few at any moment', () {
     for (final spec in levelSpecs) {
+      if (spec.isCube) {
+        // On the block the choice is the face's: each face holds it.
+        for (final face in spec.faceSpecs) {
+          expect(PuzzleGenerator.keepsRules(face, PuzzleGenerator.dealFace(face)), isTrue, reason: 'level ${spec.level} ${face.seed}');
+        }
+        continue;
+      }
       final p = puzzleForLevel(spec);
       final profile = p.openMoveProfile();
       expect(profile, hasLength(p.arrowCount - p.pairs.length ~/ 2), reason: 'level ${spec.level} solvable');
@@ -142,9 +165,7 @@ void main() {
     double hunt(Chapter c) {
       var sum = 0.0;
       var n = 0;
-      for (var level = c.firstLevel + 1; level <= c.lastLevel - 1; level++) {
-        final i = (level - 1) % kChapterLength + 1;
-        if (i == 5 || i == 15 || i == 10) continue;
+      for (var level = c.firstLevel + 1; level <= c.lastLevel; level++) {
         sum += puzzleForLevel(specForLevel(level)).arrowsPerOpenMove;
         n++;
       }
@@ -154,17 +175,54 @@ void main() {
     final first = hunt(chapters[0]);
     var before = hunt(chapters[1]);
     expect(before, greaterThan(first));
-    for (final chapter in chapters.skip(2)) {
+    for (final chapter in chapters.skip(2).where((c) => c.rule != ChapterRule.cube)) {
       final now = hunt(chapter);
       expect(now, greaterThan(before * 0.9), reason: 'chapter ${chapter.index}');
       before = now;
     }
   });
 
+  test('on the block the faces keep to themselves and grow deeper level by level', () {
+    // Every arrow leaves by its own face, and nothing on one face waits for
+    // anything on another.
+    for (final level in <int>[51, 70, 85, 100]) {
+      final p = puzzleForLevel(specForLevel(level));
+      for (final a in p.arrows) {
+        final face = p.faceOf(a.id);
+        expect(a.cells.every((c) => p.faceOfCell(c) == face), isTrue, reason: 'level $level $a');
+        expect(p.rayOf(a.id).every((c) => p.faceOfCell(c) == face), isTrue, reason: 'level $level $a');
+        expect(p.dependenciesOf(a.id).every((d) => p.faceOf(d) == face), isTrue, reason: 'level $level $a');
+      }
+      for (var f = 0; f < 6; f++) {
+        expect(p.arrowsOn(f), isNotEmpty, reason: 'level $level face $f');
+      }
+    }
+    // Each ten levels' faces are harder work than the ten before: longer
+    // chains to unpick, face by face.
+    double depth(int from) {
+      var sum = 0;
+      for (var level = from; level < from + 10; level++) {
+        final spec = specForLevel(level);
+        for (final face in spec.faceSpecs) {
+          sum += PuzzleGenerator.dealFace(face).dependencyDepth;
+        }
+      }
+      return sum / 60;
+    }
+
+    var before = depth(52);
+    for (final from in <int>[61, 71, 81, 91]) {
+      final now = depth(from);
+      expect(now, greaterThan(before * 0.95), reason: 'levels $from+');
+      before = now;
+    }
+    expect(depth(91), greaterThan(depth(52)));
+  });
+
   test('an arrow may point straight at another as long as nothing cycles', () {
     // Level 10 and up are full of arrows that wait for a neighbour; every one
     // of them still leaves in the greedy order.
-    final p = puzzleForLevel(specForLevel(12));
+    final p = puzzleForLevel(specForLevel(9));
     final waiting = p.arrows.where((a) => p.blockersOf(a.id).isNotEmpty).length;
     expect(waiting, greaterThan(p.arrowCount ~/ 2));
     expect(p.solvingOrder(), hasLength(p.arrowCount));

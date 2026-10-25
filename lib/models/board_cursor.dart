@@ -19,14 +19,20 @@ import '../engine/puzzle.dart';
 /// With no [from] the cursor starts at the first arrow in reading order:
 /// topmost head, then leftmost. A [from] that has left the board still
 /// anchors the step — the cursor stays where the arrow was until it moves.
-int? cursorStep(Puzzle puzzle, Set<int> removed, int? from, Direction direction) {
-  if (from == null) return firstArrow(puzzle, removed);
+///
+/// On a cube level the cursor keeps to the [face] in front: a [from] on
+/// another face (the block has turned since) starts it again on this one.
+int? cursorStep(Puzzle puzzle, Set<int> removed, int? from, Direction direction, {int? face}) {
+  if (from == null || (face != null && puzzle.faceOf(from) != face)) {
+    return firstArrow(puzzle, removed, face: face);
+  }
   final here = puzzle.arrows[from].head;
   final (dx, dy) = direction.vector;
   int? best;
   var bestScore = double.infinity;
   for (final arrow in puzzle.arrows) {
     if (arrow.id == from || removed.contains(arrow.id)) continue;
+    if (face != null && puzzle.faceOf(arrow.id) != face) continue;
     final ox = arrow.head.x - here.x;
     final oy = arrow.head.y - here.y;
     // How far it lies along the direction asked for, and how far off to the
@@ -53,11 +59,12 @@ bool _readsBefore(Puzzle puzzle, int a, int b) {
 }
 
 /// The first arrow still on the board in reading order (topmost head, then
-/// leftmost), or null when the board is empty.
-int? firstArrow(Puzzle puzzle, Set<int> removed) {
+/// leftmost), or null when the board (or, given, the [face]) is empty.
+int? firstArrow(Puzzle puzzle, Set<int> removed, {int? face}) {
   int? best;
   for (final arrow in puzzle.arrows) {
     if (removed.contains(arrow.id)) continue;
+    if (face != null && puzzle.faceOf(arrow.id) != face) continue;
     if (best == null || _readsBefore(puzzle, arrow.id, best)) best = arrow.id;
   }
   return best;

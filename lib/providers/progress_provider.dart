@@ -6,9 +6,13 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/chapters.dart';
 import '../data/level_specs.dart';
 import '../models/level_progress.dart';
+import '../models/riddle.dart';
 import 'app_providers.dart';
+import 'riddle_provider.dart';
+import 'saved_game_provider.dart';
 
 class ProgressRepository {
   ProgressRepository(this._prefs);
@@ -38,6 +42,69 @@ class ProgressRepository {
     await _prefs.setInt(_countKey(p.level), p.timesCompleted);
     final best = p.bestTimeMs;
     if (best != null) await _prefs.setInt(_bestKey(p.level), best);
+  }
+
+  /// Which layout of the trail the stored progress is for: absent for the
+  /// first (five chapters of twenty), [kTrailLayout] once moved over.
+  static const String layoutKey = 'arrow_trail_layout';
+
+  /// The trail's current layout: five flat chapters of ten, then the block.
+  static const int kTrailLayout = 2;
+
+  /// Moves progress recorded on the old trail — five chapters of twenty
+  /// levels — onto the new one, once. Each new level takes the standing of
+  /// the old level it stands in for ([oldLevelFor]), so a player keeps their
+  /// place: halfway through the old Mirrors is halfway through the new. The
+  /// block (51–100) is new, so nothing carries onto it. Stars and clear
+  /// counts come across; a best time only where the board did (levels 1–7,
+  /// dealt as before), since a time on another board says nothing here. A
+  /// game left half-played on a level whose board has moved is dropped, and
+  /// so is a riddle left open on one. Takes effect in memory at once; run
+  /// from `main()` before anything reads the progress or the saved game.
+  Future<void> migrateLayout() async {
+    if (_prefs.getInt(layoutKey) == kTrailLayout) return;
+    final old = <int, LevelProgress>{
+      for (var level = 1; level <= totalLevels; level++) level: load(level),
+    };
+    final moved = <LevelProgress>[
+      for (var level = 1; level < kFirstCubeLevel; level++)
+        if (old[oldLevelFor(level)]! case final was when was.completed)
+          LevelProgress(
+            level: level,
+            completed: true,
+            stars: was.stars,
+            bestTimeMs: level <= kUnmovedLevels ? was.bestTimeMs : null,
+            timesCompleted: was.timesCompleted,
+          ),
+    ];
+    await _prefs.setInt(layoutKey, kTrailLayout);
+    if (old.values.every((p) => !p.completed)) return;
+    await clearAll();
+    for (final p in moved) {
+      await save(p);
+    }
+    final saved = SavedGameRepository(_prefs).load();
+    if (saved != null && saved.level > kUnmovedLevels) await SavedGameRepository(_prefs).clear();
+    final riddle = _prefs.getString(RiddleDeckRepository.openKey);
+    if (riddle != null && (OpenRiddle.decode(riddle)?.level ?? totalLevels) > kUnmovedLevels) {
+      await _prefs.remove(RiddleDeckRepository.openKey);
+    }
+  }
+
+  /// The levels whose boards did not move with the new layout.
+  static const int kUnmovedLevels = 7;
+
+  /// The level of the old trail (five chapters of twenty) that new [level]
+  /// (1..50) stands in for: the same level for 1–7, then old 9, 12 and 15
+  /// for the rest of Lines; in each later chapter its teaching board, and
+  /// for the climb every other level (the new chapter's 2nd level is the
+  /// old one's 4th, its 10th the old 20th).
+  static int oldLevelFor(int level) {
+    if (level <= kUnmovedLevels) return level;
+    if (level <= 10) return const <int>[9, 12, 15][level - 8];
+    final chapter = (level - 1) ~/ 10; // 1..4
+    final i = (level - 1) % 10 + 1; // 1..10
+    return chapter * 20 + (i == 1 ? 1 : 2 * i);
   }
 
   /// Wipes every level's progress.

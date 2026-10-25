@@ -4,13 +4,14 @@ library;
 
 import '../l10n/app_localizations.dart';
 
-/// The name of chapter [index] (1..5) of the trail.
+/// The name of chapter [index] (1..6) of the trail.
 String chapterName(AppLocalizations l10n, int index) => switch (index) {
       1 => l10n.chapterName1,
       2 => l10n.chapterName2,
       3 => l10n.chapterName3,
       4 => l10n.chapterName4,
-      _ => l10n.chapterName5,
+      5 => l10n.chapterName5,
+      _ => l10n.chapterName6,
     };
 
 /// The one-line description of chapter [index]'s twist.
@@ -19,7 +20,8 @@ String chapterBlurb(AppLocalizations l10n, int index) => switch (index) {
       2 => l10n.chapterBlurb2,
       3 => l10n.chapterBlurb3,
       4 => l10n.chapterBlurb4,
-      _ => l10n.chapterBlurb5,
+      5 => l10n.chapterBlurb5,
+      _ => l10n.chapterBlurb6,
     };
 
 /// The playful title of 1-based [level] (1..100).

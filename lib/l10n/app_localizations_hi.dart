@@ -1106,4 +1106,61 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get settingsExtraTimeSubtitle => 'हर लेवल पर दुगनी घड़ी';
+
+  @override
+  String get chapterName6 => 'क्यूब';
+
+  @override
+  String get chapterBlurb6 =>
+      'एक क्यूब की छह सतहों पर तीर। हर सतह तक पहुँचने के लिए उसे घुमाओ।';
+
+  @override
+  String get introTitleCube => 'क्यूब';
+
+  @override
+  String get introBodyCube =>
+      'छह सतहें, एक बार में एक। सतह साफ़ करो, फिर क्यूब घुमाओ।';
+
+  @override
+  String get tutorialCube =>
+      'हर सतह अपना अलग बोर्ड है। उसे साफ़ करो, फिर क्यूब घुमाकर अगली पर जाओ।';
+
+  @override
+  String get cubeTurnLeft => 'बाईं सतह पर घुमाओ';
+
+  @override
+  String get cubeTurnRight => 'दाईं सतह पर घुमाओ';
+
+  @override
+  String get cubeTurnUp => 'ऊपर की सतह पर घुमाओ';
+
+  @override
+  String get cubeTurnDown => 'नीचे की सतह पर घुमाओ';
+
+  @override
+  String cubeFaceArrows(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'इस सतह पर $count तीर',
+      one: 'इस सतह पर 1 तीर',
+      zero: 'सतह साफ़',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cubeFacesClear(int cleared, int total) {
+    return '$total में से $cleared सतहें साफ़';
+  }
+
+  @override
+  String cubeMapLabel(int face, int cleared, int total) {
+    return 'क्यूब, सामने सतह $face, $total में से $cleared सतहें साफ़';
+  }
+
+  @override
+  String boardFaceLabel(int face, int width, int height, int left, int total) {
+    return 'क्यूब की सतह $face, $width गुणा $height, $total में से $left तीर बाक़ी';
+  }
 }

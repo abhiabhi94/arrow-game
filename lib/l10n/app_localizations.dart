@@ -2011,6 +2011,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Twice the clock on every level'**
   String get settingsExtraTimeSubtitle;
+
+  /// No description provided for @chapterName6.
+  ///
+  /// In en, this message translates to:
+  /// **'The Block'**
+  String get chapterName6;
+
+  /// No description provided for @chapterBlurb6.
+  ///
+  /// In en, this message translates to:
+  /// **'Six faces of arrows on a block. Turn it to reach each face.'**
+  String get chapterBlurb6;
+
+  /// No description provided for @introTitleCube.
+  ///
+  /// In en, this message translates to:
+  /// **'The block'**
+  String get introTitleCube;
+
+  /// No description provided for @introBodyCube.
+  ///
+  /// In en, this message translates to:
+  /// **'Six faces, one at a time. Clear a face, then turn the block.'**
+  String get introBodyCube;
+
+  /// No description provided for @tutorialCube.
+  ///
+  /// In en, this message translates to:
+  /// **'Each face is its own board. Clear it, then turn the block to the next.'**
+  String get tutorialCube;
+
+  /// No description provided for @cubeTurnLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn to the face on the left'**
+  String get cubeTurnLeft;
+
+  /// No description provided for @cubeTurnRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn to the face on the right'**
+  String get cubeTurnRight;
+
+  /// No description provided for @cubeTurnUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn to the face above'**
+  String get cubeTurnUp;
+
+  /// No description provided for @cubeTurnDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn to the face below'**
+  String get cubeTurnDown;
+
+  /// No description provided for @cubeFaceArrows.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Face clear} =1{1 arrow on this face} other{{count} arrows on this face}}'**
+  String cubeFaceArrows(int count);
+
+  /// No description provided for @cubeFacesClear.
+  ///
+  /// In en, this message translates to:
+  /// **'{cleared} of {total} faces clear'**
+  String cubeFacesClear(int cleared, int total);
+
+  /// No description provided for @cubeMapLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'The block, face {face} towards you, {cleared} of {total} faces clear'**
+  String cubeMapLabel(int face, int cleared, int total);
+
+  /// No description provided for @boardFaceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Face {face} of the block, {width} by {height}, {left} of {total} arrows left on it'**
+  String boardFaceLabel(int face, int width, int height, int left, int total);
 }
 
 class _AppLocalizationsDelegate

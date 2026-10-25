@@ -1108,4 +1108,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsExtraTimeSubtitle => 'Twice the clock on every level';
+
+  @override
+  String get chapterName6 => 'The Block';
+
+  @override
+  String get chapterBlurb6 =>
+      'Six faces of arrows on a block. Turn it to reach each face.';
+
+  @override
+  String get introTitleCube => 'The block';
+
+  @override
+  String get introBodyCube =>
+      'Six faces, one at a time. Clear a face, then turn the block.';
+
+  @override
+  String get tutorialCube =>
+      'Each face is its own board. Clear it, then turn the block to the next.';
+
+  @override
+  String get cubeTurnLeft => 'Turn to the face on the left';
+
+  @override
+  String get cubeTurnRight => 'Turn to the face on the right';
+
+  @override
+  String get cubeTurnUp => 'Turn to the face above';
+
+  @override
+  String get cubeTurnDown => 'Turn to the face below';
+
+  @override
+  String cubeFaceArrows(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count arrows on this face',
+      one: '1 arrow on this face',
+      zero: 'Face clear',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cubeFacesClear(int cleared, int total) {
+    return '$cleared of $total faces clear';
+  }
+
+  @override
+  String cubeMapLabel(int face, int cleared, int total) {
+    return 'The block, face $face towards you, $cleared of $total faces clear';
+  }
+
+  @override
+  String boardFaceLabel(int face, int width, int height, int left, int total) {
+    return 'Face $face of the block, $width by $height, $left of $total arrows left on it';
+  }
 }
