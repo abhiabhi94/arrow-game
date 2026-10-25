@@ -25,9 +25,9 @@ the way its head points, until it leaves the board. Get every arrow out.
   ("I follow you all day long and vanish when the lights go out"). Every
   riddle has a 💡 that gives a clue and then the first letter, and the
   answer only has to be *close*: a plural, a tense or a typo is waved
-  through with a "close enough". **150 riddles per language** — the later
-  ones a shade more lateral than the first fifty, still one everyday word
-  each — dealt in a shuffled order so the whole pack comes round before any
+  through with a "close enough". **250 riddles per language** — ids 51–150 a
+  shade more lateral than the first fifty, the last hundred lighter and
+  sillier again, all one everyday word each — dealt in a shuffled order so the whole pack comes round before any
   of them repeats (and a pack already under way when the bank grew gets
   the new riddles shuffled into what it has left).
   The next fresh mistake asks again, so lives are never spent thoughtlessly.
