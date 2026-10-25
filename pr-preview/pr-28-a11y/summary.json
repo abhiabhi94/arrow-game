@@ -1,0 +1,68 @@
+{
+ "changed": [
+  [
+   "home-dark-grid.png",
+   1
+  ],
+  [
+   "home-light-1440x900.png",
+   1
+  ],
+  [
+   "home-light-resume.png",
+   1
+  ],
+  [
+   "home-light.png",
+   1
+  ],
+  [
+   "home-scrolled-dark-grid.png",
+   2
+  ],
+  [
+   "home-scrolled-light-resume.png",
+   1
+  ],
+  [
+   "home-scrolled-light.png",
+   4
+  ],
+  [
+   "level-16-dark-grid.png",
+   2
+  ],
+  [
+   "level-16-hint-dark-grid.png",
+   2
+  ],
+  [
+   "level-20-hint-light.png",
+   1
+  ],
+  [
+   "level-20-light.png",
+   1
+  ]
+ ],
+ "same": [
+  "level-01-hint-light.png",
+  "level-01-keys-light-1440x900.png",
+  "level-01-light-1440x900.png",
+  "level-01-light.png",
+  "level-01-outoflives-light.png",
+  "level-01-riddle-hint-light.png",
+  "level-01-riddle-letter-light.png",
+  "level-01-riddle-light.png",
+  "level-01-riddle-solved-light.png",
+  "level-03-light-resume.png",
+  "onboarding-light.png",
+  "settings-light.png"
+ ],
+ "only_after": [
+  "level-16-intro-dark-grid.png",
+  "level-20-intro-light.png"
+ ],
+ "only_before": [],
+ "problems": []
+}
