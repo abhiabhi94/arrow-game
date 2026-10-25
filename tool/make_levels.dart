@@ -42,6 +42,8 @@
 
 import 'dart:math';
 
+import 'package:arrow_game/data/level_specs.dart' show kClockTrim;
+
 const int firstLevel = 21;
 const int lastLevel = 100;
 
@@ -122,8 +124,8 @@ void main() {
     final slack = teach ? 25.0 : 15.0;
     final think = mirrors * 1.0 + locks * 4.0 + hidden * 3.0 + pairs * 3.0;
     final seconds = arrows * (teach ? 3.0 : pace[chapter]) + slack + think;
-    // Never a clock over ten minutes.
-    final timeLimitMs = min((seconds * 1000).round(), 599000);
+    // Never a clock over ten minutes, and every clock trimmed to kClockTrim.
+    final timeLimitMs = (min((seconds * 1000).round(), 599000) * kClockTrim).round();
 
     final features = <String>[
       if (mirrors > 0) 'mirrors: $mirrors',
@@ -193,7 +195,7 @@ void _cube(int level) {
   final slack = (teach ? 25.0 : 15.0) + 2.0 * faces;
   final think = mirrors * 1.0 + locks * 4.0 + hidden * 3.0 + pairs * 3.0;
   final seconds = arrows * (teach ? 3.0 : cubePace) + slack + think;
-  final timeLimitMs = min((seconds * 1000).round(), 599000);
+  final timeLimitMs = (min((seconds * 1000).round(), 599000) * kClockTrim).round();
   final openMoves = teach ? 3 : 2;
   _print(level, side, side, arrows, minLength, maxLength, timeLimitMs, openMoves, mirrors, locks, hidden, pairs, faces);
 }

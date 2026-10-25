@@ -12,6 +12,10 @@ Beat beatOf(int level) => chapterOf(level).firstLevel == level ? Beat.teach : Be
 final List<Chapter> flatChapters = chapters.where((c) => c.rule != ChapterRule.cube).toList();
 final List<LevelSpec> flatSpecs = levelSpecs.where((s) => !s.isCube).toList();
 
+/// A level's clock as its rule worked it out, before [kClockTrim]: the
+/// paces below are the rule's.
+int untrimmed(LevelSpec s) => (s.timeLimitMs / kClockTrim).round();
+
 void main() {
   test('there are 150 levels, numbered 1..150 in order', () {
     expect(totalLevels, 150);
@@ -42,7 +46,7 @@ void main() {
     // The clock is brisk but never a lottery: from level 10 on at least
     // 2.4 s an arrow.
     for (final s in levelSpecs.where((s) => s.level >= 10 && s.level <= 20)) {
-      expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(2400), reason: 'level ${s.level}');
+      expect(untrimmed(s) / s.arrows, greaterThanOrEqualTo(2400), reason: 'level ${s.level}');
     }
   });
 
@@ -58,7 +62,7 @@ void main() {
             expect(s.openMoves, 3, reason: 'level $level');
             expect(s.cellCount, lessThanOrEqualTo(10 * 13), reason: 'level $level');
             expect(s.minLength, 2, reason: 'level $level');
-            expect(s.timeLimitMs / s.arrows, greaterThanOrEqualTo(4000), reason: 'level $level');
+            expect(untrimmed(s) / s.arrows, greaterThanOrEqualTo(4000), reason: 'level $level');
           case Beat.climb:
             climb.add(s);
         }
@@ -79,11 +83,21 @@ void main() {
     }
   });
 
+  test('every clock is trimmed to 95% of what its rule works out', () {
+    expect(kClockTrim, 0.95);
+    // Level 1 was 26 s and level 100 584 s before the trim.
+    expect(specForLevel(1).timeLimitMs, 24700);
+    expect(specForLevel(100).timeLimitMs, 554800);
+    for (final s in levelSpecs) {
+      expect(s.timeLimitMs, lessThanOrEqualTo((599000 * kClockTrim).round()), reason: 'level ${s.level}');
+    }
+  });
+
   test('the count is capped and the clock stays under ten minutes', () {
     for (final s in flatSpecs) {
       expect(s.arrows, lessThanOrEqualTo(160), reason: 'level ${s.level}');
       expect(s.timeLimitMs, lessThan(600000), reason: 'level ${s.level}');
-      expect(s.timeLimitMs, greaterThanOrEqualTo(24000), reason: 'level ${s.level}');
+      expect(untrimmed(s), greaterThanOrEqualTo(24000), reason: 'level ${s.level}');
       // Room for the arrows: ~11.3 free cells each on the climb.
       if (beatOf(s.level) == Beat.climb && s.level > kChapterLength) {
         expect(s.freeCellCount / s.arrows, inInclusiveRange(11.0, 13.5), reason: 'level ${s.level}');
@@ -104,7 +118,7 @@ void main() {
     double pace(LevelSpec s) {
       final f = s.features;
       final think = (f.mirrors * 1 + f.locks * 4 + f.hidden * 3 + f.pairs * 3) * 1000;
-      return (s.timeLimitMs - think) / s.arrows;
+      return (untrimmed(s) - think) / s.arrows;
     }
 
     for (var i = 2; i <= 20; i++) {
@@ -121,7 +135,7 @@ void main() {
     // match, over its own pace alone.
     final finale60 = specForLevel(60);
     expect(finale60.features.locks, 8);
-    expect(finale60.timeLimitMs, greaterThan(finale60.arrows * 3200 + 15000));
+    expect(untrimmed(finale60), greaterThan(finale60.arrows * 3200 + 15000));
     // The twists buy time, so a late chapter's level is never shorter on
     // the clock than the same level of the chapter before.
     for (var i = 2; i <= 20; i++) {
@@ -176,7 +190,7 @@ void main() {
     double pace(LevelSpec s) {
       final f = s.features;
       final think = (f.mirrors * 1 + f.locks * 4 + f.hidden * 3 + f.pairs * 3) * 1000;
-      return (s.timeLimitMs - think) / s.arrows;
+      return (untrimmed(s) - think) / s.arrows;
     }
 
     for (var level = kFirstCubeLevel + 1; level <= totalLevels; level++) {
@@ -280,6 +294,6 @@ void main() {
         expect(seeds.add(s.withVariant(0).seed + v * 1_000_003), isTrue, reason: 'level ${s.level} variant $v');
       }
     }
-    expect(specForLevel(1).toString(), 'LevelSpec(1: 5x6, 5 arrows, 26000ms)');
+    expect(specForLevel(1).toString(), 'LevelSpec(1: 5x6, 5 arrows, 24700ms)');
   });
 }

@@ -718,7 +718,10 @@ Key patterns:
   clock over ten minutes, the pace per arrow *growing* chapter by chapter —
   3.0 s in Mirrors to 3.4 s in Pairs, since every twist is one more thing
   to read on every arrow — plus 1 s a mirror, 4 s a lock and 3 s a hidden
-  head or tether, the whole thing capped at 599 s, so a later chapter's
+  head or tether, the whole thing capped at 599 s and then trimmed to
+  `kClockTrim` (95%, every level 1–150, the table's numbers already
+  trimmed; the daily board keeps its flat five minutes, which its card
+  promises; the tests read the rule's paces back through `untrimmed`), so a later chapter's
   level is never shorter on the clock than the chapter before's; mirrors
   one per eight arrows through their own chapter and one per fourteen
   after, never under two) and
