@@ -1,4 +1,4 @@
-**20 screen(s) changed**, 3 unchanged, 2 new.
+**19 screen(s) changed**, 4 unchanged.
 
 <details><summary><b>home-dark-grid</b> — 1 changed region(s)</summary>
 
@@ -24,7 +24,7 @@
 
 </details>
 
-<details><summary><b>home-scrolled-dark-grid</b> — 2 changed region(s)</summary>
+<details><summary><b>home-scrolled-dark-grid</b> — 1 changed region(s)</summary>
 
 ![home-scrolled-dark-grid](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-28-a11y/home-scrolled-dark-grid.png)
 
@@ -33,12 +33,6 @@
 <details><summary><b>home-scrolled-light-resume</b> — 1 changed region(s)</summary>
 
 ![home-scrolled-light-resume](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-28-a11y/home-scrolled-light-resume.png)
-
-</details>
-
-<details><summary><b>home-scrolled-light</b> — 4 changed region(s)</summary>
-
-![home-scrolled-light](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-28-a11y/home-scrolled-light.png)
 
 </details>
 
@@ -96,13 +90,13 @@
 
 </details>
 
-<details><summary><b>level-16-dark-grid</b> — 5 changed region(s)</summary>
+<details><summary><b>level-16-dark-grid</b> — 4 changed region(s)</summary>
 
 ![level-16-dark-grid](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-28-a11y/level-16-dark-grid.png)
 
 </details>
 
-<details><summary><b>level-16-hint-dark-grid</b> — 4 changed region(s)</summary>
+<details><summary><b>level-16-hint-dark-grid</b> — 3 changed region(s)</summary>
 
 ![level-16-hint-dark-grid](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-28-a11y/level-16-hint-dark-grid.png)
 
@@ -120,10 +114,9 @@
 
 </details>
 
-- `level-16-intro-dark-grid.png`: new in this PR (no counterpart on the base branch)
-- `level-20-intro-light.png`: new in this PR (no counterpart on the base branch)
 <details><summary>Unchanged</summary>
 
+- `home-scrolled-light.png`
 - `level-01-riddle-letter-light.png`
 - `onboarding-light.png`
 - `settings-light.png`

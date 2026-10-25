@@ -18,15 +18,11 @@
   ],
   [
    "home-scrolled-dark-grid.png",
-   2
+   1
   ],
   [
    "home-scrolled-light-resume.png",
    1
-  ],
-  [
-   "home-scrolled-light.png",
-   4
   ],
   [
    "level-01-hint-light.png",
@@ -66,11 +62,11 @@
   ],
   [
    "level-16-dark-grid.png",
-   5
+   4
   ],
   [
    "level-16-hint-dark-grid.png",
-   4
+   3
   ],
   [
    "level-20-hint-light.png",
@@ -82,14 +78,12 @@
   ]
  ],
  "same": [
+  "home-scrolled-light.png",
   "level-01-riddle-letter-light.png",
   "onboarding-light.png",
   "settings-light.png"
  ],
- "only_after": [
-  "level-16-intro-dark-grid.png",
-  "level-20-intro-light.png"
- ],
+ "only_after": [],
  "only_before": [],
  "problems": []
 }
