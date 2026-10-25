@@ -1,4 +1,4 @@
-// Finds, for each level given (default: every level from 8), the first
+// Finds, for each level given (default: every level from 21), the first
 // variant whose board keeps every rule the level table is tested for: the
 // full arrow count, every twist placed, most of the mirrors on some arrow's
 // way out, and the player's choice held within the generator's slack at
@@ -9,7 +9,7 @@
 // its own share of the level (the generator re-deals a face on its own
 // until it does, so a cube level rarely needs a variant):
 //
-//   dart run tool/pick_variants.dart            # levels 8..100
+//   dart run tool/pick_variants.dart            # levels 21..150
 //   dart run tool/pick_variants.dart 38 46 80   # just these
 import 'dart:math';
 
@@ -22,7 +22,7 @@ const int kMaxVariants = 24;
 
 void main(List<String> args) {
   final levels = args.isEmpty
-      ? List<int>.generate(totalLevels - 7, (i) => i + 8)
+      ? List<int>.generate(totalLevels - 20, (i) => i + 21)
       : args.map(int.parse).toList();
   for (final level in levels) {
     final base = specForLevel(level);

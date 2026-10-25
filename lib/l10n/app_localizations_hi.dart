@@ -562,6 +562,156 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName100 => 'आख़िरी तीर';
 
   @override
+  String get levelName101 => 'पहला कोना';
+
+  @override
+  String get levelName102 => 'छह पहलू';
+
+  @override
+  String get levelName103 => 'मोड़';
+
+  @override
+  String get levelName104 => 'शुरुआत';
+
+  @override
+  String get levelName105 => 'ईंट दर ईंट';
+
+  @override
+  String get levelName106 => 'सतह की बात';
+
+  @override
+  String get levelName107 => 'डिब्बे का किनारा';
+
+  @override
+  String get levelName108 => 'नुक्कड़';
+
+  @override
+  String get levelName109 => 'घनमूल';
+
+  @override
+  String get levelName110 => 'चपटा डिब्बा';
+
+  @override
+  String get levelName111 => 'शीश महल';
+
+  @override
+  String get levelName112 => 'प्रिज़्म';
+
+  @override
+  String get levelName113 => 'तिरछा कोण';
+
+  @override
+  String get levelName114 => 'आईना';
+
+  @override
+  String get levelName115 => 'निशाना';
+
+  @override
+  String get levelName116 => 'बहुरूपदर्शी';
+
+  @override
+  String get levelName117 => 'काँच का डिब्बा';
+
+  @override
+  String get levelName118 => 'मुड़ती रोशनी';
+
+  @override
+  String get levelName119 => 'परछाईं';
+
+  @override
+  String get levelName120 => 'आईने के पार';
+
+  @override
+  String get levelName121 => 'बंद डिब्बा';
+
+  @override
+  String get levelName122 => 'गुप्त अंक';
+
+  @override
+  String get levelName123 => 'तिजोरी';
+
+  @override
+  String get levelName124 => 'चाबियों का गुच्छा';
+
+  @override
+  String get levelName125 => 'ख़ज़ाने का संदूक';
+
+  @override
+  String get levelName126 => 'पहेली का डिब्बा';
+
+  @override
+  String get levelName127 => 'तहख़ाना';
+
+  @override
+  String get levelName128 => 'ताला-तोड़';
+
+  @override
+  String get levelName129 => 'मास्टर चाबी';
+
+  @override
+  String get levelName130 => 'ताला-कुंजी';
+
+  @override
+  String get levelName131 => 'काला डिब्बा';
+
+  @override
+  String get levelName132 => 'धुआँ और आईने';
+
+  @override
+  String get levelName133 => 'कोहरे की चादर';
+
+  @override
+  String get levelName134 => 'अँधेरा पहलू';
+
+  @override
+  String get levelName135 => 'अंधा मोड़';
+
+  @override
+  String get levelName136 => 'परछाईं का डिब्बा';
+
+  @override
+  String get levelName137 => 'रात की पाली';
+
+  @override
+  String get levelName138 => 'गहरे राज़';
+
+  @override
+  String get levelName139 => 'धुंध का घन';
+
+  @override
+  String get levelName140 => 'ग्रहण';
+
+  @override
+  String get levelName141 => 'एक जैसे दो';
+
+  @override
+  String get levelName142 => 'बँधे हुए';
+
+  @override
+  String get levelName143 => 'जोड़ी';
+
+  @override
+  String get levelName144 => 'जुड़वाँ चोटियाँ';
+
+  @override
+  String get levelName145 => 'गुत्थी';
+
+  @override
+  String get levelName146 => 'साथी';
+
+  @override
+  String get levelName147 => 'क़दम से क़दम';
+
+  @override
+  String get levelName148 => 'कंधे से कंधा';
+
+  @override
+  String get levelName149 => 'भरा घर';
+
+  @override
+  String get levelName150 => 'आख़िरी घन';
+
+  @override
   String get tutorialTap =>
       'किसी तीर पर टैप करो — वह अपनी दिशा में निकल जाएगा।';
 

@@ -77,14 +77,14 @@ void main() {
         DailyRepository.bestKey(day): 143000,
         DailyRepository.starsKey(day): 2,
         'arrow_level_1_done': true,
-        for (var l = 1; l <= 15; l++) 'arrow_level_${l}_done': true,
+        for (var l = 1; l <= 25; l++) 'arrow_level_${l}_done': true,
       },
       extraOverrides: [..._gameOverride, ..._fixedDay()],
     );
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('Cleared today · Best today 2:23 · 3 day streak · Next board in 15h 0m'), findsOneWidget);
     expect(find.text('Play it again'), findsOneWidget);
-    // 15 levels cleared: the daily is dealt with the Mirrors chapter's rules.
+    // 25 levels cleared: the daily is dealt with the Mirrors chapter's rules.
     expect(find.textContaining('Mirrors rules'), findsOneWidget);
   });
 
@@ -124,19 +124,17 @@ void main() {
     expect(find.text('Chapter 1 · Lines'), findsOneWidget);
     expect(find.text('Chapter 2 · Mirrors', skipOffstage: false), findsOneWidget);
     expect(find.text('Chapter 5 · Pairs', skipOffstage: false), findsOneWidget);
-    expect(find.textContaining('Levels 41–50', skipOffstage: false), findsOneWidget);
-    expect(find.text('Chapter 6 · The Block', skipOffstage: false), findsOneWidget);
-    expect(find.textContaining('Levels 51–100', skipOffstage: false), findsOneWidget);
+    expect(find.textContaining('Levels 41–60', skipOffstage: false), findsOneWidget);
     // Only the first band is on screen; the rest are down the trail.
     final headings = semanticsNodes(tester, RegExp(r'^Chapter \d'));
     expect(headings, isNotEmpty);
-    expect(headings.first.label, 'Chapter 1 · Lines. Levels 1–10. One rule: tap an arrow with a clear path and it slides out.');
+    expect(headings.first.label, 'Chapter 1 · Lines. Levels 1–20. One rule: tap an arrow with a clear path and it slides out.');
     // The bands sit above their first level, in order down the trail.
     final band2 = tester.getRect(find.text('Chapter 2 · Mirrors', skipOffstage: false)).top;
-    final node10 = tester.getRect(find.text('10', skipOffstage: false)).top;
-    final node11 = tester.getRect(find.text('11', skipOffstage: false)).top;
-    expect(band2, greaterThan(node10));
-    expect(band2, lessThan(node11));
+    final node20 = tester.getRect(find.text('20', skipOffstage: false)).top;
+    final node21 = tester.getRect(find.text('21', skipOffstage: false)).top;
+    expect(band2, greaterThan(node20));
+    expect(band2, lessThan(node21));
     handle.dispose();
   });
 }

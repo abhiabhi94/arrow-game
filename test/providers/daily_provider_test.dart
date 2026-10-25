@@ -31,7 +31,7 @@ void main() {
 
   test('today\'s chapter follows the levels cleared and is then fixed for the day', () async {
     final prefs = await _prefs();
-    var cleared = 15;
+    var cleared = 25;
     final n = DailyNotifier(
       DailyRepository(prefs),
       levelsCleared: () => cleared,
@@ -46,7 +46,7 @@ void main() {
     expect(n.spec.seed, dailySeed(_today, n.salt));
     expect(n.spec.features.mirrors, greaterThan(0));
     // More levels cleared later in the day do not re-deal the board.
-    cleared = 35;
+    cleared = 45;
     n.refresh();
     expect(n.state.chapter.index, 2);
     final again = DailyNotifier(
@@ -62,7 +62,7 @@ void main() {
 
   test('on the block the daily board stays flat, with the last flat chapter\'s twists', () async {
     final prefs = await _prefs();
-    final n = DailyNotifier(DailyRepository(prefs), levelsCleared: () => 80, clock: () => _day, random: Random(1));
+    final n = DailyNotifier(DailyRepository(prefs), levelsCleared: () => 120, clock: () => _day, random: Random(1));
     expect(n.state.chapter.index, 5);
     expect(n.spec.isCube, isFalse);
     expect(n.spec.features.pairs, greaterThan(0));

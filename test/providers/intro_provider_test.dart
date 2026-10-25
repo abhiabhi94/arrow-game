@@ -31,21 +31,21 @@ void main() {
   test('every card at or before the level is owed, in trail order, until dismissed', () async {
     final n = await _notifier();
     expect(n.due(level: 1), isEmpty);
-    expect(n.due(level: 10), isEmpty);
-    expect(n.due(level: 11), [ChapterRule.mirrors]);
-    expect(n.due(level: 26), [ChapterRule.mirrors, ChapterRule.locks]);
-    expect(n.due(level: 35), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog]);
-    expect(n.due(level: 50), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs]);
+    expect(n.due(level: 20), isEmpty);
+    expect(n.due(level: 21), [ChapterRule.mirrors]);
+    expect(n.due(level: 46), [ChapterRule.mirrors, ChapterRule.locks]);
+    expect(n.due(level: 65), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog]);
+    expect(n.due(level: 100), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs]);
     expect(
-      n.due(level: 100),
+      n.due(level: 150),
       [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
     );
     expect(n.due(chapter: chapters[2]), [ChapterRule.mirrors, ChapterRule.locks]);
     expect(n.due(), isEmpty);
-    // A player who met Mirrors at 11 is shown only Locks at 21.
+    // A player who met Mirrors at 21 is shown only Locks at 41.
     n.markSeen(ChapterRule.mirrors);
-    expect(n.due(level: 21), [ChapterRule.locks]);
-    expect(n.due(level: 12), isEmpty);
+    expect(n.due(level: 41), [ChapterRule.locks]);
+    expect(n.due(level: 22), isEmpty);
     n.markSeen(ChapterRule.mirrors); // again: nothing changes
     expect(n.state, {ChapterRule.mirrors});
     n.dispose();

@@ -8,32 +8,34 @@ A playful cross-platform (Android + iOS) **arrow exit puzzle** built with
 Flutter (in the spirit of "Arrow Exit Puzzle"). Bent arrow pieces sit on a
 grid; tapping one slides it along its own path, the way its head points, until
 it leaves the board. An arrow whose exit path runs into another arrow bumps
-back and costs a life. 100 fixed, procedurally generated levels in **six
-chapters** (`data/chapters.dart`): five flat chapters of ten, each built on
-one twist and keeping the ones before it — **Lines** (1–10, the plain
-rectangle, 5 arrows on 5×6 → 105 on 26×40), **Mirrors** (11–20: a diagonal
-in a cell turns an arrow's path a right angle, so the way out is read off
-the board), **Locks** (21–30: a padlocked arrow also waits for the key with
-its number; tapping it early costs nothing and points at the key), **Fog**
-(31–40: a dashed arrow hides its head until a neighbour leaves; tapping it
-while hidden costs nothing and points at the neighbour that would uncover
-it), **Pairs** (41–50: two tethered arrows, washed in one tint, leave on one
-tap, so both paths must be clear) — then **The Block** (51–100): six square
-faces of arrows on a cube, played one face at a time while the player turns
-the block round — the whole block is drawn at once in 3D and a finger turns
-it (or the turn keys, or Shift+arrow keys); an arrow leaves by its own face's edge, so the faces never touch,
-and the twists come back onto the faces ten levels at a time. Every flat
-chapter opens on a small teaching board under a card that is one line and a
-self-playing demo of the twist, then climbs steadily from 30 arrows at its
-second level to 120 at its tenth (the same top for every chapter: the twist
-is what makes a later chapter harder); the block climbs from 30 arrows (five
-a face) to 144 (twenty-four a face), a few more every level. The clock grows
-chapter by chapter and never passes ten minutes. A **daily board**
+back and costs a life. 100 fixed, procedurally generated levels in **five
+chapters of twenty** (`data/chapters.dart`), each built on one twist and
+keeping the ones before it: **Lines** (1–20, the plain rectangle, 5 arrows on
+5×6 → 144 on 32×50), **Mirrors** (21–40: a diagonal in a cell turns an
+arrow's path a right angle, so the way out is read off the board), **Locks** (41–60: a
+padlocked arrow also waits for the key with its number; tapping it early
+costs nothing and points at the key), **Fog** (61–80: a dashed arrow hides
+its head until a neighbour leaves; tapping it while hidden costs nothing
+and points at the neighbour that would uncover it), **Pairs** (81–100: two
+tethered arrows, washed in one tint, leave on one tap, so both paths must
+be clear) — and then **The Block** (101–150, a sixth chapter after the
+hundred flat levels, which it leaves untouched): six square faces of arrows
+on a cube, the whole block drawn at once in 3D, a finger turning it (or the
+turn keys, or Shift+arrow keys) and the face square to the player the one
+played; an arrow leaves by its own face's edge, so the faces never touch,
+and the twists come back onto the faces ten levels at a time, the count
+after a short warm-up holding about level 100's work and climbing a little
+every level, with never more than thirty arrows on one face. Every flat chapter opens on a
+small teaching board under a card that is one line and a self-playing
+demo of the twist, then climbs steadily from 30 arrows at its second
+level to 150 at its twentieth (the same top for every chapter: the twist
+is what makes a later chapter harder), with a clock that grows chapter by
+chapter and never passes ten minutes. A **daily board**
 (home card; `data/daily.dart`) is a fresh ~5-minute deal every day (80
-arrows) with the twists of the chapter the player has reached (the last flat
-one, Pairs, once they are on the block — the daily board is always flat),
-seeded from the date and a per-install salt so no two phones share one; it
-keeps a streak. Everything
+arrows) with the twists of the chapter the player has reached (Pairs, once
+they are on the block — the daily board is always flat), seeded from
+the date and a per-install salt so no two phones share one; it keeps a
+streak. Everything
 is drawn in a single ink like a printed puzzle (the sun-coloured key badge
 and the pointer from a tapped lock to its key are the one new colour),
 3 lives per level (spend them all and a
@@ -55,19 +57,19 @@ tool/coverage.sh 92             # coverage gate (fails under threshold)
 
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
 node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-viewport screenshots -> shots/
-node tool/screenshot.mjs --levels 11,21,31,41,51 --daily             # each chapter's card (mid-demo) + teaching board, and today's daily board
-node tool/screenshot.mjs --levels 51,90 --keys Shift+ArrowRight,Shift+ArrowUp  # the block: a face, then turned right and up
-dart run tool/make_levels.dart        # prints levels 11-100 from the chapter rules (paste into lib/data/level_specs.dart)
-dart run tool/pick_variants.dart      # the first variant of each level from 8 that keeps every pinned rule
-dart run tool/level_report.dart 21 3  # a level (and its next 3 variants): arrows placed, twists placed, fill, open moves
+node tool/screenshot.mjs --levels 21,41,61,81 --daily                # each chapter's card (mid-demo) + teaching board, and today's daily board
+node tool/screenshot.mjs --levels 101,140 --keys Shift+ArrowRight,Shift+ArrowUp  # the block in 3D, then turned right and up
+dart run tool/make_levels.dart        # prints levels 21-150 from the chapter rules (paste into lib/data/level_specs.dart)
+dart run tool/pick_variants.dart      # the first variant of each level from 21 that keeps every pinned rule
+dart run tool/level_report.dart 41 3  # a level (and its next 3 variants): arrows placed, twists placed, fill, open moves
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
 node tool/screenshot.mjs --levels 4 --cleared 3                     # levels 1-3 cleared: the walked road, stars, the chapter's bar, the Up next bubble
 node tool/screenshot.mjs --levels 1 --viewport 1440x900 --keys Equal,KeyH  # desktop layout + keyboard
 node tool/screenshot.mjs --levels 1 --crash 2,4                     # a bump mid-crash (fake clock): jolt + red flash
-node tool/screenshot.mjs --levels 12 --crash 12,11,650              # a bump that turned at a mirror, 650 ms in: pressed on the blocker
-node tool/screenshot.mjs --levels 21 --crash 2,8,1300               # the key leaving: the lock popped open, glowing (700 ms: the spark on its way)
-node tool/screenshot.mjs --levels 31 --crash 3,9,500                # a tap on a hidden arrow: the pointer to the arrow that uncovers it
-node tool/screenshot.mjs --levels 41 --crash 2,6,450                # a pair bumping: both halves pressed forward, the tether lit
+node tool/screenshot.mjs --levels 21 --crash 5,5,650                # a bump that turned at a mirror, 650 ms in: pressed on the blocker
+node tool/screenshot.mjs --levels 41 --crash 4,0,1300               # the key leaving: the lock popped open, glowing (700 ms: the spark on its way)
+node tool/screenshot.mjs --levels 61 --crash 2,9,500                # a tap on a hidden arrow: the pointer to the arrow that uncovers it
+node tool/screenshot.mjs --levels 81 --crash 4,4,450                # a pair bumping: both halves pressed forward, the tether lit
 node tool/screenshot.mjs --levels 1 --riddle 2,4,2,3,2,2            # spend all 3 lives -> Out of lives, the riddle, its hint, solved
 node tool/screenshot.mjs --lang hi --settings --levels 1 --riddle 2,4,2,3,2,2 --riddle-answer aam  # the same in Hindi
 node tool/screenshot.mjs --levels 1 --riddle-hint 2,4                # spend the 3 hints -> the riddle button, its riddle, the hint it buys
@@ -242,7 +244,7 @@ lib/
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N;
                          dealFace re-deals a cube face on its own until it keepsRules
     answer_match.dart    judging a typed riddle answer (exact / close / wrong)
-  data/level_specs.dart  the 100 levels (board size, arrow count, length range, clock)
+  data/level_specs.dart  the 150 levels (board size, arrow count, length range, clock, faces)
   data/riddle_bank.dart  150 riddles in English + 150 पहेलियाँ in Hindi
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot),
@@ -328,7 +330,7 @@ Key patterns:
   along its own track and sprung back with the other, the tether lit
   between them, so the second arrow is seen to be tied to the first
   rather than appearing to bump on its own.
-- **The block** (levels 51–100; `LevelSpec.faces` = 6, `Puzzle.cube`,
+- **The block** (levels 101–150, after the hundred flat ones; `LevelSpec.faces` = 6, `Puzzle.cube`,
   `engine/cube.dart`): a cube level is six square faces, each a board of its
   own, laid side by side in one strip of the *same* `Puzzle` — face `f` is
   columns `f·n … f·n+n-1` (`faceSize` = n). `traceRay` takes an `originX`, so
@@ -423,10 +425,9 @@ Key patterns:
   neighbour can leave before, preferring one not free at the start). One
   twist per arrow. `LevelFeatures` on `LevelSpec` says how many of each. It runs on a background isolate
   (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
-  it runs inline (in the VM ~0.5 s for level 20 and 0.4 s for the 30×46
-  level 50; on the block ~0.6 s for level 75 and ~1 s for level 100, whose
-  six faces are dealt one after another, each re-dealt until it keeps the
-  rules). `dart run tool/level_report.dart
+  it runs inline (~0.4 s for level 20, about 2.5 s for level 60 and ~4 s for
+  the 52×84 level 80, which takes 1.7× level 60's time in the VM, and level
+  100's 57×92 board about 2.5 s in the VM). `dart run tool/level_report.dart
   [level] [extraSeeds]` prints arrows placed vs asked, fill, depth,
   free-at-start, open moves (mean/max vs the cap), `Puzzle.openTapRisk` and
   timing — run it after touching the table or the generator.
@@ -477,16 +478,6 @@ Key patterns:
   rumble — an Android waveform, heavy + vibrate elsewhere) on a `Timer` at
   `forwardMs` so they land on impact (a light tick answers the finger at
   once). Tests use `fakeAsync` for that timer.
-- **The trail's new layout** (`ProgressRepository.migrateLayout`, run from
-  `main()` before anything reads progress; prefs `arrow_trail_layout` = 2):
-  progress from the old trail of five chapters of twenty moves onto the new
-  one once — each new level 1–50 takes the standing of the old level it
-  stands in for (`oldLevelFor`: 1–7 as they were, then 9, 12, 15; in each
-  later chapter its teaching board and every other level of the climb), so
-  halfway through the old Mirrors is halfway through the new; stars and
-  clear counts come across, a best time only on 1–7 (the boards that did
-  not move); nothing carries onto the block; a saved game or an open riddle
-  on a level past 7 is dropped (its board has moved).
 - **Saved game:** one slot (`models/saved_game.dart`, prefs key
   `arrow_saved_game`, JSON: level, the board's seed, arrows out, slips,
   hints, clock — the board itself is rebuilt from the seed, and the seed is
@@ -699,46 +690,55 @@ Key patterns:
   count, lengths, clock, `openMoves` (3 on levels 1–3 and on every teaching
   board, 2 otherwise: how many taps the generator leaves available at once),
   `features` (mirrors, locks, hidden, pairs), `faces` and `variant`. Levels
-  1–10 are ten of the first release's twenty rows (1–7, 9, 12, 15) kept but
-  for the level number. **Levels 11–100 are printed by
+  1–20 are untouched from the first release. **Levels 21–150 are printed by
   `tool/make_levels.dart`** from the chapter rules rather than tuned a row
   at a time — the first hundred levels were the same level played eighty
   times, climbing to 464 arrows and a fifteen-minute read with nothing new
   after level 20 — so change the rules there, paste the rows, then run
   `tool/pick_variants.dart` and write its picks in: each level is dealt
-  from the first variant whose board keeps every pinned rule
-  (`PuzzleGenerator.keepsRules`: full count, every twist placed, the choice
-  held at the start and at its widest and narrow on average; on the block,
-  every face). `test/data/level_specs_test.dart` pins the shape: in each
-  flat chapter a 12-arrow teaching board with the new twist alone, then a
-  steady climb of ten to twelve arrows a level from ~30 at its second level
-  to 120 at its tenth, every chapter topping out at the same count (the
-  chapters were twenty levels each, climbing to 150; squeezing them into
-  ten made room for the block); on the block a teaching cube of three
-  arrows a face, then two or three more arrows every level to 144, the
-  faces 7×7 → 15×15, the twists back ten levels at a time (mirrors from
-  61, locks 71, hidden heads 81, pairs 91, at least one a face); no clock
-  over ten minutes, the pace per arrow *growing* chapter by chapter — 3.0 s
-  in Mirrors to 3.4 s in Pairs and 3.3–3.5 s on the block, since every
-  twist is one more thing to read on every arrow — plus 1 s a mirror, 4 s
-  a lock and 3 s a hidden head or tether (and on the block 2 s a face for
-  turning it), the whole thing capped at 599 s; mirrors one per eight
-  arrows through their own chapter and one per fourteen after, never under
-  two. `test/engine/puzzle_generator_test.dart` pins that every level deals
-  its full count with its twists, solvable, tight, that the hunt (arrows on
-  the board per open move) climbs chapter by chapter, and that on the
-  block every face keeps to itself and the faces' chains grow deeper ten
-  levels by ten. Keep the generator test green — it is what guarantees a
-  level is playable. A flat board is sized to ~11.3 free cells an arrow
-  (`freeCellCount`: the rectangle less the mirrors), which fills to ~0.88;
-  a face of the block to ~9.5 (a small face with few arrows on it came out
-  a third empty at the flat boards' room), which fills to 0.6–0.9.
+  from the first variant whose board keeps every pinned rule (full count,
+  every twist placed, the choice held at the start and at its widest and
+  narrow on average). `test/data/level_specs_test.dart` pins the shape (a
+  12-arrow teaching board with the new twist alone at each chapter's first
+  level, then a steady climb of six or seven arrows a level from ~30 at
+  its second to 150 at its twentieth, every chapter topping out at the
+  same count — the first cut jumped from the teaching board to 150 and
+  climbed to 265, a cliff after every card and a slog by the end — no
+  clock over ten minutes, the pace per arrow *growing* chapter by chapter —
+  3.0 s in Mirrors to 3.4 s in Pairs, since every twist is one more thing
+  to read on every arrow — plus 1 s a mirror, 4 s a lock and 3 s a hidden
+  head or tether, the whole thing capped at 599 s, so a later chapter's
+  level is never shorter on the clock than the chapter before's; mirrors
+  one per eight arrows through their own chapter and one per fourteen
+  after, never under two) and
+  `test/engine/puzzle_generator_test.dart` pins that every level deals its
+  full count with its twists, solvable, tight, and that the hunt (arrows on
+  the board per open move) climbs chapter by chapter. Keep the generator
+  test green — it is what guarantees a level is playable. The board is
+  sized to ~11.3 free cells an arrow (`freeCellCount`: the rectangle less
+  the mirrors), which fills to ~0.88. **The block (101–150)** comes after
+  the hundred flat levels, changes none of them, and — after a short
+  warm-up — never drops back below level 100: a teaching cube of three
+  arrows a face; 102–104 bring the twists back one a level (mirrors, locks,
+  hidden heads) on faces of 10, 15 and 20 arrows; from 105 all four twists
+  are on every face and the block holds about level 100's work (132
+  arrows), then gains one arrow every level to 177, each twist thickening
+  on its own staggered schedule, so every level is a little more than the
+  one before — but a face never holds more than thirty arrows (faces 10×10 →
+  17×17 past the 6×6 teaching cube), since one big board was the slog. The clock is 2.4 s an arrow (a
+  small face reads faster than one big board) plus the twists' seconds and
+  2 s a face for turning, under 600 s throughout; a face is sized to ~9.5
+  free cells an arrow and fills to 0.6–0.9. `test/data/level_specs_test.dart`
+  pins that curve (the warm-up, level 100's work at 105, a strict climb in
+  arrows-plus-weighted-twists, the face cap), and the generator test that
+  every face keeps the rules (`PuzzleGenerator.keepsRules`;
+  `pick_variants` checks a cube level face by face), that the faces keep
+  to themselves and that their chains grow deeper ten levels by ten.
 - **Chapters and the daily board:** `data/chapters.dart` is the map (five
-  flat chapters of `kFlatChapterLength` = 10, then the block from
-  `kFirstCubeLevel` = 51 to 100; each `Chapter` carries its own
+  flat chapters of `kChapterLength` = 20, then the block from
+  `kFirstCubeLevel` = 101 to 150; each `Chapter` carries its own
   `firstLevel`/`lastLevel`; `chapterOf`, `ruleTaughtAt`,
-  `chapterForProgress`, `dailyChapterFor` — the daily board's chapter, which
-  is Pairs once the player is on the block);
+  `chapterForProgress`, `dailyChapterFor` — Pairs once on the block);
   `data/chapter_demos.dart` holds the tiny solvable boards each chapter card
   plays and the script of taps that shows the twist
   (`demoScriptFor`; the

@@ -4,46 +4,45 @@ import 'package:arrow_game/data/level_specs.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('five flat chapters of ten, then fifty levels on the block, cover the trail in order', () {
+  test('five chapters of twenty levels, then fifty on the block, cover the trail in order', () {
     expect(chapters, hasLength(6));
     expect(chapters.first.firstLevel, 1);
     expect(chapters.last.lastLevel, totalLevels);
     for (var i = 1; i < chapters.length; i++) {
       expect(chapters[i].firstLevel, chapters[i - 1].lastLevel + 1);
-      expect(chapters[i].index, i + 1);
     }
     for (final c in chapters.take(5)) {
-      expect(c.length, kFlatChapterLength);
+      expect(c.length, kChapterLength);
     }
-    expect(chapters.last.length, 50);
     expect(chapters.last.firstLevel, kFirstCubeLevel);
+    expect(chapters.last.length, 50);
     expect(chapterOf(1).rule, ChapterRule.lines);
-    expect(chapterOf(10).rule, ChapterRule.lines);
-    expect(chapterOf(11).rule, ChapterRule.mirrors);
-    expect(chapterOf(20).index, 2);
-    expect(chapterOf(21).rule, ChapterRule.locks);
-    expect(chapterOf(31).rule, ChapterRule.fog);
-    expect(chapterOf(41).rule, ChapterRule.pairs);
-    expect(chapterOf(50).rule, ChapterRule.pairs);
-    expect(chapterOf(51).rule, ChapterRule.cube);
-    expect(chapterOf(100).rule, ChapterRule.cube);
-    expect(chapterOf(50).contains(41), isTrue);
-    expect(chapterOf(50).contains(40), isFalse);
+    expect(chapterOf(20).rule, ChapterRule.lines);
+    expect(chapterOf(21).rule, ChapterRule.mirrors);
+    expect(chapterOf(40).index, 2);
+    expect(chapterOf(41).rule, ChapterRule.locks);
+    expect(chapterOf(61).rule, ChapterRule.fog);
+    expect(chapterOf(81).rule, ChapterRule.pairs);
+    expect(chapterOf(100).rule, ChapterRule.pairs);
+    expect(chapterOf(100).contains(81), isTrue);
+    expect(chapterOf(100).contains(80), isFalse);
+    expect(chapterOf(101).rule, ChapterRule.cube);
+    expect(chapterOf(150).rule, ChapterRule.cube);
     expect(() => chapterOf(0), throwsRangeError);
-    expect(() => chapterOf(101), throwsRangeError);
+    expect(() => chapterOf(151), throwsRangeError);
   });
 
   test('each chapter past the first teaches its twist on its first level', () {
     expect(ruleTaughtAt(1), isNull);
     expect(ruleTaughtAt(2), isNull);
-    expect(ruleTaughtAt(11), ChapterRule.mirrors);
-    expect(ruleTaughtAt(12), isNull);
-    expect(ruleTaughtAt(21), ChapterRule.locks);
-    expect(ruleTaughtAt(31), ChapterRule.fog);
-    expect(ruleTaughtAt(41), ChapterRule.pairs);
-    expect(ruleTaughtAt(51), ChapterRule.cube);
-    expect(ruleTaughtAt(61), isNull);
+    expect(ruleTaughtAt(21), ChapterRule.mirrors);
+    expect(ruleTaughtAt(22), isNull);
+    expect(ruleTaughtAt(41), ChapterRule.locks);
+    expect(ruleTaughtAt(61), ChapterRule.fog);
+    expect(ruleTaughtAt(81), ChapterRule.pairs);
     expect(ruleTaughtAt(100), isNull);
+    expect(ruleTaughtAt(101), ChapterRule.cube);
+    expect(ruleTaughtAt(111), isNull);
   });
 
   test('the level table matches the chapters: a twist appears with its chapter and stays', () {
@@ -81,27 +80,29 @@ void main() {
     }
   });
 
-  test('the chapter for a player follows the levels cleared', () {
+  test('the chapter for a player follows the levels cleared, twenty a chapter', () {
     expect(chapterForProgress(0).index, 1);
     expect(chapterForProgress(1).index, 1);
-    expect(chapterForProgress(10).index, 1);
-    expect(chapterForProgress(11).index, 2);
-    expect(chapterForProgress(20).index, 2);
-    expect(chapterForProgress(21).index, 3);
-    expect(chapterForProgress(41).index, 5);
-    expect(chapterForProgress(50).index, 5);
-    expect(chapterForProgress(51).index, 6);
-    expect(chapterForProgress(100).index, 6);
+    expect(chapterForProgress(20).index, 1);
+    expect(chapterForProgress(21).index, 2);
+    expect(chapterForProgress(40).index, 2);
+    expect(chapterForProgress(41).index, 3);
+    expect(chapterForProgress(60).index, 3);
+    expect(chapterForProgress(61).index, 4);
+    expect(chapterForProgress(80).index, 4);
+    expect(chapterForProgress(81).index, 5);
+    expect(chapterForProgress(100).index, 5);
+    expect(chapterForProgress(101).index, 6);
     expect(chapterForProgress(500).index, 6);
     expect(chapterForProgress(-3).index, 1);
   });
 
   test('the daily board borrows the last flat chapter once the player is on the block', () {
     expect(dailyChapterFor(0).rule, ChapterRule.lines);
-    expect(dailyChapterFor(25).rule, ChapterRule.locks);
-    expect(dailyChapterFor(50).rule, ChapterRule.pairs);
-    expect(dailyChapterFor(51).rule, ChapterRule.pairs);
+    expect(dailyChapterFor(45).rule, ChapterRule.locks);
     expect(dailyChapterFor(100).rule, ChapterRule.pairs);
+    expect(dailyChapterFor(101).rule, ChapterRule.pairs);
+    expect(dailyChapterFor(150).rule, ChapterRule.pairs);
   });
 
   test('every chapter card has a small, solvable board that shows its twist, and a script that plays it', () {

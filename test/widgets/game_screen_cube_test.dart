@@ -17,7 +17,7 @@ import '../support/pump_app.dart';
 import '../support/sample_puzzle.dart';
 
 /// A level on the block, past its teaching level, with every card seen.
-const int _level = 60;
+const int _level = 110;
 
 List<Override> _overrides() => [
       gameProvider.overrideWith(

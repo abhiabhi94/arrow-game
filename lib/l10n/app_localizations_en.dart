@@ -562,6 +562,156 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName100 => 'The Last Arrow';
 
   @override
+  String get levelName101 => 'First Corner';
+
+  @override
+  String get levelName102 => 'Six Sides';
+
+  @override
+  String get levelName103 => 'Corner Turn';
+
+  @override
+  String get levelName104 => 'Square One';
+
+  @override
+  String get levelName105 => 'Building Blocks';
+
+  @override
+  String get levelName106 => 'Face Value';
+
+  @override
+  String get levelName107 => 'Edge of the Box';
+
+  @override
+  String get levelName108 => 'Corner Shop';
+
+  @override
+  String get levelName109 => 'Cube Root';
+
+  @override
+  String get levelName110 => 'Flat Pack';
+
+  @override
+  String get levelName111 => 'Hall of Glass';
+
+  @override
+  String get levelName112 => 'Prism';
+
+  @override
+  String get levelName113 => 'Reflex Angle';
+
+  @override
+  String get levelName114 => 'Looking Glass';
+
+  @override
+  String get levelName115 => 'Angle of Attack';
+
+  @override
+  String get levelName116 => 'Kaleidoscope';
+
+  @override
+  String get levelName117 => 'Glass Box';
+
+  @override
+  String get levelName118 => 'Bent Light';
+
+  @override
+  String get levelName119 => 'Mirror Image';
+
+  @override
+  String get levelName120 => 'Through the Looking Box';
+
+  @override
+  String get levelName121 => 'Locked Box';
+
+  @override
+  String get levelName122 => 'Combination';
+
+  @override
+  String get levelName123 => 'Strongbox';
+
+  @override
+  String get levelName124 => 'Key Ring';
+
+  @override
+  String get levelName125 => 'Treasure Chest';
+
+  @override
+  String get levelName126 => 'Puzzle Box';
+
+  @override
+  String get levelName127 => 'Vault';
+
+  @override
+  String get levelName128 => 'Safe Cracker';
+
+  @override
+  String get levelName129 => 'Skeleton Key';
+
+  @override
+  String get levelName130 => 'Lock, Stock';
+
+  @override
+  String get levelName131 => 'Black Box';
+
+  @override
+  String get levelName132 => 'Smoke and Mirrors';
+
+  @override
+  String get levelName133 => 'Fog Bank';
+
+  @override
+  String get levelName134 => 'Dark Side';
+
+  @override
+  String get levelName135 => 'Blind Corner';
+
+  @override
+  String get levelName136 => 'Shadow Box';
+
+  @override
+  String get levelName137 => 'Night Shift';
+
+  @override
+  String get levelName138 => 'Hidden Depths';
+
+  @override
+  String get levelName139 => 'Mist Cube';
+
+  @override
+  String get levelName140 => 'Eclipse';
+
+  @override
+  String get levelName141 => 'Two of a Kind';
+
+  @override
+  String get levelName142 => 'Tied Together';
+
+  @override
+  String get levelName143 => 'Double Act';
+
+  @override
+  String get levelName144 => 'Twin Peaks';
+
+  @override
+  String get levelName145 => 'Knotted';
+
+  @override
+  String get levelName146 => 'Partners';
+
+  @override
+  String get levelName147 => 'Lockstep';
+
+  @override
+  String get levelName148 => 'Side by Side';
+
+  @override
+  String get levelName149 => 'Full House';
+
+  @override
+  String get levelName150 => 'The Last Block';
+
+  @override
   String get tutorialTap => 'Tap an arrow to slide it out the way it points.';
 
   @override

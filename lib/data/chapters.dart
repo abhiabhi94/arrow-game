@@ -1,10 +1,11 @@
-/// The trail in six chapters. The first five are flat boards of ten levels
-/// each, each built on one twist: plain lines, then mirrors, then locks,
-/// then hidden heads, then tethered pairs. The sixth is the block: fifty
-/// levels on a cube, six faces of arrows played one at a time, the twists
-/// coming back one by one on the faces. Every chapter opens on a small
-/// teaching board that carries the new thing alone, and the game screen
-/// puts an illustrated card over that board the first time it is played.
+/// The trail in six chapters. The first five are flat boards of twenty
+/// levels each, each built on one twist: plain lines, then mirrors, then
+/// locks, then hidden heads, then tethered pairs. The sixth is the block:
+/// fifty levels on a cube past the first hundred, six faces of arrows
+/// played one at a time, the twists coming back one by one on the faces.
+/// Every chapter opens on a small teaching board that carries the new thing
+/// alone, and the game screen puts an illustrated card over that board the
+/// first time it is played.
 /// Pure Dart.
 library;
 
@@ -56,17 +57,18 @@ class Chapter {
 }
 
 /// Levels in each of the flat chapters.
-const int kFlatChapterLength = 10;
+const int kChapterLength = 20;
 
-/// The first level on the block.
-const int kFirstCubeLevel = 51;
+/// The first level on the block: it comes after the first hundred, which
+/// are as they always were.
+const int kFirstCubeLevel = 101;
 
 const List<Chapter> chapters = <Chapter>[
-  Chapter(index: 1, rule: ChapterRule.lines, firstLevel: 1, lastLevel: 10),
-  Chapter(index: 2, rule: ChapterRule.mirrors, firstLevel: 11, lastLevel: 20),
-  Chapter(index: 3, rule: ChapterRule.locks, firstLevel: 21, lastLevel: 30),
-  Chapter(index: 4, rule: ChapterRule.fog, firstLevel: 31, lastLevel: 40),
-  Chapter(index: 5, rule: ChapterRule.pairs, firstLevel: 41, lastLevel: 50),
+  Chapter(index: 1, rule: ChapterRule.lines, firstLevel: 1, lastLevel: 20),
+  Chapter(index: 2, rule: ChapterRule.mirrors, firstLevel: 21, lastLevel: 40),
+  Chapter(index: 3, rule: ChapterRule.locks, firstLevel: 41, lastLevel: 60),
+  Chapter(index: 4, rule: ChapterRule.fog, firstLevel: 61, lastLevel: 80),
+  Chapter(index: 5, rule: ChapterRule.pairs, firstLevel: 81, lastLevel: 100),
   Chapter(index: 6, rule: ChapterRule.cube, firstLevel: kFirstCubeLevel, lastLevel: totalLevels),
 ];
 
@@ -87,8 +89,8 @@ ChapterRule? ruleTaughtAt(int level) {
 }
 
 /// The chapter a player who has cleared [levelsCleared] levels is in: the
-/// one their furthest level sits in, so 0–10 cleared is the first chapter,
-/// 11–20 the second, and so on.
+/// one their furthest level sits in, so 0–20 cleared is the first chapter,
+/// 21–40 the second, and so on.
 Chapter chapterForProgress(int levelsCleared) =>
     chapterOf(levelsCleared.clamp(1, totalLevels));
 
