@@ -251,7 +251,7 @@ const prefs = {
   ...(riddleCells || riddleHintCell
     ? {
         'flutter.arrow_riddle_order': JSON.stringify(
-          Array.from({ length: 150 }, (_, i) => String(i + 1)),
+          Array.from({ length: 250 }, (_, i) => String(i + 1)),
         ),
         'flutter.arrow_riddle_cursor': '0',
       }
