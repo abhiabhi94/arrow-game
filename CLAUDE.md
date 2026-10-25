@@ -20,8 +20,8 @@ while hidden costs nothing and points at the neighbour that would uncover
 it), **Pairs** (41–50: two tethered arrows, washed in one tint, leave on one
 tap, so both paths must be clear) — then **The Block** (51–100): six square
 faces of arrows on a cube, played one face at a time while the player turns
-the block round (buttons, a swipe on the little block picture, Shift+arrow
-keys); an arrow leaves by its own face's edge, so the faces never touch,
+the block round — the whole block is drawn at once in 3D and a finger turns
+it (or the turn keys, or Shift+arrow keys); an arrow leaves by its own face's edge, so the faces never touch,
 and the twists come back onto the faces ten levels at a time. Every flat
 chapter opens on a small teaching board under a card that is one line and a
 self-playing demo of the twist, then climbs steadily from 30 arrows at its
@@ -238,7 +238,7 @@ lib/
     arrow_piece.dart     ArrowPiece: cells tail→head + heading; exitRay()
     puzzle.dart          Puzzle: occupancy, blockers, canExit, solvingOrder, hintFor, difficultyScore;
                          Puzzle.cube (six faces in one strip, rays end at a face's edge)
-    cube.dart            CubeView / CubeTurn: which face is in front, a real cube's quarter turns
+    cube.dart            the block in space: face frames, cubeNeighbour, Quat, CubeCamera (projection, hit)
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N;
                          dealFace re-deals a cube face on its own until it keepsRules
     answer_match.dart    judging a typed riddle answer (exact / close / wrong)
@@ -258,8 +258,8 @@ lib/
   ui/                  colors.dart (light+dark ArrowPalette), theme.dart (Material 3 + Google Sans Flex),
                        layout.dart (phone-width column + mouse-drag scrolling for the desktop browser)
   widgets/             puzzle_board (painter + slide/bump animations; one face of a cube), board_toolbar,
-                       cube_stage (a face of the block + the 3D quarter turn), cube_map (turn buttons,
-                       the little block picture), lives_indicator, timer_bar, stars_row, result_card, riddle_card
+                       cube_stage (the whole block in 3D: drag, settle, taps by ray), cube_map (turn keys),
+                       keycap (raised 3D buttons), lives_indicator, timer_bar, stars_row, result_card, riddle_card
   utils/               format.dart, labels.dart (level names)
   l10n/                app_en.arb (+ generated app_localizations*.dart)
 ```
@@ -343,30 +343,45 @@ Key patterns:
   face seeded from the level's seed and its number), and the generator
   deals each face with `PuzzleGenerator.dealFace` — up to `kFaceDeals`
   seeds until the face `keepsRules` (full count, every twist, mirrors hit,
-  the choice held) — so a cube level needs no variant. The player sees one
-  face (`PuzzleBoard.face`: drawn, sized, tapped and read out as that face
-  alone; the board label says "Face 2 of the block…"). `CubeView` (front +
-  up) is a real cube's standing: `turned(CubeTurn)` brings the face on that
-  side round (four turns come back, the top stays on top through a side
-  turn), `pathTo(face)` is one turn or two for the face behind. Every face is
-  drawn upright whichever way the block stands — its arrows touch no other
-  face, so a rotated face would only be harder to read. On the game screen
-  `CubeControls` (`widgets/cube_map.dart`) is a row of turn buttons round a
-  small corner view of the block (front, top and right faces, mint once
-  clear) with "N of 6 faces clear / N arrows on this face" (a swipe across
-  it turns the block too); **Shift + arrow keys** turn it (`cubeTurnFor`)
-  while the plain arrow keys walk the cursor on the front face only.
-  `CubeStage` draws the face as a card in `palette.cubeFace` with the
-  block's right side and underside showing (`kCubeDepth`), and a turn as a
-  real quarter turn about the cube's centre (perspective, each face
-  darkening towards `cubeEdge` as it turns away, the block drawing back by
-  1/(sin+cos) so the corner stays on screen; nothing tappable mid-turn;
-  `kCubeTurn`, instant with motion reduced). A cleared face turns the block
-  on by itself after `kCubeAutoTurnDelay` (a neighbour with arrows first:
+  the choice held) — so a cube level needs no variant.
+  **The whole block is drawn at once, in 3D** (`widgets/cube_stage.dart`,
+  math in `engine/cube.dart`, pure Dart): every face has a fixed frame on
+  the block (`faceNormal` / `faceRight` / `faceUp`), `faceOn(face)` is the
+  turn (a `Quat`) that shows it square and upright, and `CubeCamera` holds
+  the block's orientation plus a small fixed lean (`kRestYaw`,
+  `kRestPitch`) so the top and the right side show beside the face being
+  played. For each face it gives a perspective `Matrix4` (`faceMatrix`,
+  column-major) that draws a plain square face widget — the face's own
+  `PuzzleBoard(face:)` on a card — where that face lies on the turned
+  block; faces turned away are culled and the rest painted far to near
+  (`visibleFaces`), each shaded by how it faces the light (the face being
+  played keeps its full light and a primary rim), over a pool of light
+  with the block's shadow on the floor. **A finger turns the block
+  freely** (`onScale*`: one finger turns, two zoom up to `kCubeMaxZoom`,
+  where the front face fills the stage); let go and it eases (slerp,
+  `kCubeTurn`) square onto the face most towards the player, or — flicked
+  past `kFlickSpeed` — onto the next face that way (`cubeNeighbour`). The
+  faces sit under `IgnorePointer`: **the stage works out every tap from
+  the geometry** (`CubeCamera.hit`: a ray from the eye through the touch,
+  the nearest face it meets and the point on it), so a tap on the face
+  being played goes to that face's board (`PuzzleBoardState.tapAtBox`,
+  nearest-arrow slop and all, via the `GlobalKey` the stage hands each
+  `faceBuilder`), and a tap on a side that shows turns the block round to
+  it rather than playing it. The game screen keeps only which face is
+  being played (`_face`); `CubeControls` (`widgets/cube_map.dart`) is a
+  row of keycap turn buttons round "N of 6 faces clear / N arrows on this
+  face", **Shift + arrow keys** turn the block (`cubeTurnFor`) while the
+  plain arrow keys walk the cursor on the front face only, and only that
+  face's board is in the semantics tree. A cleared face turns the block on
+  by itself after `kCubeAutoTurnDelay` (a neighbour with arrows first:
   right, down, left, up), a hint prefers the front face
   (`Puzzle.hintFor(face:)`) and, lit elsewhere, turns the block round to
   it, and a fresh board, a restart or a resumed game puts the block down
-  with its first face that still has arrows in front.
+  with its first face that still has arrows in front. With motion reduced
+  a turn is a jump. The chapter card's demo is the same stage, not
+  interactive. The game's buttons (toolbar and turn keys) are `Keycap`s
+  (`widgets/keycap.dart`): a top over a deeper side that sinks under the
+  finger, so the controls read as things in space like the block.
 - **Generation:** `puzzle_generator.dart` places arrows one by one on flat
   typed-data grids, roughly inside-out (deep heads sampled first so the free
   area stays an outer ring). A head may face free cells *or point straight

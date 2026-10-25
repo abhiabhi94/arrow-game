@@ -1118,12 +1118,11 @@ class AppLocalizationsHi extends AppLocalizations {
   String get introTitleCube => 'क्यूब';
 
   @override
-  String get introBodyCube =>
-      'छह सतहें, एक बार में एक। सतह साफ़ करो, फिर क्यूब घुमाओ।';
+  String get introBodyCube => 'एक क्यूब पर छह सतहें। घुमाकर हर सतह खेलो।';
 
   @override
   String get tutorialCube =>
-      'हर सतह अपना अलग बोर्ड है। उसे साफ़ करो, फिर क्यूब घुमाकर अगली पर जाओ।';
+      'क्यूब को उँगली से घुमाओ। सामने वाली सतह खेलो; बगल की सतह छुओ तो वो सामने आ जाएगी।';
 
   @override
   String get cubeTurnLeft => 'बाईं सतह पर घुमाओ';

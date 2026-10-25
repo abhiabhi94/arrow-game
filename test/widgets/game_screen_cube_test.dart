@@ -9,7 +9,6 @@ import 'package:arrow_game/screens/game_screen.dart';
 import 'package:arrow_game/widgets/cube_map.dart';
 import 'package:arrow_game/widgets/cube_stage.dart';
 import 'package:arrow_game/widgets/puzzle_board.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,8 +51,8 @@ Future<ProviderContainer> _pump(WidgetTester tester) async {
   return container;
 }
 
-/// The face on show (the only board, once the block is at rest).
-int _face(WidgetTester tester) => tester.widget<PuzzleBoard>(find.byType(PuzzleBoard)).face!;
+/// The face being played.
+int _face(WidgetTester tester) => tester.widget<CubeStage>(find.byType(CubeStage)).face;
 
 /// Lets a turn (and anything queued behind it) play out.
 Future<void> _settle(WidgetTester tester) async {
@@ -62,12 +61,21 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-/// Taps the centre of [cell] (in the face's own cells) on the face shown.
+/// Where the centre of [cell] (in its face's own cells) on [face] is drawn
+/// on the screen, as the block stands now.
+Offset _onScreen(WidgetTester tester, int face, Cell cell) {
+  final stage = tester.state<CubeStageState>(find.byType(CubeStage));
+  final cam = stage.camera;
+  final cs = (cam.side - 2 * kFacePadding) / 4;
+  final (sx, sy) = cam.project(
+    cam.pointOn(face, kFacePadding + (cell.x + 0.5) * cs, kFacePadding + (cell.y + 0.5) * cs),
+  );
+  return tester.getCenter(find.byType(CubeStage)) + Offset(sx, sy);
+}
+
+/// Taps the centre of [cell] on the face being played.
 Future<void> _tapCell(WidgetTester tester, Cell cell) async {
-  final board = find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint)).first;
-  final rect = tester.getRect(board);
-  final cs = rect.width / 4;
-  await tester.tapAt(rect.topLeft + Offset((cell.x + 0.5) * cs, (cell.y + 0.5) * cs));
+  await tester.tapAt(_onScreen(tester, _face(tester), cell));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 1000));
 }
@@ -83,11 +91,13 @@ void main() {
     // The board is the face alone: four cells across.
     expect(find.bySemanticsLabel(RegExp('^Face 1 of the block, 4 by 4, 3 of 3 arrows left')), findsOneWidget);
 
+    // The whole block shows at once: the face in front, the top and a side.
+    expect(find.byType(PuzzleBoard), findsNWidgets(3));
     await tester.tap(find.byTooltip('Turn to the face on the right'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
-    // Mid-turn both faces are drawn, and neither can be tapped.
-    expect(find.byType(PuzzleBoard), findsNWidgets(2));
+    // Mid-turn nothing on the block can be played.
+    expect(tester.state<CubeStageState>(find.byType(CubeStage)).settled, isFalse);
     await _settle(tester);
     expect(_face(tester), 1);
     expect(find.text('1 arrow on this face'), findsOneWidget);
@@ -143,17 +153,53 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await _settle(tester);
-    expect(_face(tester), const CubeView().up);
+    expect(_face(tester), cubeNeighbour(0, CubeTurn.up));
     // A plain arrow key walks the cursor, on this face only.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
     await tester.pump();
     final container = ProviderScope.containerOf(tester.element(find.byType(GameScreen)));
-    final focused = tester.widget<PuzzleBoard>(find.byType(PuzzleBoard)).focusedArrowId;
+    final focused = tester
+        .widgetList<PuzzleBoard>(find.byType(PuzzleBoard))
+        .firstWhere((b) => b.face == _face(tester))
+        .focusedArrowId;
     expect(container.read(gameProvider(_level)).puzzle!.faceOf(focused!), _face(tester));
     await tester.tap(find.byTooltip('Restart level'));
     await tester.pump();
     await _settle(tester);
     expect(_face(tester), 0);
+  });
+
+  testWidgets('a drag turns the block and it settles on the face most towards the player', (tester) async {
+    await _pump(tester);
+    final centre = tester.getCenter(find.byType(CubeStage));
+    // A slow drag to the left, about a quarter turn: the right face comes
+    // round.
+    final gesture = await tester.startGesture(centre);
+    for (var i = 0; i < 20; i++) {
+      await gesture.moveBy(const Offset(-8, 0));
+      await tester.pump(const Duration(milliseconds: 40));
+    }
+    await tester.pump(const Duration(milliseconds: 300));
+    await gesture.up();
+    await _settle(tester);
+    expect(_face(tester), cubeNeighbour(0, CubeTurn.right));
+    // A flick to the right from there goes back.
+    await tester.fling(find.byType(CubeStage), const Offset(60, 0), 1500);
+    await _settle(tester);
+    expect(_face(tester), 0);
+  });
+
+  testWidgets('a tap on a side that shows turns the block to it, and does not play', (tester) async {
+    final container = await _pump(tester);
+    final top = cubeNeighbour(0, CubeTurn.up);
+    await tester.tapAt(_onScreen(tester, top, const Cell(1, 1)));
+    await tester.pump();
+    await _settle(tester);
+    expect(_face(tester), top);
+    expect(container.read(gameProvider(_level)).removed, isEmpty);
+    // Now it is in front, the same tap plays its arrow.
+    await _tapCell(tester, const Cell(1, 1));
+    expect(container.read(gameProvider(_level)).removed, {top + 2});
   });
 
   test('Shift and an arrow key mean a turn that way', () {

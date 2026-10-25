@@ -1121,11 +1121,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get introBodyCube =>
-      'Six faces, one at a time. Clear a face, then turn the block.';
+      'Six faces on one block. Turn it to play each face.';
 
   @override
   String get tutorialCube =>
-      'Each face is its own board. Clear it, then turn the block to the next.';
+      'Drag the block to turn it. Play the face in front; tap a side to bring it round.';
 
   @override
   String get cubeTurnLeft => 'Turn to the face on the left';

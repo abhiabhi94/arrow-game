@@ -115,10 +115,14 @@ class PuzzleBoard extends StatefulWidget {
   final bool reduceMotion;
 
   @override
-  State<PuzzleBoard> createState() => _PuzzleBoardState();
+  State<PuzzleBoard> createState() => PuzzleBoardState();
 }
 
-class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin {
+class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin {
+  /// The cell size and where the drawing sits in the board's box, from the
+  /// last layout, for [tapAtBox].
+  double _cellSize = 0;
+  Offset _paintOffset = Offset.zero;
   /// Arrows sliding out: id → progress controller.
   final Map<int, AnimationController> _exits = <int, AnimationController>{};
 
@@ -178,9 +182,9 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   }
 
   @override
-  void didUpdateWidget(PuzzleBoard old) {
-    super.didUpdateWidget(old);
-    if (old.reduceMotion != widget.reduceMotion) {
+  void didUpdateWidget(PuzzleBoard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.reduceMotion != widget.reduceMotion) {
       _hintPing?.dispose();
       _hintPing = null;
       _slump?.dispose();
@@ -188,14 +192,14 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     }
     _syncHintPing();
     final s = widget.state;
-    if (s.puzzle != old.state.puzzle || s.moveToken < old.state.moveToken) {
+    if (s.puzzle != oldWidget.state.puzzle || s.moveToken < oldWidget.state.moveToken) {
       // A restart: forget every animation.
       _disposeAll();
       _syncSlump();
       return;
     }
-    final moved = s.moveToken != old.state.moveToken && s.lastMoveId != null;
-    final uncovered = s.revealed.difference(old.state.revealed);
+    final moved = s.moveToken != oldWidget.state.moveToken && s.lastMoveId != null;
+    final uncovered = s.revealed.difference(oldWidget.state.revealed);
     if (moved) {
       final id = s.lastMoveId!;
       switch (s.lastOutcome) {
@@ -496,6 +500,16 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     return best;
   }
 
+  /// A tap the block's stage worked out from its own geometry, at [p] in
+  /// this board's box: the cube's faces are drawn turned in space, so the
+  /// stage, not this board, catches the finger. Taken the same way as a tap
+  /// on the board itself, nearest-arrow slop and all.
+  void tapAtBox(Offset p) {
+    if (_cellSize <= 0 || _settling) return;
+    final id = _arrowFor(p - _paintOffset, _cellSize);
+    if (id != null) widget.onTapArrow(id);
+  }
+
   void _onTapUp(TapUpDetails d, double cellSize) {
     // Taps the player never meant: one finger of a pinch, or a stutter while
     // the board is still moving from the last one.
@@ -517,6 +531,11 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
           constraints.maxHeight / puzzle.height,
         );
         final size = Size(cellSize * windowWidth, cellSize * puzzle.height);
+        _cellSize = cellSize;
+        _paintOffset = Offset(
+          (constraints.maxWidth - size.width) / 2,
+          (constraints.maxHeight - size.height) / 2,
+        );
         return Center(
           // The board is a labelled container and the painter supplies one
           // node per arrow; the gesture detector adds nothing of its own,

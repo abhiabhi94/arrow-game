@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../data/chapter_demos.dart';
 import '../data/chapters.dart';
-import '../engine/cube.dart';
 import '../models/game_state.dart';
 import '../providers/game_provider.dart';
 import '../ui/motion.dart';
@@ -43,8 +42,7 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
   late final void Function() _unsubscribe;
   Timer? _timer;
   int _step = 0;
-  CubeView _view = const CubeView();
-  CubeTurn? _lastTurn;
+  int _face = 0;
 
   @override
   void initState() {
@@ -75,13 +73,9 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
     }
     final puzzle = _state.puzzle!;
     final id = script[_step];
-    if (puzzle.isCube && puzzle.faceOf(id) != _view.front) {
+    if (puzzle.isCube && puzzle.faceOf(id) != _face) {
       // Round to the arrow's face first, then play it.
-      final turn = _view.pathTo(puzzle.faceOf(id)).first;
-      setState(() {
-        _view = _view.turned(turn);
-        _lastTurn = turn;
-      });
+      setState(() => _face = puzzle.faceOf(id));
       _schedule(kCubeTurn + const Duration(milliseconds: 400));
       return;
     }
@@ -105,10 +99,11 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
             height: widget.height,
             child: _state.puzzle!.isCube
                 ? CubeStage(
-                    view: _view,
-                    lastTurn: _lastTurn,
+                    face: _face,
+                    interactive: false,
                     reduceMotion: reduceMotionOf(context),
-                    faceBuilder: (context, face) => PuzzleBoard(
+                    faceBuilder: (context, face, boardKey, front) => PuzzleBoard(
+                      key: boardKey,
                       state: _state,
                       face: face,
                       showGrid: true,

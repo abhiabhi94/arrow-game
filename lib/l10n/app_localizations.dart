@@ -2033,13 +2033,13 @@ abstract class AppLocalizations {
   /// No description provided for @introBodyCube.
   ///
   /// In en, this message translates to:
-  /// **'Six faces, one at a time. Clear a face, then turn the block.'**
+  /// **'Six faces on one block. Turn it to play each face.'**
   String get introBodyCube;
 
   /// No description provided for @tutorialCube.
   ///
   /// In en, this message translates to:
-  /// **'Each face is its own board. Clear it, then turn the block to the next.'**
+  /// **'Drag the block to turn it. Play the face in front; tap a side to bring it round.'**
   String get tutorialCube;
 
   /// No description provided for @cubeTurnLeft.

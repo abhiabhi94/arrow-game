@@ -31,19 +31,18 @@ void main() {
   testWidgets('the block\'s demo turns from face to face as it plays them, and starts over', (tester) async {
     await pumpApp(tester, const Center(child: SizedBox(width: 300, child: ChapterDemoBoard(rule: ChapterRule.cube))));
     expect(find.byType(CubeStage), findsOneWidget);
-    final shown = <int?>[];
+    final shown = <int>[];
     for (var i = 0; i < 40; i++) {
       await tester.pump(const Duration(milliseconds: 500));
       expect(tester.takeException(), isNull, reason: 'step $i');
-      for (final board in tester.widgetList<PuzzleBoard>(find.byType(PuzzleBoard))) {
-        if (shown.isEmpty || shown.last != board.face) shown.add(board.face);
-      }
+      final face = tester.widget<CubeStage>(find.byType(CubeStage)).face;
+      if (shown.isEmpty || shown.last != face) shown.add(face);
     }
-    // Round the middle of the block and back to the front.
+    // Round the middle of the block and back to the front, the whole block
+    // drawn all the while.
     expect(shown.toSet(), containsAll(<int>[0, 1, 2, 3]));
     expect(shown.where((f) => f == 0).length, greaterThan(1));
-    await tester.pump(const Duration(seconds: 2));
-    expect(find.byType(PuzzleBoard), findsOneWidget);
+    expect(find.byType(PuzzleBoard), findsNWidgets(3));
   });
 
   testWidgets('with motion reduced the demo stands still', (tester) async {

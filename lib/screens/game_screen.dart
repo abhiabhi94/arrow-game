@@ -143,36 +143,20 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// Whether the screen keeps still — read in build, used by the listener.
   bool _calm = false;
 
-  /// On a cube level, how the block stands — its front face is the one
-  /// shown and played — and the turn that brought it there (null for a
-  /// jump), which sets the way the block spins.
-  CubeView _view = const CubeView();
-  CubeTurn? _lastTurn;
+  /// On a cube level, the face of the block being played — the one the
+  /// block stands square on (`CubeStage` turns it round to this one).
+  int _face = 0;
 
-  /// A turn queued behind another (the face behind takes two), or the
-  /// pause before the block turns on by itself from a cleared face.
+  /// The pause before the block turns on by itself from a cleared face.
   Timer? _turnTimer;
 
   /// Turns the block a quarter [turn]: the face that way comes to the front.
-  void _turnCube(CubeTurn turn) {
-    _turnTimer?.cancel();
-    setState(() {
-      _view = _view.turned(turn);
-      _lastTurn = turn;
-    });
-  }
+  void _turnCube(CubeTurn turn) => _turnTo(cubeNeighbour(_face, turn));
 
-  /// Turns the block round to [face] — one turn, or two for the face
-  /// behind, the second once the first is over.
+  /// Turns the block round to [face].
   void _turnTo(int face) {
-    final path = _view.pathTo(face);
-    if (path.isEmpty) return;
-    _turnCube(path.first);
-    if (path.length > 1) {
-      _turnTimer = Timer(kCubeTurn + const Duration(milliseconds: 60), () {
-        if (mounted) _turnCube(path[1]);
-      });
-    }
+    _turnTimer?.cancel();
+    if (face != _face) setState(() => _face = face);
   }
 
   /// Arrows still on each face of the block.
@@ -191,7 +175,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int? _nextFace(GameState state) {
     final left = _faceLeft(state);
     for (final turn in const <CubeTurn>[CubeTurn.right, CubeTurn.down, CubeTurn.left, CubeTurn.up]) {
-      if (left[_view.faceTowards(turn)] > 0) return _view.faceTowards(turn);
+      final next = cubeNeighbour(_face, turn);
+      if (left[next] > 0) return next;
     }
     final rest = <int>[for (var f = 0; f < left.length; f++) if (left[f] > 0) f];
     return rest.isEmpty ? null : rest.first;
@@ -203,14 +188,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final puzzle = state.puzzle;
     if (puzzle == null || !puzzle.isCube) return;
     _turnTimer?.cancel();
-    final left = _faceLeft(state);
-    var view = const CubeView();
-    final first = left.indexWhere((n) => n > 0);
-    for (final turn in view.pathTo(first < 0 ? 0 : first)) {
-      view = view.turned(turn);
-    }
-    _view = view;
-    _lastTurn = null;
+    final first = _faceLeft(state).indexWhere((n) => n > 0);
+    _face = first < 0 ? 0 : first;
   }
 
   /// The chapter cards still to show over the paused board, in trail
@@ -351,24 +330,24 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void _followCube(GameState? prev, GameState next) {
     final puzzle = next.puzzle!;
     final hint = next.hintArrowId;
-    if (hint != null && hint != prev?.hintArrowId && puzzle.faceOf(hint) != _view.front) {
+    if (hint != null && hint != prev?.hintArrowId && puzzle.faceOf(hint) != _face) {
       _turnTo(puzzle.faceOf(hint));
       return;
     }
     final exited = next.lastOutcome == MoveOutcome.exited && next.moveToken != prev?.moveToken;
-    if (!exited || next.phase != GamePhase.playing || _faceLeft(next)[_view.front] > 0) return;
+    if (!exited || next.phase != GamePhase.playing || _faceLeft(next)[_face] > 0) return;
     _turnTimer?.cancel();
     _turnTimer = Timer(kCubeAutoTurnDelay, () {
       if (!mounted) return;
       final now = ref.read(gameProvider(widget.level));
-      if (!now.isPlaying || _faceLeft(now)[_view.front] > 0) return;
+      if (!now.isPlaying || _faceLeft(now)[_face] > 0) return;
       final face = _nextFace(now);
       if (face != null) _turnTo(face);
     });
   }
 
   /// The face in front on a cube level, or null on a flat board.
-  int? _cubeFace(GameState state) => state.puzzle?.isCube ?? false ? _view.front : null;
+  int? _cubeFace(GameState state) => state.puzzle?.isCube ?? false ? _face : null;
 
   @override
   void initState() {
@@ -417,14 +396,20 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// The zoom ceiling for the level on screen, from how small a cell is
   /// drawn in the viewport the board actually has.
   double get _maxZoom {
-    if (_viewport.isEmpty) return kMaxZoom;
     final spec = ref.read(gameProvider(widget.level)).spec;
+    // The block zooms until the face in front fills the stage.
+    if (spec.isCube) return kCubeMaxZoom;
+    if (_viewport.isEmpty) return kMaxZoom;
     return maxZoomFor(min(_viewport.width / spec.width, _viewport.height / spec.height));
   }
 
   /// Zooms about the centre of the board viewport.
   void _setZoom(double scale) {
     final s = scale.clamp(kMinZoom, _maxZoom);
+    if (ref.read(gameProvider(widget.level)).spec.isCube) {
+      setState(() => _scale = s);
+      return;
+    }
     final dx = _viewport.width * (1 - s) / 2;
     final dy = _viewport.height * (1 - s) / 2;
     setState(() {
@@ -671,7 +656,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: CubeControls(
-                              view: _view,
+                              face: _face,
                               faceLeft: _faceLeft(state),
                               onTurn: _turnCube,
                               enabled: state.isPlaying,
@@ -683,6 +668,29 @@ class _GameScreenState extends ConsumerState<GameScreen>
                           child: LayoutBuilder(
                             builder: (context, constraints) {
                               _viewport = constraints.biggest;
+                              // The block is its own 3D stage: a finger turns
+                              // it and two zoom it, so it takes no viewer.
+                              if (state.puzzle?.isCube ?? false) {
+                                return CubeStage(
+                                  face: _face,
+                                  zoom: _scale,
+                                  reduceMotion: _calm,
+                                  onFaceChanged: (face) => _turnTo(face),
+                                  onZoom: _setZoom,
+                                  interactive: state.isPlaying,
+                                  faceBuilder: (context, face, boardKey, front) => PuzzleBoard(
+                                    key: boardKey,
+                                    state: state,
+                                    face: face,
+                                    showGrid: gridUnlocked && settings.gridLinesOn,
+                                    onTapArrow: notifier.tapArrow,
+                                    onBounce: front ? notifier.bounce : null,
+                                    zoom: _scale,
+                                    focusedArrowId: front ? _cursor : null,
+                                    reduceMotion: _calm,
+                                  ),
+                                );
+                              }
                               return ClipRect(
                                 child: InteractiveViewer(
                                   transformationController: _zoom,
@@ -697,22 +705,6 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                       padding: const EdgeInsets.all(4),
                                       child: state.isLoading
                                           ? _LoadingView(message: l10n.gameLoading)
-                                          : state.puzzle!.isCube
-                                          ? CubeStage(
-                                              view: _view,
-                                              lastTurn: _lastTurn,
-                                              reduceMotion: _calm,
-                                              faceBuilder: (context, face) => PuzzleBoard(
-                                                state: state,
-                                                face: face,
-                                                showGrid: gridUnlocked && settings.gridLinesOn,
-                                                onTapArrow: notifier.tapArrow,
-                                                onBounce: notifier.bounce,
-                                                zoom: _scale,
-                                                focusedArrowId: _cursor,
-                                                reduceMotion: _calm,
-                                              ),
-                                            )
                                           : PuzzleBoard(
                                               state: state,
                                               showGrid: gridUnlocked && settings.gridLinesOn,

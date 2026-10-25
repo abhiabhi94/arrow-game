@@ -11,73 +11,102 @@ Puzzle face(List<ArrowPiece> arrows, {Map<Cell, Mirror> mirrors = const {}, Map<
     Puzzle(width: 4, height: 4, arrows: arrows, mirrors: mirrors, locks: locks);
 
 void main() {
-  group('CubeView', () {
-    test('starts with face 0 in front and face 4 on top', () {
-      const v = CubeView();
-      expect(v.front, 0);
-      expect(v.up, 4);
-      expect(v.right, 1);
-      expect(v.back, 2);
-      expect(v.left, 3);
-      expect(v.down, 5);
-    });
+  group('the block in space', () {
+    bool near(double a, double b) => (a - b).abs() < 1e-9;
+    bool same(Vec3 a, Vec3 b) => near(a.$1, b.$1) && near(a.$2, b.$2) && near(a.$3, b.$3);
 
-    test('four turns the same way come back to the start', () {
-      for (final turn in CubeTurn.values) {
-        var v = const CubeView();
-        final seen = <int>{};
-        for (var i = 0; i < 4; i++) {
-          v = v.turned(turn);
-          seen.add(v.front);
-        }
-        expect(v, const CubeView(), reason: turn.name);
-        expect(seen, hasLength(4), reason: turn.name);
-      }
-    });
-
-    test('a turn and its opposite undo each other, from any standing', () {
-      final views = <CubeView>{const CubeView()};
-      for (var i = 0; i < 4; i++) {
-        for (final v in views.toList()) {
-          for (final t in CubeTurn.values) {
-            views.add(v.turned(t));
-          }
-        }
-      }
-      // All 24 ways a cube can stand are reached.
-      expect(views, hasLength(24));
-      for (final v in views) {
+    test('every face has a frame, and its neighbours are the faces its edges touch', () {
+      for (var f = 0; f < 6; f++) {
+        expect(dot(faceRight(f), faceUp(f)), 0, reason: 'face $f');
+        expect(dot(faceRight(f), faceNormal(f)), 0, reason: 'face $f');
+        final around = {for (final t in CubeTurn.values) cubeNeighbour(f, t)};
+        expect(around, hasLength(4), reason: 'face $f');
+        expect(around, isNot(contains(f)));
         for (final t in CubeTurn.values) {
-          expect(v.turned(t).turned(t.opposite), v, reason: '$v $t');
-          expect(v.turned(t).front, v.faceTowards(t));
+          // The face beside it lies that way, and nothing lies further than
+          // a quarter turn away.
+          final n = cubeNeighbour(f, t);
+          expect(dot(faceNormal(f), faceNormal(n)), 0, reason: 'face $f $t');
         }
-        expect({v.front, v.up, v.right, v.left, v.down, v.back}, hasLength(6));
       }
-    });
-
-    test('a turn to the side keeps the top, and a turn up brings it round', () {
-      const v = CubeView();
-      expect(v.turned(CubeTurn.right), const CubeView(front: 1, up: 4));
-      expect(v.turned(CubeTurn.left).front, 3);
-      expect(v.turned(CubeTurn.up), const CubeView(front: 4, up: 2));
-      expect(v.turned(CubeTurn.down), const CubeView(front: 5, up: 0));
-    });
-
-    test('the way to any face is at most two turns', () {
-      const v = CubeView();
-      expect(v.pathTo(0), isEmpty);
-      expect(v.pathTo(1), [CubeTurn.right]);
-      expect(v.pathTo(4), [CubeTurn.up]);
-      expect(v.pathTo(2), hasLength(2));
-      var w = v;
-      for (final t in v.pathTo(2)) {
-        w = w.turned(t);
+      expect(cubeNeighbour(0, CubeTurn.right), 1);
+      expect(cubeNeighbour(0, CubeTurn.left), 3);
+      expect(cubeNeighbour(0, CubeTurn.up), 4);
+      expect(cubeNeighbour(0, CubeTurn.down), 5);
+      // Round the middle and back.
+      var f = 0;
+      for (var i = 0; i < 4; i++) {
+        f = cubeNeighbour(f, CubeTurn.right);
       }
-      expect(w.front, 2);
-      expect(CubeTurn.up.isHorizontal, isFalse);
+      expect(f, 0);
+      expect(cubePath(0, 0), isEmpty);
+      expect(cubePath(0, 4), [CubeTurn.up]);
+      expect(cubePath(0, 2), hasLength(2));
+      expect(CubeTurn.up.opposite, CubeTurn.down);
       expect(CubeTurn.left.isHorizontal, isTrue);
-      expect(v.toString(), 'CubeView(front 0, up 4)');
-      expect(v.hashCode, const CubeView().hashCode);
+    });
+
+    test('a face turned on looks straight at the player, the right way up', () {
+      for (var f = 0; f < 6; f++) {
+        final q = faceOn(f);
+        expect(same(q.rotate(faceNormal(f)), (0, 0, 1)), isTrue, reason: 'face $f');
+        expect(same(q.rotate(faceRight(f)), (1, 0, 0)), isTrue, reason: 'face $f');
+        expect(same(q.rotate(faceUp(f)), (0, 1, 0)), isTrue, reason: 'face $f');
+      }
+    });
+
+    test('quaternions compose, turn and blend', () {
+      final a = Quat.axisAngle((0, 1, 0), 0.7);
+      final b = Quat.axisAngle((1, 0, 0), -0.4);
+      const v = (0.3, -0.2, 0.9);
+      expect(same((a * b).rotate(v), a.rotate(b.rotate(v))), isTrue);
+      expect(same(a.slerp(b, 0).rotate(v), a.rotate(v)), isTrue);
+      expect(same(a.slerp(b, 1).rotate(v), b.rotate(v)), isTrue);
+      expect(a.distanceTo(a), closeTo(0, 1e-12));
+      expect(a.distanceTo(b), greaterThan(0));
+      expect(same(Quat.identity.slerp(Quat.identity, 0.5).rotate(v), v), isTrue);
+      expect(Quat.identity.toString(), 'Quat(1.0, 0.0, 0.0, 0.0)');
+    });
+
+    test('at rest the face being played is nearest, and the top and a side show beside it', () {
+      for (var f = 0; f < 6; f++) {
+        final cam = CubeCamera(orientation: faceOn(f), side: 300);
+        expect(cam.nearestFace, f);
+        final shown = cam.visibleFaces;
+        expect(shown, hasLength(3), reason: 'face $f');
+        expect(shown.last, f, reason: 'painted last, on top');
+        expect(shown, contains(cubeNeighbour(f, CubeTurn.up)));
+        expect(shown, contains(cubeNeighbour(f, CubeTurn.right)));
+      }
+    });
+
+    test('a touch lands where the face was drawn', () {
+      final cam = CubeCamera(orientation: faceOn(2), side: 240, zoom: 1.3);
+      for (final (face, u, v) in <(int, double, double)>[(2, 120, 120), (2, 20, 200), (2, 230, 15), (4, 120, 200), (3, 200, 120)]) {
+        final (sx, sy) = cam.project(cam.pointOn(face, u, v));
+        final hit = cam.hit(sx, sy)!;
+        expect(hit.face, face, reason: '$face $u $v');
+        expect(hit.u, closeTo(u, 1e-6));
+        expect(hit.v, closeTo(v, 1e-6));
+      }
+      // Far off the block, nothing.
+      expect(cam.hit(2000, 2000), isNull);
+    });
+
+    test('the face matrix draws a face where its points project', () {
+      final cam = CubeCamera(orientation: faceOn(0), side: 200);
+      for (final f in cam.visibleFaces) {
+        final m = cam.faceMatrix(f);
+        for (final (px, py) in <(double, double)>[(-100, -100), (100, 40), (0, 0)]) {
+          // Column-major: x' = m0 px + m4 py + m12, w = m3 px + m7 py + m15.
+          final w = m[3] * px + m[7] * py + m[15];
+          final x = (m[0] * px + m[4] * py + m[12]) / w;
+          final y = (m[1] * px + m[5] * py + m[13]) / w;
+          final (sx, sy) = cam.project(cam.pointOn(f, px + 100, py + 100));
+          expect(x, closeTo(sx, 1e-6), reason: 'face $f');
+          expect(y, closeTo(sy, 1e-6), reason: 'face $f');
+        }
+      }
     });
   });
 

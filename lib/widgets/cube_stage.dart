@@ -4,68 +4,117 @@ import 'package:flutter/material.dart';
 
 import '../engine/cube.dart';
 import '../ui/colors.dart';
+import 'puzzle_board.dart';
 
-/// How long the block takes to turn a quarter.
-const Duration kCubeTurn = Duration(milliseconds: 460);
+/// How long the block takes to come round to a face.
+const Duration kCubeTurn = Duration(milliseconds: 520);
 
-/// How much of the block's sides shows beside and below the face at rest,
-/// in logical pixels.
-const double kCubeDepth = 10;
+/// How much of the stage's shorter side the block's edge takes at zoom 1:
+/// room for the block leaning, and turning through a corner, without
+/// leaving the stage.
+const double kCubeFill = 0.6;
 
-/// The block on a cube level: one face towards the player, drawn as a
-/// square card a step off the page with the block's edge round it, and —
-/// when [view] changes — a real quarter turn of a cube, the face going
-/// away round the side as the next one comes round to the front, each
-/// darkening as it turns from the light. The faces are built by
-/// [faceBuilder]; nothing on either can be tapped while the block turns.
-/// With [reduceMotion] the new face is simply there.
+/// How far the block can be zoomed: until the face in front fills the
+/// stage's width.
+const double kCubeMaxZoom = 1 / kCubeFill;
+
+/// The gap between a face's edge and its board, in logical pixels.
+const double kFacePadding = 6;
+
+/// How fast a drag turns the block, in radians a logical pixel.
+const double kDragTurn = 0.011;
+
+/// A flick faster than this, in logical pixels a second, turns the block on
+/// to the next face that way rather than settling on the nearest.
+const double kFlickSpeed = 500;
+
+/// Builds the board on [face]. [boardKey] goes on its [PuzzleBoard] so the
+/// stage can hand it the taps that land on it; [front] says whether it is
+/// the face being played.
+typedef CubeFaceBuilder =
+    Widget Function(
+      BuildContext context,
+      int face,
+      GlobalKey<PuzzleBoardState> boardKey,
+      bool front,
+    );
+
+/// The block on a cube level, whole and in 3D: six faces of arrows on a
+/// cube that leans a little so the top and a side show beside the face
+/// being played ([face]), lit from above left so every face has its own
+/// shade, over a soft pool of light with its shadow on the floor.
+///
+/// A finger turns it freely; let go and it settles, square, on the face
+/// most towards the player — or, flicked, on the next face that way — and
+/// [onFaceChanged] says so. A tap on the face being played plays the arrow
+/// under it (the stage works out which cell from the block's geometry and
+/// hands the tap to that face's board); a tap on another face that shows
+/// turns the block round to it. Two fingers zoom ([onZoom]). When [face]
+/// changes from outside — a button, a key, a hint, a cleared face — the
+/// block turns round to it on its own. With [reduceMotion] it is simply
+/// there; with [interactive] off (the chapter card) it only turns when told.
 class CubeStage extends StatefulWidget {
   const CubeStage({
     super.key,
-    required this.view,
+    required this.face,
     required this.faceBuilder,
-    this.lastTurn,
+    this.onFaceChanged,
+    this.onZoom,
+    this.zoom = 1,
     this.reduceMotion = false,
+    this.interactive = true,
   });
 
-  /// How the block stands: [CubeView.front] is the face shown.
-  final CubeView view;
-
-  /// The turn that brought [view] about, which sets the way the block
-  /// spins; null (a jump, or the start) shows the face without a turn.
-  final CubeTurn? lastTurn;
-
-  final Widget Function(BuildContext context, int face) faceBuilder;
+  final int face;
+  final CubeFaceBuilder faceBuilder;
+  final ValueChanged<int>? onFaceChanged;
+  final ValueChanged<double>? onZoom;
+  final double zoom;
   final bool reduceMotion;
+  final bool interactive;
 
   @override
-  State<CubeStage> createState() => _CubeStageState();
+  State<CubeStage> createState() => CubeStageState();
 }
 
-class _CubeStageState extends State<CubeStage> with SingleTickerProviderStateMixin {
-  late final AnimationController _turn = AnimationController(vsync: this, duration: kCubeTurn)
-    ..addListener(() => setState(() {}))
-    ..addStatusListener((status) {
-      if (status == AnimationStatus.completed) setState(() => _from = null);
-    });
+class CubeStageState extends State<CubeStage>
+    with SingleTickerProviderStateMixin {
+  late Quat _orientation = faceOn(widget.face);
+  Quat _from = Quat.identity;
+  Quat _to = Quat.identity;
+  late final AnimationController _turn =
+      AnimationController(vsync: this, duration: kCubeTurn)..addListener(
+        () => setState(
+          () => _orientation = _from.slerp(
+            _to,
+            Curves.easeOutCubic.transform(_turn.value),
+          ),
+        ),
+      );
 
-  /// The face going away while the block turns, and which way it turns.
-  int? _from;
-  CubeTurn? _spin;
+  final Map<int, GlobalKey<PuzzleBoardState>> _boards =
+      <int, GlobalKey<PuzzleBoardState>>{};
+
+  /// The stage's size at the last layout, for the camera.
+  Size _size = Size.zero;
+
+  bool _dragging = false;
+  double _zoomAtStart = 1;
+
+  /// The block as it stands now, as seen on this stage.
+  CubeCamera get camera => CubeCamera(
+    orientation: _orientation,
+    side: min(_size.width, _size.height) * kCubeFill,
+    zoom: widget.zoom,
+  );
+
+  /// Whether the block is still or moving (a finger on it, or a turn).
+  bool get settled => !_dragging && !_turn.isAnimating;
 
   @override
-  void didUpdateWidget(CubeStage old) {
-    super.didUpdateWidget(old);
-    if (widget.view.front == old.view.front) return;
-    final turn = widget.lastTurn;
-    if (turn == null || widget.reduceMotion) {
-      _turn.stop();
-      _from = null;
-      return;
-    }
-    _from = old.view.front;
-    _spin = turn;
-    _turn.forward(from: 0);
+  void didUpdateWidget(CubeStage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.face != oldWidget.face) _turnTo(widget.face);
   }
 
   @override
@@ -74,149 +123,238 @@ class _CubeStageState extends State<CubeStage> with SingleTickerProviderStateMix
     super.dispose();
   }
 
+  void _turnTo(int face) {
+    final target = faceOn(face);
+    if (widget.reduceMotion) {
+      _turn.stop();
+      setState(() => _orientation = target);
+      return;
+    }
+    _from = _orientation;
+    _to = target;
+    _turn.forward(from: 0);
+  }
+
+  void _onScaleStart(ScaleStartDetails d) {
+    _turn.stop();
+    _zoomAtStart = widget.zoom;
+    _dragging = true;
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails d) {
+    if (d.pointerCount > 1) {
+      widget.onZoom?.call(_zoomAtStart * d.scale);
+      return;
+    }
+    final delta = d.focalPointDelta;
+    if (delta == Offset.zero) return;
+    // Drag right and the front swings right; drag down and it tips down.
+    setState(() {
+      _orientation =
+          (Quat.axisAngle((0, 1, 0), delta.dx * kDragTurn) *
+                  Quat.axisAngle((1, 0, 0), delta.dy * kDragTurn) *
+                  _orientation)
+              .normalized;
+    });
+  }
+
+  void _onScaleEnd(ScaleEndDetails d) {
+    _dragging = false;
+    final v = d.velocity.pixelsPerSecond;
+    var face = camera.nearestFace;
+    if (d.pointerCount == 0 &&
+        v.distance > kFlickSpeed &&
+        face == widget.face) {
+      // A flick: on to the next face the way the finger went — a flick to
+      // the left brings the face on the right round.
+      final turn = v.dx.abs() > v.dy.abs()
+          ? (v.dx < 0 ? CubeTurn.right : CubeTurn.left)
+          : (v.dy < 0 ? CubeTurn.down : CubeTurn.up);
+      face = cubeNeighbour(widget.face, turn);
+    }
+    _turnTo(face);
+    if (face != widget.face) widget.onFaceChanged?.call(face);
+  }
+
+  void _onTapUp(TapUpDetails d) {
+    if (!settled) return;
+    final c = Offset(_size.width / 2, _size.height / 2);
+    final p = d.localPosition - c;
+    final hit = camera.hit(p.dx, p.dy);
+    if (hit == null) return;
+    if (hit.face != widget.face) {
+      // Another face that shows: bring it round.
+      _turnTo(hit.face);
+      widget.onFaceChanged?.call(hit.face);
+      return;
+    }
+    _boards[hit.face]?.currentState?.tapAtBox(
+      Offset(hit.u - kFacePadding, hit.v - kFacePadding),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return LayoutBuilder(
       builder: (context, constraints) {
-        // The block stands a little proud of the page: its right side and
-        // its underside show below and beside the face, [kCubeDepth] deep.
-        final side = min(constraints.maxWidth, constraints.maxHeight) - kCubeDepth;
-        Widget face(int f, {double shade = 0}) => SizedBox.square(
-              key: ValueKey<int>(f),
-              dimension: side,
-              child: _Face(shade: shade, child: widget.faceBuilder(context, f)),
-            );
-        final from = _from;
-        if (from == null) {
-          return Center(
-            child: CustomPaint(
-              painter: _BlockSides(palette: context.palette),
-              child: Padding(
-                padding: const EdgeInsets.only(right: kCubeDepth, bottom: kCubeDepth),
-                child: face(widget.view.front),
-              ),
-            ),
-          );
-        }
-        final t = Curves.easeInOut.transform(_turn.value);
-        // A quarter turn about the cube's own centre, half a side behind
-        // the face: the face going away turns through t·90°, the one coming
-        // round from 90° to none.
-        final out = _spin!;
-        final angle = t * pi / 2;
-        // Turned to the corner, the block is a diagonal wide: it draws back
-        // a little as it turns so the corner never leaves the screen.
-        final fit = 1 / (sin(angle) + cos(angle));
-        return IgnorePointer(
-          child: Center(
-            child: Container(
-              transform: Matrix4.diagonal3Values(fit, fit, 1),
-              transformAlignment: Alignment.center,
+        _size = constraints.biggest;
+        final cam = camera;
+        final side = cam.side;
+        if (side <= 0) return const SizedBox.shrink();
+        const light = _light;
+        final faces = <Widget>[
+          for (final f in cam.visibleFaces)
+            Positioned(
+              left: _size.width / 2 - side / 2,
+              top: _size.height / 2 - side / 2,
               width: side,
               height: side,
-              margin: const EdgeInsets.only(right: kCubeDepth, bottom: kCubeDepth),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // Whichever is further turned goes underneath.
-                  if (t < 0.5) ...[
-                    _turned(face(widget.view.front, shade: cos(angle)), out, angle - pi / 2, side),
-                    _turned(face(from, shade: sin(angle)), out, angle, side),
-                  ] else ...[
-                    _turned(face(from, shade: sin(angle)), out, angle, side),
-                    _turned(face(widget.view.front, shade: cos(angle)), out, angle - pi / 2, side),
-                  ],
-                ],
+              // The faces draw nothing a finger can press: the stage works
+              // out from the geometry what a tap meant.
+              child: IgnorePointer(
+                child: Transform(
+                  key: ValueKey<int>(f),
+                  alignment: Alignment.center,
+                  transform: Matrix4.fromList(cam.faceMatrix(f)),
+                  child: _Face(
+                    // The face being played keeps its full light: its
+                    // arrows are the ones being read.
+                    shade: f == widget.face
+                        ? 0
+                        : (1 - max(0.0, dot(cam.toView(faceNormal(f)), light)))
+                                .clamp(0.0, 1.0) *
+                            0.55,
+                    front: f == widget.face,
+                    child: f == widget.face
+                        ? widget.faceBuilder(
+                            context,
+                            f,
+                            _boards.putIfAbsent(
+                              f,
+                              GlobalKey<PuzzleBoardState>.new,
+                            ),
+                            true,
+                          )
+                        : ExcludeSemantics(
+                            child: widget.faceBuilder(
+                              context,
+                              f,
+                              _boards.putIfAbsent(
+                                f,
+                                GlobalKey<PuzzleBoardState>.new,
+                              ),
+                              false,
+                            ),
+                          ),
+                  ),
+                ),
               ),
             ),
-          ),
+        ];
+        final stage = Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _StagePainter(side: side * widget.zoom, palette: p),
+              ),
+            ),
+            ...faces,
+          ],
+        );
+        if (!widget.interactive) return stage;
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onScaleStart: _onScaleStart,
+          onScaleUpdate: _onScaleUpdate,
+          onScaleEnd: _onScaleEnd,
+          onTapUp: _onTapUp,
+          child: stage,
         );
       },
     );
   }
 
-  /// [child] (a face the size of [side]) turned [angle] round the block's
-  /// centre in the sense of [turn]: towards the face on the right sends
-  /// the front face off to the left, and so on.
-  static Widget _turned(Widget child, CubeTurn turn, double angle, double side) {
-    final half = side / 2;
-    final m = Matrix4.identity()..setEntry(3, 2, 1 / (side * 2.6));
-    m.translateByDouble(0, 0, half, 1);
-    switch (turn) {
-      case CubeTurn.right:
-        m.rotateY(angle);
-      case CubeTurn.left:
-        m.rotateY(-angle);
-      case CubeTurn.up:
-        m.rotateX(-angle);
-      case CubeTurn.down:
-        m.rotateX(angle);
-    }
-    m.translateByDouble(0, 0, -half, 1);
-    return Transform(transform: m, alignment: Alignment.center, child: child);
-  }
+  /// The light, from above, a little left and in front.
+  static const Vec3 _light = (-0.35, 0.75, 0.56);
 }
 
-/// The block's right side and underside, drawn behind the face at rest as
-/// two slanted bands [kCubeDepth] deep, the underside the darker — enough
-/// to read the card as the near face of a solid.
-class _BlockSides extends CustomPainter {
-  _BlockSides({required this.palette});
-
-  final ArrowPalette palette;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const d = kCubeDepth;
-    const r = 14.0;
-    final w = size.width - d;
-    final h = size.height - d;
-    final right = Path()
-      ..moveTo(w - r / 2, r / 2)
-      ..lineTo(w + d, d + r / 2)
-      ..lineTo(w + d, h + d - r / 2)
-      ..lineTo(w - r / 2, h)
-      ..close();
-    final under = Path()
-      ..moveTo(r / 2, h - r / 2)
-      ..lineTo(w, h - r / 2)
-      ..lineTo(w + d - r / 2, h + d)
-      ..lineTo(d + r / 2, h + d)
-      ..close();
-    canvas.drawPath(right, Paint()..color = palette.cubeEdge);
-    canvas.drawPath(under, Paint()..color = Color.lerp(palette.cubeEdge, palette.arrowInk, 0.18)!);
-  }
-
-  @override
-  bool shouldRepaint(_BlockSides old) => old.palette != palette;
-}
-
-/// A face of the block: a square card in [ArrowPalette.cubeFace] with the
-/// block's edge round it, darkened by [shade] (0..1) as it turns away.
+/// A face of the block: a square of [ArrowPalette.cubeFace] edged in the
+/// block's own shade, darkened by [shade] (0..1) as it turns from the
+/// light. The face being played wears a primary rim.
 class _Face extends StatelessWidget {
-  const _Face({required this.child, this.shade = 0});
+  const _Face({required this.child, required this.shade, required this.front});
 
   final Widget child;
   final double shade;
+  final bool front;
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    final radius = BorderRadius.circular(14);
     return DecoratedBox(
       position: DecorationPosition.foreground,
       decoration: BoxDecoration(
-        borderRadius: radius,
-        color: shade > 0 ? p.cubeEdge.withValues(alpha: 0.85 * shade.clamp(0.0, 1.0)) : null,
+        color: shade > 0 ? p.cubeEdge.withValues(alpha: shade) : null,
+        border: front
+            ? Border.all(color: p.primary.withValues(alpha: 0.55), width: 2.5)
+            : null,
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: p.cubeFace,
-          borderRadius: radius,
-          border: Border.all(color: p.cubeEdge, width: 2),
+          border: Border.all(color: p.cubeEdge, width: 1.5),
         ),
-        child: Padding(padding: const EdgeInsets.all(6), child: child),
+        child: Padding(
+          padding: const EdgeInsets.all(kFacePadding),
+          child: child,
+        ),
       ),
     );
   }
+}
+
+/// The stage under the block: a soft pool of light behind it and its
+/// shadow on the floor below.
+class _StagePainter extends CustomPainter {
+  _StagePainter({required this.side, required this.palette});
+
+  final double side;
+  final ArrowPalette palette;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final pool = Rect.fromCircle(center: c, radius: side * 1.25);
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            palette.cubeFace.withValues(alpha: 0.9),
+            palette.cubeFace.withValues(alpha: 0),
+          ],
+        ).createShader(pool),
+    );
+    final floor = Rect.fromCenter(
+      center: c + Offset(0, side * 0.8),
+      width: side * 1.9,
+      height: side * 0.42,
+    );
+    canvas.drawOval(
+      floor,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            palette.arrowInk.withValues(alpha: 0.22),
+            palette.arrowInk.withValues(alpha: 0),
+          ],
+        ).createShader(floor),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_StagePainter old) =>
+      old.side != side || old.palette != palette;
 }
