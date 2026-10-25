@@ -232,7 +232,7 @@ lib/
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N
     answer_match.dart    judging a typed riddle answer (exact / close / wrong)
   data/level_specs.dart  the 100 levels (board size, arrow count, length range, clock)
-  data/riddle_bank.dart  150 riddles in English + 150 पहेलियाँ in Hindi
+  data/riddle_bank.dart  250 riddles in English + 250 पहेलियाँ in Hindi
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot),
                        riddle (question, answers, hint)
@@ -712,10 +712,11 @@ Key patterns:
   past a spent allowance is earned rather than tapped through, so lives are
   never spent thoughtlessly and a 300-arrow board is still never lost to one
   slipped finger; the same card, with `RiddlePrize.hint`, sells a fourth
-  hint and every one after it (see **Hints**). Each language has its own bank of `kRiddleCount` (150)
+  hint and every one after it (see **Hints**). Each language has its own bank of `kRiddleCount` (250)
   riddles — ids 51–150 a shade more lateral than the first fifty, since the
-  first fifty read as too easy, though the answer is still one everyday word
-  and the gate is still not a crossword — the Hindi ones are written as पहेलियाँ, not translated, since a
+  first fifty read as too easy, and ids 151–250 lighter and sillier again
+  (kitchen, schoolbag and zoo things, said with a twist), though the answer
+  is always one everyday word and the gate is still not a crossword — the Hindi ones are written as पहेलियाँ, not translated, since a
   pun rarely survives the crossing — and `RiddleDeckNotifier` deals a
   *shuffled pack* rather than rolling a die: every riddle comes up before any
   repeats, the order and position are persisted (`arrow_riddle_order`,
@@ -991,7 +992,7 @@ composite action check the `uses:` inside it too.
   (60, 80, 100) on a phone may want the glyph floor or the badge size moved.
 - **Localization:** English and Hindi are authored (`lib/l10n/app_en.arb`,
   `app_hi.arb`) and Settings has the picker, so a third language is a third
-  `.arb` file, a `LanguageChoice` value, and a bank of 150 riddles in
+  `.arb` file, a `LanguageChoice` value, and a bank of 250 riddles in
   `data/riddle_bank.dart` (plus whatever `engine/answer_match.dart` needs to
   peel that language's endings off — it handles English and Devanagari today,
   and falls back to plain typo distance for anything else).
