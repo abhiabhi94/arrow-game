@@ -32,6 +32,10 @@
 //             non-phone shots carry the size in their filename
 //   --keys    Playwright key names pressed on each opened level, then captured
 //             (level-NN-keys-*.png): e.g. Equal zooms in, KeyH asks for a hint
+//   --drag dx,dy  drags the mouse that far across the middle of each opened
+//             level, slowly, lets go and captures a second later
+//             (level-NN-drag-*.png): on a cube level, the block left where
+//             the drag put it
 //   --riddle x,y,...  spends every life on the first level by tapping the
 //             given blocked cells (level 1: 2,4,2,3,2,2 are three different
 //             blocked heads), then captures the "Out of lives" card, the
@@ -122,6 +126,7 @@ const isPhone = viewport.width < 600;
 // Keys to press on each opened level, so keyboard shortcuts can be smoke-tested
 // the same way taps are (e.g. `--keys Equal,Equal,KeyH`).
 const keys = String(args.keys ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+const drag = args.drag ? String(args.drag).split(',').map(Number) : null;
 const crash = parseCell(args.crash);
 const riddleCells = parseCells(args.riddle);
 const riddleHintCell = parseCell(args['riddle-hint']);
@@ -484,6 +489,22 @@ try {
       await solved.click();
       await settle(page, 600);
       await shoot(page, `level-${id}-hint-earned-${tag}`);
+    }
+    if (drag) {
+      const vp = page.viewportSize();
+      const x = vp.width / 2;
+      const y = vp.height / 2;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      const steps = 24;
+      for (let i = 1; i <= steps; i++) {
+        await page.mouse.move(x + (drag[0] * i) / steps, y + (drag[1] * i) / steps);
+        await settle(page, 30);
+      }
+      await settle(page, 200);
+      await page.mouse.up();
+      await settle(page, 1000);
+      await shoot(page, `level-${id}-drag-${tag}`);
     }
     if (keys.length) {
       for (const key of keys) {

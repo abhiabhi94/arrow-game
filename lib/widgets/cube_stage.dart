@@ -24,10 +24,6 @@ const double kFacePadding = 6;
 /// How fast a drag turns the block, in radians a logical pixel.
 const double kDragTurn = 0.011;
 
-/// A flick faster than this, in logical pixels a second, turns the block on
-/// to the next face that way rather than settling on the nearest.
-const double kFlickSpeed = 500;
-
 /// Builds the board on [face]. [boardKey] goes on its [PuzzleBoard] so the
 /// stage can hand it the taps that land on it; [front] says whether it is
 /// the face being played.
@@ -40,19 +36,22 @@ typedef CubeFaceBuilder =
     );
 
 /// The block on a cube level, whole and in 3D: six faces of arrows on a
-/// cube that leans a little so the top and a side show beside the face
-/// being played ([face]), lit from above left so every face has its own
-/// shade, over a soft pool of light with its shadow on the floor.
+/// cube, lit from above left so every face has its own shade, over a soft
+/// pool of light with its shadow on the floor. A level opens with the block
+/// leaning a little so the top and a side show beside [face]
+/// ([openingPose]).
 ///
-/// A finger turns it freely; let go and it settles, square, on the face
-/// most towards the player — or, flicked, on the next face that way — and
-/// [onFaceChanged] says so. A tap on the face being played plays the arrow
-/// under it (the stage works out which cell from the block's geometry and
-/// hands the tap to that face's board); a tap on another face that shows
-/// turns the block round to it. Two fingers zoom ([onZoom]). When [face]
-/// changes from outside — a button, a key, a hint, a cleared face — the
-/// block turns round to it on its own. With [reduceMotion] it is simply
-/// there; with [interactive] off (the chapter card) it only turns when told.
+/// A finger turns it freely, and **it stays where the finger leaves it**:
+/// no settling back to a pose the player did not choose. The face then
+/// most towards the player is the one being played, and [onFaceChanged]
+/// says so. A tap on the face being played plays the arrow under it (the
+/// stage works out which cell from the block's geometry and hands the tap
+/// to that face's board); a tap on another face that shows turns the block
+/// round to it. Two fingers zoom ([onZoom]). When [face] changes from
+/// outside — a button, a key, a hint, a cleared face — the block turns to
+/// show that face square, the pose to play it in ([faceOn]). With
+/// [reduceMotion] such a turn is a jump; with [interactive] off (the
+/// chapter card) the block only turns when told.
 class CubeStage extends StatefulWidget {
   const CubeStage({
     super.key,
@@ -63,6 +62,7 @@ class CubeStage extends StatefulWidget {
     this.zoom = 1,
     this.reduceMotion = false,
     this.interactive = true,
+    this.leaning = false,
   });
 
   final int face;
@@ -73,13 +73,23 @@ class CubeStage extends StatefulWidget {
   final bool reduceMotion;
   final bool interactive;
 
+  /// Whether a turn shows the face with the opening lean rather than
+  /// square: for the chapter card, which is a picture of a block, not a
+  /// face to play.
+  final bool leaning;
+
   @override
   State<CubeStage> createState() => CubeStageState();
 }
 
 class CubeStageState extends State<CubeStage>
     with SingleTickerProviderStateMixin {
-  late Quat _orientation = faceOn(widget.face);
+  late Quat _orientation = openingPose(widget.face);
+
+  /// The face this stage last said was being played, after a drag: the
+  /// block already stands where the finger left it, so when [CubeStage.face]
+  /// comes back as this one there is nothing to turn.
+  int? _reported;
   Quat _from = Quat.identity;
   Quat _to = Quat.identity;
   late final AnimationController _turn =
@@ -114,7 +124,10 @@ class CubeStageState extends State<CubeStage>
   @override
   void didUpdateWidget(CubeStage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.face != oldWidget.face) _turnTo(widget.face);
+    if (widget.face != oldWidget.face && widget.face != _reported) {
+      _turnTo(widget.face);
+    }
+    _reported = null;
   }
 
   @override
@@ -124,7 +137,7 @@ class CubeStageState extends State<CubeStage>
   }
 
   void _turnTo(int face) {
-    final target = faceOn(face);
+    final target = widget.leaning ? openingPose(face) : faceOn(face);
     if (widget.reduceMotion) {
       _turn.stop();
       setState(() => _orientation = target);
@@ -158,22 +171,16 @@ class CubeStageState extends State<CubeStage>
     });
   }
 
+  /// Let go: the block stays exactly where the finger left it — no
+  /// settling back to a pose the player did not choose — and the face now
+  /// most towards the player is the one being played.
   void _onScaleEnd(ScaleEndDetails d) {
-    _dragging = false;
-    final v = d.velocity.pixelsPerSecond;
-    var face = camera.nearestFace;
-    if (d.pointerCount == 0 &&
-        v.distance > kFlickSpeed &&
-        face == widget.face) {
-      // A flick: on to the next face the way the finger went — a flick to
-      // the left brings the face on the right round.
-      final turn = v.dx.abs() > v.dy.abs()
-          ? (v.dx < 0 ? CubeTurn.right : CubeTurn.left)
-          : (v.dy < 0 ? CubeTurn.down : CubeTurn.up);
-      face = cubeNeighbour(widget.face, turn);
+    setState(() => _dragging = false);
+    final face = camera.nearestFace;
+    if (face != widget.face) {
+      _reported = face;
+      widget.onFaceChanged?.call(face);
     }
-    _turnTo(face);
-    if (face != widget.face) widget.onFaceChanged?.call(face);
   }
 
   void _onTapUp(TapUpDetails d) {

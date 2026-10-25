@@ -59,6 +59,7 @@ flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build 
 node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-viewport screenshots -> shots/
 node tool/screenshot.mjs --levels 21,41,61,81 --daily                # each chapter's card (mid-demo) + teaching board, and today's daily board
 node tool/screenshot.mjs --levels 101,140 --keys Shift+ArrowRight,Shift+ArrowUp  # the block in 3D, then turned right and up
+node tool/screenshot.mjs --levels 120 --drag -90,40                  # a drag across the block: it stays where it is left
 dart run tool/make_levels.dart        # prints levels 21-150 from the chapter rules (paste into lib/data/level_specs.dart)
 dart run tool/pick_variants.dart      # the first variant of each level from 21 that keeps every pinned rule
 dart run tool/level_report.dart 41 3  # a level (and its next 3 variants): arrows placed, twists placed, fill, open moves
@@ -98,7 +99,8 @@ for the tap — a click on the board's accessibility node would otherwise be a
 semantic tap at the board's centre; a fresh profile opened straight at a
 late level is owed every chapter card it skipped, and the driver puts
 them all away before the board flows. On a cube level `--keys Shift+ArrowRight`
-turns the block. `--cleared N` records levels 1..N as cleared (stars and a best time), so
+turns the block, and `--drag dx,dy` drags the mouse across the middle of
+each opened level and captures the block a second after letting go. `--cleared N` records levels 1..N as cleared (stars and a best time), so
 the trail shows its walked road, the stars and a chapter's progress.
 `--riddle x,y,…` spends every life on
 three different blocked heads (level 1: `2,4,2,3,2,2`) and captures the
@@ -349,10 +351,11 @@ Key patterns:
   **The whole block is drawn at once, in 3D** (`widgets/cube_stage.dart`,
   math in `engine/cube.dart`, pure Dart): every face has a fixed frame on
   the block (`faceNormal` / `faceRight` / `faceUp`), `faceOn(face)` is the
-  turn (a `Quat`) that shows it square and upright, and `CubeCamera` holds
-  the block's orientation plus a small fixed lean (`kRestYaw`,
-  `kRestPitch`) so the top and the right side show beside the face being
-  played. For each face it gives a perspective `Matrix4` (`faceMatrix`,
+  turn (a `Quat`) that shows it square and upright — the pose to play it
+  in — and `CubeCamera` holds the block's orientation. A level opens on
+  `openingPose` (a lean of `kOpeningYaw` / `kOpeningPitch`, so the top and
+  the right side show beside the face being played and the block reads as
+  a block); after that the pose is the player's. For each face it gives a perspective `Matrix4` (`faceMatrix`,
   column-major) that draws a plain square face widget — the face's own
   `PuzzleBoard(face:)` on a card — where that face lies on the turned
   block; faces turned away are culled and the rest painted far to near
@@ -360,9 +363,15 @@ Key patterns:
   played keeps its full light and a primary rim), over a pool of light
   with the block's shadow on the floor. **A finger turns the block
   freely** (`onScale*`: one finger turns, two zoom up to `kCubeMaxZoom`,
-  where the front face fills the stage); let go and it eases (slerp,
-  `kCubeTurn`) square onto the face most towards the player, or — flicked
-  past `kFlickSpeed` — onto the next face that way (`cubeNeighbour`). The
+  where the front face fills the stage), and **it stays where the finger
+  leaves it** — the first cut eased it back to a leaning pose on release,
+  which left the face being played hanging at an angle — while the face
+  then most towards the player becomes the one being played (the stage
+  reports it and does not turn again when the screen echoes it back,
+  `_reported`). A turn asked for from outside — a turn key, Shift+arrow, a
+  cleared face, a hint, a tap on a side — eases (slerp, `kCubeTurn`) to
+  that face square (`faceOn`); only the chapter card's demo turns to the
+  leaning pose (`leaning`), since it is a picture of a block. The
   faces sit under `IgnorePointer`: **the stage works out every tap from
   the geometry** (`CubeCamera.hit`: a ray from the eye through the touch,
   the nearest face it meets and the point on it), so a tap on the face

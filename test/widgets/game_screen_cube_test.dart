@@ -169,24 +169,36 @@ void main() {
     expect(_face(tester), 0);
   });
 
-  testWidgets('a drag turns the block and it settles on the face most towards the player', (tester) async {
-    await _pump(tester);
+  testWidgets('the block stays where a drag leaves it, and the face most towards the player is played', (tester) async {
+    final container = await _pump(tester);
     final centre = tester.getCenter(find.byType(CubeStage));
     // A slow drag to the left, about a quarter turn: the right face comes
-    // round.
+    // round to the front.
     final gesture = await tester.startGesture(centre);
     for (var i = 0; i < 20; i++) {
-      await gesture.moveBy(const Offset(-8, 0));
+      await gesture.moveBy(const Offset(-7, 0));
       await tester.pump(const Duration(milliseconds: 40));
     }
-    await tester.pump(const Duration(milliseconds: 300));
+    final held = tester.state<CubeStageState>(find.byType(CubeStage)).camera.orientation;
     await gesture.up();
     await _settle(tester);
+    final stage = tester.state<CubeStageState>(find.byType(CubeStage));
     expect(_face(tester), cubeNeighbour(0, CubeTurn.right));
-    // A flick to the right from there goes back.
-    await tester.fling(find.byType(CubeStage), const Offset(60, 0), 1500);
+    // Not settled back to any pose: exactly where the finger let go.
+    expect(stage.camera.orientation.distanceTo(held), closeTo(0, 1e-9));
+    expect(stage.camera.orientation.distanceTo(faceOn(_face(tester))), greaterThan(1e-4));
+    expect(stage.settled, isTrue);
+    // And the face it is left on plays, as it stands.
+    final played = _face(tester);
+    await _tapCell(tester, const Cell(1, 1));
+    expect(container.read(gameProvider(_level)).removed, {played + 2});
+    // That cleared the face, and the block has turned on to the next one.
     await _settle(tester);
-    expect(_face(tester), 0);
+    // A turn shows the next face square, the pose to play it in.
+    expect(
+      tester.state<CubeStageState>(find.byType(CubeStage)).camera.orientation.distanceTo(faceOn(_face(tester))),
+      closeTo(0, 1e-6),
+    );
   });
 
   testWidgets('a tap on a side that shows turns the block to it, and does not play', (tester) async {

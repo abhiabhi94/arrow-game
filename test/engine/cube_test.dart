@@ -68,9 +68,18 @@ void main() {
       expect(Quat.identity.toString(), 'Quat(1.0, 0.0, 0.0, 0.0)');
     });
 
-    test('at rest the face being played is nearest, and the top and a side show beside it', () {
+    test('a face turned on shows alone, square', () {
       for (var f = 0; f < 6; f++) {
         final cam = CubeCamera(orientation: faceOn(f), side: 300);
+        expect(cam.nearestFace, f);
+        expect(cam.visibleFaces, [f]);
+        expect(cam.facing(f), closeTo(1, 1e-9));
+      }
+    });
+
+    test('a level opens with the block leaning: the face being played nearest, the top and a side beside it', () {
+      for (var f = 0; f < 6; f++) {
+        final cam = CubeCamera(orientation: openingPose(f), side: 300);
         expect(cam.nearestFace, f);
         final shown = cam.visibleFaces;
         expect(shown, hasLength(3), reason: 'face $f');
@@ -81,7 +90,7 @@ void main() {
     });
 
     test('a touch lands where the face was drawn', () {
-      final cam = CubeCamera(orientation: faceOn(2), side: 240, zoom: 1.3);
+      final cam = CubeCamera(orientation: openingPose(2), side: 240, zoom: 1.3);
       for (final (face, u, v) in <(int, double, double)>[(2, 120, 120), (2, 20, 200), (2, 230, 15), (4, 120, 200), (3, 200, 120)]) {
         final (sx, sy) = cam.project(cam.pointOn(face, u, v));
         final hit = cam.hit(sx, sy)!;
@@ -94,7 +103,7 @@ void main() {
     });
 
     test('the face matrix draws a face where its points project', () {
-      final cam = CubeCamera(orientation: faceOn(0), side: 200);
+      final cam = CubeCamera(orientation: openingPose(0), side: 200);
       for (final f in cam.visibleFaces) {
         final m = cam.faceMatrix(f);
         for (final (px, py) in <(double, double)>[(-100, -100), (100, 40), (0, 0)]) {

@@ -220,14 +220,25 @@ class Quat {
   String toString() => 'Quat($w, $x, $y, $z)';
 }
 
-/// The block turned so [face] looks straight at the player, right way up.
+/// The block turned so [face] looks straight at the player, right way up:
+/// the pose to play it in.
 Quat faceOn(int face) =>
     Quat.fromRows(_rights[face], _ups[face], _normals[face]);
 
-/// The block in front of the player: how it is turned ([orientation]), how
-/// big it is ([side], the length of an edge on screen at [zoom] 1), the
-/// small fixed lean that lets the top and a side show beside the face
-/// being played ([yaw], [pitch]), and how far the eye is ([distance]).
+/// The block's lean when a level opens: turned a little to the right and
+/// tipped a little forward, so the top and the right side show beside
+/// [face] and the block reads as a block. Only the opening pose — once the
+/// player has turned it, it stays where they leave it, and a turn to a face
+/// shows that face square ([faceOn]).
+const double kOpeningYaw = -0.4;
+const double kOpeningPitch = 0.42;
+
+Quat openingPose(int face) =>
+    Quat.axisAngle((1, 0, 0), kOpeningPitch) * Quat.axisAngle((0, 1, 0), kOpeningYaw) * faceOn(face);
+
+/// The block in front of the player: how it is turned ([orientation], from
+/// the block's own axes to the viewer's), how big it is ([side], the length
+/// of an edge on screen at [zoom] 1), and how far the eye is ([distance]).
 ///
 /// Screen coordinates are measured from the middle of the stage, x to the
 /// right and y *down*, the way the widget layer counts.
@@ -236,21 +247,12 @@ class CubeCamera {
     required this.orientation,
     required this.side,
     this.zoom = 1,
-    this.yaw = kRestYaw,
-    this.pitch = kRestPitch,
     this.distance = 0,
   });
-
-  /// The block's lean at rest: turned a little to the right and tipped a
-  /// little forward, so the top and the right side show beside the front.
-  static const double kRestYaw = -0.4;
-  static const double kRestPitch = 0.42;
 
   final Quat orientation;
   final double side;
   final double zoom;
-  final double yaw;
-  final double pitch;
 
   /// The eye's distance from the block's middle; 0 for [side] × 3.2.
   final double distance;
@@ -258,10 +260,7 @@ class CubeCamera {
   double get eye => distance > 0 ? distance : side * 3.2;
 
   /// The whole turn from the block's own axes to the viewer's.
-  Quat get view =>
-      Quat.axisAngle((1, 0, 0), pitch) *
-      Quat.axisAngle((0, 1, 0), yaw) *
-      orientation;
+  Quat get view => orientation;
 
   /// [v] (on the block) as the viewer sees it.
   Vec3 toView(Vec3 v) => view.rotate(v);
