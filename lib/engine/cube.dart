@@ -164,6 +164,9 @@ class Quat {
     w * o.z + x * o.y - y * o.x + z * o.w,
   );
 
+  /// The turn back: this rotation undone (for a unit quaternion).
+  Quat get conjugate => Quat(w, -x, -y, -z);
+
   Quat get normalized {
     final n = math.sqrt(w * w + x * x + y * y + z * z);
     return Quat(w / n, x / n, y / n, z / n);
@@ -233,8 +236,19 @@ Quat faceOn(int face) =>
 const double kOpeningYaw = -0.4;
 const double kOpeningPitch = 0.42;
 
-Quat openingPose(int face) =>
-    Quat.axisAngle((1, 0, 0), kOpeningPitch) * Quat.axisAngle((0, 1, 0), kOpeningYaw) * faceOn(face);
+/// The opening lean on its own: the turn [openingPose] puts on a face
+/// squared up ([faceOn]).
+final Quat kOpeningLean =
+    Quat.axisAngle((1, 0, 0), kOpeningPitch) *
+    Quat.axisAngle((0, 1, 0), kOpeningYaw);
+
+Quat openingPose(int face) => kOpeningLean * faceOn(face);
+
+/// How the block in [orientation] leans away from [face] squared up: the
+/// turn that, put on [faceOn] of any face, shows that face exactly the way
+/// [face] is shown now. A turn to another face keeps the player's lean.
+Quat leanOf(Quat orientation, int face) =>
+    (orientation * faceOn(face).conjugate).normalized;
 
 /// The block in front of the player: how it is turned ([orientation], from
 /// the block's own axes to the viewer's), how big it is ([side], the length

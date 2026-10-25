@@ -188,17 +188,28 @@ void main() {
     expect(stage.camera.orientation.distanceTo(held), closeTo(0, 1e-9));
     expect(stage.camera.orientation.distanceTo(faceOn(_face(tester))), greaterThan(1e-4));
     expect(stage.settled, isTrue);
+    final lean = leanOf(held, _face(tester));
+    // Pausing and resuming, and time passing, leave it where it is.
+    await tester.tap(find.byTooltip('Pause'));
+    await _settle(tester);
+    await tester.tap(find.text('Resume'));
+    await _settle(tester);
+    await tester.pump(const Duration(seconds: 5));
+    expect(stage.camera.orientation.distanceTo(held), closeTo(0, 1e-9));
     // And the face it is left on plays, as it stands.
     final played = _face(tester);
     await _tapCell(tester, const Cell(1, 1));
     expect(container.read(gameProvider(_level)).removed, {played + 2});
-    // That cleared the face, and the block has turned on to the next one.
+    // That cleared the face, and the block has turned on to the next one —
+    // leaning just the way the player left it, not swung back square or to
+    // the opening pose.
     await _settle(tester);
-    // A turn shows the next face square, the pose to play it in.
-    expect(
-      tester.state<CubeStageState>(find.byType(CubeStage)).camera.orientation.distanceTo(faceOn(_face(tester))),
-      closeTo(0, 1e-6),
-    );
+    final now = tester.state<CubeStageState>(find.byType(CubeStage)).camera;
+    expect(_face(tester), isNot(played));
+    expect(now.nearestFace, _face(tester));
+    expect(now.orientation.distanceTo(lean * faceOn(_face(tester))), closeTo(0, 1e-6));
+    expect(now.orientation.distanceTo(faceOn(_face(tester))), greaterThan(1e-4));
+    expect(now.orientation.distanceTo(openingPose(_face(tester))), greaterThan(1e-4));
   });
 
   testWidgets('a tap on a side that shows turns the block to it, and does not play', (tester) async {

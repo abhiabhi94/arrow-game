@@ -370,8 +370,10 @@ Key patterns:
   reports it and does not turn again when the screen echoes it back,
   `_reported`). A turn asked for from outside — a turn key, Shift+arrow, a
   cleared face, a hint, a tap on a side — eases (slerp, `kCubeTurn`) to
-  that face square (`faceOn`); only the chapter card's demo turns to the
-  leaning pose (`leaning`), since it is a picture of a block. The
+  that face **with the lean the player left** (`CubeStageState._lean`,
+  `leanOf`: the turn away from the front face squared up, the opening
+  lean until a finger changes it), never back square or to the opening
+  pose — a turn that squared the block up read as it snapping back. The
   faces sit under `IgnorePointer`: **the stage works out every tap from
   the geometry** (`CubeCamera.hit`: a ray from the eye through the touch,
   the nearest face it meets and the point on it), so a tap on the face

@@ -89,6 +89,17 @@ void main() {
       }
     });
 
+    test('a lean carries from one face to another', () {
+      final held = Quat.axisAngle((0, 1, 0), 0.5) * Quat.axisAngle((1, 0, 0), -0.3) * faceOn(1);
+      final lean = leanOf(held, 1);
+      expect((lean * faceOn(1)).distanceTo(held), closeTo(0, 1e-9));
+      expect(leanOf(openingPose(3), 3).distanceTo(kOpeningLean), closeTo(0, 1e-9));
+      final next = CubeCamera(orientation: lean * faceOn(4), side: 300);
+      expect(next.nearestFace, 4);
+      expect(next.facing(4), closeTo(CubeCamera(orientation: held, side: 300).facing(1), 1e-9));
+      expect(Quat.identity.conjugate.distanceTo(Quat.identity), closeTo(0, 1e-12));
+    });
+
     test('a touch lands where the face was drawn', () {
       final cam = CubeCamera(orientation: openingPose(2), side: 240, zoom: 1.3);
       for (final (face, u, v) in <(int, double, double)>[(2, 120, 120), (2, 20, 200), (2, 230, 15), (4, 120, 200), (3, 200, 120)]) {

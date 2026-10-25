@@ -49,7 +49,8 @@ typedef CubeFaceBuilder =
 /// to that face's board); a tap on another face that shows turns the block
 /// round to it. Two fingers zoom ([onZoom]). When [face] changes from
 /// outside — a button, a key, a hint, a cleared face — the block turns to
-/// show that face square, the pose to play it in ([faceOn]). With
+/// show that face the way the player left the last one: the same lean,
+/// whether the opening one or their own ([leanOf]). With
 /// [reduceMotion] such a turn is a jump; with [interactive] off (the
 /// chapter card) the block only turns when told.
 class CubeStage extends StatefulWidget {
@@ -62,7 +63,6 @@ class CubeStage extends StatefulWidget {
     this.zoom = 1,
     this.reduceMotion = false,
     this.interactive = true,
-    this.leaning = false,
   });
 
   final int face;
@@ -73,11 +73,6 @@ class CubeStage extends StatefulWidget {
   final bool reduceMotion;
   final bool interactive;
 
-  /// Whether a turn shows the face with the opening lean rather than
-  /// square: for the chapter card, which is a picture of a block, not a
-  /// face to play.
-  final bool leaning;
-
   @override
   State<CubeStage> createState() => CubeStageState();
 }
@@ -86,10 +81,11 @@ class CubeStageState extends State<CubeStage>
     with SingleTickerProviderStateMixin {
   late Quat _orientation = openingPose(widget.face);
 
-  /// The face this stage last said was being played, after a drag: the
-  /// block already stands where the finger left it, so when [CubeStage.face]
-  /// comes back as this one there is nothing to turn.
-  int? _reported;
+  /// How the block leans away from the face being played squared up — the
+  /// opening lean until a finger turns it, then whatever the finger left.
+  /// A turn to another face from outside keeps it ([leanOf]), so the block
+  /// never swings back to a pose the player did not choose.
+  Quat _lean = kOpeningLean;
   Quat _from = Quat.identity;
   Quat _to = Quat.identity;
   late final AnimationController _turn =
@@ -124,10 +120,12 @@ class CubeStageState extends State<CubeStage>
   @override
   void didUpdateWidget(CubeStage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.face != oldWidget.face && widget.face != _reported) {
+    // A face the block already shows in front (the one a drag left there)
+    // needs no turn.
+    if (widget.face != oldWidget.face &&
+        (camera.nearestFace != widget.face || _turn.isAnimating)) {
       _turnTo(widget.face);
     }
-    _reported = null;
   }
 
   @override
@@ -137,7 +135,7 @@ class CubeStageState extends State<CubeStage>
   }
 
   void _turnTo(int face) {
-    final target = widget.leaning ? openingPose(face) : faceOn(face);
+    final target = (_lean * faceOn(face)).normalized;
     if (widget.reduceMotion) {
       _turn.stop();
       setState(() => _orientation = target);
@@ -177,10 +175,8 @@ class CubeStageState extends State<CubeStage>
   void _onScaleEnd(ScaleEndDetails d) {
     setState(() => _dragging = false);
     final face = camera.nearestFace;
-    if (face != widget.face) {
-      _reported = face;
-      widget.onFaceChanged?.call(face);
-    }
+    _lean = leanOf(_orientation, face);
+    if (face != widget.face) widget.onFaceChanged?.call(face);
   }
 
   void _onTapUp(TapUpDetails d) {
@@ -230,8 +226,8 @@ class CubeStageState extends State<CubeStage>
                     shade: f == widget.face
                         ? 0
                         : (1 - max(0.0, dot(cam.toView(faceNormal(f)), light)))
-                                .clamp(0.0, 1.0) *
-                            0.55,
+                                  .clamp(0.0, 1.0) *
+                              0.55,
                     front: f == widget.face,
                     child: f == widget.face
                         ? widget.faceBuilder(

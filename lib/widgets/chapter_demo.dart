@@ -101,7 +101,6 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
                 ? CubeStage(
                     face: _face,
                     interactive: false,
-                    leaning: true,
                     reduceMotion: reduceMotionOf(context),
                     faceBuilder: (context, face, boardKey, front) => PuzzleBoard(
                       key: boardKey,
