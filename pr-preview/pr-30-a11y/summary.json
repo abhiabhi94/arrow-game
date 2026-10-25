@@ -2,19 +2,19 @@
  "changed": [
   [
    "level-01-riddle-hint-light.png",
-   3
+   6
   ],
   [
    "level-01-riddle-letter-light.png",
-   4
+   8
   ],
   [
    "level-01-riddle-light.png",
-   3
+   7
   ],
   [
    "level-01-riddle-solved-light.png",
-   4
+   3
   ]
  ],
  "same": [
@@ -40,7 +40,5 @@
  ],
  "only_after": [],
  "only_before": [],
- "problems": [
-  "Riddle not solved: typed \"shadow\" and submitted, but no \"Back to the arrows$\" button appeared (the answer field lost the keyboard?)"
- ]
+ "problems": []
 }

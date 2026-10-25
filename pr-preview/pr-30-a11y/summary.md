@@ -1,29 +1,24 @@
-### ❌ 1 problem(s) driving the PR build
-
-```
-Riddle not solved: typed "shadow" and submitted, but no "Back to the arrows$" button appeared (the answer field lost the keyboard?)
-```
 **4 screen(s) changed**, 19 unchanged.
 
-<details><summary><b>level-01-riddle-hint-light</b> — 3 changed region(s)</summary>
+<details><summary><b>level-01-riddle-hint-light</b> — 6 changed region(s)</summary>
 
 ![level-01-riddle-hint-light](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-30-a11y/level-01-riddle-hint-light.png)
 
 </details>
 
-<details><summary><b>level-01-riddle-letter-light</b> — 4 changed region(s)</summary>
+<details><summary><b>level-01-riddle-letter-light</b> — 8 changed region(s)</summary>
 
 ![level-01-riddle-letter-light](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-30-a11y/level-01-riddle-letter-light.png)
 
 </details>
 
-<details><summary><b>level-01-riddle-light</b> — 3 changed region(s)</summary>
+<details><summary><b>level-01-riddle-light</b> — 7 changed region(s)</summary>
 
 ![level-01-riddle-light](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-30-a11y/level-01-riddle-light.png)
 
 </details>
 
-<details><summary><b>level-01-riddle-solved-light</b> — 4 changed region(s)</summary>
+<details><summary><b>level-01-riddle-solved-light</b> — 3 changed region(s)</summary>
 
 ![level-01-riddle-solved-light](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-30-a11y/level-01-riddle-solved-light.png)
 
