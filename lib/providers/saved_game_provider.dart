@@ -8,7 +8,9 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/level_specs.dart';
 import '../models/game_state.dart';
+import '../models/level_spec.dart';
 import '../models/saved_game.dart';
 import 'app_providers.dart';
 
@@ -19,11 +21,18 @@ class SavedGameRepository {
 
   static const String key = 'arrow_saved_game';
 
+  /// The snapshot in the slot, or null — also for one of a level this build
+  /// does not have. The web builds share one origin, so storage written by a
+  /// PR preview with more levels (one saved at level 150) is read by the
+  /// live app too, and a level past [totalLevels] has no spec to show.
   SavedGame? load() {
     final raw = _prefs.getString(key);
     if (raw == null) return null;
     final decoded = jsonDecode(raw);
-    return decoded is Map<String, Object?> ? SavedGame.fromJson(decoded) : null;
+    final game = decoded is Map<String, Object?> ? SavedGame.fromJson(decoded) : null;
+    if (game == null) return null;
+    final known = game.level == LevelSpec.dailyLevel || (game.level >= 1 && game.level <= totalLevels);
+    return known ? game : null;
   }
 
   Future<void> save(SavedGame game) => _prefs.setString(key, jsonEncode(game.toJson()));
