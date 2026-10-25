@@ -102,13 +102,13 @@
 
 </details>
 
-<details><summary><b>level-20-hint-light</b> — 3 changed region(s)</summary>
+<details><summary><b>level-20-hint-light</b> — 4 changed region(s)</summary>
 
 ![level-20-hint-light](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-28-a11y/level-20-hint-light.png)
 
 </details>
 
-<details><summary><b>level-20-light</b> — 4 changed region(s)</summary>
+<details><summary><b>level-20-light</b> — 5 changed region(s)</summary>
 
 ![level-20-light](https://abhiabhi94.github.io/arrow-game/pr-preview/pr-28-a11y/level-20-light.png)
 
