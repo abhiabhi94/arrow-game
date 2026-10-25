@@ -10,6 +10,8 @@ pull request gets its own playable preview and a debug APK — see
 laptop the keyboard helps: **H** hint, **+ / -** zoom, **G** grid lines,
 **Space** pause.
 
+**Like it?** [Sponsor on GitHub](https://github.com/sponsors/abhiabhi94) 💜
+
 ## How it plays
 
 Bent arrow pieces sit on a grid. Tap one and it slides along its own path,
