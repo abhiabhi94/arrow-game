@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/models/game_state.dart';
 import 'package:arrow_game/models/level_progress.dart';
+import 'package:arrow_game/models/level_spec.dart';
 import 'package:arrow_game/models/saved_game.dart';
 import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/saved_game_provider.dart';
@@ -38,6 +40,19 @@ void main() {
     expect(repo.load(), isNull);
     await prefs.setString(SavedGameRepository.key, '[1, 2]');
     expect(repo.load(), isNull);
+  });
+
+  test('a snapshot of a level this build does not have reads as empty; the daily one is kept', () async {
+    // A PR preview on the same origin with 150 levels left one at level 150.
+    const daily = SavedGame(level: LevelSpec.dailyLevel, seed: 9, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 10);
+    for (final level in [-1, totalLevels + 1, 150]) {
+      final container = await _container({
+        SavedGameRepository.key: jsonEncode(SavedGame(level: level, seed: 9, removed: const [1], mistakes: 0, hintsLeft: 3, elapsedMs: 10).toJson()),
+      });
+      expect(container.read(savedGameProvider), isNull, reason: 'level $level');
+    }
+    final container = await _container({SavedGameRepository.key: jsonEncode(daily.toJson())});
+    expect(container.read(savedGameProvider), daily);
   });
 
   test('the notifier starts from storage and answers for its level only', () async {
