@@ -90,7 +90,7 @@ void main() {
   });
 
   test('a free arrow slides out; the last one clears the level', () {
-    final cleared = <(int, int, int)>[];
+    final cleared = <(int, int?, int)>[];
     final engine = RecordingHapticEngine();
     final sfxBackend = RecordingSfxBackend();
     final n = _notifier(
@@ -508,6 +508,42 @@ void main() {
     n.dispose();
   });
 
+  test('with time limits removed no time is counted, and none is reported on a clear', () {
+    final untimed = sampleSpec.untimed();
+    expect(untimed.timed, isFalse);
+    expect(untimed.seed, sampleSpec.seed);
+    expect(untimed.timeLimitMs, sampleSpec.timeLimitMs);
+    expect(untimed.untimed(), same(untimed));
+    // Re-dealing or stretching an untimed level keeps it untimed.
+    expect(untimed.withVariant(1).timed, isFalse);
+    expect(untimed.withClockFactor(2).timed, isFalse);
+
+    final cleared = <(int, int?, int)>[];
+    final n = GameNotifier(
+      untimed,
+      puzzle: samplePuzzle(),
+      autoTick: false,
+      onCleared: (l, ms, stars) => cleared.add((l, ms, stars)),
+    );
+    n.tick(sampleSpec.timeLimitMs * 3);
+    expect(n.state.phase, GamePhase.playing);
+    expect(n.state.elapsedMs, 0);
+    n.tapArrow(0);
+    n.tapArrow(1);
+    n.tapArrow(2);
+    expect(n.state.phase, GamePhase.cleared);
+    expect(cleared, [(1, null, 3)]);
+    n.dispose();
+  });
+
+  test('an untimed level resumes a saved game played past the clock', () {
+    const saved = SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 90000);
+    final n = GameNotifier(sampleSpec.untimed(), puzzle: samplePuzzle(), savedGame: saved, autoTick: false);
+    expect(n.state.phase, GamePhase.paused);
+    expect(n.state.elapsedMs, 90000);
+    n.dispose();
+  });
+
   test('a saved game that does not fit is ignored', () {
     const cases = <SavedGame>[
       SavedGame(level: 2, seed: 15855, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // other level
@@ -556,6 +592,7 @@ void main() {
     final sub = container.listen(gameProvider(1), (_, _) {});
     addTearDown(sub.close);
     final notifier = container.read(gameProvider(1).notifier);
+    // Time limits stay on by default: the level as the table deals it.
     expect(notifier.spec, same(specForLevel(1)));
     expect(notifier.haptics, isNotNull);
     expect(notifier.sfx, isNotNull);

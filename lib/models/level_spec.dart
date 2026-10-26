@@ -58,6 +58,7 @@ class LevelSpec {
     this.openMoves = 2,
     this.variant = 0,
     this.features = LevelFeatures.none,
+    this.timed = true,
     this._seed,
   })  : assert(level >= 0),
         assert(openMoves >= 1),
@@ -84,8 +85,13 @@ class LevelSpec {
   final int minLength;
   final int maxLength;
 
-  /// The level clock: run out and the level is failed.
+  /// The level clock: run out and the level is failed — unless [timed] is
+  /// off, when it is only the level's nominal pace.
   final int timeLimitMs;
+
+  /// Whether the clock can run out. Off with the "no time limit" setting
+  /// ([untimed]): the time played is still counted, but never ends the level.
+  final bool timed;
 
   /// How many arrows the generator tries to keep playable at any moment.
   /// Small numbers mean the player has to hunt for the next move; big ones
@@ -133,6 +139,27 @@ class LevelSpec {
       openMoves: openMoves,
       variant: variant,
       features: features,
+      timed: timed,
+      seed: _seed,
+    );
+  }
+
+  /// The same level with no clock at all — the "Remove time limits" setting.
+  /// Like [withClockFactor], the board and [seed] are untouched.
+  LevelSpec untimed() {
+    if (!timed) return this;
+    return LevelSpec(
+      level: level,
+      width: width,
+      height: height,
+      arrows: arrows,
+      minLength: minLength,
+      maxLength: maxLength,
+      timeLimitMs: timeLimitMs,
+      openMoves: openMoves,
+      variant: variant,
+      features: features,
+      timed: false,
       seed: _seed,
     );
   }
@@ -149,6 +176,7 @@ class LevelSpec {
         openMoves: openMoves,
         variant: variant,
         features: features,
+        timed: timed,
         seed: _seed,
       );
 

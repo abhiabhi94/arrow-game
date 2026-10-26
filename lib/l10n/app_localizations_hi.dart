@@ -1106,4 +1106,31 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get settingsExtraTimeSubtitle => 'हर लेवल पर दुगनी घड़ी';
+
+  @override
+  String get onboardRuleNoClock =>
+      'कोई घड़ी नहीं — जितना चाहो समय लो (सेटिंग्स में घड़ी चालू कर सकते हो)';
+
+  @override
+  String get settingsGameplay => 'खेल';
+
+  @override
+  String get settingsRemoveTimeLimits => 'समय-सीमा हटाएँ';
+
+  @override
+  String get settingsRemoveTimeLimitsSubtitle =>
+      'किसी लेवल पर घड़ी नहीं — अपनी रफ़्तार से खेलो';
+
+  @override
+  String homeResumeProgressUntimed(int out, int total) {
+    return '$total में से $out तीर बाहर';
+  }
+
+  @override
+  String resumeBodyUntimed(int out, int total) {
+    return 'आपने यह लेवल $total में से $out तीर बाहर के साथ छोड़ा था।';
+  }
+
+  @override
+  String get gamePausedBodyUntimed => 'साँस ले लीजिए। बोर्ड इंतज़ार करेगा।';
 }

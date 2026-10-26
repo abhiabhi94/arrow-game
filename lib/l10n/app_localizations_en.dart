@@ -1108,4 +1108,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsExtraTimeSubtitle => 'Twice the clock on every level';
+
+  @override
+  String get onboardRuleNoClock =>
+      'No clock — take all the time you like (Settings can add one)';
+
+  @override
+  String get settingsGameplay => 'Gameplay';
+
+  @override
+  String get settingsRemoveTimeLimits => 'Remove time limits';
+
+  @override
+  String get settingsRemoveTimeLimitsSubtitle =>
+      'No clock on any level — play at your own pace';
+
+  @override
+  String homeResumeProgressUntimed(int out, int total) {
+    return '$out of $total arrows out';
+  }
+
+  @override
+  String resumeBodyUntimed(int out, int total) {
+    return 'You left this level with $out of $total arrows out.';
+  }
+
+  @override
+  String get gamePausedBodyUntimed => 'Take a breath. The board will wait.';
 }

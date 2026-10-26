@@ -433,7 +433,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _putRiddleAway();
       }
       if (next.phase == GamePhase.cleared && prev?.phase != GamePhase.cleared) {
-        if (widget.isDaily) {
+        if (!next.spec.timed) {
+          _newBest = false;
+        } else if (widget.isDaily) {
           final best = ref.read(dailyProvider).bestTodayMs;
           _newBest = best == null || next.elapsedMs < best;
         } else {
@@ -534,12 +536,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
                           padding: _gutter,
                           child: Row(
                             children: [
-                              Expanded(
-                                child: TimerBar(
-                                  remainingMs: state.remainingMs,
-                                  fraction: state.timeFraction,
-                                ),
-                              ),
+                              // With time limits removed there is no clock at all.
+                              if (state.spec.timed)
+                                Expanded(
+                                  child: TimerBar(
+                                    remainingMs: state.remainingMs,
+                                    fraction: state.timeFraction,
+                                  ),
+                                )
+                              else
+                                const Spacer(),
                               const SizedBox(width: 12),
                               _ArrowsOut(out: state.arrowsOut, total: state.arrowsTotal),
                               const SizedBox(width: 12),
@@ -670,11 +676,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 GamePhase.paused when state.resumeOffered => ResultCard(
                   emoji: '👋',
                   title: l10n.resumeTitle,
-                  body: l10n.resumeBody(
-                    state.arrowsOut,
-                    state.arrowsTotal,
-                    formatDurationMs(state.elapsedMs),
-                  ),
+                  body: state.spec.timed
+                      ? l10n.resumeBody(
+                          state.arrowsOut,
+                          state.arrowsTotal,
+                          formatDurationMs(state.elapsedMs),
+                        )
+                      : l10n.resumeBodyUntimed(state.arrowsOut, state.arrowsTotal),
                   actions: [
                     FilledButton(onPressed: notifier.resume, child: Text(l10n.resumeContinue)),
                     OutlinedButton(onPressed: _restart, child: Text(l10n.resumeStartOver)),
@@ -687,7 +695,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 GamePhase.paused => ResultCard(
                   emoji: '⏸️',
                   title: l10n.gamePaused,
-                  body: l10n.gamePausedBody,
+                  body: state.spec.timed ? l10n.gamePausedBody : l10n.gamePausedBodyUntimed,
                   actions: [
                     FilledButton(onPressed: notifier.resume, child: Text(l10n.gameResume)),
                     OutlinedButton(
@@ -711,10 +719,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     children: [
                       StarsRow(stars: state.stars, size: 44, animated: true),
                       const SizedBox(height: 10),
-                      Text(
-                        l10n.clearedTime(formatDurationMs(state.elapsedMs)),
-                        style: TextStyle(fontWeight: FontWeight.w800, color: p.textInk),
-                      ),
+                      // An untimed level counted no time, so says none.
+                      if (state.spec.timed)
+                        Text(
+                          l10n.clearedTime(formatDurationMs(state.elapsedMs)),
+                          style: TextStyle(fontWeight: FontWeight.w800, color: p.textInk),
+                        ),
                       if (_newBest)
                         Text(
                           l10n.clearedNewBest,

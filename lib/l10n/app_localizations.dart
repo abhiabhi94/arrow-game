@@ -2011,6 +2011,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Twice the clock on every level'**
   String get settingsExtraTimeSubtitle;
+
+  /// No description provided for @onboardRuleNoClock.
+  ///
+  /// In en, this message translates to:
+  /// **'No clock — take all the time you like (Settings can add one)'**
+  String get onboardRuleNoClock;
+
+  /// No description provided for @settingsGameplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Gameplay'**
+  String get settingsGameplay;
+
+  /// No description provided for @settingsRemoveTimeLimits.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove time limits'**
+  String get settingsRemoveTimeLimits;
+
+  /// No description provided for @settingsRemoveTimeLimitsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No clock on any level — play at your own pace'**
+  String get settingsRemoveTimeLimitsSubtitle;
+
+  /// No description provided for @homeResumeProgressUntimed.
+  ///
+  /// In en, this message translates to:
+  /// **'{out} of {total} arrows out'**
+  String homeResumeProgressUntimed(int out, int total);
+
+  /// No description provided for @resumeBodyUntimed.
+  ///
+  /// In en, this message translates to:
+  /// **'You left this level with {out} of {total} arrows out.'**
+  String resumeBodyUntimed(int out, int total);
+
+  /// No description provided for @gamePausedBodyUntimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a breath. The board will wait.'**
+  String get gamePausedBodyUntimed;
 }
 
 class _AppLocalizationsDelegate

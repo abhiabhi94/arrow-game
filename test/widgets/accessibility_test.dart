@@ -5,6 +5,7 @@ library;
 import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/models/game_state.dart';
+import 'package:arrow_game/models/saved_game.dart';
 import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
@@ -14,6 +15,7 @@ import 'package:arrow_game/screens/home_screen.dart';
 import 'package:arrow_game/screens/onboarding_screen.dart';
 import 'package:arrow_game/screens/settings_screen.dart';
 import 'package:arrow_game/widgets/puzzle_board.dart';
+import 'package:arrow_game/widgets/timer_bar.dart';
 import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
@@ -341,6 +343,120 @@ void main() {
     });
   });
 
+  group('time limits removed', () {
+    testWidgets('the HUD has no clock at all, and the clock never runs out', (tester) async {
+      final handle = tester.ensureSemantics();
+      await usePhoneSurface(tester);
+      final container = await pumpApp(
+        tester,
+        const GameScreen(level: 1),
+        extraOverrides: [
+          gameProvider.overrideWith(
+            (ref, level) => GameNotifier(sampleSpecFor(level).untimed(), puzzle: samplePuzzle(), autoTick: false),
+          ),
+          ...silentFeedback(),
+        ],
+      );
+      await _settle(tester, 300);
+      expect(find.byType(TimerBar), findsNothing);
+      expect(find.bySemanticsLabel(RegExp('on the clock')), findsNothing);
+      expect(find.bySemanticsLabel('0 of 3 arrows out'), findsOneWidget);
+      final notifier = container.read(gameProvider(1).notifier);
+      notifier.tick(sampleSpecFor(1).timeLimitMs * 2);
+      await tester.pump();
+      expect(notifier.state.phase, GamePhase.playing);
+
+      // Paused, the card does not talk about a clock either.
+      notifier.pause();
+      await _settle(tester, 300);
+      expect(find.text('Take a breath. The board will wait.'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('the welcome-back card does not mention a clock', (tester) async {
+      await usePhoneSurface(tester);
+      await pumpApp(
+        tester,
+        const GameScreen(level: 1),
+        extraOverrides: [
+          gameProvider.overrideWith(
+            (ref, level) => GameNotifier(
+              sampleSpecFor(level).untimed(),
+              puzzle: samplePuzzle(),
+              savedGame: const SavedGame(
+                level: 1,
+                seed: sampleSeed,
+                removed: [1],
+                mistakes: 0,
+                hintsLeft: 3,
+                elapsedMs: 90_000,
+              ),
+              autoTick: false,
+            ),
+          ),
+          ...silentFeedback(),
+        ],
+      );
+      await _settle(tester, 300);
+      expect(find.text('You left this level with 1 of 3 arrows out.'), findsOneWidget);
+    });
+
+    testWidgets('the trail keeps a time recorded before, and shows none for an untimed clear', (tester) async {
+      final handle = tester.ensureSemantics();
+      await usePhoneSurface(tester);
+      await pumpApp(
+        tester,
+        const HomeScreen(),
+        seed: <String, Object>{
+          'arrow_no_time_limit': true,
+          // Cleared with the clock on: its best time stays on the trail.
+          'arrow_level_1_done': true,
+          'arrow_level_1_stars': 2,
+          'arrow_level_1_best': 21000,
+          'arrow_level_1_count': 1,
+          // Cleared only with time limits removed: no time was ever counted.
+          'arrow_level_2_done': true,
+          'arrow_level_2_stars': 3,
+          'arrow_level_2_count': 1,
+        },
+        extraOverrides: [
+          progressProvider.overrideWith(
+            (ref) => ProgressNotifier(ref.watch(progressRepositoryProvider), unlockAllLevels: false),
+          ),
+        ],
+      );
+      await _settle(tester, 800);
+      expect(
+        find.bySemanticsLabel('Level 1, First Steps, Cleared, 2 of 3 stars, best time 0:21'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Level 2, Two Ways Out, Cleared, 3 of 3 stars'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('the win card says nothing about time', (tester) async {
+      await usePhoneSurface(tester);
+      await pumpApp(
+        tester,
+        const GameScreen(level: 1),
+        extraOverrides: [
+          gameProvider.overrideWith(
+            (ref, level) => GameNotifier(sampleSpecFor(level).untimed(), puzzle: samplePuzzle(), autoTick: false),
+          ),
+          ...silentFeedback(),
+        ],
+      );
+      await _settle(tester, 300);
+      await _tapCell(tester, const Cell(2, 1));
+      await _tapCell(tester, const Cell(3, 3));
+      await _tapCell(tester, const Cell(0, 3));
+      await _settle(tester, 1500);
+      expect(find.text('Level cleared!'), findsOneWidget);
+      expect(find.textContaining('Time '), findsNothing);
+      expect(find.text('New best time!'), findsNothing);
+    });
+  });
+
   group('extra time', () {
     test('doubles the clock of every level and nothing else', () {
       expect(specForLevel(1).withClockFactor(1), same(specForLevel(1)));
@@ -367,7 +483,7 @@ void main() {
         return container;
       }
 
-      final longer = await containerWith({'arrow_extra_time': true});
+      final longer = await containerWith({'arrow_extra_time': true, 'arrow_no_time_limit': false});
       // Reading the provider starts the real generator for level 1 on an
       // isolate; the spec is set before that lands, and the notifier is
       // disposed with the container.
@@ -377,7 +493,7 @@ void main() {
       await longer.read(gameProvider(1).notifier).ready;
       sub.close();
 
-      final plain = await containerWith({});
+      final plain = await containerWith({'arrow_no_time_limit': false});
       final sub2 = plain.listen(gameProvider(1), (_, _) {});
       expect(plain.read(gameProvider(1)).spec.timeLimitMs, specForLevel(1).timeLimitMs);
       await plain.read(gameProvider(1).notifier).ready;
