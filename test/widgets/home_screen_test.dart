@@ -128,6 +128,7 @@ void main() {
       tester,
       const HomeScreen(),
       seed: <String, Object>{
+        'arrow_no_time_limit': false,
         SavedGameRepository.key: jsonEncode(const {
           'level': 3,
           'seed': 3 * 7919 + 17,
@@ -150,6 +151,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(GameScreen), findsOneWidget);
     expect(find.text('Level 3'), findsOneWidget);
+  });
+
+  testWidgets('with time limits removed the hero says nothing about a clock', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(
+      tester,
+      const HomeScreen(),
+      seed: <String, Object>{
+        'arrow_no_time_limit': true,
+        SavedGameRepository.key: jsonEncode(const {
+          'level': 3,
+          'seed': 3 * 7919 + 17,
+          'removed': [0, 1],
+          'mistakes': 0,
+          'hintsLeft': 3,
+          'elapsedMs': 30000,
+        }),
+      },
+      extraOverrides: _gameOverride,
+    );
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.text('PICK UP WHERE YOU LEFT OFF'), findsOneWidget);
+    expect(find.text('2 of 12 arrows out'), findsOneWidget);
   });
 
   testWidgets('with every level cleared the hero offers a replay', (tester) async {

@@ -380,5 +380,12 @@
   "cubeFaceArrows": "{count, plural, =0{सतह साफ़} =1{इस सतह पर 1 तीर} other{इस सतह पर {count} तीर}}",
   "cubeFacesClear": "{total} में से {cleared} सतहें साफ़",
   "cubeMapLabel": "क्यूब, सामने सतह {face}, {total} में से {cleared} सतहें साफ़",
-  "boardFaceLabel": "क्यूब की सतह {face}, {width} गुणा {height}, {total} में से {left} तीर बाक़ी"
+  "boardFaceLabel": "क्यूब की सतह {face}, {width} गुणा {height}, {total} में से {left} तीर बाक़ी",
+  "onboardRuleNoClock": "कोई घड़ी नहीं — जितना चाहो समय लो (सेटिंग्स में घड़ी चालू कर सकते हो)",
+  "settingsGameplay": "खेल",
+  "settingsRemoveTimeLimits": "समय-सीमा हटाएँ",
+  "settingsRemoveTimeLimitsSubtitle": "किसी लेवल पर घड़ी नहीं — अपनी रफ़्तार से खेलो",
+  "homeResumeProgressUntimed": "{total} में से {out} तीर बाहर",
+  "resumeBodyUntimed": "आपने यह लेवल {total} में से {out} तीर बाहर के साथ छोड़ा था।",
+  "gamePausedBodyUntimed": "साँस ले लीजिए। बोर्ड इंतज़ार करेगा।"
 }

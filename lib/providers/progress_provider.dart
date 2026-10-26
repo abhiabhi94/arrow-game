@@ -75,7 +75,7 @@ class ProgressNotifier extends StateNotifier<Map<int, LevelProgress>> {
 
   /// Records a clear of [level] in [timeMs] with [stars]. State updates at
   /// once; the returned future completes when it is persisted.
-  Future<void> recordCompletion(int level, int timeMs, int stars) {
+  Future<void> recordCompletion(int level, int? timeMs, int stars) {
     final updated = progressFor(level).withCompletion(timeMs, stars);
     state = <int, LevelProgress>{...state, level: updated};
     return _repo.save(updated);

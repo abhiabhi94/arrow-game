@@ -24,7 +24,8 @@ import 'saved_game_provider.dart';
 import 'settings_provider.dart';
 
 /// Called once when a level is cleared, with the clear time and star rating.
-typedef ClearedCallback = void Function(int level, int elapsedMs, int stars);
+/// [elapsedMs] is null on an untimed level: no time was counted.
+typedef ClearedCallback = void Function(int level, int? elapsedMs, int stars);
 
 /// Called whenever the level's standing is worth remembering: after every
 /// move, hint, pause, restart or ending, and when the screen goes away.
@@ -133,7 +134,7 @@ class GameNotifier extends StateNotifier<GameState> {
       saved.hintsLeft >= 0 &&
       saved.hintsLeft <= maxHints &&
       saved.elapsedMs >= 0 &&
-      saved.elapsedMs < spec.timeLimitMs;
+      (!spec.timed || saved.elapsedMs < spec.timeLimitMs);
 
   void _snapshot() => onSnapshot?.call(state);
 
@@ -167,7 +168,7 @@ class GameNotifier extends StateNotifier<GameState> {
       if (cleared) {
         sfx?.win();
         haptics?.victory();
-        onCleared?.call(spec.level, state.elapsedMs, state.stars);
+        onCleared?.call(spec.level, spec.timed ? state.elapsedMs : null, state.stars);
       } else {
         haptics?.hit();
       }
@@ -337,9 +338,10 @@ class GameNotifier extends StateNotifier<GameState> {
   }
 
   /// Advances the clock by [ms]. Public so the timer callback and tests can
-  /// drive it. Only the playing phase consumes time.
+  /// drive it. Only the playing phase consumes time, and an untimed level
+  /// counts none at all.
   void tick(int ms) {
-    if (!state.isPlaying) return;
+    if (!state.isPlaying || !spec.timed) return;
     final elapsed = state.elapsedMs + ms;
     if (elapsed >= spec.timeLimitMs) {
       _stopTimer();
@@ -383,8 +385,9 @@ const int kExtraTimeFactor = 2;
 
 /// One notifier per level, thrown away when the game screen closes. A level
 /// with a saved game comes back where it was left, paused, with the choice
-/// to continue or start over. With "extra time" on in Settings the level is
-/// dealt with its clock doubled — the same board, the same stars.
+/// to continue or start over. With "Remove time limits" on in Settings (off
+/// by default) the level is dealt untimed; otherwise "extra time" deals it
+/// with its clock doubled — the same board, the same stars either way.
 ///
 /// Level [LevelSpec.dailyLevel] (0) is today's daily board: dealt by the
 /// daily standing rather than the level table, and a clear goes to the
@@ -394,7 +397,7 @@ final gameProvider = StateNotifierProvider.autoDispose.family<GameNotifier, Game
   level,
 ) {
   final saves = ref.read(savedGameProvider.notifier);
-  final extraTime = ref.read(settingsProvider).extraTime;
+  final settings = ref.read(settingsProvider);
   final daily = level == LevelSpec.dailyLevel;
   final LevelSpec spec;
   final ClearedCallback onCleared;
@@ -407,7 +410,9 @@ final gameProvider = StateNotifierProvider.autoDispose.family<GameNotifier, Game
     onCleared = ref.read(progressProvider.notifier).recordCompletion;
   }
   return GameNotifier(
-    spec.withClockFactor(extraTime ? kExtraTimeFactor : 1),
+    settings.noTimeLimit
+        ? spec.untimed()
+        : spec.withClockFactor(settings.extraTime ? kExtraTimeFactor : 1),
     savedGame: saves.forLevel(level),
     haptics: ref.watch(hapticsProvider),
     sfx: ref.watch(sfxProvider),

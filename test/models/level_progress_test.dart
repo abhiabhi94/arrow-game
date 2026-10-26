@@ -37,6 +37,12 @@ void main() {
     expect(better.bestTimeMs, 15000);
     expect(better.isNewBest(15000), isFalse);
     expect(better.isNewBest(14999), isTrue);
+
+    // An untimed clear counts the clear and the stars, not a time.
+    final untimed = better.withCompletion(null, 2);
+    expect(untimed.timesCompleted, 4);
+    expect(untimed.bestTimeMs, 15000);
+    expect(LevelProgress.empty(1).withCompletion(null, 2).bestTimeMs, isNull);
   });
 
   test('value equality', () {

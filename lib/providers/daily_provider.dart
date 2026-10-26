@@ -39,7 +39,9 @@ class DailyStanding {
   final int? bestTodayMs;
   final int starsToday;
 
-  bool get clearedToday => bestTodayMs != null;
+  /// Cleared today — whether or not a time was counted (a board cleared with
+  /// time limits removed has no best).
+  bool get clearedToday => lastClearedDay == day;
 
   /// The streak as the home screen says it: a run that ended before
   /// yesterday is over.
@@ -146,7 +148,7 @@ class DailyNotifier extends StateNotifier<DailyStanding> {
   /// Records a clear of today's board in [timeMs] with [stars]. The streak
   /// grows by one on the first clear of a day that follows a cleared day,
   /// restarts at one after a gap, and is untouched by a second clear.
-  Future<void> recordCompletion(int timeMs, int stars) {
+  Future<void> recordCompletion(int? timeMs, int stars) {
     refresh();
     final s = state;
     final first = !s.clearedToday;
@@ -158,7 +160,9 @@ class DailyNotifier extends StateNotifier<DailyStanding> {
       chapter: s.chapter,
       streak: streak,
       lastClearedDay: s.day,
-      bestTodayMs: s.bestTodayMs == null ? timeMs : min(s.bestTodayMs!, timeMs),
+      bestTodayMs: timeMs == null
+          ? s.bestTodayMs
+          : (s.bestTodayMs == null ? timeMs : min(s.bestTodayMs!, timeMs)),
       starsToday: max(s.starsToday, stars),
     );
     state = updated;

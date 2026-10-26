@@ -789,5 +789,32 @@
         "type": "int"
       }
     }
-  }
+  },
+  "onboardRuleNoClock": "No clock — take all the time you like (Settings can add one)",
+  "settingsGameplay": "Gameplay",
+  "settingsRemoveTimeLimits": "Remove time limits",
+  "settingsRemoveTimeLimitsSubtitle": "No clock on any level — play at your own pace",
+  "homeResumeProgressUntimed": "{out} of {total} arrows out",
+  "@homeResumeProgressUntimed": {
+    "placeholders": {
+      "out": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "resumeBodyUntimed": "You left this level with {out} of {total} arrows out.",
+  "@resumeBodyUntimed": {
+    "placeholders": {
+      "out": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "gamePausedBodyUntimed": "Take a breath. The board will wait."
 }

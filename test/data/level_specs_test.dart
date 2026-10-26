@@ -210,6 +210,9 @@ void main() {
     expect(s.withVariant(3).faces, 6);
     expect(s.withClockFactor(2).faces, 6);
     expect(s.withClockFactor(2).timeLimitMs, s.timeLimitMs * 2);
+    // No clock (the default) keeps it a block too.
+    expect(s.untimed().faces, 6);
+    expect(s.untimed().seed, s.seed);
   });
 
   test('the block warms up, then never drops below level 100 and climbs a little every level', () {
