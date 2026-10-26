@@ -508,6 +508,31 @@ void main() {
     n.dispose();
   });
 
+  test('with no time limit the clock only counts: it never runs out', () {
+    final untimed = sampleSpec.untimed();
+    expect(untimed.timed, isFalse);
+    expect(untimed.seed, sampleSpec.seed);
+    expect(untimed.timeLimitMs, sampleSpec.timeLimitMs);
+    expect(untimed.untimed(), same(untimed));
+    // Re-dealing or stretching an untimed level keeps it untimed.
+    expect(untimed.withVariant(1).timed, isFalse);
+    expect(untimed.withClockFactor(2).timed, isFalse);
+
+    final n = GameNotifier(untimed, puzzle: samplePuzzle(), autoTick: false);
+    n.tick(sampleSpec.timeLimitMs * 3);
+    expect(n.state.phase, GamePhase.playing);
+    expect(n.state.elapsedMs, sampleSpec.timeLimitMs * 3);
+    n.dispose();
+  });
+
+  test('an untimed level resumes a saved game played past the clock', () {
+    const saved = SavedGame(level: 1, seed: sampleSeed, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 90000);
+    final n = GameNotifier(sampleSpec.untimed(), puzzle: samplePuzzle(), savedGame: saved, autoTick: false);
+    expect(n.state.phase, GamePhase.paused);
+    expect(n.state.elapsedMs, 90000);
+    n.dispose();
+  });
+
   test('a saved game that does not fit is ignored', () {
     const cases = <SavedGame>[
       SavedGame(level: 2, seed: 15855, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 10), // other level
@@ -556,7 +581,10 @@ void main() {
     final sub = container.listen(gameProvider(1), (_, _) {});
     addTearDown(sub.close);
     final notifier = container.read(gameProvider(1).notifier);
-    expect(notifier.spec, same(specForLevel(1)));
+    // "No time limit" is on by default: the same level, with no clock to run out.
+    expect(notifier.spec.timed, isFalse);
+    expect(notifier.spec.seed, specForLevel(1).seed);
+    expect(notifier.spec.arrows, specForLevel(1).arrows);
     expect(notifier.haptics, isNotNull);
     expect(notifier.sfx, isNotNull);
     await notifier.ready;

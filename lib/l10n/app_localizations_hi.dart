@@ -1106,4 +1106,20 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get settingsExtraTimeSubtitle => 'हर लेवल पर दुगनी घड़ी';
+
+  @override
+  String hudTimePlayed(String time) {
+    return '$time खेले, कोई समय-सीमा नहीं';
+  }
+
+  @override
+  String get settingsNoTimeLimit => 'कोई समय-सीमा नहीं';
+
+  @override
+  String get settingsNoTimeLimitSubtitle =>
+      'अपनी रफ़्तार से खेलो — घड़ी बस आगे गिनती है';
+
+  @override
+  String get onboardRuleNoClock =>
+      'कोई घड़ी नहीं — जितना चाहो समय लो (सेटिंग्स में घड़ी चालू कर सकते हो)';
 }

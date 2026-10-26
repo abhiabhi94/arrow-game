@@ -133,7 +133,7 @@ class GameNotifier extends StateNotifier<GameState> {
       saved.hintsLeft >= 0 &&
       saved.hintsLeft <= maxHints &&
       saved.elapsedMs >= 0 &&
-      saved.elapsedMs < spec.timeLimitMs;
+      (!spec.timed || saved.elapsedMs < spec.timeLimitMs);
 
   void _snapshot() => onSnapshot?.call(state);
 
@@ -336,11 +336,12 @@ class GameNotifier extends StateNotifier<GameState> {
   }
 
   /// Advances the clock by [ms]. Public so the timer callback and tests can
-  /// drive it. Only the playing phase consumes time.
+  /// drive it. Only the playing phase consumes time, and an untimed level
+  /// only counts it.
   void tick(int ms) {
     if (!state.isPlaying) return;
     final elapsed = state.elapsedMs + ms;
-    if (elapsed >= spec.timeLimitMs) {
+    if (spec.timed && elapsed >= spec.timeLimitMs) {
       _stopTimer();
       state = state.copyWith(elapsedMs: spec.timeLimitMs, phase: GamePhase.timeUp);
       sfx?.lose();
@@ -382,8 +383,9 @@ const int kExtraTimeFactor = 2;
 
 /// One notifier per level, thrown away when the game screen closes. A level
 /// with a saved game comes back where it was left, paused, with the choice
-/// to continue or start over. With "extra time" on in Settings the level is
-/// dealt with its clock doubled — the same board, the same stars.
+/// to continue or start over. With "no time limit" on in Settings (the
+/// default) the level is dealt untimed; otherwise "extra time" deals it with
+/// its clock doubled — the same board, the same stars either way.
 ///
 /// Level [LevelSpec.dailyLevel] (0) is today's daily board: dealt by the
 /// daily standing rather than the level table, and a clear goes to the
@@ -393,7 +395,7 @@ final gameProvider = StateNotifierProvider.autoDispose.family<GameNotifier, Game
   level,
 ) {
   final saves = ref.read(savedGameProvider.notifier);
-  final extraTime = ref.read(settingsProvider).extraTime;
+  final settings = ref.read(settingsProvider);
   final daily = level == LevelSpec.dailyLevel;
   final LevelSpec spec;
   final ClearedCallback onCleared;
@@ -406,7 +408,9 @@ final gameProvider = StateNotifierProvider.autoDispose.family<GameNotifier, Game
     onCleared = ref.read(progressProvider.notifier).recordCompletion;
   }
   return GameNotifier(
-    spec.withClockFactor(extraTime ? kExtraTimeFactor : 1),
+    settings.noTimeLimit
+        ? spec.untimed()
+        : spec.withClockFactor(settings.extraTime ? kExtraTimeFactor : 1),
     savedGame: saves.forLevel(level),
     haptics: ref.watch(hapticsProvider),
     sfx: ref.watch(sfxProvider),

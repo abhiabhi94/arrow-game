@@ -2011,6 +2011,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Twice the clock on every level'**
   String get settingsExtraTimeSubtitle;
+
+  /// No description provided for @hudTimePlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'{time} played, no time limit'**
+  String hudTimePlayed(String time);
+
+  /// No description provided for @settingsNoTimeLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'No time limit'**
+  String get settingsNoTimeLimit;
+
+  /// No description provided for @settingsNoTimeLimitSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Play at your own pace — the clock only counts up'**
+  String get settingsNoTimeLimitSubtitle;
+
+  /// No description provided for @onboardRuleNoClock.
+  ///
+  /// In en, this message translates to:
+  /// **'No clock — take all the time you like (Settings can add one)'**
+  String get onboardRuleNoClock;
 }
 
 class _AppLocalizationsDelegate

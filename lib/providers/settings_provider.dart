@@ -23,6 +23,7 @@ class SettingsRepository {
   static const _kLanguage = 'arrow_language';
   static const _kReduceMotion = 'arrow_reduce_motion';
   static const _kExtraTime = 'arrow_extra_time';
+  static const _kNoTimeLimit = 'arrow_no_time_limit';
 
   Settings load() {
     const d = Settings.defaults;
@@ -37,6 +38,7 @@ class SettingsRepository {
       languageChoice: _parseLanguage(_prefs.getString(_kLanguage), d.languageChoice),
       reduceMotion: _prefs.getBool(_kReduceMotion) ?? d.reduceMotion,
       extraTime: _prefs.getBool(_kExtraTime) ?? d.extraTime,
+      noTimeLimit: _prefs.getBool(_kNoTimeLimit) ?? d.noTimeLimit,
     );
   }
 
@@ -51,6 +53,7 @@ class SettingsRepository {
     await _prefs.setString(_kLanguage, s.languageChoice.name);
     await _prefs.setBool(_kReduceMotion, s.reduceMotion);
     await _prefs.setBool(_kExtraTime, s.extraTime);
+    await _prefs.setBool(_kNoTimeLimit, s.noTimeLimit);
   }
 
   /// Maps a stored language name back to [LanguageChoice], falling back to
@@ -94,6 +97,8 @@ class SettingsNotifier extends StateNotifier<Settings> {
   void setReduceMotion(bool on) => _update(state.copyWith(reduceMotion: on));
 
   void setExtraTime(bool on) => _update(state.copyWith(extraTime: on));
+
+  void setNoTimeLimit(bool on) => _update(state.copyWith(noTimeLimit: on));
 
   void completeOnboarding() => _update(state.copyWith(onboardingDone: true));
 

@@ -341,6 +341,31 @@ void main() {
     });
   });
 
+  group('no time limit', () {
+    testWidgets('the HUD counts the time played, with no bar to drain', (tester) async {
+      final handle = tester.ensureSemantics();
+      await usePhoneSurface(tester);
+      final container = await pumpApp(
+        tester,
+        const GameScreen(level: 1),
+        extraOverrides: [
+          gameProvider.overrideWith(
+            (ref, level) => GameNotifier(sampleSpecFor(level).untimed(), puzzle: samplePuzzle(), autoTick: false),
+          ),
+          ...silentFeedback(),
+        ],
+      );
+      await _settle(tester, 300);
+      final notifier = container.read(gameProvider(1).notifier);
+      notifier.tick(sampleSpecFor(1).timeLimitMs + 12_000);
+      await tester.pump();
+      expect(notifier.state.phase, GamePhase.playing);
+      expect(find.bySemanticsLabel('0:42 played, no time limit'), findsOneWidget);
+      expect(find.byType(AnimatedFractionallySizedBox), findsNothing);
+      handle.dispose();
+    });
+  });
+
   group('extra time', () {
     test('doubles the clock of every level and nothing else', () {
       expect(specForLevel(1).withClockFactor(1), same(specForLevel(1)));
@@ -367,7 +392,7 @@ void main() {
         return container;
       }
 
-      final longer = await containerWith({'arrow_extra_time': true});
+      final longer = await containerWith({'arrow_extra_time': true, 'arrow_no_time_limit': false});
       // Reading the provider starts the real generator for level 1 on an
       // isolate; the spec is set before that lands, and the notifier is
       // disposed with the container.
@@ -377,7 +402,7 @@ void main() {
       await longer.read(gameProvider(1).notifier).ready;
       sub.close();
 
-      final plain = await containerWith({});
+      final plain = await containerWith({'arrow_no_time_limit': false});
       final sub2 = plain.listen(gameProvider(1), (_, _) {});
       expect(plain.read(gameProvider(1)).spec.timeLimitMs, specForLevel(1).timeLimitMs);
       await plain.read(gameProvider(1).notifier).ready;

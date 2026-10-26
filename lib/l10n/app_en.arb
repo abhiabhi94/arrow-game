@@ -677,5 +677,16 @@
   "settingsReduceMotion": "Reduce motion",
   "settingsReduceMotionSubtitle": "No shakes, hops or confetti — the arrows still move",
   "settingsExtraTime": "Extra time",
-  "settingsExtraTimeSubtitle": "Twice the clock on every level"
+  "settingsExtraTimeSubtitle": "Twice the clock on every level",
+  "hudTimePlayed": "{time} played, no time limit",
+  "@hudTimePlayed": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsNoTimeLimit": "No time limit",
+  "settingsNoTimeLimitSubtitle": "Play at your own pace — the clock only counts up",
+  "onboardRuleNoClock": "No clock — take all the time you like (Settings can add one)"
 }

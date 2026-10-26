@@ -170,7 +170,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           onTapArrow: _two.tapArrow,
                           calm: calm,
                         ),
-                      _ => _SummaryStep(key: const ValueKey(2), calm: calm),
+                      _ => _SummaryStep(
+                          key: const ValueKey(2),
+                          calm: calm,
+                          untimed: ref.watch(settingsProvider.select((s) => s.noTimeLimit)),
+                        ),
                     },
                   ),
                 ),
@@ -348,9 +352,12 @@ class _DemoStep extends StatelessWidget {
 }
 
 class _SummaryStep extends StatelessWidget {
-  const _SummaryStep({super.key, required this.calm});
+  const _SummaryStep({super.key, required this.calm, required this.untimed});
 
   final bool calm;
+
+  /// "No time limit" is on, so the clock rule says there is none.
+  final bool untimed;
 
   @override
   Widget build(BuildContext context) {
@@ -358,7 +365,7 @@ class _SummaryStep extends StatelessWidget {
     final p = context.palette;
     final rules = <(String, String)>[
       ('❤️', l10n.onboardRuleLives),
-      ('⏱️', l10n.onboardRuleClock),
+      ('⏱️', untimed ? l10n.onboardRuleNoClock : l10n.onboardRuleClock),
       ('💡', l10n.onboardRuleHints),
       ('🔍', l10n.onboardRuleZoom),
       ('🧩', l10n.onboardRuleRiddle),

@@ -538,6 +538,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                                 child: TimerBar(
                                   remainingMs: state.remainingMs,
                                   fraction: state.timeFraction,
+                                  elapsedMs: state.spec.timed ? null : state.elapsedMs,
                                 ),
                               ),
                               const SizedBox(width: 12),

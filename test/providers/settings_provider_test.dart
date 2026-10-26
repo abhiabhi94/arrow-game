@@ -31,11 +31,13 @@ void main() {
         languageChoice: LanguageChoice.hindi,
         reduceMotion: true,
         extraTime: true,
+        noTimeLimit: false,
       );
       await SettingsRepository(prefs).save(custom);
       expect(SettingsRepository(prefs).load(), custom);
       expect(prefs.getBool('arrow_reduce_motion'), isTrue);
       expect(prefs.getBool('arrow_extra_time'), isTrue);
+      expect(prefs.getBool('arrow_no_time_limit'), isFalse);
     });
 
     test('unknown stored theme values fall back to system', () async {
@@ -70,6 +72,7 @@ void main() {
       notifier.setLanguageChoice(LanguageChoice.hindi);
       notifier.setReduceMotion(true);
       notifier.setExtraTime(true);
+      notifier.setNoTimeLimit(false);
       await Future<void>.delayed(Duration.zero);
 
       expect(
@@ -85,6 +88,7 @@ void main() {
           languageChoice: LanguageChoice.hindi,
           reduceMotion: true,
           extraTime: true,
+          noTimeLimit: false,
         ),
       );
       expect(prefs.getBool('arrow_haptics_on'), isFalse);

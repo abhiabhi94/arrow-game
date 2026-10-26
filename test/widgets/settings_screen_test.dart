@@ -19,7 +19,6 @@ void main() {
     await usePhoneSurface(tester);
     final container = await pumpApp(tester, const SettingsScreen());
     expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('How to play'), findsOneWidget);
     expect(find.text('60%'), findsOneWidget);
 
     await tester.tap(find.byType(Switch).at(1));
@@ -39,9 +38,32 @@ void main() {
     expect(container.read(settingsProvider).musicOn, isFalse);
     expect(find.byType(Slider), findsNothing);
 
+    await tester.scrollUntilVisible(find.text('Dark'), 200);
     await tester.tap(find.text('Dark'));
     await tester.pump();
     expect(container.read(settingsProvider).themeChoice, ThemeChoice.dark);
+    await tester.scrollUntilVisible(find.text('How to play'), 200);
+    expect(find.text('How to play'), findsOneWidget);
+  });
+
+  testWidgets('no time limit is on by default, and extra time waits for a clock', (tester) async {
+    await usePhoneSurface(tester);
+    final container = await pumpApp(tester, const SettingsScreen());
+    expect(container.read(settingsProvider).noTimeLimit, isTrue);
+    await tester.scrollUntilVisible(find.text('Extra time'), 200);
+    SwitchListTile tile(String title) =>
+        tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, title));
+    expect(tile('No time limit').value, isTrue);
+    // Nothing to stretch while there is no clock.
+    expect(tile('Extra time').onChanged, isNull);
+
+    await tester.tap(find.text('No time limit'));
+    await tester.pump();
+    expect(container.read(settingsProvider).noTimeLimit, isFalse);
+    expect(tile('Extra time').onChanged, isNotNull);
+    await tester.tap(find.text('Extra time'));
+    await tester.pump();
+    expect(container.read(settingsProvider).extraTime, isTrue);
   });
 
   testWidgets('picks a language, with the device as the default', (tester) async {

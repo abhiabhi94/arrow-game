@@ -25,6 +25,7 @@ class Settings {
     required this.languageChoice,
     this.reduceMotion = false,
     this.extraTime = false,
+    this.noTimeLimit = true,
   });
 
   /// Background music on/off (on by default).
@@ -67,6 +68,12 @@ class Settings {
   /// longer; stars and progress are earned the same way.
   final bool extraTime;
 
+  /// Plays every level without a clock: time is still counted (for the best
+  /// time) but never runs out, so "Time's up" never comes. On by default —
+  /// the player sets the pace, not a wall clock; switching it off brings the
+  /// level clocks (and [extraTime]) back.
+  final bool noTimeLimit;
+
   static const Settings defaults = Settings(
     musicOn: true,
     musicVolume: 0.6,
@@ -78,6 +85,7 @@ class Settings {
     languageChoice: LanguageChoice.system,
     reduceMotion: false,
     extraTime: false,
+    noTimeLimit: true,
   );
 
   Settings copyWith({
@@ -91,6 +99,7 @@ class Settings {
     LanguageChoice? languageChoice,
     bool? reduceMotion,
     bool? extraTime,
+    bool? noTimeLimit,
   }) =>
       Settings(
         musicOn: musicOn ?? this.musicOn,
@@ -103,6 +112,7 @@ class Settings {
         languageChoice: languageChoice ?? this.languageChoice,
         reduceMotion: reduceMotion ?? this.reduceMotion,
         extraTime: extraTime ?? this.extraTime,
+        noTimeLimit: noTimeLimit ?? this.noTimeLimit,
       );
 
   @override
@@ -117,7 +127,8 @@ class Settings {
       other.onboardingDone == onboardingDone &&
       other.languageChoice == languageChoice &&
       other.reduceMotion == reduceMotion &&
-      other.extraTime == extraTime;
+      other.extraTime == extraTime &&
+      other.noTimeLimit == noTimeLimit;
 
   @override
   int get hashCode => Object.hash(
@@ -131,5 +142,6 @@ class Settings {
         languageChoice,
         reduceMotion,
         extraTime,
+        noTimeLimit,
       );
 }

@@ -317,5 +317,9 @@
   "settingsReduceMotion": "हरकत कम करें",
   "settingsReduceMotionSubtitle": "कोई झटका, छलाँग या कंफ़ेटी नहीं — तीर फिर भी चलते हैं",
   "settingsExtraTime": "अतिरिक्त समय",
-  "settingsExtraTimeSubtitle": "हर लेवल पर दुगनी घड़ी"
+  "settingsExtraTimeSubtitle": "हर लेवल पर दुगनी घड़ी",
+  "hudTimePlayed": "{time} खेले, कोई समय-सीमा नहीं",
+  "settingsNoTimeLimit": "कोई समय-सीमा नहीं",
+  "settingsNoTimeLimitSubtitle": "अपनी रफ़्तार से खेलो — घड़ी बस आगे गिनती है",
+  "onboardRuleNoClock": "कोई घड़ी नहीं — जितना चाहो समय लो (सेटिंग्स में घड़ी चालू कर सकते हो)"
 }

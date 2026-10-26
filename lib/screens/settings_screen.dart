@@ -142,6 +142,16 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             _SettingCard(
+              child: SwitchListTile(
+                value: settings.noTimeLimit,
+                onChanged: notifier.setNoTimeLimit,
+                secondary: const _Emoji('⏱️'),
+                title: Text(l10n.settingsNoTimeLimit),
+                subtitle: Text(l10n.settingsNoTimeLimitSubtitle),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _SettingCard(
               child: Column(
                 children: [
                   Padding(
@@ -168,7 +178,8 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   SwitchListTile(
                     value: settings.extraTime,
-                    onChanged: notifier.setExtraTime,
+                    // Nothing to stretch while there is no clock.
+                    onChanged: settings.noTimeLimit ? null : notifier.setExtraTime,
                     title: Text(l10n.settingsExtraTime),
                     subtitle: Text(l10n.settingsExtraTimeSubtitle),
                   ),

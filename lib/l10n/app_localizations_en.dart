@@ -1108,4 +1108,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsExtraTimeSubtitle => 'Twice the clock on every level';
+
+  @override
+  String hudTimePlayed(String time) {
+    return '$time played, no time limit';
+  }
+
+  @override
+  String get settingsNoTimeLimit => 'No time limit';
+
+  @override
+  String get settingsNoTimeLimitSubtitle =>
+      'Play at your own pace — the clock only counts up';
+
+  @override
+  String get onboardRuleNoClock =>
+      'No clock — take all the time you like (Settings can add one)';
 }
