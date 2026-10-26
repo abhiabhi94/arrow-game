@@ -1,0 +1,3 @@
+• Walked away mid-riddle? It waits for you now. Reopen the level and the same riddle is right where you left it: no reshuffle, no escape hatch.
+• A riddle stays in the language it was asked in, even if you switch languages in between.
+• Small fixes and polish under the hood.

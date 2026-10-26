@@ -71,6 +71,37 @@ re-set `ANDROID_UPLOAD_KEYSTORE_BASE64` and `ANDROID_UPLOAD_KEYSTORE_PASSWORD`.
   `node tool/screenshot.mjs --levels 1,7,20 --settings --hint` (390×844;
   Play accepts any 16:9–9:16 PNG from 320 px up).
 
+### 4. Google Play API access (automatic uploads)
+
+The workflows publish to Play themselves through the Play Developer API,
+signed in as a **service account**. Once:
+
+1. **Google Cloud Console** (any project; one made for this is tidiest):
+   APIs & Services → Library → enable **Google Play Android Developer API**.
+2. IAM & Admin → Service accounts → **Create service account** (no roles
+   needed) → Keys → Add key → JSON. Keep the downloaded file safe; it is a
+   credential.
+3. **Play Console** → Users and permissions → **Invite new users** → the
+   service account's email (`…@….iam.gserviceaccount.com`) → App
+   permissions → Arrow → tick **Release apps to testing tracks** and
+   **Release to production, exclude devices, and use Play App Signing**.
+   (Access can take a few minutes to start working.)
+4. **GitHub** → Settings → Environments:
+   - `release` → add secret `PLAY_SERVICE_ACCOUNT_JSON` = the whole JSON file.
+   - `production` (create it) → the same secret again (environment secrets
+     are per environment), and under **Required reviewers** add yourself, so
+     every production release waits for an approval click.
+
+   ```bash
+   gh secret set --env release    PLAY_SERVICE_ACCOUNT_JSON < ~/keys/arrow-play.json
+   gh secret set --env production PLAY_SERVICE_ACCOUNT_JSON < ~/keys/arrow-play.json
+   ```
+
+The API cannot create the app or its first release, so the very first
+bundle goes up by hand (already done for Arrow). Without the secret the
+Release workflow still builds and attaches the bundle, and only warns that it
+uploaded nothing.
+
 ## Cutting a release
 
 From an up-to-date `main`, one command does the whole thing:
@@ -173,7 +204,7 @@ signed `.aab` and `.apk`, uploaded as the workflow artifact
 `arrow-<name>-<code>` and attached to a GitHub Release named
 "Arrow 1.0.0 (1)".
 
-To build without tagging (a dry run, or an internal-testing upload), use
+To build without tagging (a dry run, or a one-off alpha upload), use
 **Actions → Release → Run workflow**; the optional inputs override the
 version name/code for that build only.
 
@@ -186,8 +217,61 @@ Then download the artifact. It contains:
 | `arrow-<v>-mapping.txt`      | R8 mapping — upload under App bundle explorer → Downloads → "Upload ReTrace mapping file" so native/Kotlin crash reports are readable |
 | `arrow-<v>-dart-symbols.zip` | Dart obfuscation symbols; keep with the release (`flutter symbolize -d`) |
 
-In Play Console: Release → Testing (internal) or Production → Create new
-release → upload the `.aab` → release notes → review → roll out.
+## Google Play: alpha, then production
+
+Only two tracks are used, both at a 100% rollout:
+
+| Track | What puts a build there |
+|-------|-------------------------|
+| **alpha** (closed testing) | every `v*` tag — the Release workflow uploads the `.aab` and its R8 mapping after building it (a manual run does too when **upload_to_alpha** is ticked) |
+| **production** | **Actions → Promote to production → Run workflow**, then approve it |
+
+Promoting rebuilds nothing: it puts the version code that is on alpha onto
+production, so the public gets exactly the build the testers ran. Leave
+**version_code** blank for alpha's newest, or name an older one that is
+still on alpha. Both go through `tool/play_publish.mjs` (Node's own `fetch`
+and `crypto`, no dependencies).
+
+So a release is:
+
+0. Update `whatsnew/` (below) in the PRs that change something players see.
+1. `tool/bump_version.sh --push` → the build lands on alpha.
+2. Try it from the Play Store as a tester.
+3. Promote to production → approve → Google's review → live.
+
+### Release notes ("What's new")
+
+`whatsnew/en-US.txt` and `whatsnew/hi-IN.txt` are the text players read on
+the store page. The upload sends them as the alpha release's notes,
+promotion carries them to production, and the GitHub Release shows the same
+words instead of a list of merged PRs.
+
+Write them for players, not for the repository:
+
+- **What changed for them**, never how: no refactors, CI, dependency bumps,
+  tests or file names. A release with nothing visible says so in one line
+  ("Small fixes and polish under the hood").
+- **Short:** two or three bullets of one sentence each. Play's cap is 500
+  characters per language and the store shows only the first few lines.
+- **Light, but straight:** a little wit is welcome ("Walked away
+  mid-riddle? It waits for you now."), as long as the bullet still says
+  plainly what is different.
+- **Hindi is written, not translated**, the same as the riddles.
+
+The guards: `tool/bump_version.sh` refuses to cut a release while `whatsnew/`
+is unchanged since the last tag (`--same-notes` when that is really meant)
+and prints the English notes in its plan. The Release workflow runs
+`node tool/play_publish.mjs check-notes` before building, which fails on an
+empty or missing `en-US.txt` or on anything over 500 characters. A language
+the store listing does not have yet (add Hindi under Store presence → Main
+store listing → Manage translations) is skipped with a warning.
+
+Play still reviews releases on both tracks; the API only saves the clicks.
+A personal developer account opened after November 2023 also has to run a
+closed test (12 testers for 14 days) before production is unlocked at all.
+
+To do it by hand instead: Play Console → Testing → Closed testing (alpha)
+or Production → Create new release → upload the `.aab` → review → roll out.
 
 ## Building locally instead
 

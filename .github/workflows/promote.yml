@@ -1,0 +1,48 @@
+name: Promote to production
+
+# Moves a build that is already on Google Play's alpha (closed testing) track
+# onto production, at 100%. Nothing is rebuilt: production gets the very
+# version code the testers ran. Builds reach alpha through release.yml (every
+# v* tag). See docs/release.md.
+#
+# Runs in the "production" GitHub environment: give it a required reviewer
+# (Settings → Environments → production) so every production release waits
+# for an approval click. It needs its own PLAY_SERVICE_ACCOUNT_JSON secret
+# there (environment secrets are per environment).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: Version code to promote; blank = the newest release on alpha
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promote-production
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Alpha → production
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Promote
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          VERSION_CODE: ${{ github.event.inputs.version_code }}
+        run: |
+          args=()
+          [ -n "$VERSION_CODE" ] && args=(--version-code "$VERSION_CODE")
+          node tool/play_publish.mjs promote "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
