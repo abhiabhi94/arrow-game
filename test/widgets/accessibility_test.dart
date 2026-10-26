@@ -5,6 +5,7 @@ library;
 import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/models/game_state.dart';
+import 'package:arrow_game/models/saved_game.dart';
 import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
@@ -14,6 +15,7 @@ import 'package:arrow_game/screens/home_screen.dart';
 import 'package:arrow_game/screens/onboarding_screen.dart';
 import 'package:arrow_game/screens/settings_screen.dart';
 import 'package:arrow_game/widgets/puzzle_board.dart';
+import 'package:arrow_game/widgets/timer_bar.dart';
 import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
@@ -341,8 +343,8 @@ void main() {
     });
   });
 
-  group('no time limit', () {
-    testWidgets('the HUD counts the time played, with no bar to drain', (tester) async {
+  group('time limits removed', () {
+    testWidgets('the HUD has no clock at all, and the clock never runs out', (tester) async {
       final handle = tester.ensureSemantics();
       await usePhoneSurface(tester);
       final container = await pumpApp(
@@ -356,13 +358,47 @@ void main() {
         ],
       );
       await _settle(tester, 300);
+      expect(find.byType(TimerBar), findsNothing);
+      expect(find.bySemanticsLabel(RegExp('on the clock')), findsNothing);
+      expect(find.bySemanticsLabel('0 of 3 arrows out'), findsOneWidget);
       final notifier = container.read(gameProvider(1).notifier);
-      notifier.tick(sampleSpecFor(1).timeLimitMs + 12_000);
+      notifier.tick(sampleSpecFor(1).timeLimitMs * 2);
       await tester.pump();
       expect(notifier.state.phase, GamePhase.playing);
-      expect(find.bySemanticsLabel('0:42 played, no time limit'), findsOneWidget);
-      expect(find.byType(AnimatedFractionallySizedBox), findsNothing);
+
+      // Paused, the card does not talk about a clock either.
+      notifier.pause();
+      await _settle(tester, 300);
+      expect(find.text('Take a breath. The board will wait.'), findsOneWidget);
       handle.dispose();
+    });
+
+    testWidgets('the welcome-back card does not mention a clock', (tester) async {
+      await usePhoneSurface(tester);
+      await pumpApp(
+        tester,
+        const GameScreen(level: 1),
+        extraOverrides: [
+          gameProvider.overrideWith(
+            (ref, level) => GameNotifier(
+              sampleSpecFor(level).untimed(),
+              puzzle: samplePuzzle(),
+              savedGame: const SavedGame(
+                level: 1,
+                seed: sampleSeed,
+                removed: [1],
+                mistakes: 0,
+                hintsLeft: 3,
+                elapsedMs: 90_000,
+              ),
+              autoTick: false,
+            ),
+          ),
+          ...silentFeedback(),
+        ],
+      );
+      await _settle(tester, 300);
+      expect(find.text('You left this level with 1 of 3 arrows out.'), findsOneWidget);
     });
   });
 

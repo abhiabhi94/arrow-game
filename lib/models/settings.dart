@@ -68,10 +68,11 @@ class Settings {
   /// longer; stars and progress are earned the same way.
   final bool extraTime;
 
-  /// Plays every level without a clock: time is still counted (for the best
-  /// time) but never runs out, so "Time's up" never comes. On by default —
-  /// the player sets the pace, not a wall clock; switching it off brings the
-  /// level clocks (and [extraTime]) back.
+  /// "Remove time limits": no level has a clock — none on screen, and
+  /// "Time's up" never comes (the time played is still kept, quietly, for
+  /// best times). On by default — the player sets the pace, not a wall clock;
+  /// switching it off brings back the clocks that count down to zero (and
+  /// [extraTime]).
   final bool noTimeLimit;
 
   static const Settings defaults = Settings(

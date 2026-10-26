@@ -318,8 +318,11 @@
   "settingsReduceMotionSubtitle": "कोई झटका, छलाँग या कंफ़ेटी नहीं — तीर फिर भी चलते हैं",
   "settingsExtraTime": "अतिरिक्त समय",
   "settingsExtraTimeSubtitle": "हर लेवल पर दुगनी घड़ी",
-  "hudTimePlayed": "{time} खेले, कोई समय-सीमा नहीं",
-  "settingsNoTimeLimit": "कोई समय-सीमा नहीं",
-  "settingsNoTimeLimitSubtitle": "अपनी रफ़्तार से खेलो — घड़ी बस आगे गिनती है",
-  "onboardRuleNoClock": "कोई घड़ी नहीं — जितना चाहो समय लो (सेटिंग्स में घड़ी चालू कर सकते हो)"
+  "onboardRuleNoClock": "कोई घड़ी नहीं — जितना चाहो समय लो (सेटिंग्स में घड़ी चालू कर सकते हो)",
+  "settingsGameplay": "खेल",
+  "settingsRemoveTimeLimits": "समय-सीमा हटाएँ",
+  "settingsRemoveTimeLimitsSubtitle": "किसी लेवल पर घड़ी नहीं — अपनी रफ़्तार से खेलो",
+  "homeResumeProgressUntimed": "{total} में से {out} तीर बाहर",
+  "resumeBodyUntimed": "आपने यह लेवल {total} में से {out} तीर बाहर के साथ छोड़ा था।",
+  "gamePausedBodyUntimed": "साँस ले लीजिए। बोर्ड इंतज़ार करेगा।"
 }

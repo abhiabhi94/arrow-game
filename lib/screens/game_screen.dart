@@ -534,13 +534,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
                           padding: _gutter,
                           child: Row(
                             children: [
-                              Expanded(
-                                child: TimerBar(
-                                  remainingMs: state.remainingMs,
-                                  fraction: state.timeFraction,
-                                  elapsedMs: state.spec.timed ? null : state.elapsedMs,
-                                ),
-                              ),
+                              // With time limits removed there is no clock at all.
+                              if (state.spec.timed)
+                                Expanded(
+                                  child: TimerBar(
+                                    remainingMs: state.remainingMs,
+                                    fraction: state.timeFraction,
+                                  ),
+                                )
+                              else
+                                const Spacer(),
                               const SizedBox(width: 12),
                               _ArrowsOut(out: state.arrowsOut, total: state.arrowsTotal),
                               const SizedBox(width: 12),
@@ -671,11 +674,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 GamePhase.paused when state.resumeOffered => ResultCard(
                   emoji: '👋',
                   title: l10n.resumeTitle,
-                  body: l10n.resumeBody(
-                    state.arrowsOut,
-                    state.arrowsTotal,
-                    formatDurationMs(state.elapsedMs),
-                  ),
+                  body: state.spec.timed
+                      ? l10n.resumeBody(
+                          state.arrowsOut,
+                          state.arrowsTotal,
+                          formatDurationMs(state.elapsedMs),
+                        )
+                      : l10n.resumeBodyUntimed(state.arrowsOut, state.arrowsTotal),
                   actions: [
                     FilledButton(onPressed: notifier.resume, child: Text(l10n.resumeContinue)),
                     OutlinedButton(onPressed: _restart, child: Text(l10n.resumeStartOver)),
@@ -688,7 +693,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 GamePhase.paused => ResultCard(
                   emoji: '⏸️',
                   title: l10n.gamePaused,
-                  body: l10n.gamePausedBody,
+                  body: state.spec.timed ? l10n.gamePausedBody : l10n.gamePausedBodyUntimed,
                   actions: [
                     FilledButton(onPressed: notifier.resume, child: Text(l10n.gameResume)),
                     OutlinedButton(

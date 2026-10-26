@@ -356,7 +356,7 @@ class _SummaryStep extends StatelessWidget {
 
   final bool calm;
 
-  /// "No time limit" is on, so the clock rule says there is none.
+  /// "Remove time limits" is on, so the clock rule says there is none.
   final bool untimed;
 
   @override

@@ -33,8 +33,8 @@ and the pointer from a tapped lock to its key are the one new colour),
 3 lives per level (spend them all and a
 card asks for a riddle: crack it and the level carries on for one more
 mistake, then asks again — or start fresh), a clock on every level ("Time's
-up" → replay the same level) that is off by default (Settings → **No time
-limit**, on out of the box: the HUD counts the time played up instead), 3 hints per level, zoom in/out, a grid-lines
+up" → replay the same level) that is off by default (Settings → Gameplay →
+**Remove time limits**, on out of the box: no clock on any level), 3 hints per level, zoom in/out, a grid-lines
 toggle earned after level 4 and on by default from there, 1–3 stars per
 clear, local progress, light/dark theme, English and हिन्दी (following the
 device by default), haptic feedback.
@@ -863,18 +863,22 @@ Key patterns:
     moves that carries no information: no screen jolt, hop, confetti, slump,
     shake or entrance animation, a still hint glow, a bump that flashes
     without travelling (`_BoardPainter.travel` = 0). Arrows still slide out.
-  - *Time.* Settings → **No time limit** (`Settings.noTimeLimit`,
+  - *Time.* Settings opens on a **Gameplay** card of its own (apart from
+    sound and looks; `_CardHeading` is the heading it shares with
+    Accessibility). **Remove time limits** (`Settings.noTimeLimit`,
     `arrow_no_time_limit`, **on by default**) deals every level, the daily
-    board too, with `LevelSpec.untimed()` (`timed: false`): `tick` still
-    counts `elapsedMs` (best times, the resume card) but never ends the
-    level, a saved game fits whatever its clock reads, and `TimerBar` is a
-    count-up stopwatch with no bar ("0:42 played, no time limit"). The
-    player sets the pace, not a wall clock; the onboarding's clock rule
-    says so too. Switched off, the level clocks come back, and **Extra
-    time** (disabled while there is no clock) doubles them
-    (`LevelSpec.withClockFactor`, applied in `gameProvider`; the seed, board
-    and stars are untouched, so saved games still fit). The curve is brisk
-    by design; this is the opt-out for hands and eyes that need longer.
+    board too, with `LevelSpec.untimed()` (`timed: false`): there is no clock
+    at all — no `TimerBar` in the HUD, and the pause card, the "Welcome back"
+    card and home's Continue line say nothing about one (`*Untimed`
+    strings); `tick` still keeps `elapsedMs` quietly (best times) but never
+    ends the level, and a saved game fits whatever it reads. The player sets
+    the pace, not a wall clock; the onboarding's clock rule says so too.
+    Switched off, every level's clock counts down to zero as before, and
+    **Extra time** (the card's second switch, disabled while there is no
+    clock) doubles it (`LevelSpec.withClockFactor`, applied in
+    `gameProvider`; the seed, board and stars are untouched, so saved games
+    still fit). The curve is brisk by design; this is the opt-out for hands
+    and eyes that need longer.
   - *Touch targets.* Everything tappable is ≥ 44 px (the riddle's hint chip
     was 34). Cells on late boards are the game's own problem and the zoom's
     answer (`kFingerCellPx`).

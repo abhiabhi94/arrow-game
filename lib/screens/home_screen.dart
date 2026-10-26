@@ -15,6 +15,7 @@ import '../models/level_spec.dart';
 import '../providers/daily_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/saved_game_provider.dart';
+import '../providers/settings_provider.dart';
 import '../ui/colors.dart';
 import '../ui/layout.dart';
 import '../ui/motion.dart';
@@ -46,6 +47,8 @@ class HomeScreen extends ConsumerWidget {
     // A daily board left mid-way is the daily card's to offer.
     final saved = ref.watch(savedGameProvider);
     final savedLevel = saved != null && saved.level != LevelSpec.dailyLevel ? saved : null;
+    // With time limits removed a level has no clock to report.
+    final untimed = ref.watch(settingsProvider.select((s) => s.noTimeLimit));
     final heroLevel = savedLevel?.level ?? nextLevel;
     final daily = ref.watch(dailyProvider);
     final dailyNotifier = ref.read(dailyProvider.notifier)..refresh();
@@ -94,11 +97,16 @@ class HomeScreen extends ConsumerWidget {
                           allCleared: allCleared,
                           resume: savedLevel == null
                               ? null
-                              : l10n.homeResumeProgress(
-                                  savedLevel.arrowsOut,
-                                  specForLevel(savedLevel.level).arrows,
-                                  formatDurationMs(savedLevel.elapsedMs),
-                                ),
+                              : untimed
+                                  ? l10n.homeResumeProgressUntimed(
+                                      savedLevel.arrowsOut,
+                                      specForLevel(savedLevel.level).arrows,
+                                    )
+                                  : l10n.homeResumeProgress(
+                                      savedLevel.arrowsOut,
+                                      specForLevel(savedLevel.level).arrows,
+                                      formatDurationMs(savedLevel.elapsedMs),
+                                    ),
                           onPlay: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(
                               builder: (_) => GameScreen(level: heroLevel),

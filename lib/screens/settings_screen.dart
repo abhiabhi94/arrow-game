@@ -71,6 +71,28 @@ class SettingsScreen extends ConsumerWidget {
               contentGutter(constraints.maxWidth) +
               MediaQuery.paddingOf(context),
           children: [
+            // How the game plays, apart from how it sounds and looks.
+            _SettingCard(
+              child: Column(
+                children: [
+                  _CardHeading(emoji: '🎮', title: l10n.settingsGameplay),
+                  SwitchListTile(
+                    value: settings.noTimeLimit,
+                    onChanged: notifier.setNoTimeLimit,
+                    title: Text(l10n.settingsRemoveTimeLimits),
+                    subtitle: Text(l10n.settingsRemoveTimeLimitsSubtitle),
+                  ),
+                  SwitchListTile(
+                    value: settings.extraTime,
+                    // Nothing to stretch while there is no clock.
+                    onChanged: settings.noTimeLimit ? null : notifier.setExtraTime,
+                    title: Text(l10n.settingsExtraTime),
+                    subtitle: Text(l10n.settingsExtraTimeSubtitle),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             _SettingCard(
               child: Column(
                 children: [
@@ -142,46 +164,14 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             _SettingCard(
-              child: SwitchListTile(
-                value: settings.noTimeLimit,
-                onChanged: notifier.setNoTimeLimit,
-                secondary: const _Emoji('⏱️'),
-                title: Text(l10n.settingsNoTimeLimit),
-                subtitle: Text(l10n.settingsNoTimeLimitSubtitle),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _SettingCard(
               child: Column(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Row(
-                      children: [
-                        const _Emoji('♿'),
-                        const SizedBox(width: 12),
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            l10n.settingsAccessibility,
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _CardHeading(emoji: '♿', title: l10n.settingsAccessibility),
                   SwitchListTile(
                     value: settings.reduceMotion,
                     onChanged: notifier.setReduceMotion,
                     title: Text(l10n.settingsReduceMotion),
                     subtitle: Text(l10n.settingsReduceMotionSubtitle),
-                  ),
-                  SwitchListTile(
-                    value: settings.extraTime,
-                    // Nothing to stretch while there is no clock.
-                    onChanged: settings.noTimeLimit ? null : notifier.setExtraTime,
-                    title: Text(l10n.settingsExtraTime),
-                    subtitle: Text(l10n.settingsExtraTimeSubtitle),
                   ),
                 ],
               ),
@@ -315,6 +305,32 @@ class _Emoji extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       ExcludeSemantics(child: Text(emoji, style: const TextStyle(fontSize: 24)));
+}
+
+/// The emoji and spoken heading at the top of a card that groups switches.
+class _CardHeading extends StatelessWidget {
+  const _CardHeading({required this.emoji, required this.title});
+
+  final String emoji;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: Row(
+          children: [
+            _Emoji(emoji),
+            const SizedBox(width: 12),
+            Semantics(
+              header: true,
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _SettingCard extends StatelessWidget {

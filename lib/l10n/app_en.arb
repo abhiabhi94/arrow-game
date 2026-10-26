@@ -678,15 +678,31 @@
   "settingsReduceMotionSubtitle": "No shakes, hops or confetti — the arrows still move",
   "settingsExtraTime": "Extra time",
   "settingsExtraTimeSubtitle": "Twice the clock on every level",
-  "hudTimePlayed": "{time} played, no time limit",
-  "@hudTimePlayed": {
+  "onboardRuleNoClock": "No clock — take all the time you like (Settings can add one)",
+  "settingsGameplay": "Gameplay",
+  "settingsRemoveTimeLimits": "Remove time limits",
+  "settingsRemoveTimeLimitsSubtitle": "No clock on any level — play at your own pace",
+  "homeResumeProgressUntimed": "{out} of {total} arrows out",
+  "@homeResumeProgressUntimed": {
     "placeholders": {
-      "time": {
-        "type": "String"
+      "out": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
       }
     }
   },
-  "settingsNoTimeLimit": "No time limit",
-  "settingsNoTimeLimitSubtitle": "Play at your own pace — the clock only counts up",
-  "onboardRuleNoClock": "No clock — take all the time you like (Settings can add one)"
+  "resumeBodyUntimed": "You left this level with {out} of {total} arrows out.",
+  "@resumeBodyUntimed": {
+    "placeholders": {
+      "out": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "gamePausedBodyUntimed": "Take a breath. The board will wait."
 }

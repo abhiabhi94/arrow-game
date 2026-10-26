@@ -11,22 +11,15 @@ import '../utils/format.dart';
 /// The last quarter is not colour alone: the icon changes to an alarm. To a
 /// screen reader the whole row is one node, "0:30 left on the clock" — not a
 /// live region, since it changes ten times a second.
-///
-/// On an untimed level ([elapsedMs] given) there is nothing to drain: the row
-/// is a stopwatch counting up the time played, with no bar and no warning.
 class TimerBar extends StatelessWidget {
   const TimerBar({
     super.key,
     required this.remainingMs,
     required this.fraction,
-    this.elapsedMs,
   });
 
   final int remainingMs;
   final double fraction;
-
-  /// The time played on an untimed level; null when the clock can run out.
-  final int? elapsedMs;
 
   static const double _warnBelow = 0.25;
 
@@ -34,13 +27,10 @@ class TimerBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final l10n = AppLocalizations.of(context)!;
-    final played = elapsedMs;
-    final warn = played == null && fraction < _warnBelow;
-    final time = played == null
-        ? formatTimeLeft(remainingMs)
-        : formatDurationMs(played);
+    final warn = fraction < _warnBelow;
+    final time = formatTimeLeft(remainingMs);
     return Semantics(
-      label: played == null ? l10n.hudTimeLeft(time) : l10n.hudTimePlayed(time),
+      label: l10n.hudTimeLeft(time),
       excludeSemantics: true,
       child: Row(
         children: [
@@ -65,26 +55,23 @@ class TimerBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          if (played != null)
-            const Spacer()
-          else
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  height: 10,
-                  color: p.timerTrack,
-                  alignment: Alignment.centerLeft,
-                  child: AnimatedFractionallySizedBox(
-                    duration: const Duration(milliseconds: kTickMs),
-                    curve: Curves.linear,
-                    widthFactor: fraction.clamp(0.0, 1.0),
-                    heightFactor: 1,
-                    child: ColoredBox(color: warn ? p.timerWarn : p.timerFill),
-                  ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                height: 10,
+                color: p.timerTrack,
+                alignment: Alignment.centerLeft,
+                child: AnimatedFractionallySizedBox(
+                  duration: const Duration(milliseconds: kTickMs),
+                  curve: Curves.linear,
+                  widthFactor: fraction.clamp(0.0, 1.0),
+                  heightFactor: 1,
+                  child: ColoredBox(color: warn ? p.timerWarn : p.timerFill),
                 ),
               ),
             ),
+          ),
         ],
       ),
     );

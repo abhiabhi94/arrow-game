@@ -581,7 +581,7 @@ void main() {
     final sub = container.listen(gameProvider(1), (_, _) {});
     addTearDown(sub.close);
     final notifier = container.read(gameProvider(1).notifier);
-    // "No time limit" is on by default: the same level, with no clock to run out.
+    // Time limits are removed by default: the same level, with no clock.
     expect(notifier.spec.timed, isFalse);
     expect(notifier.spec.seed, specForLevel(1).seed);
     expect(notifier.spec.arrows, specForLevel(1).arrows);
