@@ -1,74 +1,6 @@
 {
  "changed": [
   [
-   "home-light-resume.png",
-   8
-  ],
-  [
-   "home-scrolled-light-resume.png",
-   7
-  ],
-  [
-   "home-scrolled-light.png",
-   8
-  ],
-  [
-   "level-01-hint-light.png",
-   1
-  ],
-  [
-   "level-01-keys-light-1440x900.png",
-   2
-  ],
-  [
-   "level-01-light-1440x900.png",
-   2
-  ],
-  [
-   "level-01-light.png",
-   1
-  ],
-  [
-   "level-01-outoflives-light.png",
-   1
-  ],
-  [
-   "level-01-riddle-hint-light.png",
-   1
-  ],
-  [
-   "level-01-riddle-letter-light.png",
-   1
-  ],
-  [
-   "level-01-riddle-light.png",
-   1
-  ],
-  [
-   "level-01-riddle-solved-light.png",
-   1
-  ],
-  [
-   "level-03-light-resume.png",
-   4
-  ],
-  [
-   "level-16-dark-grid.png",
-   1
-  ],
-  [
-   "level-16-hint-dark-grid.png",
-   1
-  ],
-  [
-   "level-20-hint-light.png",
-   2
-  ],
-  [
-   "level-20-light.png",
-   1
-  ],
-  [
    "settings-light.png",
    7
   ]
@@ -76,8 +8,25 @@
  "same": [
   "home-dark-grid.png",
   "home-light-1440x900.png",
+  "home-light-resume.png",
   "home-light.png",
   "home-scrolled-dark-grid.png",
+  "home-scrolled-light-resume.png",
+  "home-scrolled-light.png",
+  "level-01-hint-light.png",
+  "level-01-keys-light-1440x900.png",
+  "level-01-light-1440x900.png",
+  "level-01-light.png",
+  "level-01-outoflives-light.png",
+  "level-01-riddle-hint-light.png",
+  "level-01-riddle-letter-light.png",
+  "level-01-riddle-light.png",
+  "level-01-riddle-solved-light.png",
+  "level-03-light-resume.png",
+  "level-16-dark-grid.png",
+  "level-16-hint-dark-grid.png",
+  "level-20-hint-light.png",
+  "level-20-light.png",
   "onboarding-light.png"
  ],
  "only_after": [],
