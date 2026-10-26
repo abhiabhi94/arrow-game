@@ -9,7 +9,7 @@ enum Beat { teach, climb }
 Beat beatOf(int level) => chapterOf(level).firstLevel == level ? Beat.teach : Beat.climb;
 
 /// The flat chapters (the first hundred levels), and their levels.
-final List<Chapter> flatChapters = chapters.where((c) => c.rule != ChapterRule.cube).toList();
+final List<Chapter> flatChapters = chapters.where((c) => !c.rule.onBlock).toList();
 final List<LevelSpec> flatSpecs = levelSpecs.where((s) => !s.isCube).toList();
 
 /// A level's clock as its rule worked it out, before [kClockTrim]: the
@@ -17,15 +17,15 @@ final List<LevelSpec> flatSpecs = levelSpecs.where((s) => !s.isCube).toList();
 int untrimmed(LevelSpec s) => (s.timeLimitMs / kClockTrim).round();
 
 void main() {
-  test('there are 150 levels, numbered 1..150 in order', () {
-    expect(totalLevels, 150);
+  test('there are 200 levels, numbered 1..200 in order', () {
+    expect(totalLevels, 200);
     expect(levelSpecs, hasLength(totalLevels));
     for (var i = 0; i < levelSpecs.length; i++) {
       expect(levelSpecs[i].level, i + 1);
       expect(specForLevel(i + 1), same(levelSpecs[i]));
     }
     expect(() => specForLevel(0), throwsRangeError);
-    expect(() => specForLevel(151), throwsRangeError);
+    expect(() => specForLevel(201), throwsRangeError);
   });
 
   test('the first chapter is the plain rectangle, growing every level', () {
@@ -197,8 +197,11 @@ void main() {
       final s = specForLevel(level);
       expect(s.timeLimitMs, lessThan(600000), reason: 'level $level');
       // A face is a small board, quicker to read than level 100's one big
-      // one: 2.4 s an arrow before the twists' seconds.
-      expect(pace(s), greaterThanOrEqualTo(2400), reason: 'level $level');
+      // one: 2.4 s an arrow before the twists' seconds — until the clock
+      // reaches its ten-minute cap, where the squeeze holds it.
+      if (untrimmed(s) < 599000) {
+        expect(pace(s), greaterThanOrEqualTo(2400), reason: 'level $level');
+      }
       // Room on each face: ~9.5 free cells an arrow (a face grows a whole
       // row and column at a time, so a little more just after it grows).
       expect(s.freeCellCount / s.arrows, inInclusiveRange(8.5, 13.0), reason: 'level $level');
@@ -216,7 +219,7 @@ void main() {
   });
 
   test('the block warms up, then never drops below level 100 and climbs a little every level', () {
-    final cube = chapters.last;
+    final cube = chapters[5];
     expect(cube.rule, ChapterRule.cube);
     // How much there is to do on a board: the arrows and the twists, each
     // twist weighed like the seconds the clock gives it.
@@ -263,6 +266,53 @@ void main() {
     for (var level = cube.firstLevel; level <= cube.lastLevel; level++) {
       final s = specForLevel(level);
       expect((s.arrows / s.faces).ceil(), lessThanOrEqualTo(30), reason: 'level $level');
+      expect(s.width, lessThanOrEqualTo(18), reason: 'level $level');
+    }
+  });
+
+  test('the squeeze packs the block tighter and climbs on from level 150', () {
+    final squeeze = chapters.last;
+    expect(squeeze.rule, ChapterRule.squeeze);
+    int work(LevelSpec s) {
+      final f = s.features;
+      return s.arrows + 2 * f.mirrors + 4 * f.locks + 3 * f.hidden + 3 * f.pairs;
+    }
+
+    // One way out of each face at a time, from the teaching cube on.
+    for (var level = squeeze.firstLevel; level <= squeeze.lastLevel; level++) {
+      final s = specForLevel(level);
+      expect(s.isCube, isTrue, reason: 'level $level');
+      expect(s.openMoves, 1, reason: 'level $level');
+    }
+    // A small teaching cube with no twists, then all four twists on every
+    // face through the warm-up.
+    final teach = specForLevel(squeeze.firstLevel);
+    expect(teach.features.isPlain, isTrue);
+    expect(teach.arrows, lessThanOrEqualTo(6 * 6));
+    for (var level = squeeze.firstLevel + 1; level <= squeeze.lastLevel; level++) {
+      final s = specForLevel(level);
+      final f = s.features;
+      for (final n in <int>[f.mirrors, f.locks, f.hidden, f.pairs]) {
+        expect(n, greaterThanOrEqualTo(s.faces), reason: 'level $level: every twist on every face');
+      }
+    }
+    // Past the warm-up it starts a little above level 150 and every level
+    // is a little more than the one before, by an arrow or a twist.
+    final block = specForLevel(squeeze.firstLevel - 1);
+    expect(work(specForLevel(squeeze.firstLevel + 4)), greaterThan(work(block)));
+    for (var level = squeeze.firstLevel + 2; level <= squeeze.lastLevel; level++) {
+      final prev = specForLevel(level - 1);
+      final cur = specForLevel(level);
+      expect(work(cur), greaterThan(work(prev)), reason: 'level $level');
+      expect(cur.arrows, greaterThanOrEqualTo(prev.arrows), reason: 'level $level');
+      expect(cur.width, greaterThanOrEqualTo(prev.width), reason: 'level $level');
+      expect(cur.timeLimitMs, greaterThanOrEqualTo(prev.timeLimitMs), reason: 'level $level');
+    }
+    expect(work(specForLevel(totalLevels)), greaterThan(work(block) * 1.15));
+    // Still never a big board: at most thirty-four arrows on a face.
+    for (var level = squeeze.firstLevel; level <= squeeze.lastLevel; level++) {
+      final s = specForLevel(level);
+      expect((s.arrows / s.faces).ceil(), lessThanOrEqualTo(34), reason: 'level $level');
       expect(s.width, lessThanOrEqualTo(18), reason: 'level $level');
     }
   });

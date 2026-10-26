@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/pump_app.dart';
 
 void main() {
-  for (final rule in ChapterRule.values.where((r) => r != ChapterRule.cube)) {
+  for (final rule in ChapterRule.values.where((r) => !r.onBlock)) {
     testWidgets('the ${rule.name} demo plays its script and starts over', (tester) async {
       await pumpApp(tester, Center(child: SizedBox(width: 300, child: ChapterDemoBoard(rule: rule))));
       expect(find.byType(PuzzleBoard), findsOneWidget);
@@ -43,6 +43,19 @@ void main() {
     expect(shown.toSet(), containsAll(<int>[0, 1, 2, 3]));
     expect(shown.where((f) => f == 0).length, greaterThan(1));
     expect(find.byType(PuzzleBoard), findsNWidgets(3));
+  });
+
+  testWidgets('the squeeze\'s demo clears the front face, then turns to the next', (tester) async {
+    await pumpApp(tester, const Center(child: SizedBox(width: 300, child: ChapterDemoBoard(rule: ChapterRule.squeeze))));
+    expect(find.byType(CubeStage), findsOneWidget);
+    final shown = <int>[];
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.takeException(), isNull, reason: 'step $i');
+      final face = tester.widget<CubeStage>(find.byType(CubeStage)).face;
+      if (shown.isEmpty || shown.last != face) shown.add(face);
+    }
+    expect(shown.take(2), <int>[0, 1]);
   });
 
   testWidgets('with motion reduced the demo stands still', (tester) async {

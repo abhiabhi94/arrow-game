@@ -1,5 +1,5 @@
-/// The 150 levels, in six chapters (`data/chapters.dart`): five flat
-/// chapters of twenty, then fifty levels on the block.
+/// The 200 levels, in seven chapters (`data/chapters.dart`): five flat
+/// chapters of twenty, then two chapters of fifty on the block.
 ///
 /// **Levels 1–20** are the plain rectangle: one rule, the board growing
 /// every level from 5 arrows on 5×6 to 144 on 32×50, with the clock brisk
@@ -53,11 +53,22 @@
 /// twists' seconds and 2 s a face for turning the block, and the generator
 /// re-deals each face on its own until it keeps the rules, so no cube level
 /// needs a variant.
+///
+/// **Levels 151–200** are the squeeze, the block again with each face
+/// packed so that one way out at a time is the aim (`openMoves` 1 where the
+/// block has 2): a small teaching cube with no twists, three warm-up levels
+/// with all four twists on faces of 20, 25 and 28 arrows, then from level
+/// 155 a little more than level 150 (178 arrows and its twists), one level
+/// gaining an arrow and the next a twist, to 200 arrows with 42 mirrors and
+/// 18, 17 and 16 locks, hidden heads and pairs — every level a little more
+/// than the one before, a face never over thirty-four arrows. Past the
+/// warm-up the clock sits at the ten-minute cap, so the work grows and the
+/// time does not.
 library;
 
 import '../models/level_spec.dart';
 
-const int totalLevels = 150;
+const int totalLevels = 200;
 
 /// The share of the worked-out clock every level gets: each clock below is
 /// the rule's (`tool/make_levels.dart`, and levels 1–20 as first tuned)
@@ -215,6 +226,56 @@ const List<LevelSpec> levelSpecs = <LevelSpec>[
   LevelSpec(level: 148, width: 17, height: 17, arrows: 175, minLength: 3, maxLength: 14, timeLimitMs: 556700, openMoves: 2, features: LevelFeatures(mirrors: 29, locks: 11, hidden: 11, pairs: 11), faces: 6),
   LevelSpec(level: 149, width: 17, height: 17, arrows: 176, minLength: 3, maxLength: 14, timeLimitMs: 558980, openMoves: 2, features: LevelFeatures(mirrors: 29, locks: 11, hidden: 11, pairs: 11), faces: 6),
   LevelSpec(level: 150, width: 17, height: 17, arrows: 177, minLength: 3, maxLength: 14, timeLimitMs: 566010, openMoves: 2, features: LevelFeatures(mirrors: 30, locks: 12, hidden: 11, pairs: 11), faces: 6),
+  LevelSpec(level: 151, width: 8, height: 8, arrows: 36, minLength: 2, maxLength: 5, timeLimitMs: 137750, openMoves: 1, faces: 6),
+  LevelSpec(level: 152, width: 14, height: 14, arrows: 120, minLength: 3, maxLength: 13, timeLimitMs: 367650, openMoves: 1, features: LevelFeatures(mirrors: 12, locks: 6, hidden: 6, pairs: 6), faces: 6),
+  LevelSpec(level: 153, width: 16, height: 16, arrows: 150, minLength: 3, maxLength: 15, timeLimitMs: 438900, openMoves: 1, features: LevelFeatures(mirrors: 15, locks: 6, hidden: 6, pairs: 6), faces: 6),
+  LevelSpec(level: 154, width: 16, height: 16, arrows: 168, minLength: 3, maxLength: 15, timeLimitMs: 482790, openMoves: 1, features: LevelFeatures(mirrors: 18, locks: 6, hidden: 6, pairs: 6), faces: 6),
+  LevelSpec(level: 155, width: 17, height: 17, arrows: 178, minLength: 3, maxLength: 15, timeLimitMs: 568290, openMoves: 1, features: LevelFeatures(mirrors: 30, locks: 12, hidden: 11, pairs: 11), faces: 6),
+  LevelSpec(level: 156, width: 17, height: 17, arrows: 178, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 32, locks: 12, hidden: 11, pairs: 11), faces: 6),
+  LevelSpec(level: 157, width: 17, height: 17, arrows: 179, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 32, locks: 12, hidden: 11, pairs: 11), faces: 6),
+  LevelSpec(level: 158, width: 17, height: 17, arrows: 179, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 32, locks: 13, hidden: 11, pairs: 11), faces: 6),
+  LevelSpec(level: 159, width: 17, height: 17, arrows: 180, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 32, locks: 13, hidden: 11, pairs: 11), faces: 6),
+  LevelSpec(level: 160, width: 17, height: 17, arrows: 180, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 32, locks: 13, hidden: 12, pairs: 11), faces: 6),
+  LevelSpec(level: 161, width: 17, height: 17, arrows: 181, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 32, locks: 13, hidden: 12, pairs: 11), faces: 6),
+  LevelSpec(level: 162, width: 17, height: 17, arrows: 181, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 32, locks: 13, hidden: 12, pairs: 12), faces: 6),
+  LevelSpec(level: 163, width: 17, height: 17, arrows: 182, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 32, locks: 13, hidden: 12, pairs: 12), faces: 6),
+  LevelSpec(level: 164, width: 17, height: 17, arrows: 182, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 34, locks: 13, hidden: 12, pairs: 12), faces: 6),
+  LevelSpec(level: 165, width: 17, height: 17, arrows: 183, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 34, locks: 13, hidden: 12, pairs: 12), faces: 6),
+  LevelSpec(level: 166, width: 17, height: 17, arrows: 183, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 34, locks: 14, hidden: 12, pairs: 12), faces: 6),
+  LevelSpec(level: 167, width: 17, height: 17, arrows: 184, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 34, locks: 14, hidden: 12, pairs: 12), faces: 6),
+  LevelSpec(level: 168, width: 17, height: 17, arrows: 184, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 34, locks: 14, hidden: 13, pairs: 12), faces: 6),
+  LevelSpec(level: 169, width: 17, height: 17, arrows: 185, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 34, locks: 14, hidden: 13, pairs: 12), faces: 6),
+  LevelSpec(level: 170, width: 17, height: 17, arrows: 185, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 34, locks: 14, hidden: 13, pairs: 13), faces: 6),
+  LevelSpec(level: 171, width: 17, height: 17, arrows: 186, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 34, locks: 14, hidden: 13, pairs: 13), faces: 6),
+  LevelSpec(level: 172, width: 17, height: 17, arrows: 186, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 36, locks: 14, hidden: 13, pairs: 13), faces: 6),
+  LevelSpec(level: 173, width: 18, height: 18, arrows: 187, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 36, locks: 14, hidden: 13, pairs: 13), faces: 6),
+  LevelSpec(level: 174, width: 18, height: 18, arrows: 187, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 36, locks: 15, hidden: 13, pairs: 13), faces: 6),
+  LevelSpec(level: 175, width: 18, height: 18, arrows: 188, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 36, locks: 15, hidden: 13, pairs: 13), faces: 6),
+  LevelSpec(level: 176, width: 18, height: 18, arrows: 188, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 36, locks: 15, hidden: 14, pairs: 13), faces: 6),
+  LevelSpec(level: 177, width: 18, height: 18, arrows: 189, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 36, locks: 15, hidden: 14, pairs: 13), faces: 6),
+  LevelSpec(level: 178, width: 18, height: 18, arrows: 189, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 36, locks: 15, hidden: 14, pairs: 14), faces: 6),
+  LevelSpec(level: 179, width: 18, height: 18, arrows: 190, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 36, locks: 15, hidden: 14, pairs: 14), faces: 6),
+  LevelSpec(level: 180, width: 18, height: 18, arrows: 190, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 38, locks: 15, hidden: 14, pairs: 14), faces: 6),
+  LevelSpec(level: 181, width: 18, height: 18, arrows: 191, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 38, locks: 15, hidden: 14, pairs: 14), faces: 6),
+  LevelSpec(level: 182, width: 18, height: 18, arrows: 191, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 38, locks: 16, hidden: 14, pairs: 14), faces: 6),
+  LevelSpec(level: 183, width: 18, height: 18, arrows: 192, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 38, locks: 16, hidden: 14, pairs: 14), faces: 6),
+  LevelSpec(level: 184, width: 18, height: 18, arrows: 192, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 38, locks: 16, hidden: 15, pairs: 14), faces: 6),
+  LevelSpec(level: 185, width: 18, height: 18, arrows: 193, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 38, locks: 16, hidden: 15, pairs: 14), faces: 6),
+  LevelSpec(level: 186, width: 18, height: 18, arrows: 193, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 38, locks: 16, hidden: 15, pairs: 15), faces: 6),
+  LevelSpec(level: 187, width: 18, height: 18, arrows: 194, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 38, locks: 16, hidden: 15, pairs: 15), faces: 6),
+  LevelSpec(level: 188, width: 18, height: 18, arrows: 194, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 40, locks: 16, hidden: 15, pairs: 15), faces: 6),
+  LevelSpec(level: 189, width: 18, height: 18, arrows: 195, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 40, locks: 16, hidden: 15, pairs: 15), faces: 6),
+  LevelSpec(level: 190, width: 18, height: 18, arrows: 195, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 40, locks: 17, hidden: 15, pairs: 15), faces: 6),
+  LevelSpec(level: 191, width: 18, height: 18, arrows: 196, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 40, locks: 17, hidden: 15, pairs: 15), faces: 6),
+  LevelSpec(level: 192, width: 18, height: 18, arrows: 196, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 40, locks: 17, hidden: 16, pairs: 15), faces: 6),
+  LevelSpec(level: 193, width: 18, height: 18, arrows: 197, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 40, locks: 17, hidden: 16, pairs: 15), faces: 6),
+  LevelSpec(level: 194, width: 18, height: 18, arrows: 197, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 40, locks: 17, hidden: 16, pairs: 16), faces: 6),
+  LevelSpec(level: 195, width: 18, height: 18, arrows: 198, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 40, locks: 17, hidden: 16, pairs: 16), faces: 6),
+  LevelSpec(level: 196, width: 18, height: 18, arrows: 198, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 42, locks: 17, hidden: 16, pairs: 16), faces: 6),
+  LevelSpec(level: 197, width: 18, height: 18, arrows: 199, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 42, locks: 17, hidden: 16, pairs: 16), faces: 6),
+  LevelSpec(level: 198, width: 18, height: 18, arrows: 199, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 42, locks: 18, hidden: 16, pairs: 16), faces: 6),
+  LevelSpec(level: 199, width: 18, height: 18, arrows: 200, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 42, locks: 18, hidden: 16, pairs: 16), faces: 6),
+  LevelSpec(level: 200, width: 18, height: 18, arrows: 200, minLength: 3, maxLength: 15, timeLimitMs: 569050, openMoves: 1, features: LevelFeatures(mirrors: 42, locks: 18, hidden: 17, pairs: 16), faces: 6),
 ];
 
 /// The spec for 1-based [level]; throws for a level outside 1..[totalLevels].

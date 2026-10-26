@@ -1,5 +1,5 @@
-// Prints the `LevelSpec` rows for levels 21–150 — the four chapters past the
-// plain rectangle, and the fifty levels on the block after them — so the
+// Prints the `LevelSpec` rows for levels 21–200 — the four chapters past the
+// plain rectangle, and the two chapters of fifty on the block after them — so the
 // table in lib/data/level_specs.dart is drawn from one set of rules rather
 // than tuned a row at a time:
 //
@@ -146,6 +146,9 @@ void main() {
   for (var level = 101; level <= 150; level++) {
     _cube(level);
   }
+  for (var level = 151; level <= 200; level++) {
+    _squeeze(level);
+  }
 }
 
 void _cube(int level) {
@@ -198,6 +201,62 @@ void _cube(int level) {
   final timeLimitMs = (min((seconds * 1000).round(), 599000) * kClockTrim).round();
   final openMoves = teach ? 3 : 2;
   _print(level, side, side, arrows, minLength, maxLength, timeLimitMs, openMoves, mirrors, locks, hidden, pairs, faces);
+}
+
+/// Arrows on the block at the end of the squeeze, from level 150's 177.
+const int squeezeTop = 200;
+
+/// Levels 151–200, the squeeze: the block again, with one way out of each
+/// face at a time (`openMoves` 1) where the block let two. A short warm-up
+/// — a small teaching cube with no twists, then three levels on faces of
+/// twenty, twenty-five and twenty-eight arrows with all four twists — and
+/// from level 155 a little more than level 150's block (177 arrows and its
+/// twists), taking turns: one level gains an arrow, the next a twist
+/// (mirrors, locks, hidden heads, pairs in turn), to [squeezeTop] arrows,
+/// so every level holds a little more than the one before. A face never
+/// holds more than thirty-four arrows. The clock is the block's rule; past
+/// the warm-up it runs at the ten-minute cap, so the extra work is what
+/// gets harder, not the room to do it.
+void _squeeze(int level) {
+  final k = level - 150; // 1..50 in the chapter
+  final teach = k == 1;
+  final on = max(0, k - 5); // 0..45 past the warm-up
+  final arrows = switch (k) {
+    1 => 6 * faces,
+    2 => 20 * faces,
+    3 => 25 * faces,
+    4 => 28 * faces,
+    _ => 178 + on ~/ 2,
+  };
+  assert(arrows <= squeezeTop);
+  final perFace = (arrows / faces).ceil();
+
+  // Level 150 holds 30 mirrors, 12 locks, 11 hidden heads and 11 pairs;
+  // the warm-up holds one of each (two mirrors) a face, and from level 155
+  // every other level steps one twist up, round the four in turn.
+  final int mirrors, locks, hidden, pairs;
+  if (teach) {
+    (mirrors, locks, hidden, pairs) = (0, 0, 0, 0);
+  } else if (k < 5) {
+    (mirrors, locks, hidden, pairs) = (2 * faces + (k - 2) * 3, faces, faces, faces);
+  } else {
+    // Twist steps taken so far: one on every odd level past 155.
+    final steps = (on + 1) ~/ 2;
+    int taken(int twist) => steps <= twist ? 0 : (steps - twist + 3) ~/ 4;
+    mirrors = 30 + 2 * taken(0);
+    locks = 12 + taken(1);
+    hidden = 11 + taken(2);
+    pairs = 11 + taken(3);
+  }
+  final mirrorsPerFace = (mirrors / faces).ceil();
+  final side = teach ? 8 : sqrt(perFace * cubeCellsPerArrow + mirrorsPerFace).round();
+  final minLength = side < 10 ? 2 : 3;
+  final maxLength = teach ? 5 : min(15, max(5, side - 1));
+  final slack = (teach ? 25.0 : 15.0) + 2.0 * faces;
+  final think = mirrors * 1.0 + locks * 4.0 + hidden * 3.0 + pairs * 3.0;
+  final seconds = arrows * (teach ? 3.0 : cubePace) + slack + think;
+  final timeLimitMs = (min((seconds * 1000).round(), 599000) * kClockTrim).round();
+  _print(level, side, side, arrows, minLength, maxLength, timeLimitMs, 1, mirrors, locks, hidden, pairs, faces);
 }
 
 void _print(int level, int width, int height, int arrows, int minLength, int maxLength, int timeLimitMs,

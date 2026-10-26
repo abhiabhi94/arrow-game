@@ -18,6 +18,8 @@ void main() {
     expect(levelName(l10n, 100), 'The Last Arrow');
     expect(levelName(l10n, 101), 'First Corner');
     expect(levelName(l10n, 150), 'The Last Block');
-    expect(levelName(l10n, 151), 'The Last Block');
+    expect(levelName(l10n, 151), 'Tight Spot');
+    expect(levelName(l10n, 200), 'The Final Arrow');
+    expect(levelName(l10n, 201), 'The Final Arrow');
   });
 }

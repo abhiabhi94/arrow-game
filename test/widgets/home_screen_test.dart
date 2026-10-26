@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:ui' show Tristate;
 
 import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
 import 'package:arrow_game/providers/saved_game_provider.dart';
+import 'package:arrow_game/providers/trail_provider.dart';
 import 'package:arrow_game/screens/game_screen.dart';
 import 'package:arrow_game/screens/home_screen.dart';
 import 'package:arrow_game/screens/settings_screen.dart';
@@ -15,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/pump_app.dart';
 import '../support/sample_puzzle.dart';
+import '../support/semantics.dart';
 
 /// Opening a level from home must not spin up the real generator/timer.
 final List<Override> _gameOverride = [
@@ -191,6 +194,49 @@ void main() {
     expect(find.bySemanticsLabel('${totalLevels * 3} of ${totalLevels * 3} stars'), findsOneWidget);
   });
 
+  testWidgets('a cleared chapter folds away, so the next level is near the top', (tester) async {
+    await usePhoneSurface(tester);
+    final handle = tester.ensureSemantics();
+    // The first hundred cleared: the next level is the block's first, a
+    // hundred levels down an unfolded trail.
+    final container = await pumpApp(tester, const HomeScreen(), seed: <String, Object>{
+      for (var l = 1; l <= 100; l++) ...{
+        'arrow_level_${l}_done': true,
+        'arrow_level_${l}_stars': 3,
+      },
+    });
+    await tester.pump(const Duration(milliseconds: 800));
+    // Every flat chapter is down to its heading; the block is open.
+    for (var level = 1; level <= 100; level++) {
+      expect(find.text('$level', skipOffstage: false), findsNothing, reason: 'level $level');
+    }
+    expect(find.text('Chapter 5 · Pairs', skipOffstage: false), findsOneWidget);
+    final next = find.text('101', skipOffstage: false);
+    expect(next, findsOneWidget);
+    // Two screens down at most, not a hundred levels.
+    expect(tester.getRect(next).top, lessThan(2 * 844));
+    final band = semanticsNodes(tester, RegExp(r'^Chapter 1 · Lines')).single;
+    expect(band.getSemanticsData().flagsCollection.isExpanded, Tristate.isFalse);
+
+    // A tap on a heading opens it, and the choice is kept.
+    await tester.scrollUntilVisible(find.text('Chapter 1 · Lines'), 200);
+    await tester.tap(find.text('Chapter 1 · Lines'));
+    await tester.pump();
+    expect(find.text('1', skipOffstage: false), findsOneWidget);
+    expect(find.text('20', skipOffstage: false), findsOneWidget);
+    expect(find.text('21', skipOffstage: false), findsNothing);
+    expect(container.read(trailFoldProvider), {1: true});
+    expect(tester.getRect(find.text('101', skipOffstage: false)).top, greaterThan(20 * kTrailSpacing));
+    // And a tap on an open chapter folds it (the heading is now under the
+    // pinned header, so it is tapped where it is).
+    tester.widget<InkWell>(find.ancestor(of: find.text('Chapter 1 · Lines'), matching: find.byType(InkWell)).first).onTap!();
+    await tester.pump();
+    expect(find.text('20', skipOffstage: false), findsNothing);
+    expect(container.read(trailFoldProvider), {1: false});
+    await tester.pumpAndSettle();
+    handle.dispose();
+  });
+
   testWidgets('the stars and the gear stay put while the trail scrolls', (tester) async {
     await usePhoneSurface(tester);
     await pumpApp(tester, const HomeScreen(), seed: <String, Object>{
@@ -199,7 +245,7 @@ void main() {
     });
     expect(find.text('Slide every arrow out'), findsOneWidget);
     final gear = find.byTooltip('Settings');
-    final stars = find.bySemanticsLabel(RegExp(r'^3 of 450 stars'));
+    final stars = find.bySemanticsLabel(RegExp('^3 of ${totalLevels * 3} stars'));
     // A hundred levels down the trail, both are still in the bar at the top —
     // the bar slims and its contents recentre, but nothing scrolls away.
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -900));

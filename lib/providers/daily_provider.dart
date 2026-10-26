@@ -126,7 +126,7 @@ class DailyNotifier extends StateNotifier<DailyStanding> {
       repo.saveChapter(day, index);
     }
     // The daily board is flat: never the block's chapter.
-    return repo.load(day, chapters[index.clamp(1, chapters.length - 1) - 1]);
+    return repo.load(day, chapters[index.clamp(1, kFlatChapterCount) - 1]);
   }
 
   /// Rolls the standing over to today if the day has changed since it was

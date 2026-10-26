@@ -1,8 +1,11 @@
-/// The trail in six chapters. The first five are flat boards of twenty
+/// The trail in seven chapters. The first five are flat boards of twenty
 /// levels each, each built on one twist: plain lines, then mirrors, then
 /// locks, then hidden heads, then tethered pairs. The sixth is the block:
 /// fifty levels on a cube past the first hundred, six faces of arrows
 /// played one at a time, the twists coming back one by one on the faces.
+/// The seventh is the squeeze: fifty more on the block, each face packed so
+/// that fewer of its arrows can leave at once, and the work climbing on from
+/// level 150's.
 /// Every chapter opens on a small teaching board that carries the new thing
 /// alone, and the game screen puts an illustrated card over that board the
 /// first time it is played.
@@ -31,6 +34,12 @@ enum ChapterRule {
   /// Six faces on a block, played one at a time: the block turns to bring
   /// the next face round.
   cube,
+
+  /// The block packed tighter: fewer ways out of each face at once.
+  squeeze;
+
+  /// Whether the chapter is played on the block rather than a flat board.
+  bool get onBlock => this == cube || this == squeeze;
 }
 
 class Chapter {
@@ -63,13 +72,20 @@ const int kChapterLength = 20;
 /// are as they always were.
 const int kFirstCubeLevel = 101;
 
+/// The first level of the squeeze, the second chapter on the block.
+const int kFirstSqueezeLevel = 151;
+
+/// How many chapters are flat boards (the daily board borrows from these).
+const int kFlatChapterCount = 5;
+
 const List<Chapter> chapters = <Chapter>[
   Chapter(index: 1, rule: ChapterRule.lines, firstLevel: 1, lastLevel: 20),
   Chapter(index: 2, rule: ChapterRule.mirrors, firstLevel: 21, lastLevel: 40),
   Chapter(index: 3, rule: ChapterRule.locks, firstLevel: 41, lastLevel: 60),
   Chapter(index: 4, rule: ChapterRule.fog, firstLevel: 61, lastLevel: 80),
   Chapter(index: 5, rule: ChapterRule.pairs, firstLevel: 81, lastLevel: 100),
-  Chapter(index: 6, rule: ChapterRule.cube, firstLevel: kFirstCubeLevel, lastLevel: totalLevels),
+  Chapter(index: 6, rule: ChapterRule.cube, firstLevel: kFirstCubeLevel, lastLevel: kFirstSqueezeLevel - 1),
+  Chapter(index: 7, rule: ChapterRule.squeeze, firstLevel: kFirstSqueezeLevel, lastLevel: totalLevels),
 ];
 
 /// The chapter [level] (1..[totalLevels]) belongs to.
@@ -99,5 +115,5 @@ Chapter chapterForProgress(int levelsCleared) =>
 /// on the block, since the daily board is flat — the last flat chapter.
 Chapter dailyChapterFor(int levelsCleared) {
   final chapter = chapterForProgress(levelsCleared);
-  return chapter.rule == ChapterRule.cube ? chapters[chapter.index - 2] : chapter;
+  return chapter.rule.onBlock ? chapters[kFlatChapterCount - 1] : chapter;
 }

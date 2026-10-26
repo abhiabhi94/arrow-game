@@ -16,6 +16,7 @@ import '../providers/daily_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/saved_game_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/trail_provider.dart';
 import '../ui/colors.dart';
 import '../ui/layout.dart';
 import '../ui/motion.dart';
@@ -42,6 +43,9 @@ class HomeScreen extends ConsumerWidget {
     final progress = ref.watch(progressProvider);
     final notifier = ref.read(progressProvider.notifier);
     final nextLevel = notifier.highestUnlocked;
+    // Watched so a fold or an unfold rebuilds the trail.
+    ref.watch(trailFoldProvider);
+    final folds = ref.read(trailFoldProvider.notifier);
     final allCleared = notifier.levelsCleared == totalLevels;
     // A level left mid-way takes the hero card: it is where the player was.
     // A daily board left mid-way is the daily card's to offer.
@@ -173,6 +177,14 @@ class HomeScreen extends ConsumerWidget {
                           progress: progress,
                           isUnlocked: notifier.isUnlocked,
                           current: nextLevel,
+                          isOpen: (chapter, cleared) => folds.isOpen(
+                            chapter.index,
+                            allCleared: cleared == chapter.length,
+                          ),
+                          onToggle: (chapter, cleared) => folds.toggle(
+                            chapter.index,
+                            allCleared: cleared == chapter.length,
+                          ),
                         ),
                       ),
                     ),
@@ -499,16 +511,28 @@ class _NextUpCard extends StatelessWidget {
 /// level marked by a bubble beside its node. The first cut was a thin
 /// dotted line from node to node down a lot of empty page, and a caption
 /// under every node: a list.
+///
+/// A chapter folds down to its heading (a tap on the heading flips it): a
+/// cleared one is folded unless the player opened it, so the next level is
+/// near the top of the page rather than a hundred and more levels down.
 class _Trail extends StatelessWidget {
   const _Trail({
     required this.progress,
     required this.isUnlocked,
     required this.current,
+    required this.isOpen,
+    required this.onToggle,
   });
 
   final Map<int, LevelProgress> progress;
   final bool Function(int level) isUnlocked;
   final int current;
+
+  /// Whether [chapter] shows its levels, given how many of them are cleared.
+  final bool Function(Chapter chapter, int cleared) isOpen;
+
+  /// Folds an open chapter, opens a folded one.
+  final void Function(Chapter chapter, int cleared) onToggle;
 
   /// Where across the width [level]'s node sits: a slow sine that starts
   /// over at every chapter, so each section opens at the centre and winds
@@ -516,12 +540,11 @@ class _Trail extends StatelessWidget {
   static double fractionFor(int level) =>
       0.5 + 0.38 * sin((level - chapterOf(level).firstLevel) * 0.62);
 
-  /// How far down the trail [level]'s node sits: its place in the line plus
-  /// a band of [bandHeight] for every chapter heading above it.
-  static double topOf(int level, double bandHeight) =>
-      (level - 1) * kTrailSpacing + chapterOf(level).index * bandHeight;
-
   static const double nodeSize = 60;
+
+  /// Extra room under a folded chapter's heading, before the next one (its
+  /// band already leaves a gap).
+  static const double foldedGap = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -531,27 +554,59 @@ class _Trail extends StatelessWidget {
     final bandHeight = MediaQuery.textScalerOf(
       context,
     ).scale(kChapterBandHeight);
+    final cleared = <int, int>{
+      for (final c in chapters) c.index: _clearedIn(c),
+    };
+    final open = <int, bool>{
+      for (final c in chapters) c.index: isOpen(c, cleared[c.index]!),
+    };
+    // Down the page: each chapter's heading, then its levels if it is open.
+    final bandTops = <int, double>{};
+    final levelTops = <int, double>{};
+    var y = 0.0;
+    for (final chapter in chapters) {
+      bandTops[chapter.index] = y + 8;
+      y += bandHeight;
+      if (open[chapter.index]!) {
+        for (var i = 0; i < chapter.length; i++) {
+          levelTops[chapter.firstLevel + i] = y + i * kTrailSpacing;
+        }
+        y += chapter.length * kTrailSpacing;
+      } else {
+        y += foldedGap;
+      }
+    }
+    final height = open[chapters.last.index]!
+        ? y - kTrailSpacing + nodeSize + 48
+        : y + 24;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final points = <Offset>[
-          for (var level = 1; level <= totalLevels; level++)
-            Offset(
-              (width - nodeSize) * fractionFor(level) + nodeSize / 2,
-              topOf(level, bandHeight) + nodeSize / 2 + 8,
+        final points = <int, Offset>{
+          for (final e in levelTops.entries)
+            e.key: Offset(
+              (width - nodeSize) * fractionFor(e.key) + nodeSize / 2,
+              e.value + nodeSize / 2 + 8,
             ),
-        ];
-        // One road per chapter: it starts under the chapter's heading and
-        // ends at its last level, rather than running on behind the next
-        // heading.
+        };
+        // One road per open chapter: it starts under the chapter's heading
+        // and ends at its last level, rather than running on behind the
+        // next heading.
         final roads = <_Road>[
           for (final chapter in chapters)
-            _Road(
-              firstLevel: chapter.firstLevel,
-              points: points.sublist(chapter.firstLevel - 1, chapter.lastLevel),
-            ),
+            if (open[chapter.index]!)
+              _Road(
+                firstLevel: chapter.firstLevel,
+                points: <Offset>[
+                  for (var l = chapter.firstLevel; l <= chapter.lastLevel; l++) points[l]!,
+                ],
+              ),
         ];
-        final height = topOf(totalLevels, bandHeight) + nodeSize + 48;
+        final bubble =
+            current >= 1 &&
+            current <= totalLevels &&
+            !(progress[current]?.completed ?? false) &&
+            points.containsKey(current);
         return SizedBox(
           width: width,
           height: height,
@@ -572,34 +627,34 @@ class _Trail extends StatelessWidget {
                 Positioned(
                   left: 0,
                   right: 0,
-                  top: topOf(chapter.firstLevel, bandHeight) - bandHeight + 8,
+                  top: bandTops[chapter.index],
                   height: bandHeight - 8,
                   child: _ChapterBand(
                     chapter: chapter,
                     reached: isUnlocked(chapter.firstLevel),
-                    cleared: _clearedIn(chapter),
+                    cleared: cleared[chapter.index]!,
+                    open: open[chapter.index]!,
+                    onToggle: () => onToggle(chapter, cleared[chapter.index]!),
                   ),
                 ),
-              for (var level = 1; level <= totalLevels; level++)
+              for (final e in points.entries)
                 Positioned(
-                  left: points[level - 1].dx - nodeSize / 2,
-                  top: points[level - 1].dy - nodeSize / 2,
+                  left: e.value.dx - nodeSize / 2,
+                  top: e.value.dy - nodeSize / 2,
                   child: _LevelNode(
-                    level: level,
+                    level: e.key,
                     size: nodeSize,
-                    progress: progress[level] ?? LevelProgress.empty(level),
-                    unlocked: isUnlocked(level),
+                    progress: progress[e.key] ?? LevelProgress.empty(e.key),
+                    unlocked: isUnlocked(e.key),
                     isCurrent:
-                        level == current &&
-                        !(progress[level]?.completed ?? false),
+                        e.key == current &&
+                        !(progress[e.key]?.completed ?? false),
                   ),
                 ),
-              if (current >= 1 &&
-                  current <= totalLevels &&
-                  !(progress[current]?.completed ?? false))
+              if (bubble)
                 _NextUpBubble(
                   level: current,
-                  node: points[current - 1],
+                  node: points[current]!,
                   nodeSize: nodeSize,
                   // Beside the node, on the side with the room.
                   onRight: fractionFor(current) < 0.5,
@@ -711,10 +766,20 @@ class _TrailPainter extends CustomPainter {
       old.color != color ||
       old.doneColor != doneColor ||
       old.roads.length != roads.length ||
+      !_sameStarts(old.roads, roads) ||
       (old.roads.isNotEmpty &&
           old.roads.first.points.first != roads.first.points.first) ||
       (old.roads.isNotEmpty &&
           old.roads.last.points.last != roads.last.points.last);
+}
+
+/// Whether two sets of roads start at the same levels and places (a fold
+/// moves every road below it).
+bool _sameStarts(List<_Road> a, List<_Road> b) {
+  for (var i = 0; i < a.length && i < b.length; i++) {
+    if (a[i].firstLevel != b[i].firstLevel || a[i].points.first != b[i].points.first) return false;
+  }
+  return true;
 }
 
 /// The marker on the next level: a small card beside its node with the
@@ -1038,17 +1103,23 @@ class _LevelNode extends StatelessWidget {
 
 /// A chapter's section heading on the trail: its icon, number and name,
 /// the levels it spans and a line on the twist it brings, and a bar of
-/// how much of it is cleared. Muted until the chapter is reached.
+/// how much of it is cleared. Muted until the chapter is reached. A tap
+/// folds the chapter's levels away or brings them back; the chevron says
+/// which.
 class _ChapterBand extends StatelessWidget {
   const _ChapterBand({
     required this.chapter,
     required this.reached,
     required this.cleared,
+    required this.open,
+    required this.onToggle,
   });
 
   final Chapter chapter;
   final bool reached;
   final int cleared;
+  final bool open;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -1065,101 +1136,124 @@ class _ChapterBand extends StatelessWidget {
       ChapterRule.fog => Icons.blur_on_rounded,
       ChapterRule.pairs => Icons.link_rounded,
       ChapterRule.cube => Icons.view_in_ar_rounded,
+      ChapterRule.squeeze => Icons.compress_rounded,
     };
     final ink = reached ? p.textInk : p.textMuted;
     final share = cleared / chapter.length;
     return Semantics(
       header: true,
+      button: true,
+      expanded: open,
       label: '$heading. $levels. $blurb',
       excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: reached ? p.primary : p.cardTint,
-                shape: BoxShape.circle,
-                border: reached
-                    ? null
-                    : Border.all(color: p.outlineSoft, width: 1.5),
-              ),
-              child: Icon(
-                icon,
-                color: reached ? Colors.white : p.textMuted,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
+      onTap: onToggle,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onToggle,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: reached ? p.primary : p.cardTint,
+                    shape: BoxShape.circle,
+                    border: reached
+                        ? null
+                        : Border.all(color: p.outlineSoft, width: 1.5),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: reached ? Colors.white : p.textMuted,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: Text(
-                          heading,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            color: ink,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              heading,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: ink,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$cleared/${chapter.length}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: cleared == chapter.length
+                                  ? p.successInk
+                                  : p.textMuted,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          AnimatedRotation(
+                            turns: open ? 0 : -0.25,
+                            duration: reduceMotionOf(context)
+                                ? Duration.zero
+                                : const Duration(milliseconds: 200),
+                            child: Icon(
+                              Icons.expand_more_rounded,
+                              size: 22,
+                              color: p.textMuted,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(height: 2),
                       Text(
-                        '$cleared/${chapter.length}',
+                        '$levels · $blurb',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: cleared == chapter.length
-                              ? p.successInk
-                              : p.textMuted,
+                          color: p.textMuted,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 5,
+                        width: double.infinity,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ColoredBox(color: p.outlineSoft),
+                              FractionallySizedBox(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: share,
+                                child: ColoredBox(color: p.accentMint),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$levels · $blurb',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: p.textMuted,
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 5,
-                    width: double.infinity,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          ColoredBox(color: p.outlineSoft),
-                          FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: share,
-                            child: ColoredBox(color: p.accentMint),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

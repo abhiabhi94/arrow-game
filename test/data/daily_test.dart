@@ -47,7 +47,7 @@ void main() {
           expect(f.hidden, inInclusiveRange(3, 5));
           expect(f.locks, 2);
           expect(f.pairs, 0);
-        case ChapterRule.pairs || ChapterRule.cube:
+        case ChapterRule.pairs || ChapterRule.cube || ChapterRule.squeeze:
           // The daily board is flat: on the block it keeps the flat twists.
           expect(spec.isCube, isFalse);
           expect(f.pairs, inInclusiveRange(3, 5));
