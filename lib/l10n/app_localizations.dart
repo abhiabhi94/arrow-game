@@ -1124,6 +1124,306 @@ abstract class AppLocalizations {
   /// **'The Last Arrow'**
   String get levelName100;
 
+  /// No description provided for @levelName101.
+  ///
+  /// In en, this message translates to:
+  /// **'First Corner'**
+  String get levelName101;
+
+  /// No description provided for @levelName102.
+  ///
+  /// In en, this message translates to:
+  /// **'Six Sides'**
+  String get levelName102;
+
+  /// No description provided for @levelName103.
+  ///
+  /// In en, this message translates to:
+  /// **'Corner Turn'**
+  String get levelName103;
+
+  /// No description provided for @levelName104.
+  ///
+  /// In en, this message translates to:
+  /// **'Square One'**
+  String get levelName104;
+
+  /// No description provided for @levelName105.
+  ///
+  /// In en, this message translates to:
+  /// **'Building Blocks'**
+  String get levelName105;
+
+  /// No description provided for @levelName106.
+  ///
+  /// In en, this message translates to:
+  /// **'Face Value'**
+  String get levelName106;
+
+  /// No description provided for @levelName107.
+  ///
+  /// In en, this message translates to:
+  /// **'Edge of the Box'**
+  String get levelName107;
+
+  /// No description provided for @levelName108.
+  ///
+  /// In en, this message translates to:
+  /// **'Corner Shop'**
+  String get levelName108;
+
+  /// No description provided for @levelName109.
+  ///
+  /// In en, this message translates to:
+  /// **'Cube Root'**
+  String get levelName109;
+
+  /// No description provided for @levelName110.
+  ///
+  /// In en, this message translates to:
+  /// **'Flat Pack'**
+  String get levelName110;
+
+  /// No description provided for @levelName111.
+  ///
+  /// In en, this message translates to:
+  /// **'Hall of Glass'**
+  String get levelName111;
+
+  /// No description provided for @levelName112.
+  ///
+  /// In en, this message translates to:
+  /// **'Prism'**
+  String get levelName112;
+
+  /// No description provided for @levelName113.
+  ///
+  /// In en, this message translates to:
+  /// **'Reflex Angle'**
+  String get levelName113;
+
+  /// No description provided for @levelName114.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking Glass'**
+  String get levelName114;
+
+  /// No description provided for @levelName115.
+  ///
+  /// In en, this message translates to:
+  /// **'Angle of Attack'**
+  String get levelName115;
+
+  /// No description provided for @levelName116.
+  ///
+  /// In en, this message translates to:
+  /// **'Kaleidoscope'**
+  String get levelName116;
+
+  /// No description provided for @levelName117.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass Box'**
+  String get levelName117;
+
+  /// No description provided for @levelName118.
+  ///
+  /// In en, this message translates to:
+  /// **'Bent Light'**
+  String get levelName118;
+
+  /// No description provided for @levelName119.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror Image'**
+  String get levelName119;
+
+  /// No description provided for @levelName120.
+  ///
+  /// In en, this message translates to:
+  /// **'Through the Looking Box'**
+  String get levelName120;
+
+  /// No description provided for @levelName121.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked Box'**
+  String get levelName121;
+
+  /// No description provided for @levelName122.
+  ///
+  /// In en, this message translates to:
+  /// **'Combination'**
+  String get levelName122;
+
+  /// No description provided for @levelName123.
+  ///
+  /// In en, this message translates to:
+  /// **'Strongbox'**
+  String get levelName123;
+
+  /// No description provided for @levelName124.
+  ///
+  /// In en, this message translates to:
+  /// **'Key Ring'**
+  String get levelName124;
+
+  /// No description provided for @levelName125.
+  ///
+  /// In en, this message translates to:
+  /// **'Treasure Chest'**
+  String get levelName125;
+
+  /// No description provided for @levelName126.
+  ///
+  /// In en, this message translates to:
+  /// **'Puzzle Box'**
+  String get levelName126;
+
+  /// No description provided for @levelName127.
+  ///
+  /// In en, this message translates to:
+  /// **'Vault'**
+  String get levelName127;
+
+  /// No description provided for @levelName128.
+  ///
+  /// In en, this message translates to:
+  /// **'Safe Cracker'**
+  String get levelName128;
+
+  /// No description provided for @levelName129.
+  ///
+  /// In en, this message translates to:
+  /// **'Skeleton Key'**
+  String get levelName129;
+
+  /// No description provided for @levelName130.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock, Stock'**
+  String get levelName130;
+
+  /// No description provided for @levelName131.
+  ///
+  /// In en, this message translates to:
+  /// **'Black Box'**
+  String get levelName131;
+
+  /// No description provided for @levelName132.
+  ///
+  /// In en, this message translates to:
+  /// **'Smoke and Mirrors'**
+  String get levelName132;
+
+  /// No description provided for @levelName133.
+  ///
+  /// In en, this message translates to:
+  /// **'Fog Bank'**
+  String get levelName133;
+
+  /// No description provided for @levelName134.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark Side'**
+  String get levelName134;
+
+  /// No description provided for @levelName135.
+  ///
+  /// In en, this message translates to:
+  /// **'Blind Corner'**
+  String get levelName135;
+
+  /// No description provided for @levelName136.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow Box'**
+  String get levelName136;
+
+  /// No description provided for @levelName137.
+  ///
+  /// In en, this message translates to:
+  /// **'Night Shift'**
+  String get levelName137;
+
+  /// No description provided for @levelName138.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden Depths'**
+  String get levelName138;
+
+  /// No description provided for @levelName139.
+  ///
+  /// In en, this message translates to:
+  /// **'Mist Cube'**
+  String get levelName139;
+
+  /// No description provided for @levelName140.
+  ///
+  /// In en, this message translates to:
+  /// **'Eclipse'**
+  String get levelName140;
+
+  /// No description provided for @levelName141.
+  ///
+  /// In en, this message translates to:
+  /// **'Two of a Kind'**
+  String get levelName141;
+
+  /// No description provided for @levelName142.
+  ///
+  /// In en, this message translates to:
+  /// **'Tied Together'**
+  String get levelName142;
+
+  /// No description provided for @levelName143.
+  ///
+  /// In en, this message translates to:
+  /// **'Double Act'**
+  String get levelName143;
+
+  /// No description provided for @levelName144.
+  ///
+  /// In en, this message translates to:
+  /// **'Twin Peaks'**
+  String get levelName144;
+
+  /// No description provided for @levelName145.
+  ///
+  /// In en, this message translates to:
+  /// **'Knotted'**
+  String get levelName145;
+
+  /// No description provided for @levelName146.
+  ///
+  /// In en, this message translates to:
+  /// **'Partners'**
+  String get levelName146;
+
+  /// No description provided for @levelName147.
+  ///
+  /// In en, this message translates to:
+  /// **'Lockstep'**
+  String get levelName147;
+
+  /// No description provided for @levelName148.
+  ///
+  /// In en, this message translates to:
+  /// **'Side by Side'**
+  String get levelName148;
+
+  /// No description provided for @levelName149.
+  ///
+  /// In en, this message translates to:
+  /// **'Full House'**
+  String get levelName149;
+
+  /// No description provided for @levelName150.
+  ///
+  /// In en, this message translates to:
+  /// **'The Last Block'**
+  String get levelName150;
+
   /// No description provided for @tutorialTap.
   ///
   /// In en, this message translates to:
@@ -2011,6 +2311,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Twice the clock on every level'**
   String get settingsExtraTimeSubtitle;
+
+  /// No description provided for @chapterName6.
+  ///
+  /// In en, this message translates to:
+  /// **'The Block'**
+  String get chapterName6;
+
+  /// No description provided for @chapterBlurb6.
+  ///
+  /// In en, this message translates to:
+  /// **'Six faces of arrows on a block. Turn it to reach each face.'**
+  String get chapterBlurb6;
+
+  /// No description provided for @introTitleCube.
+  ///
+  /// In en, this message translates to:
+  /// **'The block'**
+  String get introTitleCube;
+
+  /// No description provided for @introBodyCube.
+  ///
+  /// In en, this message translates to:
+  /// **'Six faces on one block. Turn it to play each face.'**
+  String get introBodyCube;
+
+  /// No description provided for @tutorialCube.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the block to turn it. Play the face in front; tap a side to bring it round.'**
+  String get tutorialCube;
+
+  /// No description provided for @cubeTurnLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn to the face on the left'**
+  String get cubeTurnLeft;
+
+  /// No description provided for @cubeTurnRight.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn to the face on the right'**
+  String get cubeTurnRight;
+
+  /// No description provided for @cubeTurnUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn to the face above'**
+  String get cubeTurnUp;
+
+  /// No description provided for @cubeTurnDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn to the face below'**
+  String get cubeTurnDown;
+
+  /// No description provided for @cubeFaceArrows.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Face clear} =1{1 arrow on this face} other{{count} arrows on this face}}'**
+  String cubeFaceArrows(int count);
+
+  /// No description provided for @cubeFacesClear.
+  ///
+  /// In en, this message translates to:
+  /// **'{cleared} of {total} faces clear'**
+  String cubeFacesClear(int cleared, int total);
+
+  /// No description provided for @cubeMapLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'The block, face {face} towards you, {cleared} of {total} faces clear'**
+  String cubeMapLabel(int face, int cleared, int total);
+
+  /// No description provided for @boardFaceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Face {face} of the block, {width} by {height}, {left} of {total} arrows left on it'**
+  String boardFaceLabel(int face, int width, int height, int left, int total);
 
   /// No description provided for @onboardRuleNoClock.
   ///

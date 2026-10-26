@@ -21,6 +21,13 @@
 /// * **Pairs** ([pairs]): two tethered arrows leave together on one tap, so
 ///   both of their paths have to be clear, and each waits for whatever the
 ///   other waits for. The graph treats the pair as one node.
+///
+/// A **cube** level ([faceSize] set, see [Puzzle.cube]) is six square faces
+/// laid side by side in one strip, [faceSize] cells each. An arrow's way out
+/// ends at its own face's edge — it leaves the block there — so the faces
+/// never get in each other's way, and every rule above works face by face
+/// unchanged. The player sees one face at a time and turns the block to
+/// reach the others.
 library;
 
 import 'arrow_piece.dart';
@@ -37,12 +44,14 @@ class Puzzle {
     Map<int, int> locks = const <int, int>{},
     Set<int> hidden = const <int>{},
     Map<int, int> pairs = const <int, int>{},
+    this.faceSize,
   })  : arrows = List<ArrowPiece>.unmodifiable(arrows),
         mirrors = Map<Cell, Mirror>.unmodifiable(mirrors),
         locks = Map<int, int>.unmodifiable(locks),
         hidden = Set<int>.unmodifiable(hidden),
         pairs = Map<int, int>.unmodifiable(_symmetric(pairs)),
-        assert(width > 0 && height > 0) {
+        assert(width > 0 && height > 0),
+        assert(faceSize == null || (height == faceSize && width % faceSize == 0)) {
     for (final c in mirrors.keys) {
       assert(c.isInside(width, height), 'mirror $c is off the board');
       _occupancy[c] = kMirror;
@@ -56,11 +65,15 @@ class Puzzle {
       }
     }
     for (final a in arrows) {
+      final face = faceOfCell(a.head);
+      assert(a.cells.every((c) => faceOfCell(c) == face), 'arrow ${a.id} straddles two faces');
+      _faces.add(face);
       final trace = traceRay(
         head: a.head,
         heading: a.heading,
-        width: width,
+        width: faceWidth,
         height: height,
+        originX: face * faceWidth,
         mirrorAt: (c) => this.mirrors[c],
       );
       assert(trace != null, 'arrow ${a.id} is sent round in a ring');
@@ -74,16 +87,63 @@ class Puzzle {
       final key = this.locks[locked]!;
       assert(locked != key, 'arrow $locked is its own key');
       assert(locked >= 0 && locked < arrows.length && key >= 0 && key < arrows.length);
+      assert(_faces[locked] == _faces[key], 'lock $locked and its key are on different faces');
       _lockNumbers[locked] = n + 1;
       _lockNumbers.putIfAbsent(key, () => n + 1);
     }
     for (final e in this.pairs.entries) {
       assert(e.key != e.value, 'arrow ${e.key} is tethered to itself');
       assert(this.pairs[e.value] == e.key, 'pairs must be symmetric');
+      assert(_faces[e.key] == _faces[e.value], 'pair ${e.key} straddles two faces');
     }
     for (final h in this.hidden) {
       assert(h >= 0 && h < arrows.length);
     }
+  }
+
+  /// A cube level built from its six (or any number of) square [faces],
+  /// each a board of its own: laid side by side in one strip, the ids and
+  /// cells of each face shifted past the ones before it.
+  factory Puzzle.cube(List<Puzzle> faces) {
+    assert(faces.isNotEmpty);
+    final n = faces.first.width;
+    final arrows = <ArrowPiece>[];
+    final mirrors = <Cell, Mirror>{};
+    final locks = <int, int>{};
+    final hidden = <int>{};
+    final pairs = <int, int>{};
+    for (var f = 0; f < faces.length; f++) {
+      final face = faces[f];
+      assert(face.width == n && face.height == n && face.faceSize == null, 'faces are equal squares');
+      final dx = f * n;
+      final base = arrows.length;
+      Cell shift(Cell c) => Cell(c.x + dx, c.y);
+      for (final a in face.arrows) {
+        arrows.add(ArrowPiece(id: base + a.id, cells: <Cell>[for (final c in a.cells) shift(c)], heading: a.heading));
+      }
+      for (final e in face.mirrors.entries) {
+        mirrors[shift(e.key)] = e.value;
+      }
+      for (final e in face.locks.entries) {
+        locks[base + e.key] = base + e.value;
+      }
+      for (final h in face.hidden) {
+        hidden.add(base + h);
+      }
+      for (final e in face.pairs.entries) {
+        pairs[base + e.key] = base + e.value;
+      }
+    }
+    return Puzzle(
+      width: n * faces.length,
+      height: n,
+      arrows: arrows,
+      mirrors: mirrors,
+      locks: locks,
+      hidden: hidden,
+      pairs: pairs,
+      faceSize: n,
+    );
   }
 
   /// The occupancy mark of a mirror cell.
@@ -91,6 +151,9 @@ class Puzzle {
 
   final int width;
   final int height;
+
+  /// The side of a cube level's faces, or null for a flat board.
+  final int? faceSize;
   final List<ArrowPiece> arrows;
 
   /// The mirrors on the board: never occupied, slid through with a turn.
@@ -109,6 +172,7 @@ class Puzzle {
   final List<List<Cell>> _rays = <List<Cell>>[];
   final List<Direction> _exitHeadings = <Direction>[];
   final Map<int, int> _lockNumbers = <int, int>{};
+  final List<int> _faces = <int>[];
 
   static Map<int, int> _symmetric(Map<int, int> pairs) {
     final out = <int, int>{};
@@ -120,6 +184,32 @@ class Puzzle {
   }
 
   int get arrowCount => arrows.length;
+
+  /// Whether this is a cube level: faces of [faceSize], played one at a time.
+  bool get isCube => faceSize != null;
+
+  /// How many faces the board has: six on a cube, one flat.
+  int get faceCount => width ~/ faceWidth;
+
+  /// The size of the board the player sees at once: a face, or the board.
+  int get faceWidth => faceSize ?? width;
+  int get faceHeight => height;
+
+  /// The face [c] lies on (0 on a flat board).
+  int faceOfCell(Cell c) => faceSize == null ? 0 : c.x ~/ faceSize!;
+
+  /// The face arrow [id] lies on (0 on a flat board).
+  int faceOf(int id) => _faces[id];
+
+  /// [c] as seen on its own face: the column counted from the face's left
+  /// edge.
+  Cell onFace(Cell c) => faceSize == null ? c : Cell(c.x % faceSize!, c.y);
+
+  /// The ids of the arrows on [face].
+  List<int> arrowsOn(int face) => <int>[
+        for (var id = 0; id < arrows.length; id++)
+          if (_faces[id] == face) id,
+      ];
 
   /// Cells an arrow may use: the board less its mirrors.
   int get freeCellCount => width * height - mirrors.length;
@@ -262,10 +352,17 @@ class Puzzle {
 
   /// The best arrow to suggest: a removable one that frees the most other
   /// arrows (ties → lowest id). Null once nothing can move or all are gone.
-  int? hintFor(Set<int> removed) {
+  /// With [face] given, an arrow on that face is suggested when one can go —
+  /// the face the player is looking at — and one elsewhere only when not.
+  int? hintFor(Set<int> removed, {int? face}) {
+    var open = removable(removed);
+    if (face != null) {
+      final here = <int>[for (final id in open) if (_faces[id] == face) id];
+      if (here.isNotEmpty) open = here;
+    }
     int? best;
     var bestScore = -1;
-    for (final id in removable(removed)) {
+    for (final id in open) {
       final group = exitGroup(id);
       var score = 0;
       for (final other in arrows) {
@@ -285,7 +382,10 @@ class Puzzle {
     final out = <int>{};
     for (final c in arrows[id].cells) {
       for (final d in Direction.values) {
-        final other = _occupancy[c.step(d)];
+        final next = c.step(d);
+        // Across a face's edge is another face of the block, not a neighbour.
+        if (faceOfCell(next) != _faces[id]) continue;
+        final other = _occupancy[next];
         if (other != null && other != kMirror && other != id) out.add(other);
       }
     }
@@ -429,7 +529,7 @@ class Puzzle {
         for (final c in own) {
           for (final d in Direction.values) {
             final n = c.step(d);
-            if (!n.isInside(width, height) || own.contains(n)) continue;
+            if (!n.isInside(width, height) || faceOfCell(n) != _faces[id] || own.contains(n)) continue;
             final other = _occupancy[n];
             if (other != null &&
                 other != kMirror &&

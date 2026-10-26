@@ -18,14 +18,22 @@ costs nothing and points at the key), **Fog** (61–80: a dashed arrow hides
 its head until a neighbour leaves; tapping it while hidden costs nothing
 and points at the neighbour that would uncover it), **Pairs** (81–100: two
 tethered arrows, washed in one tint, leave on one tap, so both paths must
-be clear). Every chapter opens on a
+be clear) — and then **The Block** (101–150, a sixth chapter after the
+hundred flat levels, which it leaves untouched): six square faces of arrows
+on a cube, the whole block drawn at once in 3D, a finger turning it (or the
+turn keys, or Shift+arrow keys) and the face square to the player the one
+played; an arrow leaves by its own face's edge, so the faces never touch,
+and the twists come back onto the faces ten levels at a time, the count
+after a short warm-up holding about level 100's work and climbing a little
+every level, with never more than thirty arrows on one face. Every flat chapter opens on a
 small teaching board under a card that is one line and a self-playing
 demo of the twist, then climbs steadily from 30 arrows at its second
 level to 150 at its twentieth (the same top for every chapter: the twist
 is what makes a later chapter harder), with a clock that grows chapter by
 chapter and never passes ten minutes. A **daily board**
 (home card; `data/daily.dart`) is a fresh ~5-minute deal every day (80
-arrows) with the twists of the chapter the player has reached, seeded from
+arrows) with the twists of the chapter the player has reached (Pairs, once
+they are on the block — the daily board is always flat), seeded from
 the date and a per-install salt so no two phones share one; it keeps a
 streak. Everything
 is drawn in a single ink like a printed puzzle (the sun-coloured key badge
@@ -51,7 +59,9 @@ tool/coverage.sh 92             # coverage gate (fails under threshold)
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
 node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-viewport screenshots -> shots/
 node tool/screenshot.mjs --levels 21,41,61,81 --daily                # each chapter's card (mid-demo) + teaching board, and today's daily board
-dart run tool/make_levels.dart        # prints levels 21-100 from the chapter rules (paste into lib/data/level_specs.dart)
+node tool/screenshot.mjs --levels 101,140 --keys Shift+ArrowRight,Shift+ArrowUp  # the block in 3D, then turned right and up
+node tool/screenshot.mjs --levels 120 --drag -90,40                  # a drag across the block: it stays where it is left
+dart run tool/make_levels.dart        # prints levels 21-150 from the chapter rules (paste into lib/data/level_specs.dart)
 dart run tool/pick_variants.dart      # the first variant of each level from 21 that keeps every pinned rule
 dart run tool/level_report.dart 41 3  # a level (and its next 3 variants): arrows placed, twists placed, fill, open moves
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
@@ -89,7 +99,9 @@ and captures the bump 330 ms in (or `x,y,ms`) on Playwright's fake clock
 for the tap — a click on the board's accessibility node would otherwise be a
 semantic tap at the board's centre; a fresh profile opened straight at a
 late level is owed every chapter card it skipped, and the driver puts
-them all away before the board flows. `--cleared N` records levels 1..N as cleared (stars and a best time), so
+them all away before the board flows. On a cube level `--keys Shift+ArrowRight`
+turns the block, and `--drag dx,dy` drags the mouse across the middle of
+each opened level and captures the block a second after letting go. `--cleared N` records levels 1..N as cleared (stars and a best time), so
 the trail shows its walked road, the stars and a chapter's progress.
 `--riddle x,y,…` spends every life on
 three different blocked heads (level 1: `2,4,2,3,2,2`) and captures the
@@ -229,10 +241,13 @@ lib/
     direction.dart       Direction enum (opposite, vector)
     cell.dart            grid coordinate
     arrow_piece.dart     ArrowPiece: cells tail→head + heading; exitRay()
-    puzzle.dart          Puzzle: occupancy, blockers, canExit, solvingOrder, hintFor, difficultyScore
-    puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N
+    puzzle.dart          Puzzle: occupancy, blockers, canExit, solvingOrder, hintFor, difficultyScore;
+                         Puzzle.cube (six faces in one strip, rays end at a face's edge)
+    cube.dart            the block in space: face frames, cubeNeighbour, Quat, CubeCamera (projection, hit)
+    puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N;
+                         dealFace re-deals a cube face on its own until it keepsRules
     answer_match.dart    judging a typed riddle answer (exact / close / wrong)
-  data/level_specs.dart  the 100 levels (board size, arrow count, length range, clock)
+  data/level_specs.dart  the 150 levels (board size, arrow count, length range, clock, faces)
   data/riddle_bank.dart  250 riddles in English + 250 पहेलियाँ in Hindi
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot),
@@ -247,8 +262,9 @@ lib/
                        game (board + toolbar + overlays), settings, credits
   ui/                  colors.dart (light+dark ArrowPalette), theme.dart (Material 3 + Google Sans Flex),
                        layout.dart (phone-width column + mouse-drag scrolling for the desktop browser)
-  widgets/             puzzle_board (painter + slide/bump animations), board_toolbar,
-                       lives_indicator, timer_bar, stars_row, result_card, riddle_card
+  widgets/             puzzle_board (painter + slide/bump animations; one face of a cube), board_toolbar,
+                       cube_stage (the whole block in 3D: drag, settle, taps by ray), cube_map (turn keys),
+                       keycap (raised 3D buttons), lives_indicator, timer_bar, stars_row, result_card, riddle_card
   utils/               format.dart, labels.dart (level names)
   l10n/                app_en.arb (+ generated app_localizations*.dart)
 ```
@@ -317,6 +333,69 @@ Key patterns:
   along its own track and sprung back with the other, the tether lit
   between them, so the second arrow is seen to be tied to the first
   rather than appearing to bump on its own.
+- **The block** (levels 101–150, after the hundred flat ones; `LevelSpec.faces` = 6, `Puzzle.cube`,
+  `engine/cube.dart`): a cube level is six square faces, each a board of its
+  own, laid side by side in one strip of the *same* `Puzzle` — face `f` is
+  columns `f·n … f·n+n-1` (`faceSize` = n). `traceRay` takes an `originX`, so
+  a ray ends at its own face's edge (the arrow leaves the block there), and
+  `neighboursOf` / `openTapRisk` never look across a seam; locks and pairs
+  stay on one face (asserted). Every rule above, the game state, the saved
+  game (ids are the strip's), hints and the twists therefore work face by
+  face unchanged — the faces never interfere, which is the point: a mirror,
+  lock, hidden head or pair on the block means exactly what it means flat.
+  `LevelSpec`'s size is a face's; its `arrows` and `features` are the whole
+  block's, shared out by `faceSpecs` (odd ones spread round the block, each
+  face seeded from the level's seed and its number), and the generator
+  deals each face with `PuzzleGenerator.dealFace` — up to `kFaceDeals`
+  seeds until the face `keepsRules` (full count, every twist, mirrors hit,
+  the choice held) — so a cube level needs no variant.
+  **The whole block is drawn at once, in 3D** (`widgets/cube_stage.dart`,
+  math in `engine/cube.dart`, pure Dart): every face has a fixed frame on
+  the block (`faceNormal` / `faceRight` / `faceUp`), `faceOn(face)` is the
+  turn (a `Quat`) that shows it square and upright — the pose to play it
+  in — and `CubeCamera` holds the block's orientation. A level opens on
+  `openingPose` (a lean of `kOpeningYaw` / `kOpeningPitch`, so the top and
+  the right side show beside the face being played and the block reads as
+  a block); after that the pose is the player's. For each face it gives a perspective `Matrix4` (`faceMatrix`,
+  column-major) that draws a plain square face widget — the face's own
+  `PuzzleBoard(face:)` on a card — where that face lies on the turned
+  block; faces turned away are culled and the rest painted far to near
+  (`visibleFaces`), each shaded by how it faces the light (the face being
+  played keeps its full light and a primary rim), over a pool of light
+  with the block's shadow on the floor. **A finger turns the block
+  freely** (`onScale*`: one finger turns, two zoom up to `kCubeMaxZoom`,
+  where the front face fills the stage), and **it stays where the finger
+  leaves it** — the first cut eased it back to a leaning pose on release,
+  which left the face being played hanging at an angle — while the face
+  then most towards the player becomes the one being played (the stage
+  reports it and does not turn again when the screen echoes it back,
+  `_reported`). A turn asked for from outside — a turn key, Shift+arrow, a
+  cleared face, a hint, a tap on a side — eases (slerp, `kCubeTurn`) to
+  that face **with the lean the player left** (`CubeStageState._lean`,
+  `leanOf`: the turn away from the front face squared up, the opening
+  lean until a finger changes it), never back square or to the opening
+  pose — a turn that squared the block up read as it snapping back. The
+  faces sit under `IgnorePointer`: **the stage works out every tap from
+  the geometry** (`CubeCamera.hit`: a ray from the eye through the touch,
+  the nearest face it meets and the point on it), so a tap on the face
+  being played goes to that face's board (`PuzzleBoardState.tapAtBox`,
+  nearest-arrow slop and all, via the `GlobalKey` the stage hands each
+  `faceBuilder`), and a tap on a side that shows turns the block round to
+  it rather than playing it. The game screen keeps only which face is
+  being played (`_face`); `CubeControls` (`widgets/cube_map.dart`) is a
+  row of keycap turn buttons round "N of 6 faces clear / N arrows on this
+  face", **Shift + arrow keys** turn the block (`cubeTurnFor`) while the
+  plain arrow keys walk the cursor on the front face only, and only that
+  face's board is in the semantics tree. A cleared face turns the block on
+  by itself after `kCubeAutoTurnDelay` (a neighbour with arrows first:
+  right, down, left, up), a hint prefers the front face
+  (`Puzzle.hintFor(face:)`) and, lit elsewhere, turns the block round to
+  it, and a fresh board, a restart or a resumed game puts the block down
+  with its first face that still has arrows in front. With motion reduced
+  a turn is a jump. The chapter card's demo is the same stage, not
+  interactive. The game's buttons (toolbar and turn keys) are `Keycap`s
+  (`widgets/keycap.dart`): a top over a deeper side that sinks under the
+  finger, so the controls read as things in space like the block.
 - **Generation:** `puzzle_generator.dart` places arrows one by one on flat
   typed-data grids, roughly inside-out (deep heads sampled first so the free
   area stays an outer ring). A head may face free cells *or point straight
@@ -596,7 +675,7 @@ Key patterns:
   (cleared in the mint with their stars and best time on a small pill,
   the next one in the primary with a glow, locked ones with a lock
   badge), on a slow sine that starts over at each chapter
-  (`fractionFor`, about ten levels to a sweep). The next level alone
+  (`fractionFor`, about ten levels to a sweep, from each chapter's first level). The next level alone
   gets a caption: `_NextUpBubble`, a card beside its node on the side
   with the room, with the level's name and a pointer; it is a picture of
   the node's state (excluded from semantics, the node is the button)
@@ -622,8 +701,8 @@ Key patterns:
 - **Difficulty:** every knob is in `data/level_specs.dart` — size, arrow
   count, lengths, clock, `openMoves` (3 on levels 1–3 and on every teaching
   board, 2 otherwise: how many taps the generator leaves available at once),
-  `features` (mirrors, locks, hidden, pairs) and `variant`. Levels 1–20 are
-  untouched from the first release. **Levels 21–100 are printed by
+  `features` (mirrors, locks, hidden, pairs), `faces` and `variant`. Levels
+  1–20 are untouched from the first release. **Levels 21–150 are printed by
   `tool/make_levels.dart`** from the chapter rules rather than tuned a row
   at a time — the first hundred levels were the same level played eighty
   times, climbing to 464 arrows and a fifteen-minute read with nothing new
@@ -640,7 +719,10 @@ Key patterns:
   clock over ten minutes, the pace per arrow *growing* chapter by chapter —
   3.0 s in Mirrors to 3.4 s in Pairs, since every twist is one more thing
   to read on every arrow — plus 1 s a mirror, 4 s a lock and 3 s a hidden
-  head or tether, the whole thing capped at 599 s, so a later chapter's
+  head or tether, the whole thing capped at 599 s and then trimmed to
+  `kClockTrim` (95%, every level 1–150, the table's numbers already
+  trimmed; the daily board keeps its flat five minutes, which its card
+  promises; the tests read the rule's paces back through `untrimmed`), so a later chapter's
   level is never shorter on the clock than the chapter before's; mirrors
   one per eight arrows through their own chapter and one per fourteen
   after, never under two) and
@@ -649,14 +731,36 @@ Key patterns:
   the board per open move) climbs chapter by chapter. Keep the generator
   test green — it is what guarantees a level is playable. The board is
   sized to ~11.3 free cells an arrow (`freeCellCount`: the rectangle less
-  the mirrors), which fills to ~0.88.
-- **Chapters and the daily board:** `data/chapters.dart` is the map (five of
-  `kChapterLength` = 20, `chapterOf`, `ruleTaughtAt`, `chapterForProgress`);
+  the mirrors), which fills to ~0.88. **The block (101–150)** comes after
+  the hundred flat levels, changes none of them, and — after a short
+  warm-up — never drops back below level 100: a teaching cube of three
+  arrows a face; 102–104 bring the twists back one a level (mirrors, locks,
+  hidden heads) on faces of 10, 15 and 20 arrows; from 105 all four twists
+  are on every face and the block holds about level 100's work (132
+  arrows), then gains one arrow every level to 177, each twist thickening
+  on its own staggered schedule, so every level is a little more than the
+  one before — but a face never holds more than thirty arrows (faces 10×10 →
+  17×17 past the 6×6 teaching cube), since one big board was the slog. The clock is 2.4 s an arrow (a
+  small face reads faster than one big board) plus the twists' seconds and
+  2 s a face for turning, under 600 s throughout; a face is sized to ~9.5
+  free cells an arrow and fills to 0.6–0.9. `test/data/level_specs_test.dart`
+  pins that curve (the warm-up, level 100's work at 105, a strict climb in
+  arrows-plus-weighted-twists, the face cap), and the generator test that
+  every face keeps the rules (`PuzzleGenerator.keepsRules`;
+  `pick_variants` checks a cube level face by face), that the faces keep
+  to themselves and that their chains grow deeper ten levels by ten.
+- **Chapters and the daily board:** `data/chapters.dart` is the map (five
+  flat chapters of `kChapterLength` = 20, then the block from
+  `kFirstCubeLevel` = 101 to 150; each `Chapter` carries its own
+  `firstLevel`/`lastLevel`; `chapterOf`, `ruleTaughtAt`,
+  `chapterForProgress`, `dailyChapterFor` — Pairs once on the block);
   `data/chapter_demos.dart` holds the tiny solvable boards each chapter card
   plays and the script of taps that shows the twist
   (`demoScriptFor`; the
   lock demo taps the lock first on purpose, for the rattle and the pointer,
-  and the fog demo taps the hidden arrow first for the same reason).
+  and the fog demo taps the hidden arrow first for the same reason; the
+  block's demo is a tiny cube with one arrow on each face round its middle,
+  and the card turns the block to each arrow's face before playing it).
   `widgets/chapter_demo.dart` runs that script on a real `GameNotifier`
   every `kDemoStep`, rests `kDemoRest` on the cleared board and starts over,
   so the card is a title, one line and a loop of the rule being played

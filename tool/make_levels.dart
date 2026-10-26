@@ -1,6 +1,7 @@
-// Prints the `LevelSpec` rows for levels 21–100 — the four chapters past the
-// plain rectangle — so the table in lib/data/level_specs.dart is drawn from
-// one set of rules rather than tuned a row at a time:
+// Prints the `LevelSpec` rows for levels 21–150 — the four chapters past the
+// plain rectangle, and the fifty levels on the block after them — so the
+// table in lib/data/level_specs.dart is drawn from one set of rules rather
+// than tuned a row at a time:
 //
 //   dart run tool/make_levels.dart > /tmp/rows.dart
 //
@@ -26,10 +27,42 @@
 // for every one of them on the board, plus slack, and never over ten
 // minutes. Teaching boards run at 3 s an arrow.
 
+// **Levels 101–150** are the block: six square faces, each a board of its
+// own, played one at a time. They follow level 100, the hardest flat
+// board, so after a short warm-up they do not drop back: a teaching cube
+// (three arrows a face), three levels that bring the twists back one at a
+// time on faces of ten, fifteen and twenty arrows, and from level 105 all
+// four twists on every face and about level 100's count over the block
+// ([cubeFaceStart] a face, 132 in all), then one more arrow every level
+// to 177, the twists thickening each on its own schedule — so every level
+// is a little more than the one before, but never a big board: a face
+// holds a fifth of what level 100 did. The clock runs at [cubePace] an
+// arrow (a small face is quicker to read than one big board) plus the
+// twists' seconds and two seconds a face for turning the block.
+
 import 'dart:math';
+
+import 'package:arrow_game/data/level_specs.dart' show kClockTrim;
 
 const int firstLevel = 21;
 const int lastLevel = 100;
+
+/// Arrows on each face of the block once it is warmed up (level 105); from
+/// there the block gains one arrow a level, to 177 (about thirty a face).
+const int cubeFaceStart = 22;
+
+/// Seconds an arrow on the block, before the twists' own seconds.
+const double cubePace = 2.4;
+
+/// Faces on the block.
+const int faces = 6;
+
+/// Free cells a face of the block is sized to offer per arrow: a little
+/// tighter than a flat board, since a face is a small board with few arrows
+/// on it, and at the flat boards' room the first faces came out a third
+/// empty.
+const double cubeCellsPerArrow = 9.5;
+
 
 /// Arrows on a chapter's second level and on its twentieth.
 const int climbStart = 30;
@@ -91,8 +124,8 @@ void main() {
     final slack = teach ? 25.0 : 15.0;
     final think = mirrors * 1.0 + locks * 4.0 + hidden * 3.0 + pairs * 3.0;
     final seconds = arrows * (teach ? 3.0 : pace[chapter]) + slack + think;
-    // Never a clock over ten minutes.
-    final timeLimitMs = min((seconds * 1000).round(), 599000);
+    // Never a clock over ten minutes, and every clock trimmed to kClockTrim.
+    final timeLimitMs = (min((seconds * 1000).round(), 599000) * kClockTrim).round();
 
     final features = <String>[
       if (mirrors > 0) 'mirrors: $mirrors',
@@ -110,6 +143,78 @@ void main() {
       'minLength: $minLength, maxLength: $maxLength, timeLimitMs: $timeLimitMs, openMoves: $openMoves$featureText),',
     );
   }
+  for (var level = 101; level <= 150; level++) {
+    _cube(level);
+  }
+}
+
+void _cube(int level) {
+  final k = level - 100; // 1..50 on the block
+  final teach = k == 1;
+
+  // Arrows on each face. The first few levels warm up from the teaching
+  // cube; from the fifth on the block holds about what level 100 held
+  // (twenty-two a face, 132 in all) and climbs slowly to twenty-eight a
+  // face — the whole block is more work than level 100, but no one face is
+  // ever a big board.
+  // One more arrow on the block every level from the fifth: the faces
+  // share it out, so they take turns at growing.
+  final arrows = switch (k) {
+    1 => 3 * faces,
+    2 => 10 * faces,
+    3 => 15 * faces,
+    4 => 20 * faces,
+    _ => cubeFaceStart * faces + (k - 5),
+  };
+  final perFace = (arrows / faces).ceil();
+
+  // The twists: the player has met all four on the flat levels, so they
+  // come back one a level through the warm-up (mirrors, then locks, then
+  // hidden heads) and from the fifth level all four are on every face,
+  // thickening slowly to the last.
+  // Each twist thickens on its own schedule, staggered so no two of them
+  // step up on the same level: two mirrors a face to five, one of each
+  // other twist a face to two.
+  final on = max(0, k - 5); // 0..45 past the warm-up
+  final mirrors = k < 2 ? 0 : 2 * faces + on * 3 * faces ~/ 45;
+  final locks = k < 3 ? 0 : faces + (on * faces + 5) ~/ 45;
+  final hidden = k < 4 ? 0 : faces + (on * faces + 20) ~/ 51;
+  final pairs = k < 5 ? 0 : faces + (on * faces + 35) ~/ 57;
+  final mirrorsPerFace = (mirrors / faces).ceil();
+
+  // A face is square, sized like the flat boards but a little tighter:
+  // ~9.5 free cells an arrow beside its share of the mirrors.
+  final side = teach ? 6 : sqrt(perFace * cubeCellsPerArrow + mirrorsPerFace).round();
+  final minLength = side < 10 ? 2 : 3;
+  final maxLength = teach ? 4 : min(14, max(5, side - 1));
+
+  // The clock: a face is a small board, so an arrow on it is found faster
+  // than one among level 100's hundred and fifty — the pace per arrow is
+  // lower than the flat chapters' — plus the twists' seconds and two
+  // seconds a face for turning the block, never over ten minutes.
+  final slack = (teach ? 25.0 : 15.0) + 2.0 * faces;
+  final think = mirrors * 1.0 + locks * 4.0 + hidden * 3.0 + pairs * 3.0;
+  final seconds = arrows * (teach ? 3.0 : cubePace) + slack + think;
+  final timeLimitMs = (min((seconds * 1000).round(), 599000) * kClockTrim).round();
+  final openMoves = teach ? 3 : 2;
+  _print(level, side, side, arrows, minLength, maxLength, timeLimitMs, openMoves, mirrors, locks, hidden, pairs, faces);
+}
+
+void _print(int level, int width, int height, int arrows, int minLength, int maxLength, int timeLimitMs,
+    int openMoves, int mirrors, int locks, int hidden, int pairs, int faces) {
+  final features = <String>[
+    if (mirrors > 0) 'mirrors: $mirrors',
+    if (locks > 0) 'locks: $locks',
+    if (hidden > 0) 'hidden: $hidden',
+    if (pairs > 0) 'pairs: $pairs',
+  ];
+  final featureText = features.isEmpty ? '' : ', features: LevelFeatures(${features.join(', ')})';
+  final faceText = faces > 0 ? ', faces: $faces' : '';
+  // ignore: avoid_print
+  print(
+    '  LevelSpec(level: $level, width: $width, height: $height, arrows: $arrows, '
+    'minLength: $minLength, maxLength: $maxLength, timeLimitMs: $timeLimitMs, openMoves: $openMoves$featureText$faceText),',
+  );
 }
 
 /// The smallest board of the usual proportions whose free cells cover

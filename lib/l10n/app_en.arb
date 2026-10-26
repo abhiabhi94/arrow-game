@@ -285,6 +285,56 @@
   "levelName98": "Endless Maze",
   "levelName99": "Almost Out",
   "levelName100": "The Last Arrow",
+  "levelName101": "First Corner",
+  "levelName102": "Six Sides",
+  "levelName103": "Corner Turn",
+  "levelName104": "Square One",
+  "levelName105": "Building Blocks",
+  "levelName106": "Face Value",
+  "levelName107": "Edge of the Box",
+  "levelName108": "Corner Shop",
+  "levelName109": "Cube Root",
+  "levelName110": "Flat Pack",
+  "levelName111": "Hall of Glass",
+  "levelName112": "Prism",
+  "levelName113": "Reflex Angle",
+  "levelName114": "Looking Glass",
+  "levelName115": "Angle of Attack",
+  "levelName116": "Kaleidoscope",
+  "levelName117": "Glass Box",
+  "levelName118": "Bent Light",
+  "levelName119": "Mirror Image",
+  "levelName120": "Through the Looking Box",
+  "levelName121": "Locked Box",
+  "levelName122": "Combination",
+  "levelName123": "Strongbox",
+  "levelName124": "Key Ring",
+  "levelName125": "Treasure Chest",
+  "levelName126": "Puzzle Box",
+  "levelName127": "Vault",
+  "levelName128": "Safe Cracker",
+  "levelName129": "Skeleton Key",
+  "levelName130": "Lock, Stock",
+  "levelName131": "Black Box",
+  "levelName132": "Smoke and Mirrors",
+  "levelName133": "Fog Bank",
+  "levelName134": "Dark Side",
+  "levelName135": "Blind Corner",
+  "levelName136": "Shadow Box",
+  "levelName137": "Night Shift",
+  "levelName138": "Hidden Depths",
+  "levelName139": "Mist Cube",
+  "levelName140": "Eclipse",
+  "levelName141": "Two of a Kind",
+  "levelName142": "Tied Together",
+  "levelName143": "Double Act",
+  "levelName144": "Twin Peaks",
+  "levelName145": "Knotted",
+  "levelName146": "Partners",
+  "levelName147": "Lockstep",
+  "levelName148": "Side by Side",
+  "levelName149": "Full House",
+  "levelName150": "The Last Block",
   "tutorialTap": "Tap an arrow to slide it out the way it points.",
   "tutorialBlocked": "An arrow in the way costs a life — find the free ones first.",
   "gameLoading": "Laying out the arrows…",
@@ -678,6 +728,68 @@
   "settingsReduceMotionSubtitle": "No shakes, hops or confetti — the arrows still move",
   "settingsExtraTime": "Extra time",
   "settingsExtraTimeSubtitle": "Twice the clock on every level",
+  "chapterName6": "The Block",
+  "chapterBlurb6": "Six faces of arrows on a block. Turn it to reach each face.",
+  "introTitleCube": "The block",
+  "introBodyCube": "Six faces on one block. Turn it to play each face.",
+  "tutorialCube": "Drag the block to turn it. Play the face in front; tap a side to bring it round.",
+  "cubeTurnLeft": "Turn to the face on the left",
+  "cubeTurnRight": "Turn to the face on the right",
+  "cubeTurnUp": "Turn to the face above",
+  "cubeTurnDown": "Turn to the face below",
+  "cubeFaceArrows": "{count, plural, =0{Face clear} =1{1 arrow on this face} other{{count} arrows on this face}}",
+  "@cubeFaceArrows": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cubeFacesClear": "{cleared} of {total} faces clear",
+  "@cubeFacesClear": {
+    "placeholders": {
+      "cleared": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "cubeMapLabel": "The block, face {face} towards you, {cleared} of {total} faces clear",
+  "@cubeMapLabel": {
+    "placeholders": {
+      "face": {
+        "type": "int"
+      },
+      "cleared": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "boardFaceLabel": "Face {face} of the block, {width} by {height}, {left} of {total} arrows left on it",
+  "@boardFaceLabel": {
+    "placeholders": {
+      "face": {
+        "type": "int"
+      },
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      },
+      "left": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "onboardRuleNoClock": "No clock — take all the time you like (Settings can add one)",
   "settingsGameplay": "Gameplay",
   "settingsRemoveTimeLimits": "Remove time limits",

@@ -43,9 +43,9 @@ void main() {
   });
 
   test('a snapshot of a level this build does not have reads as empty; the daily one is kept', () async {
-    // A PR preview on the same origin with 150 levels left one at level 150.
+    // A PR preview on the same origin with more levels left one past the end.
     const daily = SavedGame(level: LevelSpec.dailyLevel, seed: 9, removed: [1], mistakes: 0, hintsLeft: 3, elapsedMs: 10);
-    for (final level in [-1, totalLevels + 1, 150]) {
+    for (final level in [-1, totalLevels + 1, totalLevels + 50]) {
       final container = await _container({
         SavedGameRepository.key: jsonEncode(SavedGame(level: level, seed: 9, removed: const [1], mistakes: 0, hintsLeft: 3, elapsedMs: 10).toJson()),
       });

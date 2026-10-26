@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../ui/colors.dart';
+import 'keycap.dart';
 
 /// The row under the board: hint (with hints-left badge), grid-lines toggle
 /// (locked until earned), zoom in and zoom out.
@@ -118,16 +119,11 @@ class _ToolButton extends StatelessWidget {
       toggled: toggled,
       child: Tooltip(
         message: tooltip,
-        child: Material(
+        child: Keycap(
           color: active ? p.primary : p.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: active ? p.primary : p.outlineSoft),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: onPressed,
-            child: SizedBox(
+          borderColor: active ? p.primary : p.outlineSoft,
+          onPressed: onPressed,
+          child: SizedBox(
               width: 58,
               height: 54,
               child: Stack(
@@ -168,7 +164,6 @@ class _ToolButton extends StatelessWidget {
                 ],
               ),
             ),
-          ),
         ),
       ),
     );

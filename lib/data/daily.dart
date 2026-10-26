@@ -1,5 +1,6 @@
 /// The daily board: one fresh deal a day, about five minutes long, with the
-/// twists of the chapter the player has reached. Pure Dart.
+/// twists of the chapter the player has reached (the last flat one, once
+/// they are on the block). Pure Dart.
 ///
 /// Every player gets their own: the seed mixes the day with a salt drawn
 /// once per install, so two phones never share a board and the same phone
@@ -45,7 +46,8 @@ LevelSpec dailySpec({required int day, required Chapter chapter, required int sa
     ChapterRule.mirrors => LevelFeatures(mirrors: mirrors),
     ChapterRule.locks => LevelFeatures(mirrors: mirrors, locks: twist),
     ChapterRule.fog => LevelFeatures(mirrors: mirrors, locks: 2, hidden: twist),
-    ChapterRule.pairs => LevelFeatures(mirrors: mirrors, locks: 2, hidden: 2, pairs: twist),
+    // The daily board is flat; on the block it keeps every flat twist.
+    ChapterRule.pairs || ChapterRule.cube => LevelFeatures(mirrors: mirrors, locks: 2, hidden: 2, pairs: twist),
   };
   // Eighty arrows at ~11.3 free cells each: 3.75 s an arrow of the five
   // minutes, the trail's own pace with room for the twists.

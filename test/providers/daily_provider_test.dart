@@ -60,6 +60,15 @@ void main() {
     again.dispose();
   });
 
+  test('on the block the daily board stays flat, with the last flat chapter\'s twists', () async {
+    final prefs = await _prefs();
+    final n = DailyNotifier(DailyRepository(prefs), levelsCleared: () => 120, clock: () => _day, random: Random(1));
+    expect(n.state.chapter.index, 5);
+    expect(n.spec.isCube, isFalse);
+    expect(n.spec.features.pairs, greaterThan(0));
+    n.dispose();
+  });
+
   test('an untimed clear counts for the day and the streak, with no best time', () async {
     final prefs = await _prefs();
     final n = DailyNotifier(DailyRepository(prefs), levelsCleared: () => 0, clock: () => _day, random: Random(1));

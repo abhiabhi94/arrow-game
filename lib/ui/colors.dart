@@ -79,6 +79,12 @@ const Color _lBlockedFlash = Color(0x80FF6B6B);
 // Laid over the board while a hint shows, so the hinted arrow is the only
 // thing still at full strength.
 const Color _lHintVeil = Color(0xB8F4F3FF);
+// A face of the block on a cube level: a card a step off the page (white
+// on the lavender), with the block's edge a shade deeper — and the same
+// shade is what the faces turning away darken towards, so the block reads
+// as a solid rather than a sheet.
+const Color _lCubeFace = Color(0xFFFFFFFF);
+const Color _lCubeEdge = Color(0xFFC9C3EE);
 // One ink for every arrow, like a printed puzzle: colour would only shout.
 const Color _lArrowInk = Color(0xFF2D2A4A);
 
@@ -134,6 +140,8 @@ const Color _dPairWash = Color(0xFF1C3A31);
 const Color _dHintGlow = Color(0xD9FFCE52);
 const Color _dBlockedFlash = Color(0x99FF7B7B);
 const Color _dHintVeil = Color(0xC2131120);
+const Color _dCubeFace = Color(0xFF221F34);
+const Color _dCubeEdge = Color(0xFF3E3860);
 const Color _dArrowInk = Color(0xFFEAE7F7);
 
 const Color _dHeartFull = Color(0xFFFF7B7B);
@@ -174,6 +182,8 @@ class ArrowPalette {
     required this.gridLine,
     required this.mirror,
     required this.pairWash,
+    required this.cubeFace,
+    required this.cubeEdge,
     required this.hintGlow,
     required this.hintVeil,
     required this.blockedFlash,
@@ -221,6 +231,11 @@ class ArrowPalette {
 
   /// The wash under the cells of a tethered pair.
   final Color pairWash;
+
+  /// A face of the block on a cube level, and its edge (also the shade the
+  /// faces turning away darken towards).
+  final Color cubeFace;
+  final Color cubeEdge;
   final Color hintGlow;
 
   /// Dims the rest of the board while a hint points at one arrow.
@@ -261,6 +276,8 @@ class ArrowPalette {
     gridLine: _lGridLine,
     mirror: _lMirror,
     pairWash: _lPairWash,
+    cubeFace: _lCubeFace,
+    cubeEdge: _lCubeEdge,
     hintGlow: _lHintGlow,
     hintVeil: _lHintVeil,
     blockedFlash: _lBlockedFlash,
@@ -298,6 +315,8 @@ class ArrowPalette {
     gridLine: _dGridLine,
     mirror: _dMirror,
     pairWash: _dPairWash,
+    cubeFace: _dCubeFace,
+    cubeEdge: _dCubeEdge,
     hintGlow: _dHintGlow,
     hintVeil: _dHintVeil,
     blockedFlash: _dBlockedFlash,

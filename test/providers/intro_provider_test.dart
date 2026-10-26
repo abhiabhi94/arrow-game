@@ -36,6 +36,10 @@ void main() {
     expect(n.due(level: 46), [ChapterRule.mirrors, ChapterRule.locks]);
     expect(n.due(level: 65), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog]);
     expect(n.due(level: 100), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs]);
+    expect(
+      n.due(level: 150),
+      [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
+    );
     expect(n.due(chapter: chapters[2]), [ChapterRule.mirrors, ChapterRule.locks]);
     expect(n.due(), isEmpty);
     // A player who met Mirrors at 21 is shown only Locks at 41.

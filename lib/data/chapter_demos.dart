@@ -72,7 +72,23 @@ Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
           ],
           pairs: const {0: 1},
         ),
+      ChapterRule.cube => _cubeDemo,
     };
+
+/// The block: one arrow on each face round its middle, each pointing a
+/// different way, so the card turns the block from face to face as it
+/// clears them. The top and bottom are left empty.
+final Puzzle _cubeDemo = Puzzle.cube(<Puzzle>[
+  _face([const Cell(0, 2), const Cell(1, 2), const Cell(2, 2)], Direction.right),
+  _face([const Cell(2, 3), const Cell(2, 2), const Cell(2, 1)], Direction.up),
+  _face([const Cell(3, 1), const Cell(2, 1), const Cell(1, 1)], Direction.left),
+  _face([const Cell(1, 0), const Cell(1, 1), const Cell(1, 2)], Direction.down),
+  Puzzle(width: 4, height: 4, arrows: const <ArrowPiece>[]),
+  Puzzle(width: 4, height: 4, arrows: const <ArrowPiece>[]),
+]);
+
+Puzzle _face(List<Cell> cells, Direction heading) =>
+    Puzzle(width: 4, height: 4, arrows: [ArrowPiece(id: 0, cells: cells, heading: heading)]);
 
 /// The taps the card plays on [demoPuzzleFor]'s board, in order. A tap on a
 /// locked (or hidden) arrow first is deliberate: it shows the rattle and the
@@ -84,6 +100,7 @@ List<int> demoScriptFor(ChapterRule rule) => switch (rule) {
       ChapterRule.locks => const [0, 1, 0],
       ChapterRule.fog => const [1, 0, 2, 1],
       ChapterRule.pairs => const [0, 2],
+      ChapterRule.cube => const [0, 1, 2, 3],
     };
 
 /// A spec that fits [demoPuzzleFor]'s boards (nothing on it matters but the
@@ -92,8 +109,9 @@ LevelSpec demoSpecFor(ChapterRule rule) {
   final p = demoPuzzleFor(rule);
   return LevelSpec(
     level: 1,
-    width: p.width,
+    width: p.faceWidth,
     height: p.height,
+    faces: p.isCube ? p.faceCount : 0,
     arrows: p.arrowCount,
     minLength: 2,
     maxLength: 6,

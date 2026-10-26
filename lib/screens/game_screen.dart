@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:confetti/confetti.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/chapters.dart';
 import '../data/level_specs.dart';
+import '../engine/cube.dart';
 import '../engine/direction.dart';
 import '../l10n/app_localizations.dart';
 import '../models/board_cursor.dart';
@@ -28,6 +30,8 @@ import '../utils/format.dart';
 import '../utils/labels.dart';
 import '../widgets/board_toolbar.dart';
 import '../widgets/chapter_demo.dart';
+import '../widgets/cube_map.dart';
+import '../widgets/cube_stage.dart';
 import '../widgets/lives_indicator.dart';
 import '../widgets/puzzle_board.dart';
 import '../widgets/result_card.dart';
@@ -68,6 +72,10 @@ class GameScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<GameScreen> createState() => _GameScreenState();
 }
+
+/// How long a cleared face stays in front before the block turns on to the
+/// next by itself: long enough for the last arrow's slide to be seen.
+const Duration kCubeAutoTurnDelay = Duration(milliseconds: 750);
 
 /// How far the screen is thrown sideways at the peak of a crash, in
 /// logical pixels.
@@ -134,6 +142,55 @@ class _GameScreenState extends ConsumerState<GameScreen>
 
   /// Whether the screen keeps still — read in build, used by the listener.
   bool _calm = false;
+
+  /// On a cube level, the face of the block being played — the one the
+  /// block stands square on (`CubeStage` turns it round to this one).
+  int _face = 0;
+
+  /// The pause before the block turns on by itself from a cleared face.
+  Timer? _turnTimer;
+
+  /// Turns the block a quarter [turn]: the face that way comes to the front.
+  void _turnCube(CubeTurn turn) => _turnTo(cubeNeighbour(_face, turn));
+
+  /// Turns the block round to [face].
+  void _turnTo(int face) {
+    _turnTimer?.cancel();
+    if (face != _face) setState(() => _face = face);
+  }
+
+  /// Arrows still on each face of the block.
+  static List<int> _faceLeft(GameState state) {
+    final puzzle = state.puzzle!;
+    final left = List<int>.filled(puzzle.faceCount, 0);
+    for (final a in puzzle.arrows) {
+      if (!state.removed.contains(a.id)) left[puzzle.faceOf(a.id)]++;
+    }
+    return left;
+  }
+
+  /// The face of the block to play next once the front one is clear: one
+  /// beside it if any still has arrows (right first, the way a page turns),
+  /// else whichever does. Null once the block is clear.
+  int? _nextFace(GameState state) {
+    final left = _faceLeft(state);
+    for (final turn in const <CubeTurn>[CubeTurn.right, CubeTurn.down, CubeTurn.left, CubeTurn.up]) {
+      final next = cubeNeighbour(_face, turn);
+      if (left[next] > 0) return next;
+    }
+    final rest = <int>[for (var f = 0; f < left.length; f++) if (left[f] > 0) f];
+    return rest.isEmpty ? null : rest.first;
+  }
+
+  /// Puts the block down with the first face that still has arrows in
+  /// front, without a turn: a fresh board, a restart or a level picked up.
+  void _settleCube(GameState state) {
+    final puzzle = state.puzzle;
+    if (puzzle == null || !puzzle.isCube) return;
+    _turnTimer?.cancel();
+    final first = _faceLeft(state).indexWhere((n) => n > 0);
+    _face = first < 0 ? 0 : first;
+  }
 
   /// The chapter cards still to show over the paused board, in trail
   /// order: every twist this level is at or past whose card the player has
@@ -237,7 +294,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final state = ref.read(gameProvider(widget.level));
     if (!state.isPlaying || state.hintArrowId != null) return;
     if (state.hintsLeft > 0) {
-      notifier.useHint();
+      notifier.useHint(face: _cubeFace(state));
       return;
     }
     notifier.pause();
@@ -253,7 +310,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
         notifier.keepGoing();
       case RiddlePrize.hint:
         notifier.resume();
-        notifier.earnHint();
+        notifier.earnHint(face: _cubeFace(ref.read(gameProvider(widget.level))));
     }
     _putRiddleAway();
   }
@@ -267,6 +324,31 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _putRiddleAway();
   }
 
+  /// Keeps the block where the play is: a hint lit on another face turns
+  /// the block round to it, and a face just cleared turns on by itself to
+  /// the next face with arrows, once the last one has slid away.
+  void _followCube(GameState? prev, GameState next) {
+    final puzzle = next.puzzle!;
+    final hint = next.hintArrowId;
+    if (hint != null && hint != prev?.hintArrowId && puzzle.faceOf(hint) != _face) {
+      _turnTo(puzzle.faceOf(hint));
+      return;
+    }
+    final exited = next.lastOutcome == MoveOutcome.exited && next.moveToken != prev?.moveToken;
+    if (!exited || next.phase != GamePhase.playing || _faceLeft(next)[_face] > 0) return;
+    _turnTimer?.cancel();
+    _turnTimer = Timer(kCubeAutoTurnDelay, () {
+      if (!mounted) return;
+      final now = ref.read(gameProvider(widget.level));
+      if (!now.isPlaying || _faceLeft(now)[_face] > 0) return;
+      final face = _nextFace(now);
+      if (face != null) _turnTo(face);
+    });
+  }
+
+  /// The face in front on a cube level, or null on a flat board.
+  int? _cubeFace(GameState state) => state.puzzle?.isCube ?? false ? _face : null;
+
   @override
   void initState() {
     super.initState();
@@ -275,6 +357,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     if (state.phase != GamePhase.loading) {
       _reclaimRiddle(state);
       _maybeIntro(state);
+      _settleCube(state);
     }
     _crash.addStatusListener((status) {
       if (status == AnimationStatus.completed && _endingHeld && mounted) {
@@ -286,6 +369,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _turnTimer?.cancel();
     _crash.dispose();
     _hop.dispose();
     _confetti.dispose();
@@ -312,14 +396,20 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// The zoom ceiling for the level on screen, from how small a cell is
   /// drawn in the viewport the board actually has.
   double get _maxZoom {
-    if (_viewport.isEmpty) return kMaxZoom;
     final spec = ref.read(gameProvider(widget.level)).spec;
+    // The block zooms until the face in front fills the stage.
+    if (spec.isCube) return kCubeMaxZoom;
+    if (_viewport.isEmpty) return kMaxZoom;
     return maxZoomFor(min(_viewport.width / spec.width, _viewport.height / spec.height));
   }
 
   /// Zooms about the centre of the board viewport.
   void _setZoom(double scale) {
     final s = scale.clamp(kMinZoom, _maxZoom);
+    if (ref.read(gameProvider(widget.level)).spec.isCube) {
+      setState(() => _scale = s);
+      return;
+    }
     final dx = _viewport.width * (1 - s) / 2;
     final dy = _viewport.height * (1 - s) / 2;
     setState(() {
@@ -348,7 +438,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final provider = gameProvider(widget.level);
     final state = ref.read(provider);
     final notifier = ref.read(provider.notifier);
-    switch (shortcutFor(event)) {
+    final shortcut = shortcutFor(event);
+    // On the block, Shift with an arrow key turns it that way.
+    if (keyboard.isShiftPressed && (state.puzzle?.isCube ?? false)) {
+      final turn = cubeTurnFor(shortcut);
+      if (turn == null) return KeyEventResult.ignored;
+      if (state.isPlaying) _turnCube(turn);
+      return KeyEventResult.handled;
+    }
+    switch (shortcut) {
       case null:
         return KeyEventResult.ignored;
       case GameShortcut.hint:
@@ -381,10 +479,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
     return KeyEventResult.handled;
   }
 
-  /// Restarts the level; the keyboard cursor goes with the attempt.
+  /// Restarts the level; the keyboard cursor goes with the attempt, and on
+  /// the block the turns.
   void _restart() {
     if (_cursor != null) setState(() => _cursor = null);
     ref.read(gameProvider(widget.level).notifier).restart();
+    // The block goes back down with its first face in front.
+    setState(() => _settleCube(ref.read(gameProvider(widget.level))));
   }
 
   /// Steps the keyboard cursor [direction] to the nearest arrow that way (or
@@ -393,7 +494,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void _moveCursor(GameState state, Direction direction) {
     final puzzle = state.puzzle;
     if (puzzle == null) return;
-    final next = cursorStep(puzzle, state.removed, _cursor, direction);
+    final next = cursorStep(puzzle, state.removed, _cursor, direction, face: _cubeFace(state));
     if (next != null && next != _cursor) setState(() => _cursor = next);
   }
 
@@ -415,11 +516,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
         // The bump that ends the attempt gets to play out first.
         _endingHeld = next.phase == GamePhase.outOfLives;
       }
-      // A restart (or a new board) forgets the keyboard cursor.
-      if (_cursor != null &&
-          (next.puzzle != prev?.puzzle || next.moveToken < (prev?.moveToken ?? 0))) {
+      // A restart (or a new board) forgets the keyboard cursor, and puts
+      // the block down again.
+      final fresh = next.puzzle != prev?.puzzle || next.moveToken < (prev?.moveToken ?? 0);
+      if (_cursor != null && fresh) {
         setState(() => _cursor = null);
       }
+      if (fresh && (next.puzzle?.isCube ?? false)) setState(() => _settleCube(next));
+      if (next.puzzle?.isCube ?? false) _followCube(prev, next);
       // Restarting (or any other way out of the phase the riddle was asked
       // in) takes the riddle with it, so backing out never leaves a card
       // floating over the board.
@@ -554,10 +658,45 @@ class _GameScreenState extends ConsumerState<GameScreen>
                           ),
                         ),
                         const SizedBox(height: 12),
+                        if (state.puzzle?.isCube ?? false) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: CubeControls(
+                              face: _face,
+                              faceLeft: _faceLeft(state),
+                              onTurn: _turnCube,
+                              enabled: state.isPlaying,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                         Expanded(
                           child: LayoutBuilder(
                             builder: (context, constraints) {
                               _viewport = constraints.biggest;
+                              // The block is its own 3D stage: a finger turns
+                              // it and two zoom it, so it takes no viewer.
+                              if (state.puzzle?.isCube ?? false) {
+                                return CubeStage(
+                                  face: _face,
+                                  zoom: _scale,
+                                  reduceMotion: _calm,
+                                  onFaceChanged: (face) => _turnTo(face),
+                                  onZoom: _setZoom,
+                                  interactive: state.isPlaying,
+                                  faceBuilder: (context, face, boardKey, front) => PuzzleBoard(
+                                    key: boardKey,
+                                    state: state,
+                                    face: face,
+                                    showGrid: gridUnlocked && settings.gridLinesOn,
+                                    onTapArrow: notifier.tapArrow,
+                                    onBounce: front ? notifier.bounce : null,
+                                    zoom: _scale,
+                                    focusedArrowId: front ? _cursor : null,
+                                    reduceMotion: _calm,
+                                  ),
+                                );
+                              }
                               return ClipRect(
                                 child: InteractiveViewer(
                                   transformationController: _zoom,
@@ -832,6 +971,7 @@ extension on _GameScreenState {
       ChapterRule.locks => l10n.tutorialLocks,
       ChapterRule.fog => l10n.tutorialFog,
       ChapterRule.pairs => l10n.tutorialPairs,
+      ChapterRule.cube => l10n.tutorialCube,
     };
   }
 }
@@ -854,6 +994,7 @@ class _IntroCard extends StatelessWidget {
       ChapterRule.locks => ('🔒', l10n.introTitleLocks, l10n.introBodyLocks),
       ChapterRule.fog => ('🌫️', l10n.introTitleFog, l10n.introBodyFog),
       ChapterRule.pairs => ('🔗', l10n.introTitlePairs, l10n.introBodyPairs),
+      ChapterRule.cube => ('🧊', l10n.introTitleCube, l10n.introBodyCube),
     };
     return ResultCard(
       emoji: emoji,
@@ -897,6 +1038,17 @@ GameShortcut? shortcutFor(KeyEvent event) => switch (event.logicalKey) {
   LogicalKeyboardKey.arrowDown => GameShortcut.cursorDown,
   LogicalKeyboardKey.arrowLeft => GameShortcut.cursorLeft,
   LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter => GameShortcut.activate,
+  _ => null,
+};
+
+/// The way Shift with an arrow key turns the block, or null for any other
+/// key.
+@visibleForTesting
+CubeTurn? cubeTurnFor(GameShortcut? shortcut) => switch (shortcut) {
+  GameShortcut.cursorLeft => CubeTurn.left,
+  GameShortcut.cursorRight => CubeTurn.right,
+  GameShortcut.cursorUp => CubeTurn.up,
+  GameShortcut.cursorDown => CubeTurn.down,
   _ => null,
 };
 

@@ -57,19 +57,23 @@ class RayTrace {
 /// through the mirrors [mirrorAt] reports, or null when the path never
 /// leaves: four mirrors can send it round in a ring. Every cell entered is
 /// in the trace, the mirror cells too — the arrow slides through them.
+///
+/// The board starts at column [originX]: a face of a cube level is one
+/// square of a strip of six, and its arrows leave by its own edges.
 RayTrace? traceRay({
   required Cell head,
   required Direction heading,
   required int width,
   required int height,
   required Mirror? Function(Cell) mirrorAt,
+  int originX = 0,
 }) {
   final cells = <Cell>[];
   var d = heading;
   var c = head.step(d);
   // A loop can only close at a mirror, entered the same way as before.
   final turned = <(Cell, Direction)>{};
-  while (c.isInside(width, height)) {
+  while (c.x >= originX && c.x < originX + width && c.y >= 0 && c.y < height) {
     cells.add(c);
     final m = mirrorAt(c);
     if (m != null) {

@@ -76,6 +76,10 @@ const int kBounceDwellMs = 140;
 /// the game screen) a ring is drawn around that arrow. With [reduceMotion]
 /// the bump no longer travels (the hit cell still flashes), the hint glow
 /// holds still instead of pulsing and a lost level does not slump.
+///
+/// **The block.** On a cube level ([Puzzle.isCube]) the board shows one
+/// [face]: it is sized, drawn, tapped and read out as that face alone, and
+/// an arrow sliding out leaves by the face's own edge.
 class PuzzleBoard extends StatefulWidget {
   const PuzzleBoard({
     super.key,
@@ -86,9 +90,13 @@ class PuzzleBoard extends StatefulWidget {
     this.zoom = 1,
     this.focusedArrowId,
     this.reduceMotion = false,
+    this.face,
   });
 
   final GameState state;
+
+  /// On a cube level, the face to show; null shows the whole board.
+  final int? face;
   final bool showGrid;
   final ValueChanged<int> onTapArrow;
 
@@ -107,10 +115,14 @@ class PuzzleBoard extends StatefulWidget {
   final bool reduceMotion;
 
   @override
-  State<PuzzleBoard> createState() => _PuzzleBoardState();
+  State<PuzzleBoard> createState() => PuzzleBoardState();
 }
 
-class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin {
+class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin {
+  /// The cell size and where the drawing sits in the board's box, from the
+  /// last layout, for [tapAtBox].
+  double _cellSize = 0;
+  Offset _paintOffset = Offset.zero;
   /// Arrows sliding out: id → progress controller.
   final Map<int, AnimationController> _exits = <int, AnimationController>{};
 
@@ -170,9 +182,9 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   }
 
   @override
-  void didUpdateWidget(PuzzleBoard old) {
-    super.didUpdateWidget(old);
-    if (old.reduceMotion != widget.reduceMotion) {
+  void didUpdateWidget(PuzzleBoard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.reduceMotion != widget.reduceMotion) {
       _hintPing?.dispose();
       _hintPing = null;
       _slump?.dispose();
@@ -180,14 +192,14 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     }
     _syncHintPing();
     final s = widget.state;
-    if (s.puzzle != old.state.puzzle || s.moveToken < old.state.moveToken) {
+    if (s.puzzle != oldWidget.state.puzzle || s.moveToken < oldWidget.state.moveToken) {
       // A restart: forget every animation.
       _disposeAll();
       _syncSlump();
       return;
     }
-    final moved = s.moveToken != old.state.moveToken && s.lastMoveId != null;
-    final uncovered = s.revealed.difference(old.state.revealed);
+    final moved = s.moveToken != oldWidget.state.moveToken && s.lastMoveId != null;
+    final uncovered = s.revealed.difference(oldWidget.state.revealed);
     if (moved) {
       final id = s.lastMoveId!;
       switch (s.lastOutcome) {
@@ -455,10 +467,14 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
   /// The arrow a touch at [p] means: the one under the finger, or — when that
   /// cell is empty — the nearest arrow still on the board within
   /// [kTouchSlopPx] of it. Null when the finger is over open space.
-  int? _arrowFor(Offset p, double cellSize) {
+  int? _arrowFor(Offset local, double cellSize) {
     final puzzle = widget.state.puzzle!;
+    final (originX, windowWidth) = _window(puzzle, widget.face);
+    // In the board's own cells: the face shown starts [originX] cells in.
+    final p = local + Offset(originX * cellSize, 0);
+    bool inside(Cell c) => c.x >= originX && c.x < originX + windowWidth && c.y >= 0 && c.y < puzzle.height;
     final cell = Cell((p.dx / cellSize).floor(), (p.dy / cellSize).floor());
-    if (cell.isInside(puzzle.width, puzzle.height)) {
+    if (inside(cell)) {
       final under = puzzle.arrowAt(cell);
       if (under != null && !widget.state.removed.contains(under)) return under;
     }
@@ -471,7 +487,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     for (var dy = -reach; dy <= reach; dy++) {
       for (var dx = -reach; dx <= reach; dx++) {
         final c = Cell(cell.x + dx, cell.y + dy);
-        if (!c.isInside(puzzle.width, puzzle.height)) continue;
+        if (!inside(c)) continue;
         final id = puzzle.arrowAt(c);
         if (id == null || widget.state.removed.contains(id)) continue;
         final d = (_BoardPainter._center(c, cellSize) - p).distance;
@@ -482,6 +498,16 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
       }
     }
     return best;
+  }
+
+  /// A tap the block's stage worked out from its own geometry, at [p] in
+  /// this board's box: the cube's faces are drawn turned in space, so the
+  /// stage, not this board, catches the finger. Taken the same way as a tap
+  /// on the board itself, nearest-arrow slop and all.
+  void tapAtBox(Offset p) {
+    if (_cellSize <= 0 || _settling) return;
+    final id = _arrowFor(p - _paintOffset, _cellSize);
+    if (id != null) widget.onTapArrow(id);
   }
 
   void _onTapUp(TapUpDetails d, double cellSize) {
@@ -497,20 +523,26 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     final puzzle = widget.state.puzzle!;
     final p = context.palette;
     final l10n = AppLocalizations.of(context);
+    final (_, windowWidth) = _window(puzzle, widget.face);
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellSize = min(
-          constraints.maxWidth / puzzle.width,
+          constraints.maxWidth / windowWidth,
           constraints.maxHeight / puzzle.height,
         );
-        final size = Size(cellSize * puzzle.width, cellSize * puzzle.height);
+        final size = Size(cellSize * windowWidth, cellSize * puzzle.height);
+        _cellSize = cellSize;
+        _paintOffset = Offset(
+          (constraints.maxWidth - size.width) / 2,
+          (constraints.maxHeight - size.height) / 2,
+        );
         return Center(
           // The board is a labelled container and the painter supplies one
           // node per arrow; the gesture detector adds nothing of its own,
           // since a semantic tap on the whole board would land at its centre.
           child: Semantics(
             container: true,
-            label: l10n == null ? null : boardLabel(l10n, widget.state),
+            label: l10n == null ? null : boardLabel(l10n, widget.state, face: widget.face),
             child: Listener(
               onPointerDown: (_) => _onPointerDown(),
               onPointerUp: (_) => _onPointerUp(),
@@ -543,6 +575,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
                     l10n: l10n,
                     textDirection: Directionality.of(context),
                     onTapArrow: widget.onTapArrow,
+                    face: widget.face,
                   ),
                 ),
               ),
@@ -553,6 +586,11 @@ class _PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin
     );
   }
 }
+
+/// The columns a board shows: from where, and how many — one face of a
+/// cube level, or the whole board.
+(int, int) _window(Puzzle puzzle, int? face) =>
+    face == null || !puzzle.isCube ? (0, puzzle.width) : (face * puzzle.faceWidth, puzzle.faceWidth);
 
 class _BoardPainter extends CustomPainter {
   _BoardPainter({
@@ -577,10 +615,17 @@ class _BoardPainter extends CustomPainter {
     required this.l10n,
     required this.textDirection,
     required this.onTapArrow,
+    required this.face,
   });
 
   final GameState state;
   final ArrowPalette palette;
+
+  /// The face of a cube level being shown, or null for the whole board.
+  final int? face;
+
+  /// Whether [id] is on the face shown (always, on a flat board).
+  bool _shown(int id) => face == null || !puzzle.isCube || puzzle.faceOf(id) == face;
   final bool showGrid;
 
   /// How far the bump actually moves the arrows, 0..1: 0 with motion reduced,
@@ -663,8 +708,13 @@ class _BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cs = size.width / puzzle.width;
-    final rect = Offset.zero & size;
+    final (originX, windowWidth) = _window(puzzle, face);
+    final cs = size.width / windowWidth;
+    // Drawn in the board's own cells: a face of the block is shifted so it
+    // sits at the canvas's origin, and the rest of the strip is never drawn.
+    canvas.save();
+    canvas.translate(-originX * cs, 0);
+    final rect = Rect.fromLTWH(originX * cs, 0, size.width, size.height);
 
     // No frame: the arrows sit straight on the page. Grid lines, when on,
     // run through the cell centres — the lattice the arrows are drawn on —
@@ -674,15 +724,16 @@ class _BoardPainter extends CustomPainter {
         ..color = palette.gridLine
         ..strokeWidth = 1;
       final first = cs / 2;
-      final lastX = size.width - cs / 2;
+      final firstX = rect.left + cs / 2;
+      final lastX = rect.right - cs / 2;
       final lastY = size.height - cs / 2;
-      for (var x = 0; x < puzzle.width; x++) {
-        final px = first + x * cs;
+      for (var x = 0; x < windowWidth; x++) {
+        final px = firstX + x * cs;
         canvas.drawLine(Offset(px, first), Offset(px, lastY), grid);
       }
       for (var y = 0; y < puzzle.height; y++) {
         final py = first + y * cs;
-        canvas.drawLine(Offset(first, py), Offset(lastX, py), grid);
+        canvas.drawLine(Offset(firstX, py), Offset(lastX, py), grid);
       }
     }
 
@@ -701,7 +752,7 @@ class _BoardPainter extends CustomPainter {
     for (final e in puzzle.pairs.entries) {
       final a = e.key;
       final b = e.value;
-      if (a > b || state.removed.contains(a) || state.removed.contains(b)) continue;
+      if (a > b || state.removed.contains(a) || state.removed.contains(b) || !_shown(a)) continue;
       glyphs.washPair(canvas, <Rect>[
         for (final id in <int>[a, b])
           for (final c in puzzle.arrows[id].cells) Rect.fromLTWH(c.x * cs, c.y * cs, cs, cs),
@@ -710,6 +761,7 @@ class _BoardPainter extends CustomPainter {
     // Mirrors: drawn under everything, so an arrow slides over the glass as
     // it turns.
     for (final e in puzzle.mirrors.entries) {
+      if (puzzle.faceOfCell(e.key) * puzzle.faceWidth != originX) continue;
       glyphs.mirror(canvas, Rect.fromLTWH(e.key.x * cs, e.key.y * cs, cs, cs), e.value);
     }
 
@@ -743,7 +795,7 @@ class _BoardPainter extends CustomPainter {
     for (final e in puzzle.pairs.entries) {
       final a = e.key;
       final b = e.value;
-      if (a > b) continue;
+      if (a > b || !_shown(a)) continue;
       bool gone(int id) => state.removed.contains(id) && !exits.containsKey(id);
       if (gone(a) || gone(b)) continue;
       final arrowA = puzzle.arrows[a];
@@ -763,6 +815,7 @@ class _BoardPainter extends CustomPainter {
     for (final arrow in puzzle.arrows) {
       final exiting = exits[arrow.id];
       if (state.removed.contains(arrow.id) && exiting == null) continue;
+      if (!_shown(arrow.id)) continue;
       final offset = _offsetOf(arrow);
       final shoved = bumping && arrow.id == hitId && shove > 0;
       if (shoved) {
@@ -790,11 +843,12 @@ class _BoardPainter extends CustomPainter {
     _paintBounces(canvas, cs, glyphs);
     _paintSparks(canvas, cs);
     _paintPointer(canvas, cs, glyphs);
-    _paintHint(canvas, size, cs);
+    _paintHint(canvas, rect, cs);
     canvas.restore();
     // Outside the clip: the ring sits a little proud of the cells, and an
     // arrow on the board's edge would otherwise lose that side of it.
     _paintCursor(canvas, cs);
+    canvas.restore();
   }
 
   /// A mirror an arrow has just turned at: its diagonal lights up in the
@@ -959,19 +1013,20 @@ class _BoardPainter extends CustomPainter {
     final strings = l10n;
     if (strings == null) return null;
     return (Size size) {
-      final cs = size.width / puzzle.width;
+      final (originX, windowWidth) = _window(puzzle, face);
+      final cs = size.width / windowWidth;
       final nodes = <CustomPainterSemantics>[];
       // Reading order: by the head's row, then its column.
       final order = <ArrowPiece>[
         for (final a in puzzle.arrows)
-          if (!state.removed.contains(a.id)) a,
+          if (!state.removed.contains(a.id) && _shown(a.id)) a,
       ]..sort((a, b) => a.head.y != b.head.y ? a.head.y - b.head.y : a.head.x - b.head.x);
       for (var i = 0; i < order.length; i++) {
         final arrow = order[i];
         nodes.add(
           CustomPainterSemantics(
             key: ValueKey<int>(arrow.id),
-            rect: _bounds(arrow, cs),
+            rect: _bounds(arrow, cs).shift(Offset(-originX * cs, 0)),
             properties: SemanticsProperties(
               label: arrowLabel(strings, state, arrow.id),
               textDirection: textDirection,
@@ -998,6 +1053,7 @@ class _BoardPainter extends CustomPainter {
       old.state.hintArrowId != state.hintArrowId ||
       old.state.phase != state.phase ||
       old.focusedId != focusedId ||
+      old.face != face ||
       old.l10n != l10n;
 
   /// The hint, drawn over the finished board: everything else dims behind a
@@ -1005,11 +1061,11 @@ class _BoardPainter extends CustomPainter {
   /// ring swells out of its head and fades, over and over. A late board is a
   /// hundred arrows in one ink — the eye does not find a static smudge among
   /// them, it finds the one thing still bright, and it finds movement.
-  void _paintHint(Canvas canvas, Size size, double cs) {
+  void _paintHint(Canvas canvas, Rect board, double cs) {
     final id = state.hintArrowId;
-    if (id == null || state.removed.contains(id)) return;
+    if (id == null || state.removed.contains(id) || !_shown(id)) return;
     final arrow = puzzle.arrows[id];
-    canvas.drawRect(Offset.zero & size, Paint()..color = palette.hintVeil);
+    canvas.drawRect(board, Paint()..color = palette.hintVeil);
     _paintArrow(canvas, arrow, cs, 0, true, null);
 
     final ping = hintPing;
@@ -1320,6 +1376,7 @@ class _BoardPainter extends CustomPainter {
       !setEquals(old.pendingReveals, pendingReveals) ||
       !_sameMap(old.bounces, bounces) ||
       old.travel != travel ||
+      old.face != face ||
       old.focusedId != focusedId;
 
   static bool _sameMap(Map<int, double> a, Map<int, double> b) {

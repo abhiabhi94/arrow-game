@@ -199,7 +199,7 @@ void main() {
     });
     expect(find.text('Slide every arrow out'), findsOneWidget);
     final gear = find.byTooltip('Settings');
-    final stars = find.bySemanticsLabel(RegExp(r'^3 of 300 stars'));
+    final stars = find.bySemanticsLabel(RegExp(r'^3 of 450 stars'));
     // A hundred levels down the trail, both are still in the bar at the top —
     // the bar slims and its contents recentre, but nothing scrolls away.
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -900));

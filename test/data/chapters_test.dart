@@ -4,13 +4,18 @@ import 'package:arrow_game/data/level_specs.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('five chapters of twenty levels cover the trail in order', () {
-    expect(chapters, hasLength(5));
+  test('five chapters of twenty levels, then fifty on the block, cover the trail in order', () {
+    expect(chapters, hasLength(6));
     expect(chapters.first.firstLevel, 1);
     expect(chapters.last.lastLevel, totalLevels);
     for (var i = 1; i < chapters.length; i++) {
       expect(chapters[i].firstLevel, chapters[i - 1].lastLevel + 1);
     }
+    for (final c in chapters.take(5)) {
+      expect(c.length, kChapterLength);
+    }
+    expect(chapters.last.firstLevel, kFirstCubeLevel);
+    expect(chapters.last.length, 50);
     expect(chapterOf(1).rule, ChapterRule.lines);
     expect(chapterOf(20).rule, ChapterRule.lines);
     expect(chapterOf(21).rule, ChapterRule.mirrors);
@@ -21,8 +26,10 @@ void main() {
     expect(chapterOf(100).rule, ChapterRule.pairs);
     expect(chapterOf(100).contains(81), isTrue);
     expect(chapterOf(100).contains(80), isFalse);
+    expect(chapterOf(101).rule, ChapterRule.cube);
+    expect(chapterOf(150).rule, ChapterRule.cube);
     expect(() => chapterOf(0), throwsRangeError);
-    expect(() => chapterOf(101), throwsRangeError);
+    expect(() => chapterOf(151), throwsRangeError);
   });
 
   test('each chapter past the first teaches its twist on its first level', () {
@@ -34,10 +41,12 @@ void main() {
     expect(ruleTaughtAt(61), ChapterRule.fog);
     expect(ruleTaughtAt(81), ChapterRule.pairs);
     expect(ruleTaughtAt(100), isNull);
+    expect(ruleTaughtAt(101), ChapterRule.cube);
+    expect(ruleTaughtAt(111), isNull);
   });
 
   test('the level table matches the chapters: a twist appears with its chapter and stays', () {
-    for (final s in levelSpecs) {
+    for (final s in levelSpecs.where((s) => !s.isCube)) {
       final chapter = chapterOf(s.level);
       final f = s.features;
       final teaching = ruleTaughtAt(s.level) != null;
@@ -58,6 +67,8 @@ void main() {
           expect(f.hidden, greaterThan(0), reason: 'level ${s.level}');
         case ChapterRule.pairs:
           expect(f.pairs, greaterThan(0), reason: 'level ${s.level}');
+        case ChapterRule.cube:
+          fail('level ${s.level} is flat');
       }
       // A teaching board carries the new twist alone, on a small board.
       if (teaching) {
@@ -81,17 +92,27 @@ void main() {
     expect(chapterForProgress(80).index, 4);
     expect(chapterForProgress(81).index, 5);
     expect(chapterForProgress(100).index, 5);
-    expect(chapterForProgress(500).index, 5);
+    expect(chapterForProgress(101).index, 6);
+    expect(chapterForProgress(500).index, 6);
     expect(chapterForProgress(-3).index, 1);
+  });
+
+  test('the daily board borrows the last flat chapter once the player is on the block', () {
+    expect(dailyChapterFor(0).rule, ChapterRule.lines);
+    expect(dailyChapterFor(45).rule, ChapterRule.locks);
+    expect(dailyChapterFor(100).rule, ChapterRule.pairs);
+    expect(dailyChapterFor(101).rule, ChapterRule.pairs);
+    expect(dailyChapterFor(150).rule, ChapterRule.pairs);
   });
 
   test('every chapter card has a small, solvable board that shows its twist, and a script that plays it', () {
     for (final rule in ChapterRule.values) {
       final p = demoPuzzleFor(rule);
       expect(p.isSolvable, isTrue, reason: rule.name);
-      expect(p.arrowCount, lessThanOrEqualTo(3), reason: rule.name);
+      expect(p.arrowCount, lessThanOrEqualTo(rule == ChapterRule.cube ? 4 : 3), reason: rule.name);
       final spec = demoSpecFor(rule);
-      expect(spec.width, p.width);
+      expect(spec.width, p.faceWidth);
+      expect(spec.isCube, p.isCube);
       expect(spec.arrows, p.arrowCount);
       // The script clears the board in order: every tap but a deliberate
       // first tap on a lock (or on a hidden head) slides something out.
@@ -125,6 +146,11 @@ void main() {
           expect(p.revealedBy({0}), {1});
         case ChapterRule.pairs:
           expect(p.partnerOf(0), 1);
+        case ChapterRule.cube:
+          // One arrow on each face round the block's middle, played in turn.
+          expect(p.isCube, isTrue);
+          expect(p.faceCount, 6);
+          expect(<int>[for (final id in demoScriptFor(rule)) p.faceOf(id)], [0, 1, 2, 3]);
       }
     }
   });
