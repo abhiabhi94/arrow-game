@@ -48,11 +48,13 @@ class LevelProgress {
   bool isNewBest(int timeMs) => bestTimeMs == null || timeMs < bestTimeMs!;
 
   /// Progress after clearing in [timeMs] with [stars], keeping the best of each.
-  LevelProgress withCompletion(int timeMs, int stars) => LevelProgress(
+  /// A clear with [timeMs] null (an untimed level) counts the clear and the
+  /// stars but leaves the best time alone.
+  LevelProgress withCompletion(int? timeMs, int stars) => LevelProgress(
         level: level,
         completed: true,
         stars: stars > this.stars ? stars : this.stars,
-        bestTimeMs: isNewBest(timeMs) ? timeMs : bestTimeMs,
+        bestTimeMs: timeMs != null && isNewBest(timeMs) ? timeMs : bestTimeMs,
         timesCompleted: timesCompleted + 1,
       );
 

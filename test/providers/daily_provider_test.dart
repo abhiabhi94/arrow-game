@@ -60,6 +60,24 @@ void main() {
     again.dispose();
   });
 
+  test('an untimed clear counts for the day and the streak, with no best time', () async {
+    final prefs = await _prefs();
+    final n = DailyNotifier(DailyRepository(prefs), levelsCleared: () => 0, clock: () => _day, random: Random(1));
+    await n.recordCompletion(null, 2);
+    expect(n.state.clearedToday, isTrue);
+    expect(n.state.bestTodayMs, isNull);
+    expect(n.state.starsToday, 2);
+    expect(n.state.streak, 1);
+    // A timed clear later the same day gives it a best, and keeps the streak.
+    await n.recordCompletion(200000, 1);
+    expect(n.state.bestTodayMs, 200000);
+    expect(n.state.streak, 1);
+    final again = DailyNotifier(DailyRepository(prefs), levelsCleared: () => 0, clock: () => _day);
+    expect(again.state.clearedToday, isTrue);
+    n.dispose();
+    again.dispose();
+  });
+
   test('a clear records the best time and stars and grows the streak day by day', () async {
     final prefs = await _prefs();
     var now = _day;

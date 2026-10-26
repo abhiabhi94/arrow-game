@@ -24,7 +24,8 @@ import 'saved_game_provider.dart';
 import 'settings_provider.dart';
 
 /// Called once when a level is cleared, with the clear time and star rating.
-typedef ClearedCallback = void Function(int level, int elapsedMs, int stars);
+/// [elapsedMs] is null on an untimed level: no time was counted.
+typedef ClearedCallback = void Function(int level, int? elapsedMs, int stars);
 
 /// Called whenever the level's standing is worth remembering: after every
 /// move, hint, pause, restart or ending, and when the screen goes away.
@@ -167,7 +168,7 @@ class GameNotifier extends StateNotifier<GameState> {
       if (cleared) {
         sfx?.win();
         haptics?.victory();
-        onCleared?.call(spec.level, state.elapsedMs, state.stars);
+        onCleared?.call(spec.level, spec.timed ? state.elapsedMs : null, state.stars);
       } else {
         haptics?.hit();
       }
@@ -337,11 +338,11 @@ class GameNotifier extends StateNotifier<GameState> {
 
   /// Advances the clock by [ms]. Public so the timer callback and tests can
   /// drive it. Only the playing phase consumes time, and an untimed level
-  /// only counts it.
+  /// counts none at all.
   void tick(int ms) {
-    if (!state.isPlaying) return;
+    if (!state.isPlaying || !spec.timed) return;
     final elapsed = state.elapsedMs + ms;
-    if (spec.timed && elapsed >= spec.timeLimitMs) {
+    if (elapsed >= spec.timeLimitMs) {
       _stopTimer();
       state = state.copyWith(elapsedMs: spec.timeLimitMs, phase: GamePhase.timeUp);
       sfx?.lose();
@@ -383,9 +384,9 @@ const int kExtraTimeFactor = 2;
 
 /// One notifier per level, thrown away when the game screen closes. A level
 /// with a saved game comes back where it was left, paused, with the choice
-/// to continue or start over. With "no time limit" on in Settings (the
-/// default) the level is dealt untimed; otherwise "extra time" deals it with
-/// its clock doubled — the same board, the same stars either way.
+/// to continue or start over. With "Remove time limits" on in Settings (off
+/// by default) the level is dealt untimed; otherwise "extra time" deals it
+/// with its clock doubled — the same board, the same stars either way.
 ///
 /// Level [LevelSpec.dailyLevel] (0) is today's daily board: dealt by the
 /// daily standing rather than the level table, and a clear goes to the

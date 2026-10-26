@@ -159,6 +159,7 @@ void main() {
       tester,
       const HomeScreen(),
       seed: <String, Object>{
+        'arrow_no_time_limit': true,
         SavedGameRepository.key: jsonEncode(const {
           'level': 3,
           'seed': 3 * 7919 + 17,

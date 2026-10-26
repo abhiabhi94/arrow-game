@@ -47,10 +47,10 @@ void main() {
     expect(find.text('How to play'), findsOneWidget);
   });
 
-  testWidgets('gameplay comes first: time limits removed by default, extra time waits for a clock', (tester) async {
+  testWidgets('gameplay comes first: time limits stay by default, extra time waits for a clock', (tester) async {
     await usePhoneSurface(tester);
     final container = await pumpApp(tester, const SettingsScreen());
-    expect(container.read(settingsProvider).noTimeLimit, isTrue);
+    expect(container.read(settingsProvider).noTimeLimit, isFalse);
     // Its own card at the top, apart from sound and looks.
     expect(find.text('Gameplay'), findsOneWidget);
     expect(
@@ -59,17 +59,17 @@ void main() {
     );
     SwitchListTile tile(String title) =>
         tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, title));
-    expect(tile('Remove time limits').value, isTrue);
-    // Nothing to stretch while there is no clock.
-    expect(tile('Extra time').onChanged, isNull);
-
-    await tester.tap(find.text('Remove time limits'));
-    await tester.pump();
-    expect(container.read(settingsProvider).noTimeLimit, isFalse);
+    expect(tile('Remove time limits').value, isFalse);
     expect(tile('Extra time').onChanged, isNotNull);
     await tester.tap(find.text('Extra time'));
     await tester.pump();
     expect(container.read(settingsProvider).extraTime, isTrue);
+
+    await tester.tap(find.text('Remove time limits'));
+    await tester.pump();
+    expect(container.read(settingsProvider).noTimeLimit, isTrue);
+    // Nothing to stretch while there is no clock.
+    expect(tile('Extra time').onChanged, isNull);
   });
 
   testWidgets('picks a language, with the device as the default', (tester) async {

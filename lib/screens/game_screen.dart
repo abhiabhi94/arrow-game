@@ -433,7 +433,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _putRiddleAway();
       }
       if (next.phase == GamePhase.cleared && prev?.phase != GamePhase.cleared) {
-        if (widget.isDaily) {
+        if (!next.spec.timed) {
+          _newBest = false;
+        } else if (widget.isDaily) {
           final best = ref.read(dailyProvider).bestTodayMs;
           _newBest = best == null || next.elapsedMs < best;
         } else {
@@ -717,10 +719,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     children: [
                       StarsRow(stars: state.stars, size: 44, animated: true),
                       const SizedBox(height: 10),
-                      Text(
-                        l10n.clearedTime(formatDurationMs(state.elapsedMs)),
-                        style: TextStyle(fontWeight: FontWeight.w800, color: p.textInk),
-                      ),
+                      // An untimed level counted no time, so says none.
+                      if (state.spec.timed)
+                        Text(
+                          l10n.clearedTime(formatDurationMs(state.elapsedMs)),
+                          style: TextStyle(fontWeight: FontWeight.w800, color: p.textInk),
+                        ),
                       if (_newBest)
                         Text(
                           l10n.clearedNewBest,

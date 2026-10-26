@@ -400,6 +400,61 @@ void main() {
       await _settle(tester, 300);
       expect(find.text('You left this level with 1 of 3 arrows out.'), findsOneWidget);
     });
+
+    testWidgets('the trail keeps a time recorded before, and shows none for an untimed clear', (tester) async {
+      final handle = tester.ensureSemantics();
+      await usePhoneSurface(tester);
+      await pumpApp(
+        tester,
+        const HomeScreen(),
+        seed: <String, Object>{
+          'arrow_no_time_limit': true,
+          // Cleared with the clock on: its best time stays on the trail.
+          'arrow_level_1_done': true,
+          'arrow_level_1_stars': 2,
+          'arrow_level_1_best': 21000,
+          'arrow_level_1_count': 1,
+          // Cleared only with time limits removed: no time was ever counted.
+          'arrow_level_2_done': true,
+          'arrow_level_2_stars': 3,
+          'arrow_level_2_count': 1,
+        },
+        extraOverrides: [
+          progressProvider.overrideWith(
+            (ref) => ProgressNotifier(ref.watch(progressRepositoryProvider), unlockAllLevels: false),
+          ),
+        ],
+      );
+      await _settle(tester, 800);
+      expect(
+        find.bySemanticsLabel('Level 1, First Steps, Cleared, 2 of 3 stars, best time 0:21'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Level 2, Two Ways Out, Cleared, 3 of 3 stars'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('the win card says nothing about time', (tester) async {
+      await usePhoneSurface(tester);
+      await pumpApp(
+        tester,
+        const GameScreen(level: 1),
+        extraOverrides: [
+          gameProvider.overrideWith(
+            (ref, level) => GameNotifier(sampleSpecFor(level).untimed(), puzzle: samplePuzzle(), autoTick: false),
+          ),
+          ...silentFeedback(),
+        ],
+      );
+      await _settle(tester, 300);
+      await _tapCell(tester, const Cell(2, 1));
+      await _tapCell(tester, const Cell(3, 3));
+      await _tapCell(tester, const Cell(0, 3));
+      await _settle(tester, 1500);
+      expect(find.text('Level cleared!'), findsOneWidget);
+      expect(find.textContaining('Time '), findsNothing);
+      expect(find.text('New best time!'), findsNothing);
+    });
   });
 
   group('extra time', () {

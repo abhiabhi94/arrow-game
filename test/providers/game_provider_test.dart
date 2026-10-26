@@ -90,7 +90,7 @@ void main() {
   });
 
   test('a free arrow slides out; the last one clears the level', () {
-    final cleared = <(int, int, int)>[];
+    final cleared = <(int, int?, int)>[];
     final engine = RecordingHapticEngine();
     final sfxBackend = RecordingSfxBackend();
     final n = _notifier(
@@ -508,7 +508,7 @@ void main() {
     n.dispose();
   });
 
-  test('with no time limit the clock only counts: it never runs out', () {
+  test('with time limits removed no time is counted, and none is reported on a clear', () {
     final untimed = sampleSpec.untimed();
     expect(untimed.timed, isFalse);
     expect(untimed.seed, sampleSpec.seed);
@@ -518,10 +518,21 @@ void main() {
     expect(untimed.withVariant(1).timed, isFalse);
     expect(untimed.withClockFactor(2).timed, isFalse);
 
-    final n = GameNotifier(untimed, puzzle: samplePuzzle(), autoTick: false);
+    final cleared = <(int, int?, int)>[];
+    final n = GameNotifier(
+      untimed,
+      puzzle: samplePuzzle(),
+      autoTick: false,
+      onCleared: (l, ms, stars) => cleared.add((l, ms, stars)),
+    );
     n.tick(sampleSpec.timeLimitMs * 3);
     expect(n.state.phase, GamePhase.playing);
-    expect(n.state.elapsedMs, sampleSpec.timeLimitMs * 3);
+    expect(n.state.elapsedMs, 0);
+    n.tapArrow(0);
+    n.tapArrow(1);
+    n.tapArrow(2);
+    expect(n.state.phase, GamePhase.cleared);
+    expect(cleared, [(1, null, 3)]);
     n.dispose();
   });
 
@@ -581,10 +592,8 @@ void main() {
     final sub = container.listen(gameProvider(1), (_, _) {});
     addTearDown(sub.close);
     final notifier = container.read(gameProvider(1).notifier);
-    // Time limits are removed by default: the same level, with no clock.
-    expect(notifier.spec.timed, isFalse);
-    expect(notifier.spec.seed, specForLevel(1).seed);
-    expect(notifier.spec.arrows, specForLevel(1).arrows);
+    // Time limits stay on by default: the level as the table deals it.
+    expect(notifier.spec, same(specForLevel(1)));
     expect(notifier.haptics, isNotNull);
     expect(notifier.sfx, isNotNull);
     await notifier.ready;

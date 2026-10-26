@@ -144,7 +144,7 @@ class LevelSpec {
     );
   }
 
-  /// The same level with no clock to run out — the "no time limit" setting.
+  /// The same level with no clock at all — the "Remove time limits" setting.
   /// Like [withClockFactor], the board and [seed] are untouched.
   LevelSpec untimed() {
     if (!timed) return this;

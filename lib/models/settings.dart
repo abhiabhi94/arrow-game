@@ -25,7 +25,7 @@ class Settings {
     required this.languageChoice,
     this.reduceMotion = false,
     this.extraTime = false,
-    this.noTimeLimit = true,
+    this.noTimeLimit = false,
   });
 
   /// Background music on/off (on by default).
@@ -68,11 +68,11 @@ class Settings {
   /// longer; stars and progress are earned the same way.
   final bool extraTime;
 
-  /// "Remove time limits": no level has a clock — none on screen, and
-  /// "Time's up" never comes (the time played is still kept, quietly, for
-  /// best times). On by default — the player sets the pace, not a wall clock;
-  /// switching it off brings back the clocks that count down to zero (and
-  /// [extraTime]).
+  /// "Remove time limits": no level has a clock. No time is counted, none is
+  /// shown while playing or on the win card, no best time is recorded, and
+  /// "Time's up" never comes — the player sets the pace, not a wall clock.
+  /// Off by default, so every level keeps the clock that counts down to zero
+  /// (and [extraTime] applies).
   final bool noTimeLimit;
 
   static const Settings defaults = Settings(
@@ -86,7 +86,7 @@ class Settings {
     languageChoice: LanguageChoice.system,
     reduceMotion: false,
     extraTime: false,
-    noTimeLimit: true,
+    noTimeLimit: false,
   );
 
   Settings copyWith({

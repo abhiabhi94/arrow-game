@@ -1236,9 +1236,13 @@ class _DailyCardState extends State<_DailyCard> {
     final streak = l10n.dailyStreak(standing.liveStreak);
     final best = standing.bestTodayMs;
     final next = _countdown(l10n);
-    final status = best == null
+    // A board cleared with time limits removed counted no time, so is
+    // cleared without a best.
+    final status = !standing.clearedToday
         ? '$streak · $next'
-        : '${l10n.dailyClearedToday} · ${l10n.dailyBestToday(formatDurationMs(best))} · $streak · $next';
+        : best == null
+            ? '${l10n.dailyClearedToday} · $streak · $next'
+            : '${l10n.dailyClearedToday} · ${l10n.dailyBestToday(formatDurationMs(best))} · $streak · $next';
     final action = resuming
         ? l10n.homeContinue
         : standing.clearedToday

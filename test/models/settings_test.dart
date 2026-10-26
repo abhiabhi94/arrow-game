@@ -19,7 +19,7 @@ void main() {
     // the player asks otherwise.
     expect(Settings.defaults.reduceMotion, isFalse);
     expect(Settings.defaults.extraTime, isFalse);
-    expect(Settings.defaults.noTimeLimit, isTrue);
+    expect(Settings.defaults.noTimeLimit, isFalse);
   });
 
   test('copyWith and equality', () {
@@ -36,7 +36,7 @@ void main() {
       languageChoice: LanguageChoice.hindi,
       reduceMotion: true,
       extraTime: true,
-      noTimeLimit: false,
+      noTimeLimit: true,
     );
     const expected = Settings(
       musicOn: false,
@@ -49,13 +49,13 @@ void main() {
       languageChoice: LanguageChoice.hindi,
       reduceMotion: true,
       extraTime: true,
-      noTimeLimit: false,
+      noTimeLimit: true,
     );
     expect(grid, expected);
     expect(grid.hashCode, expected.hashCode);
     expect(grid, isNot(dark));
     expect(grid.copyWith(extraTime: false), isNot(expected));
     expect(grid.copyWith(reduceMotion: false), isNot(expected));
-    expect(grid.copyWith(noTimeLimit: true), isNot(expected));
+    expect(grid.copyWith(noTimeLimit: false), isNot(expected));
   });
 }
