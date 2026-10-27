@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/engine/cube.dart';
 import 'package:arrow_game/models/game_state.dart';
@@ -66,7 +68,7 @@ Future<void> _settle(WidgetTester tester) async {
 Offset _onScreen(WidgetTester tester, int face, Cell cell) {
   final stage = tester.state<CubeStageState>(find.byType(CubeStage));
   final cam = stage.camera;
-  final cs = (cam.side - 2 * kFacePadding) / 4;
+  final cs = (cam.faceSize(face).$1 - 2 * kFacePadding) / 4;
   final (sx, sy) = cam.project(
     cam.pointOn(face, kFacePadding + (cell.x + 0.5) * cs, kFacePadding + (cell.y + 0.5) * cs),
   );
@@ -232,5 +234,98 @@ void main() {
     expect(cubeTurnFor(GameShortcut.cursorDown), CubeTurn.down);
     expect(cubeTurnFor(GameShortcut.hint), isNull);
     expect(cubeTurnFor(null), isNull);
+  });
+
+  group('a box', () {
+    const level = 210;
+    final spec = sampleBoxSpecFor(level);
+
+    Future<ProviderContainer> pumpBox(WidgetTester tester) async {
+      await usePhoneSurface(tester);
+      final container = await pumpApp(
+        tester,
+        const GameScreen(level: level),
+        seed: const {
+          IntroRepository.key: ['mirrors', 'locks', 'fog', 'pairs', 'cube'],
+        },
+        extraOverrides: [
+          gameProvider.overrideWith(
+            (ref, level) => GameNotifier(spec, puzzle: sampleBoxPuzzle(), autoTick: false),
+          ),
+          progressProvider.overrideWith(
+            (ref) => ProgressNotifier(ref.watch(progressRepositoryProvider), unlockAllLevels: true),
+          ),
+          ...silentFeedback(),
+        ],
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      return container;
+    }
+
+    /// Where the centre of [cell] on [face] is drawn: the face's board is
+    /// its own width and height of cells, centred in the face's card.
+    Offset onBox(WidgetTester tester, int face, Cell cell) {
+      final cam = tester.state<CubeStageState>(find.byType(CubeStage)).camera;
+      final (fw, fh) = cam.faceSize(face);
+      final (w, h) = spec.faceSizeOf(face);
+      final bw = fw - 2 * kFacePadding, bh = fh - 2 * kFacePadding;
+      final cs = bw / w < bh / h ? bw / w : bh / h;
+      final u = kFacePadding + (bw - cs * w) / 2 + (cell.x + 0.5) * cs;
+      final v = kFacePadding + (bh - cs * h) / 2 + (cell.y + 0.5) * cs;
+      final (sx, sy) = cam.project(cam.pointOn(face, u, v));
+      return tester.getCenter(find.byType(CubeStage)) + Offset(sx, sy);
+    }
+
+    testWidgets('faces of their own sizes, the block filling the stage, and taps on the right cell', (tester) async {
+      final container = await pumpBox(tester);
+      final stage = tester.state<CubeStageState>(find.byType(CubeStage));
+      final cam = stage.camera;
+      // The front is 3 by 5, the side 4 by 5, the top 3 by 4, in cells.
+      final (w0, h0) = cam.faceSize(0);
+      final (w1, h1) = cam.faceSize(1);
+      final (w4, h4) = cam.faceSize(4);
+      expect(w0 / h0, closeTo(3 / 5, 1e-9));
+      expect(w1 / h1, closeTo(4 / 5, 1e-9));
+      expect(w4 / h4, closeTo(3 / 4, 1e-9));
+      expect(find.bySemanticsLabel(RegExp('^Face 1 of the block, 3 by 5, 1 of 1 arrow')), findsOneWidget);
+      // At rest the block fills most of the stage, and stays inside it.
+      final size = tester.getSize(find.byType(CubeStage));
+      final b = cam.bounds;
+      expect(-b.left, lessThanOrEqualTo(size.width / 2));
+      expect(b.right, lessThanOrEqualTo(size.width / 2));
+      expect(-b.top, lessThanOrEqualTo(size.height / 2));
+      expect(b.bottom, lessThanOrEqualTo(size.height / 2));
+      expect(
+        2 * max(-b.left, b.right) / size.width > 0.8 || 2 * max(-b.top, b.bottom) / size.height > 0.8,
+        isTrue,
+        reason: 'the block fills the stage one way or the other: $b in $size',
+      );
+
+      // An empty cell at the foot of the tall front plays nothing.
+      await tester.tapAt(onBox(tester, 0, const Cell(2, 4)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
+      expect(container.read(gameProvider(level)).removed, isEmpty);
+      // The arrow's own cell plays it.
+      await tester.tapAt(onBox(tester, 0, const Cell(1, 0)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
+      expect(container.read(gameProvider(level)).removed, {0});
+
+      // The cleared front turns the block on to the deeper side by itself,
+      // and its arrow is played in turn.
+      await tester.pump(kCubeAutoTurnDelay);
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      expect(_face(tester), 1);
+      expect(find.bySemanticsLabel(RegExp('^Face 2 of the block, 4 by 5')), findsOneWidget);
+      await tester.tapAt(onBox(tester, 1, const Cell(0, 0)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
+      expect(container.read(gameProvider(level)).removed, {0, 1});
+      expect(container.read(gameProvider(level)).mistakes, 0);
+    });
   });
 }

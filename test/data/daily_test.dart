@@ -51,7 +51,7 @@ void main() {
           expect(spec.isCube, isFalse);
           expect(f.pairs, inInclusiveRange(3, 5));
           expect(f.hidden, 2);
-        case ChapterRule.cube || ChapterRule.squeeze:
+        case ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box:
           // On the block, the daily board is a block too: six faces of
           // fifteen, every twist on every face.
           expect(spec.isCube, isTrue);

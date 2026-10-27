@@ -64,13 +64,13 @@ class Puzzle {
       }
     }
     for (final c in mirrors.keys) {
-      assert(faceOfCell(c) >= 0, 'mirror $c is off the board');
+      assert(c.isInside(width, height) && faceOfCell(c) >= 0, 'mirror $c is off the board');
       _occupancy[c] = kMirror;
     }
     for (var i = 0; i < arrows.length; i++) {
       assert(arrows[i].id == i, 'arrow ids must be their index');
       for (final c in arrows[i].cells) {
-        assert(faceOfCell(c) >= 0, '$c is off the board');
+        assert(c.isInside(width, height) && faceOfCell(c) >= 0, '$c is off the board');
         assert(!_occupancy.containsKey(c), '$c is used twice (an arrow or a mirror)');
         _occupancy[c] = i;
       }

@@ -165,15 +165,20 @@ class LevelSpec {
   /// the odd ones going to the faces with the biggest leftover share, ties
   /// spread round the block from [offset] rather than heaped on the first
   /// face.
+  ///
+  /// When there are enough to go round, every face gets one first, so a
+  /// small face of a box is never left without a twist the level has.
   List<int> _shareByArea(int total, int offset) {
     final areas = <int>[
       for (var f = 0; f < faces; f++) faceSizeOf(f).$1 * faceSizeOf(f).$2,
     ];
     final sum = areas.fold<int>(0, (a, b) => a + b);
-    final out = <int>[for (final a in areas) total * a ~/ sum];
+    final base = total >= faces ? 1 : 0;
+    final rest = total - base * faces;
+    final out = <int>[for (final a in areas) base + rest * a ~/ sum];
     final order = List<int>.generate(faces, (f) => f)
       ..sort((a, b) {
-        final ra = total * areas[a] % sum, rb = total * areas[b] % sum;
+        final ra = rest * areas[a] % sum, rb = rest * areas[b] % sum;
         if (ra != rb) return rb.compareTo(ra);
         return ((a + offset) % faces).compareTo((b + offset) % faces);
       });

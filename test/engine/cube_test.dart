@@ -128,6 +128,112 @@ void main() {
         }
       }
     });
+
+    test('a box: faces of three sizes, and a touch lands where each was drawn', () {
+      for (final front in <int>[0, 1, 4]) {
+        final cam = CubeCamera(orientation: openingPose(front), box: (300, 400, 200), zoom: 1.2);
+        expect(cam.longest, 400);
+        expect(cam.faceSize(0), (300, 400));
+        expect(cam.faceSize(2), (300, 400));
+        expect(cam.faceSize(1), (200, 400));
+        expect(cam.faceSize(3), (200, 400));
+        expect(cam.faceSize(4), (300, 200));
+        expect(cam.faceSize(5), (300, 200));
+        for (final f in cam.visibleFaces) {
+          final (w, h) = cam.faceSize(f);
+          for (final (u, v) in <(double, double)>[(w / 2, h / 2), (w * 0.1, h * 0.9), (w * 0.9, h * 0.2)]) {
+            final (sx, sy) = cam.project(cam.pointOn(f, u, v));
+            final hit = cam.hit(sx, sy)!;
+            expect(hit.face, f, reason: 'front $front face $f $u $v');
+            expect(hit.u, closeTo(u, 1e-6));
+            expect(hit.v, closeTo(v, 1e-6));
+          }
+          // The face widget, its own width and height, drawn where its
+          // points project.
+          final m = cam.faceMatrix(f);
+          for (final (px, py) in <(double, double)>[(-w / 2, -h / 2), (w / 2, h / 3), (0, 0)]) {
+            final wq = m[3] * px + m[7] * py + m[15];
+            final x = (m[0] * px + m[4] * py + m[12]) / wq;
+            final y = (m[1] * px + m[5] * py + m[13]) / wq;
+            final (sx, sy) = cam.project(cam.pointOn(f, px + w / 2, py + h / 2));
+            expect(x, closeTo(sx, 1e-6), reason: 'face $f');
+            expect(y, closeTo(sy, 1e-6), reason: 'face $f');
+          }
+        }
+        // The outline holds every corner of every face shown.
+        final b = cam.bounds;
+        for (final f in cam.visibleFaces) {
+          final (w, h) = cam.faceSize(f);
+          for (final (u, v) in <(double, double)>[(0, 0), (w, 0), (0, h), (w, h)]) {
+            final (sx, sy) = cam.project(cam.pointOn(f, u, v));
+            expect(sx, inInclusiveRange(b.left - 1e-6, b.right + 1e-6));
+            expect(sy, inInclusiveRange(b.top - 1e-6, b.bottom + 1e-6));
+          }
+        }
+        expect(b.right - b.left, greaterThan(0));
+      }
+      // A cube is a box of three equal edges.
+      final cube = CubeCamera(orientation: openingPose(0), side: 120);
+      expect(cube.size, (120.0, 120.0, 120.0));
+      expect(cube.faceSize(3), (120.0, 120.0));
+    });
+  });
+
+  group('Puzzle.cube of a box', () {
+    // Front 3×4, right side 2×4, back 3×2: a strip 8 wide and 4 tall, with
+    // no cell under the short back face.
+    final p = Puzzle.cube([
+      Puzzle(width: 3, height: 4, arrows: [
+        ArrowPiece(id: 0, cells: const [Cell(0, 0), Cell(1, 0)], heading: Direction.right),
+      ]),
+      Puzzle(width: 2, height: 4, arrows: [
+        ArrowPiece(id: 0, cells: const [Cell(0, 1)], heading: Direction.right),
+        ArrowPiece(id: 1, cells: const [Cell(1, 3), Cell(1, 2)], heading: Direction.up),
+      ]),
+      Puzzle(width: 3, height: 2, arrows: [
+        ArrowPiece(id: 0, cells: const [Cell(0, 0), Cell(0, 1)], heading: Direction.down),
+        ArrowPiece(id: 1, cells: const [Cell(2, 1), Cell(1, 1)], heading: Direction.left),
+      ]),
+    ]);
+
+    test('lays faces of different sizes side by side, as tall as the tallest', () {
+      expect(p.faceSizes, const [(3, 4), (2, 4), (3, 2)]);
+      expect(p.width, 8);
+      expect(p.height, 4);
+      expect(p.faceCount, 3);
+      expect([for (var f = 0; f < 3; f++) p.faceOriginOf(f)], [0, 3, 5]);
+      expect([for (var f = 0; f < 3; f++) p.faceWidthOf(f)], [3, 2, 3]);
+      expect([for (var f = 0; f < 3; f++) p.faceHeightOf(f)], [4, 4, 2]);
+      expect(p.blockSize, (3, 4, 2));
+      expect(p.freeCellCount, 12 + 8 + 6);
+      expect(p.arrows[1].cells, const [Cell(3, 1)]);
+      expect(p.arrowsOn(2), [3, 4]);
+      expect(p.faceOfCell(const Cell(2, 3)), 0);
+      expect(p.faceOfCell(const Cell(4, 3)), 1);
+      expect(p.faceOfCell(const Cell(5, 1)), 2);
+      // Under the short back face, and off the strip: no face at all.
+      expect(p.faceOfCell(const Cell(5, 2)), -1);
+      expect(p.faceOfCell(const Cell(7, 3)), -1);
+      expect(p.faceOfCell(const Cell(8, 0)), -1);
+      expect(p.faceOfCell(const Cell(-1, 0)), -1);
+      expect(p.onFace(const Cell(6, 1)), const Cell(1, 1));
+    });
+
+    test('a way out ends at each face\'s own edges', () {
+      // Across the front's right edge, not on into the side.
+      expect(p.rayOf(0), const [Cell(2, 0)]);
+      // Across the narrow side: one cell, then the edge.
+      expect(p.rayOf(1), const [Cell(4, 1)]);
+      expect(p.rayOf(2), const [Cell(4, 1), Cell(4, 0)]);
+      expect(p.blockersOf(2), isEmpty);
+      // The back is two cells tall: its bottom edge is row 1, not row 3.
+      expect(p.rayOf(3), isEmpty);
+      // And its left edge is its own: the way out stops there rather than
+      // running on into the side, and only the back's own arrow is in it.
+      expect(p.rayOf(4), const [Cell(5, 1)]);
+      expect(p.blockersOf(4), {3});
+      expect(p.isSolvable, isTrue);
+    });
   });
 
   group('Puzzle.cube', () {
@@ -151,10 +257,10 @@ void main() {
 
     test('lays the faces side by side, ids and cells shifted', () {
       expect(p.isCube, isTrue);
-      expect(p.faceSize, 4);
+      expect(p.faceSizes, const [(4, 4), (4, 4)]);
       expect(p.faceCount, 2);
       expect(p.width, 8);
-      expect(p.faceWidth, 4);
+      expect(p.faceWidthOf(0), 4);
       expect(p.arrowCount, 4);
       expect(p.arrows[2].cells, const [Cell(4, 1), Cell(4, 2)]);
       expect(p.faceOf(0), 0);
@@ -201,7 +307,7 @@ void main() {
       final flat = face([ArrowPiece(id: 0, cells: const [Cell(0, 0), Cell(1, 0)], heading: Direction.right)]);
       expect(flat.isCube, isFalse);
       expect(flat.faceCount, 1);
-      expect(flat.faceWidth, 4);
+      expect(flat.faceWidthOf(0), 4);
       expect(flat.faceOf(0), 0);
       expect(flat.onFace(const Cell(3, 2)), const Cell(3, 2));
       expect(flat.arrowsOn(0), [0]);

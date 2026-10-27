@@ -4,8 +4,8 @@ import 'package:arrow_game/data/level_specs.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('five chapters of twenty levels, then two of fifty on the block, cover the trail in order', () {
-    expect(chapters, hasLength(7));
+  test('five chapters of twenty levels, then three of fifty on the block, cover the trail in order', () {
+    expect(chapters, hasLength(8));
     expect(chapters.first.firstLevel, 1);
     expect(chapters.last.lastLevel, totalLevels);
     for (var i = 1; i < chapters.length; i++) {
@@ -16,7 +16,9 @@ void main() {
     }
     expect(chapters[5].firstLevel, kFirstCubeLevel);
     expect(chapters[5].length, 50);
-    expect(chapters.last.firstLevel, kFirstSqueezeLevel);
+    expect(chapters[6].firstLevel, kFirstSqueezeLevel);
+    expect(chapters[6].length, 50);
+    expect(chapters.last.firstLevel, kFirstBoxLevel);
     expect(chapters.last.length, 50);
     expect(chapters.where((c) => !c.rule.onBlock), hasLength(kFlatChapterCount));
     expect(chapterOf(1).rule, ChapterRule.lines);
@@ -33,8 +35,11 @@ void main() {
     expect(chapterOf(150).rule, ChapterRule.cube);
     expect(chapterOf(151).rule, ChapterRule.squeeze);
     expect(chapterOf(200).rule, ChapterRule.squeeze);
+    expect(chapterOf(201).rule, ChapterRule.box);
+    expect(chapterOf(250).rule, ChapterRule.box);
+    expect(chapterOf(250).rule.onBlock, isTrue);
     expect(() => chapterOf(0), throwsRangeError);
-    expect(() => chapterOf(201), throwsRangeError);
+    expect(() => chapterOf(251), throwsRangeError);
   });
 
   test('each chapter past the first teaches its twist on its first level', () {
@@ -49,10 +54,13 @@ void main() {
     expect(ruleTaughtAt(101), ChapterRule.cube);
     expect(ruleTaughtAt(111), isNull);
     expect(ruleTaughtAt(151), ChapterRule.squeeze);
-    // The squeeze is the block again: it has no card of its own.
+    // The squeeze and the box are the block again: no card of their own.
     expect(ChapterRule.squeeze.hasCard, isFalse);
-    expect(ChapterRule.values.where((r) => !r.hasCard), [ChapterRule.squeeze]);
+    expect(ChapterRule.box.hasCard, isFalse);
+    expect(ChapterRule.values.where((r) => !r.hasCard), [ChapterRule.squeeze, ChapterRule.box]);
     expect(ruleTaughtAt(152), isNull);
+    expect(ruleTaughtAt(201), ChapterRule.box);
+    expect(ruleTaughtAt(202), isNull);
   });
 
   test('the level table matches the chapters: a twist appears with its chapter and stays', () {
@@ -77,7 +85,7 @@ void main() {
           expect(f.hidden, greaterThan(0), reason: 'level ${s.level}');
         case ChapterRule.pairs:
           expect(f.pairs, greaterThan(0), reason: 'level ${s.level}');
-        case ChapterRule.cube || ChapterRule.squeeze:
+        case ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box:
           fail('level ${s.level} is flat');
       }
       // A teaching board carries the new twist alone, on a small board.
@@ -105,7 +113,9 @@ void main() {
     expect(chapterForProgress(101).index, 6);
     expect(chapterForProgress(150).index, 6);
     expect(chapterForProgress(151).index, 7);
-    expect(chapterForProgress(500).index, 7);
+    expect(chapterForProgress(200).index, 7);
+    expect(chapterForProgress(201).index, 8);
+    expect(chapterForProgress(500).index, 8);
     expect(chapterForProgress(-3).index, 1);
   });
 
@@ -119,6 +129,7 @@ void main() {
     expect(dailyChapterFor(150).rule, ChapterRule.cube);
     expect(dailyChapterFor(151).rule, ChapterRule.cube);
     expect(dailyChapterFor(200).rule, ChapterRule.cube);
+    expect(dailyChapterFor(250).rule, ChapterRule.cube);
   });
 
   test('every chapter card has a small, solvable board that shows its twist, and a script that plays it', () {
@@ -127,7 +138,7 @@ void main() {
       expect(p.isSolvable, isTrue, reason: rule.name);
       expect(p.arrowCount, lessThanOrEqualTo(rule.onBlock ? 4 : 3), reason: rule.name);
       final spec = demoSpecFor(rule);
-      expect(spec.width, p.faceWidth);
+      expect(spec.width, p.faceWidthOf(0));
       expect(spec.isCube, p.isCube);
       expect(spec.arrows, p.arrowCount);
       // The script clears the board in order: every tap but a deliberate
@@ -167,8 +178,8 @@ void main() {
           expect(p.isCube, isTrue);
           expect(p.faceCount, 6);
           expect(<int>[for (final id in demoScriptFor(rule)) p.faceOf(id)], [0, 1, 2, 3]);
-        case ChapterRule.squeeze:
-          fail('the squeeze has no card');
+        case ChapterRule.squeeze || ChapterRule.box:
+          fail('${rule.name} has no card');
       }
     }
   });

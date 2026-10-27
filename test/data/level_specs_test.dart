@@ -17,15 +17,15 @@ final List<LevelSpec> flatSpecs = levelSpecs.where((s) => !s.isCube).toList();
 int untrimmed(LevelSpec s) => (s.timeLimitMs / kClockTrim).round();
 
 void main() {
-  test('there are 200 levels, numbered 1..200 in order', () {
-    expect(totalLevels, 200);
+  test('there are 250 levels, numbered 1..250 in order', () {
+    expect(totalLevels, 250);
     expect(levelSpecs, hasLength(totalLevels));
     for (var i = 0; i < levelSpecs.length; i++) {
       expect(levelSpecs[i].level, i + 1);
       expect(specForLevel(i + 1), same(levelSpecs[i]));
     }
     expect(() => specForLevel(0), throwsRangeError);
-    expect(() => specForLevel(201), throwsRangeError);
+    expect(() => specForLevel(251), throwsRangeError);
   });
 
   test('the first chapter is the plain rectangle, growing every level', () {
@@ -182,7 +182,9 @@ void main() {
       expect(s.isCube, s.level >= kFirstCubeLevel, reason: 'level ${s.level}');
       if (s.isCube) {
         expect(s.faces, 6, reason: 'level ${s.level}');
-        expect(s.width, s.height, reason: 'level ${s.level}: a face is square');
+        // A cube until the box, whose faces come in three sizes.
+        expect(s.isBox, s.level >= kFirstBoxLevel, reason: 'level ${s.level}');
+        if (!s.isBox) expect(s.width, s.height, reason: 'level ${s.level}: a face is square');
       }
     }
     expect(kFirstCubeLevel, 101);
@@ -208,6 +210,7 @@ void main() {
       expect(s.freeCellCount / s.arrows, inInclusiveRange(8.5, 13.0), reason: 'level $level');
       // An arrow is never longer than a face is wide.
       expect(s.maxLength, lessThan(s.width), reason: 'level $level');
+      expect(s.maxLength, lessThan(s.blockDepth), reason: 'level $level');
     }
     expect(specForLevel(101).toString(), startsWith('LevelSpec(101: 6 faces of 6x6, 18 arrows'));
     final s = specForLevel(120);
@@ -261,7 +264,7 @@ void main() {
       expect(cur.width, greaterThanOrEqualTo(prev.width), reason: 'level $level');
       expect(cur.timeLimitMs, greaterThanOrEqualTo(prev.timeLimitMs), reason: 'level $level');
     }
-    expect(work(specForLevel(totalLevels)), greaterThan(work(flatTop) * 1.4));
+    expect(work(specForLevel(kFirstBoxLevel - 1)), greaterThan(work(flatTop) * 1.4));
     // But never a big board: a face holds at most thirty arrows, and is
     // never wider than eighteen cells.
     for (var level = cube.firstLevel; level <= cube.lastLevel; level++) {
@@ -272,7 +275,7 @@ void main() {
   });
 
   test('the squeeze packs the block tighter and climbs on from level 150', () {
-    final squeeze = chapters.last;
+    final squeeze = chapters[6];
     expect(squeeze.rule, ChapterRule.squeeze);
     int work(LevelSpec s) {
       final f = s.features;
@@ -309,12 +312,108 @@ void main() {
       expect(cur.width, greaterThanOrEqualTo(prev.width), reason: 'level $level');
       expect(cur.timeLimitMs, greaterThanOrEqualTo(prev.timeLimitMs), reason: 'level $level');
     }
-    expect(work(specForLevel(totalLevels)), greaterThan(work(block) * 1.15));
+    expect(work(specForLevel(squeeze.lastLevel)), greaterThan(work(block) * 1.15));
     // Still never a big board: at most thirty-four arrows on a face.
     for (var level = squeeze.firstLevel; level <= squeeze.lastLevel; level++) {
       final s = specForLevel(level);
       expect((s.arrows / s.faces).ceil(), lessThanOrEqualTo(34), reason: 'level $level');
       expect(s.width, lessThanOrEqualTo(18), reason: 'level $level');
+    }
+  });
+
+  test('the box: bigger faces of three sizes, every twist on every face, and a climb from the squeeze', () {
+    final box = chapters.last;
+    expect(box.rule, ChapterRule.box);
+    expect(box.firstLevel, kFirstBoxLevel);
+    expect(box.lastLevel, totalLevels);
+    int work(LevelSpec s) {
+      final f = s.features;
+      return s.arrows + 2 * f.mirrors + 4 * f.locks + 3 * f.hidden + 3 * f.pairs;
+    }
+
+    // A small teaching box with no twists and room to look around.
+    final teach = specForLevel(box.firstLevel);
+    expect(teach.isBox, isTrue);
+    expect(teach.features.isPlain, isTrue);
+    expect(teach.openMoves, 3);
+    expect(teach.arrows, lessThanOrEqualTo(30));
+    for (var level = box.firstLevel + 1; level <= box.lastLevel; level++) {
+      final s = specForLevel(level);
+      expect(s.isBox, isTrue, reason: 'level $level');
+      // Two ways out of a face again: the bigger faces are the new work.
+      expect(s.openMoves, 2, reason: 'level $level');
+      // Taller than wide or deeper than wide: never a cube by accident.
+      final sizes = {for (var f = 0; f < 6; f++) s.faceSizeOf(f)};
+      expect(sizes.length, greaterThanOrEqualTo(2), reason: 'level $level');
+      for (final face in s.faceSpecs) {
+        final f = face.features;
+        for (final n in <int>[f.mirrors, f.locks, f.hidden, f.pairs]) {
+          expect(n, greaterThan(0), reason: 'level $level: every twist on every face');
+        }
+        // A face holds more than the squeeze's, but never a slog: at most
+        // fifty-five arrows, about a third of level 100's board.
+        expect(face.arrows, lessThanOrEqualTo(55), reason: 'level $level');
+        expect(face.freeCellCount / face.arrows, inInclusiveRange(8.0, 13.0), reason: 'level $level');
+      }
+    }
+    // Past the warm-up it starts near level 200's work and every level is a
+    // little more than the one before, by an arrow or a twist, ending well
+    // past the squeeze.
+    final squeezeTop = specForLevel(box.firstLevel - 1);
+    expect(work(specForLevel(box.firstLevel + 4)), greaterThan(work(squeezeTop) * 0.9));
+    for (var level = box.firstLevel + 2; level <= box.lastLevel; level++) {
+      final prev = specForLevel(level - 1);
+      final cur = specForLevel(level);
+      expect(work(cur), greaterThan(work(prev)), reason: 'level $level');
+      expect(cur.arrows, greaterThanOrEqualTo(prev.arrows), reason: 'level $level');
+      expect(cur.timeLimitMs, greaterThanOrEqualTo(prev.timeLimitMs), reason: 'level $level');
+    }
+    expect(work(specForLevel(box.lastLevel)), greaterThan(work(squeezeTop) * 1.15));
+    // The box's faces are bigger than the cube's: the block fills the stage.
+    expect(specForLevel(box.lastLevel).cellCount, greaterThan(specForLevel(box.firstLevel - 1).cellCount));
+  });
+
+  test('a box shares its arrows and twists out over its faces by area', () {
+    final s = specForLevel(250);
+    expect(s.toString(), startsWith('LevelSpec(250: a ${s.width}x${s.height}x${s.depth} box'));
+    expect(s.faceSizeOf(0), (s.width, s.height));
+    expect(s.faceSizeOf(2), (s.width, s.height));
+    expect(s.faceSizeOf(1), (s.depth, s.height));
+    expect(s.faceSizeOf(3), (s.depth, s.height));
+    expect(s.faceSizeOf(4), (s.width, s.depth));
+    expect(s.faceSizeOf(5), (s.width, s.depth));
+    final faces = s.faceSpecs;
+    expect(faces.fold<int>(0, (n, f) => n + f.arrows), s.arrows);
+    expect(faces.fold<int>(0, (n, f) => n + f.features.mirrors), s.features.mirrors);
+    expect(faces.fold<int>(0, (n, f) => n + f.features.locks), s.features.locks);
+    expect(faces.fold<int>(0, (n, f) => n + f.features.hidden), s.features.hidden);
+    expect(faces.fold<int>(0, (n, f) => n + f.features.pairs), s.features.pairs);
+    expect(s.cellCount, faces.fold<int>(0, (n, f) => n + f.cellCount));
+    for (var f = 0; f < 6; f++) {
+      expect((faces[f].width, faces[f].height), s.faceSizeOf(f));
+      // Each face's share is its area's, to within one.
+      final fair = s.arrows * faces[f].cellCount / s.cellCount;
+      expect((faces[f].arrows - fair).abs(), lessThan(1), reason: 'face $f');
+    }
+    // The bigger faces get more.
+    expect(faces[0].arrows, greaterThan(faces[4].arrows));
+  });
+
+  test('on a cube, sharing by area is the even share the block always had', () {
+    // The rule before the box, which levels 101–200 were dealt from.
+    int share(int total, int faces, int face, int offset) =>
+        total ~/ faces + ((face + offset) % faces < total % faces ? 1 : 0);
+    for (var level = kFirstCubeLevel; level < kFirstBoxLevel; level++) {
+      final s = specForLevel(level);
+      final faces = s.faceSpecs;
+      for (var f = 0; f < s.faces; f++) {
+        final why = 'level $level face $f';
+        expect(faces[f].arrows, share(s.arrows, s.faces, f, 0), reason: why);
+        expect(faces[f].features.mirrors, share(s.features.mirrors, s.faces, f, 1), reason: why);
+        expect(faces[f].features.locks, share(s.features.locks, s.faces, f, 3), reason: why);
+        expect(faces[f].features.hidden, share(s.features.hidden, s.faces, f, 5), reason: why);
+        expect(faces[f].features.pairs, share(s.features.pairs, s.faces, f, 2), reason: why);
+      }
     }
   });
 

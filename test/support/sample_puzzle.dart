@@ -145,3 +145,27 @@ LevelSpec sampleCubeSpecFor(int level) => LevelSpec(
   timeLimitMs: 60000,
   faces: 6,
 );
+
+/// A box 3 wide, 5 tall and 4 deep, one arrow on each face (each pointing
+/// right from its top-left corner), the arrows numbered by face.
+Puzzle sampleBoxPuzzle() => Puzzle.cube(<Puzzle>[
+  for (final (w, h) in sampleBoxSpecFor(201).faceSpecs.map((f) => (f.width, f.height)))
+    Puzzle(
+      width: w,
+      height: h,
+      arrows: [ArrowPiece(id: 0, cells: const [Cell(0, 0), Cell(1, 0)], heading: Direction.right)],
+    ),
+]);
+
+/// A spec matching [sampleBoxPuzzle], on level [level].
+LevelSpec sampleBoxSpecFor(int level) => LevelSpec(
+  level: level,
+  width: 3,
+  height: 5,
+  depth: 4,
+  arrows: 6,
+  minLength: 2,
+  maxLength: 2,
+  timeLimitMs: 60000,
+  faces: 6,
+);

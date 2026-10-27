@@ -319,7 +319,7 @@ void _box(int level) {
   final (w, h, d) = ((rx * unit).round(), (ry * unit).round(), (rz * unit).round());
   final shortest = min(w, min(h, d));
   final minLength = shortest < 8 ? 2 : 3;
-  final maxLength = teach ? 4 : min(14, max(5, shortest - 1));
+  final maxLength = min(shortest - 1, teach ? 4 : min(14, max(5, shortest - 1)));
   final slack = (teach ? 25.0 : 15.0) + 2.0 * faces;
   final think = mirrors * 1.0 + locks * 4.0 + hidden * 3.0 + pairs * 3.0;
   final seconds = arrows * (teach ? 3.0 : cubePace) + slack + think;
