@@ -40,8 +40,11 @@ void main() {
       n.due(level: 150),
       [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
     );
-    expect(n.due(level: 200), hasLength(6));
-    expect(n.due(level: 200).last, ChapterRule.squeeze);
+    // The squeeze has no card: past level 150 nothing more is owed.
+    expect(
+      n.due(level: 200),
+      [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
+    );
     expect(n.due(chapter: chapters[2]), [ChapterRule.mirrors, ChapterRule.locks]);
     expect(n.due(), isEmpty);
     // A player who met Mirrors at 21 is shown only Locks at 41.

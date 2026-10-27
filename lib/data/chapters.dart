@@ -40,6 +40,10 @@ enum ChapterRule {
 
   /// Whether the chapter is played on the block rather than a flat board.
   bool get onBlock => this == cube || this == squeeze;
+
+  /// Whether the chapter opens on an illustrated card. The squeeze does
+  /// not: it is the block again, with nothing new to show.
+  bool get hasCard => this != squeeze;
 }
 
 class Chapter {

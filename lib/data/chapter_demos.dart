@@ -72,8 +72,8 @@ Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
           ],
           pairs: const {0: 1},
         ),
-      ChapterRule.cube => _cubeDemo,
-      ChapterRule.squeeze => _squeezeDemo,
+      // The squeeze has no card of its own (`ChapterRule.hasCard`).
+      ChapterRule.cube || ChapterRule.squeeze => _cubeDemo,
     };
 
 /// The block: one arrow on each face round its middle, each pointing a
@@ -84,24 +84,6 @@ final Puzzle _cubeDemo = Puzzle.cube(<Puzzle>[
   _face([const Cell(2, 3), const Cell(2, 2), const Cell(2, 1)], Direction.up),
   _face([const Cell(3, 1), const Cell(2, 1), const Cell(1, 1)], Direction.left),
   _face([const Cell(1, 0), const Cell(1, 1), const Cell(1, 2)], Direction.down),
-  Puzzle(width: 4, height: 4, arrows: const <ArrowPiece>[]),
-  Puzzle(width: 4, height: 4, arrows: const <ArrowPiece>[]),
-]);
-
-/// The squeeze: two faces of the block, each with one way out — an arrow
-/// lying across the other's path, so they leave one after the other. The
-/// card clears the front face, then turns the block to the next.
-final Puzzle _squeezeDemo = Puzzle.cube(<Puzzle>[
-  Puzzle(width: 4, height: 4, arrows: [
-    ArrowPiece(id: 0, cells: const [Cell(0, 2), Cell(1, 2), Cell(2, 2)], heading: Direction.right),
-    ArrowPiece(id: 1, cells: const [Cell(3, 0), Cell(3, 1), Cell(3, 2), Cell(3, 3)], heading: Direction.down),
-  ]),
-  Puzzle(width: 4, height: 4, arrows: [
-    ArrowPiece(id: 0, cells: const [Cell(2, 3), Cell(2, 2), Cell(2, 1)], heading: Direction.up),
-    ArrowPiece(id: 1, cells: const [Cell(3, 0), Cell(2, 0), Cell(1, 0), Cell(0, 0)], heading: Direction.left),
-  ]),
-  Puzzle(width: 4, height: 4, arrows: const <ArrowPiece>[]),
-  Puzzle(width: 4, height: 4, arrows: const <ArrowPiece>[]),
   Puzzle(width: 4, height: 4, arrows: const <ArrowPiece>[]),
   Puzzle(width: 4, height: 4, arrows: const <ArrowPiece>[]),
 ]);
@@ -119,8 +101,7 @@ List<int> demoScriptFor(ChapterRule rule) => switch (rule) {
       ChapterRule.locks => const [0, 1, 0],
       ChapterRule.fog => const [1, 0, 2, 1],
       ChapterRule.pairs => const [0, 2],
-      ChapterRule.cube => const [0, 1, 2, 3],
-      ChapterRule.squeeze => const [1, 0, 3, 2],
+      ChapterRule.cube || ChapterRule.squeeze => const [0, 1, 2, 3],
     };
 
 /// A spec that fits [demoPuzzleFor]'s boards (nothing on it matters but the

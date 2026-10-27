@@ -30,7 +30,9 @@ every level, with never more than thirty arrows on one face — and then
 packed so that one arrow at a time is the aim (`openMoves` 1), the work
 climbing on from level 150's by an arrow or a twist a level to 200 arrows,
 never more than thirty-four on a face, under a clock held at its
-ten-minute cap. Every flat chapter opens on a
+ten-minute cap (trimmed like every clock). It has no chapter card: it
+is the block again (`ChapterRule.hasCard`), so level 151 opens straight
+on the board with a one-line tip under it. Every flat chapter opens on a
 small teaching board under a card that is one line and a self-playing
 demo of the twist, then climbs steadily from 30 arrows at its second
 level to 150 at its twentieth (the same top for every chapter: the twist
@@ -735,8 +737,8 @@ Key patterns:
   3.0 s in Mirrors to 3.4 s in Pairs, since every twist is one more thing
   to read on every arrow — plus 1 s a mirror, 4 s a lock and 3 s a hidden
   head or tether, the whole thing capped at 599 s and then trimmed to
-  `kClockTrim` (95%, every level 1–200, the table's numbers already
-  trimmed; the daily board keeps its flat five minutes, which its card
+  `kClockTrim` (85.5%: 95%, then another 10% off that, every level 1–200,
+  the table's numbers already trimmed; the daily board keeps its flat five minutes, which its card
   promises; the tests read the rule's paces back through `untrimmed`), so a later chapter's
   level is never shorter on the clock than the chapter before's; mirrors
   one per eight arrows through their own chapter and one per fourteen
@@ -786,8 +788,8 @@ Key patterns:
   and the fog demo taps the hidden arrow first for the same reason; the
   block's demo is a tiny cube with one arrow on each face round its middle,
   and the card turns the block to each arrow's face before playing it; the
-  squeeze's is two faces of two arrows, one holding the other up, so each
-  face has one way out at a time).
+  squeeze has no card, `ChapterRule.hasCard`, since it brings nothing new
+  to show and its demo read as a frivolous extra).
   `widgets/chapter_demo.dart` runs that script on a real `GameNotifier`
   every `kDemoStep`, rests `kDemoRest` on the cleared board and starts over,
   so the card is a title, one line and a loop of the rule being played

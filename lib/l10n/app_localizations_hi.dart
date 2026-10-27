@@ -1431,13 +1431,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get chapterBlurb7 => 'कसकर भरा क्यूब: हर सतह से एक साथ कम ही रास्ते।';
 
   @override
-  String get introTitleSqueeze => 'शिकंजा';
-
-  @override
-  String get introBodySqueeze =>
-      'सतहें ठसाठस भरी हैं। वो एक तीर ढूँढो जो निकल सके।';
-
-  @override
   String get tutorialSqueeze =>
       'हर सतह से एक साथ कम ही तीर निकल पाते हैं। जो निकल सके उसे ढूँढो, फिर अगला खुलेगा।';
 

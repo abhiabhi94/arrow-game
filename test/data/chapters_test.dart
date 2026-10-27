@@ -49,6 +49,9 @@ void main() {
     expect(ruleTaughtAt(101), ChapterRule.cube);
     expect(ruleTaughtAt(111), isNull);
     expect(ruleTaughtAt(151), ChapterRule.squeeze);
+    // The squeeze is the block again: it has no card of its own.
+    expect(ChapterRule.squeeze.hasCard, isFalse);
+    expect(ChapterRule.values.where((r) => !r.hasCard), [ChapterRule.squeeze]);
     expect(ruleTaughtAt(152), isNull);
   });
 
@@ -117,7 +120,7 @@ void main() {
   });
 
   test('every chapter card has a small, solvable board that shows its twist, and a script that plays it', () {
-    for (final rule in ChapterRule.values) {
+    for (final rule in ChapterRule.values.where((r) => r.hasCard)) {
       final p = demoPuzzleFor(rule);
       expect(p.isSolvable, isTrue, reason: rule.name);
       expect(p.arrowCount, lessThanOrEqualTo(rule.onBlock ? 4 : 3), reason: rule.name);
@@ -163,13 +166,7 @@ void main() {
           expect(p.faceCount, 6);
           expect(<int>[for (final id in demoScriptFor(rule)) p.faceOf(id)], [0, 1, 2, 3]);
         case ChapterRule.squeeze:
-          // Two faces of two arrows, each face with one way out at a time:
-          // the script plays the free one, then the one it was holding.
-          expect(p.isCube, isTrue);
-          expect(<int>[for (final id in demoScriptFor(rule)) p.faceOf(id)], [0, 0, 1, 1]);
-          for (var f = 0; f < 2; f++) {
-            expect(p.arrowsOn(f).where((id) => p.canExit(id, const <int>{})), hasLength(1), reason: 'face $f');
-          }
+          fail('the squeeze has no card');
       }
     }
   });

@@ -2654,18 +2654,6 @@ abstract class AppLocalizations {
   /// **'The block packed tight: fewer ways out of each face at once.'**
   String get chapterBlurb7;
 
-  /// No description provided for @introTitleSqueeze.
-  ///
-  /// In en, this message translates to:
-  /// **'The squeeze'**
-  String get introTitleSqueeze;
-
-  /// No description provided for @introBodySqueeze.
-  ///
-  /// In en, this message translates to:
-  /// **'The faces are packed tight. Find the one arrow that can go.'**
-  String get introBodySqueeze;
-
   /// No description provided for @tutorialSqueeze.
   ///
   /// In en, this message translates to:

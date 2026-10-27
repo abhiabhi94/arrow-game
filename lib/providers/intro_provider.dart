@@ -58,13 +58,13 @@ class IntroNotifier extends StateNotifier<Set<ChapterRule>> {
   List<ChapterRule> due({int? level, Chapter? chapter}) {
     if (!kIntroCatchUp) {
       final rule = level == null ? null : ruleTaughtAt(level);
-      return rule == null || state.contains(rule) ? const <ChapterRule>[] : <ChapterRule>[rule];
+      return rule == null || !rule.hasCard || state.contains(rule) ? const <ChapterRule>[] : <ChapterRule>[rule];
     }
     final upTo = chapter ?? (level == null ? null : chapterOf(level));
     if (upTo == null) return const <ChapterRule>[];
     return <ChapterRule>[
       for (final c in chapters)
-        if (c.index >= 2 && c.index <= upTo.index && !state.contains(c.rule)) c.rule,
+        if (c.index >= 2 && c.index <= upTo.index && c.rule.hasCard && !state.contains(c.rule)) c.rule,
     ];
   }
 

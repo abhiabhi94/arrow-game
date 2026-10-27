@@ -83,11 +83,12 @@ void main() {
     }
   });
 
-  test('every clock is trimmed to 95% of what its rule works out', () {
-    expect(kClockTrim, 0.95);
+  test('every clock is trimmed to 85.5% of what its rule works out', () {
+    // 95%, then another 10% off that.
+    expect(kClockTrim, 0.855);
     // Level 1 was 26 s and level 100 584 s before the trim.
-    expect(specForLevel(1).timeLimitMs, 24700);
-    expect(specForLevel(100).timeLimitMs, 554800);
+    expect(specForLevel(1).timeLimitMs, 22230);
+    expect(specForLevel(100).timeLimitMs, 499320);
     for (final s in levelSpecs) {
       expect(s.timeLimitMs, lessThanOrEqualTo((599000 * kClockTrim).round()), reason: 'level ${s.level}');
     }
@@ -347,6 +348,6 @@ void main() {
         expect(seeds.add(s.withVariant(0).seed + v * 1_000_003), isTrue, reason: 'level ${s.level} variant $v');
       }
     }
-    expect(specForLevel(1).toString(), 'LevelSpec(1: 5x6, 5 arrows, 24700ms)');
+    expect(specForLevel(1).toString(), 'LevelSpec(1: 5x6, 5 arrows, 22230ms)');
   });
 }

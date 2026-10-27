@@ -1435,13 +1435,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'The block packed tight: fewer ways out of each face at once.';
 
   @override
-  String get introTitleSqueeze => 'The squeeze';
-
-  @override
-  String get introBodySqueeze =>
-      'The faces are packed tight. Find the one arrow that can go.';
-
-  @override
   String get tutorialSqueeze =>
       'Few arrows can leave a face at once. Find the one that can, and the next opens up.';
 
