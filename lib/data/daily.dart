@@ -1,6 +1,6 @@
 /// The daily board: one fresh deal a day, about five minutes long, with the
-/// twists of the chapter the player has reached (the last flat one, once
-/// they are on the block). Pure Dart.
+/// twists of the chapter the player has reached — and, once they have
+/// cleared the hundred flat levels, on the 3D block. Pure Dart.
 ///
 /// Every player gets their own: the seed mixes the day with a salt drawn
 /// once per install, so two phones never share a board and the same phone
@@ -39,6 +39,7 @@ int dailySeed(int day, int salt) {
 /// week of boards in one chapter still differs board to board.
 LevelSpec dailySpec({required int day, required Chapter chapter, required int salt}) {
   final seed = dailySeed(day, salt);
+  if (chapter.rule.onBlock) return _dailyBlock(seed);
   final mirrors = chapter.index >= 2 ? 8 + seed % 5 : 0; // 8..12
   final twist = 3 + (seed >> 4) % 3; // 3..5 of the chapter's own
   final features = switch (chapter.rule) {
@@ -46,8 +47,7 @@ LevelSpec dailySpec({required int day, required Chapter chapter, required int sa
     ChapterRule.mirrors => LevelFeatures(mirrors: mirrors),
     ChapterRule.locks => LevelFeatures(mirrors: mirrors, locks: twist),
     ChapterRule.fog => LevelFeatures(mirrors: mirrors, locks: 2, hidden: twist),
-    // The daily board is flat; on the block it keeps every flat twist.
-    ChapterRule.pairs || ChapterRule.cube => LevelFeatures(mirrors: mirrors, locks: 2, hidden: 2, pairs: twist),
+    ChapterRule.pairs || ChapterRule.cube || ChapterRule.squeeze => LevelFeatures(mirrors: mirrors, locks: 2, hidden: 2, pairs: twist),
   };
   // Eighty arrows at ~11.3 free cells each: 3.75 s an arrow of the five
   // minutes, the trail's own pace with room for the twists.
@@ -61,6 +61,31 @@ LevelSpec dailySpec({required int day, required Chapter chapter, required int sa
     timeLimitMs: kDailyTimeLimitMs,
     openMoves: 2,
     features: features,
+    seed: seed,
+  );
+}
+
+/// Faces on the daily block.
+const int kDailyFaces = 6;
+
+/// The daily board on the block: six faces of fifteen arrows (12×12), every
+/// twist on every face, the counts of mirrors and pairs turning with the
+/// day. At the block's pace — 2.4 s an arrow, the twists' seconds and 2 s a
+/// face for turning — that is the same five minutes as the flat board.
+LevelSpec _dailyBlock(int seed) {
+  final mirrors = 2 * kDailyFaces + seed % 5; // 12..16
+  final pairs = kDailyFaces + (seed >> 4) % 3; // 6..8
+  return LevelSpec(
+    level: LevelSpec.dailyLevel,
+    width: 12,
+    height: 12,
+    faces: kDailyFaces,
+    arrows: 15 * kDailyFaces,
+    minLength: 3,
+    maxLength: 11,
+    timeLimitMs: kDailyTimeLimitMs,
+    openMoves: 2,
+    features: LevelFeatures(mirrors: mirrors, locks: kDailyFaces, hidden: kDailyFaces, pairs: pairs),
     seed: seed,
   );
 }

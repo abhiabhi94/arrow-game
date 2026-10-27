@@ -712,6 +712,156 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName150 => 'The Last Block';
 
   @override
+  String get levelName151 => 'Tight Spot';
+
+  @override
+  String get levelName152 => 'Squeeze Play';
+
+  @override
+  String get levelName153 => 'Pressure Point';
+
+  @override
+  String get levelName154 => 'Close Quarters';
+
+  @override
+  String get levelName155 => 'Packed In';
+
+  @override
+  String get levelName156 => 'Sardine Tin';
+
+  @override
+  String get levelName157 => 'Hourglass';
+
+  @override
+  String get levelName158 => 'Threading';
+
+  @override
+  String get levelName159 => 'Narrow Escape';
+
+  @override
+  String get levelName160 => 'Tight Squeeze';
+
+  @override
+  String get levelName161 => 'Crowd Surf';
+
+  @override
+  String get levelName162 => 'Elbow Room';
+
+  @override
+  String get levelName163 => 'Crush';
+
+  @override
+  String get levelName164 => 'Pinch';
+
+  @override
+  String get levelName165 => 'Pile-Up';
+
+  @override
+  String get levelName166 => 'Standstill';
+
+  @override
+  String get levelName167 => 'Jam Packed';
+
+  @override
+  String get levelName168 => 'Standing Room';
+
+  @override
+  String get levelName169 => 'Full Tank';
+
+  @override
+  String get levelName170 => 'Compressed';
+
+  @override
+  String get levelName171 => 'Under Pressure';
+
+  @override
+  String get levelName172 => 'Vice Grip';
+
+  @override
+  String get levelName173 => 'Tight Knit';
+
+  @override
+  String get levelName174 => 'Snug Fit';
+
+  @override
+  String get levelName175 => 'Last Inch';
+
+  @override
+  String get levelName176 => 'Crowded House';
+
+  @override
+  String get levelName177 => 'Knothole';
+
+  @override
+  String get levelName178 => 'Squeeze Box';
+
+  @override
+  String get levelName179 => 'Pressure Cooker';
+
+  @override
+  String get levelName180 => 'Clamp Down';
+
+  @override
+  String get levelName181 => 'Hairline';
+
+  @override
+  String get levelName182 => 'Needlepoint';
+
+  @override
+  String get levelName183 => 'Keyhole';
+
+  @override
+  String get levelName184 => 'Slim Chance';
+
+  @override
+  String get levelName185 => 'Rat Run';
+
+  @override
+  String get levelName186 => 'Back Alley';
+
+  @override
+  String get levelName187 => 'Fine Margin';
+
+  @override
+  String get levelName188 => 'Narrow Gauge';
+
+  @override
+  String get levelName189 => 'One Way Out';
+
+  @override
+  String get levelName190 => 'Closing In';
+
+  @override
+  String get levelName191 => 'Hard Press';
+
+  @override
+  String get levelName192 => 'Diamond';
+
+  @override
+  String get levelName193 => 'Deep Pressure';
+
+  @override
+  String get levelName194 => 'Overflow';
+
+  @override
+  String get levelName195 => 'Tipping Point';
+
+  @override
+  String get levelName196 => 'Breaking Point';
+
+  @override
+  String get levelName197 => 'Final Squeeze';
+
+  @override
+  String get levelName198 => 'Last Gasp';
+
+  @override
+  String get levelName199 => 'Endgame';
+
+  @override
+  String get levelName200 => 'The Final Arrow';
+
+  @override
   String get tutorialTap => 'Tap an arrow to slide it out the way it points.';
 
   @override
@@ -1276,6 +1426,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tutorialCube =>
       'Drag the block to turn it. Play the face in front; tap a side to bring it round.';
+
+  @override
+  String get chapterName7 => 'The Squeeze';
+
+  @override
+  String get chapterBlurb7 =>
+      'The block packed tight: fewer ways out of each face at once.';
+
+  @override
+  String get tutorialSqueeze =>
+      'Few arrows can leave a face at once. Find the one that can, and the next opens up.';
 
   @override
   String get cubeTurnLeft => 'Turn to the face on the left';

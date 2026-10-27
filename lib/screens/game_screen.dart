@@ -972,6 +972,7 @@ extension on _GameScreenState {
       ChapterRule.fog => l10n.tutorialFog,
       ChapterRule.pairs => l10n.tutorialPairs,
       ChapterRule.cube => l10n.tutorialCube,
+      ChapterRule.squeeze => l10n.tutorialSqueeze,
     };
   }
 }
@@ -994,7 +995,8 @@ class _IntroCard extends StatelessWidget {
       ChapterRule.locks => ('🔒', l10n.introTitleLocks, l10n.introBodyLocks),
       ChapterRule.fog => ('🌫️', l10n.introTitleFog, l10n.introBodyFog),
       ChapterRule.pairs => ('🔗', l10n.introTitlePairs, l10n.introBodyPairs),
-      ChapterRule.cube => ('🧊', l10n.introTitleCube, l10n.introBodyCube),
+      // The squeeze has no card of its own (`ChapterRule.hasCard`).
+      ChapterRule.cube || ChapterRule.squeeze => ('🧊', l10n.introTitleCube, l10n.introBodyCube),
     };
     return ResultCard(
       emoji: emoji,

@@ -177,7 +177,7 @@ void main() {
     final first = hunt(chapters[0]);
     var before = hunt(chapters[1]);
     expect(before, greaterThan(first));
-    for (final chapter in chapters.skip(2).where((c) => c.rule != ChapterRule.cube)) {
+    for (final chapter in chapters.skip(2).where((c) => !c.rule.onBlock)) {
       final now = hunt(chapter);
       expect(now, greaterThan(before * 0.9), reason: 'chapter ${chapter.index}');
       before = now;
@@ -187,7 +187,7 @@ void main() {
   test('on the block the faces keep to themselves and grow deeper level by level', () {
     // Every arrow leaves by its own face, and nothing on one face waits for
     // anything on another.
-    for (final level in <int>[101, 120, 135, 150]) {
+    for (final level in <int>[101, 120, 135, 150, 151, 175, 200]) {
       final p = puzzleForLevel(specForLevel(level));
       for (final a in p.arrows) {
         final face = p.faceOf(a.id);
@@ -219,6 +219,14 @@ void main() {
       before = now;
     }
     expect(depth(141), greaterThan(depth(102)));
+  });
+
+  test('the squeeze is a harder find than the block it follows', () {
+    // One way out of a face at a time where the block let two, and more
+    // on every face: more arrows to look through for every one that can go.
+    double hunt(List<int> levels) =>
+        levels.map((l) => puzzleForLevel(specForLevel(l)).arrowsPerOpenMove).reduce((a, b) => a + b) / levels.length;
+    expect(hunt(<int>[175, 200]), greaterThan(hunt(<int>[145, 150])));
   });
 
   test('an arrow may point straight at another as long as nothing cycles', () {

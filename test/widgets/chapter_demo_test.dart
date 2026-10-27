@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/pump_app.dart';
 
 void main() {
-  for (final rule in ChapterRule.values.where((r) => r != ChapterRule.cube)) {
+  for (final rule in ChapterRule.values.where((r) => !r.onBlock)) {
     testWidgets('the ${rule.name} demo plays its script and starts over', (tester) async {
       await pumpApp(tester, Center(child: SizedBox(width: 300, child: ChapterDemoBoard(rule: rule))));
       expect(find.byType(PuzzleBoard), findsOneWidget);

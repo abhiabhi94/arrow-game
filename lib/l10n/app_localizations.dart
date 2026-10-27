@@ -1424,6 +1424,306 @@ abstract class AppLocalizations {
   /// **'The Last Block'**
   String get levelName150;
 
+  /// No description provided for @levelName151.
+  ///
+  /// In en, this message translates to:
+  /// **'Tight Spot'**
+  String get levelName151;
+
+  /// No description provided for @levelName152.
+  ///
+  /// In en, this message translates to:
+  /// **'Squeeze Play'**
+  String get levelName152;
+
+  /// No description provided for @levelName153.
+  ///
+  /// In en, this message translates to:
+  /// **'Pressure Point'**
+  String get levelName153;
+
+  /// No description provided for @levelName154.
+  ///
+  /// In en, this message translates to:
+  /// **'Close Quarters'**
+  String get levelName154;
+
+  /// No description provided for @levelName155.
+  ///
+  /// In en, this message translates to:
+  /// **'Packed In'**
+  String get levelName155;
+
+  /// No description provided for @levelName156.
+  ///
+  /// In en, this message translates to:
+  /// **'Sardine Tin'**
+  String get levelName156;
+
+  /// No description provided for @levelName157.
+  ///
+  /// In en, this message translates to:
+  /// **'Hourglass'**
+  String get levelName157;
+
+  /// No description provided for @levelName158.
+  ///
+  /// In en, this message translates to:
+  /// **'Threading'**
+  String get levelName158;
+
+  /// No description provided for @levelName159.
+  ///
+  /// In en, this message translates to:
+  /// **'Narrow Escape'**
+  String get levelName159;
+
+  /// No description provided for @levelName160.
+  ///
+  /// In en, this message translates to:
+  /// **'Tight Squeeze'**
+  String get levelName160;
+
+  /// No description provided for @levelName161.
+  ///
+  /// In en, this message translates to:
+  /// **'Crowd Surf'**
+  String get levelName161;
+
+  /// No description provided for @levelName162.
+  ///
+  /// In en, this message translates to:
+  /// **'Elbow Room'**
+  String get levelName162;
+
+  /// No description provided for @levelName163.
+  ///
+  /// In en, this message translates to:
+  /// **'Crush'**
+  String get levelName163;
+
+  /// No description provided for @levelName164.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinch'**
+  String get levelName164;
+
+  /// No description provided for @levelName165.
+  ///
+  /// In en, this message translates to:
+  /// **'Pile-Up'**
+  String get levelName165;
+
+  /// No description provided for @levelName166.
+  ///
+  /// In en, this message translates to:
+  /// **'Standstill'**
+  String get levelName166;
+
+  /// No description provided for @levelName167.
+  ///
+  /// In en, this message translates to:
+  /// **'Jam Packed'**
+  String get levelName167;
+
+  /// No description provided for @levelName168.
+  ///
+  /// In en, this message translates to:
+  /// **'Standing Room'**
+  String get levelName168;
+
+  /// No description provided for @levelName169.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Tank'**
+  String get levelName169;
+
+  /// No description provided for @levelName170.
+  ///
+  /// In en, this message translates to:
+  /// **'Compressed'**
+  String get levelName170;
+
+  /// No description provided for @levelName171.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Pressure'**
+  String get levelName171;
+
+  /// No description provided for @levelName172.
+  ///
+  /// In en, this message translates to:
+  /// **'Vice Grip'**
+  String get levelName172;
+
+  /// No description provided for @levelName173.
+  ///
+  /// In en, this message translates to:
+  /// **'Tight Knit'**
+  String get levelName173;
+
+  /// No description provided for @levelName174.
+  ///
+  /// In en, this message translates to:
+  /// **'Snug Fit'**
+  String get levelName174;
+
+  /// No description provided for @levelName175.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Inch'**
+  String get levelName175;
+
+  /// No description provided for @levelName176.
+  ///
+  /// In en, this message translates to:
+  /// **'Crowded House'**
+  String get levelName176;
+
+  /// No description provided for @levelName177.
+  ///
+  /// In en, this message translates to:
+  /// **'Knothole'**
+  String get levelName177;
+
+  /// No description provided for @levelName178.
+  ///
+  /// In en, this message translates to:
+  /// **'Squeeze Box'**
+  String get levelName178;
+
+  /// No description provided for @levelName179.
+  ///
+  /// In en, this message translates to:
+  /// **'Pressure Cooker'**
+  String get levelName179;
+
+  /// No description provided for @levelName180.
+  ///
+  /// In en, this message translates to:
+  /// **'Clamp Down'**
+  String get levelName180;
+
+  /// No description provided for @levelName181.
+  ///
+  /// In en, this message translates to:
+  /// **'Hairline'**
+  String get levelName181;
+
+  /// No description provided for @levelName182.
+  ///
+  /// In en, this message translates to:
+  /// **'Needlepoint'**
+  String get levelName182;
+
+  /// No description provided for @levelName183.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyhole'**
+  String get levelName183;
+
+  /// No description provided for @levelName184.
+  ///
+  /// In en, this message translates to:
+  /// **'Slim Chance'**
+  String get levelName184;
+
+  /// No description provided for @levelName185.
+  ///
+  /// In en, this message translates to:
+  /// **'Rat Run'**
+  String get levelName185;
+
+  /// No description provided for @levelName186.
+  ///
+  /// In en, this message translates to:
+  /// **'Back Alley'**
+  String get levelName186;
+
+  /// No description provided for @levelName187.
+  ///
+  /// In en, this message translates to:
+  /// **'Fine Margin'**
+  String get levelName187;
+
+  /// No description provided for @levelName188.
+  ///
+  /// In en, this message translates to:
+  /// **'Narrow Gauge'**
+  String get levelName188;
+
+  /// No description provided for @levelName189.
+  ///
+  /// In en, this message translates to:
+  /// **'One Way Out'**
+  String get levelName189;
+
+  /// No description provided for @levelName190.
+  ///
+  /// In en, this message translates to:
+  /// **'Closing In'**
+  String get levelName190;
+
+  /// No description provided for @levelName191.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard Press'**
+  String get levelName191;
+
+  /// No description provided for @levelName192.
+  ///
+  /// In en, this message translates to:
+  /// **'Diamond'**
+  String get levelName192;
+
+  /// No description provided for @levelName193.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Pressure'**
+  String get levelName193;
+
+  /// No description provided for @levelName194.
+  ///
+  /// In en, this message translates to:
+  /// **'Overflow'**
+  String get levelName194;
+
+  /// No description provided for @levelName195.
+  ///
+  /// In en, this message translates to:
+  /// **'Tipping Point'**
+  String get levelName195;
+
+  /// No description provided for @levelName196.
+  ///
+  /// In en, this message translates to:
+  /// **'Breaking Point'**
+  String get levelName196;
+
+  /// No description provided for @levelName197.
+  ///
+  /// In en, this message translates to:
+  /// **'Final Squeeze'**
+  String get levelName197;
+
+  /// No description provided for @levelName198.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Gasp'**
+  String get levelName198;
+
+  /// No description provided for @levelName199.
+  ///
+  /// In en, this message translates to:
+  /// **'Endgame'**
+  String get levelName199;
+
+  /// No description provided for @levelName200.
+  ///
+  /// In en, this message translates to:
+  /// **'The Final Arrow'**
+  String get levelName200;
+
   /// No description provided for @tutorialTap.
   ///
   /// In en, this message translates to:
@@ -2341,6 +2641,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Drag the block to turn it. Play the face in front; tap a side to bring it round.'**
   String get tutorialCube;
+
+  /// No description provided for @chapterName7.
+  ///
+  /// In en, this message translates to:
+  /// **'The Squeeze'**
+  String get chapterName7;
+
+  /// No description provided for @chapterBlurb7.
+  ///
+  /// In en, this message translates to:
+  /// **'The block packed tight: fewer ways out of each face at once.'**
+  String get chapterBlurb7;
+
+  /// No description provided for @tutorialSqueeze.
+  ///
+  /// In en, this message translates to:
+  /// **'Few arrows can leave a face at once. Find the one that can, and the next opens up.'**
+  String get tutorialSqueeze;
 
   /// No description provided for @cubeTurnLeft.
   ///

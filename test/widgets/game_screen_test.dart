@@ -1018,7 +1018,7 @@ void main() {
       themeMode: ThemeMode.dark,
     );
     await _settle(tester, 300);
-    expect(find.text('The Last Block'), findsOneWidget);
+    expect(find.text('The Final Arrow'), findsOneWidget);
     expect(find.byType(PuzzleBoard), findsOneWidget);
   });
 

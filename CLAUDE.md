@@ -25,15 +25,23 @@ turn keys, or Shift+arrow keys) and the face square to the player the one
 played; an arrow leaves by its own face's edge, so the faces never touch,
 and the twists come back onto the faces ten levels at a time, the count
 after a short warm-up holding about level 100's work and climbing a little
-every level, with never more than thirty arrows on one face. Every flat chapter opens on a
+every level, with never more than thirty arrows on one face — and then
+**The Squeeze** (151–200, a seventh chapter, the block again): each face
+packed so that one arrow at a time is the aim (`openMoves` 1), the work
+climbing on from level 150's by an arrow or a twist a level to 200 arrows,
+never more than thirty-four on a face, under a clock held at its
+ten-minute cap (trimmed like every clock). It has no chapter card: it
+is the block again (`ChapterRule.hasCard`), so level 151 opens straight
+on the board with a one-line tip under it. Every flat chapter opens on a
 small teaching board under a card that is one line and a self-playing
 demo of the twist, then climbs steadily from 30 arrows at its second
 level to 150 at its twentieth (the same top for every chapter: the twist
 is what makes a later chapter harder), with a clock that grows chapter by
 chapter and never passes ten minutes. A **daily board**
 (home card; `data/daily.dart`) is a fresh ~5-minute deal every day (80
-arrows) with the twists of the chapter the player has reached (Pairs, once
-they are on the block — the daily board is always flat), seeded from
+arrows) with the twists of the chapter the player has reached — and, once
+all hundred flat levels are cleared, a 3D block of its own (six faces of
+fifteen, every twist on every face, the same five minutes), seeded from
 the date and a per-install salt so no two phones share one; it keeps a
 streak. Everything
 is drawn in a single ink like a printed puzzle (the sun-coloured key badge
@@ -61,7 +69,7 @@ node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-view
 node tool/screenshot.mjs --levels 21,41,61,81 --daily                # each chapter's card (mid-demo) + teaching board, and today's daily board
 node tool/screenshot.mjs --levels 101,140 --keys Shift+ArrowRight,Shift+ArrowUp  # the block in 3D, then turned right and up
 node tool/screenshot.mjs --levels 120 --drag -90,40                  # a drag across the block: it stays where it is left
-dart run tool/make_levels.dart        # prints levels 21-150 from the chapter rules (paste into lib/data/level_specs.dart)
+dart run tool/make_levels.dart        # prints levels 21-200 from the chapter rules (paste into lib/data/level_specs.dart)
 dart run tool/pick_variants.dart      # the first variant of each level from 21 that keeps every pinned rule
 dart run tool/level_report.dart 41 3  # a level (and its next 3 variants): arrows placed, twists placed, fill, open moves
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
@@ -247,14 +255,15 @@ lib/
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N;
                          dealFace re-deals a cube face on its own until it keepsRules
     answer_match.dart    judging a typed riddle answer (exact / close / wrong)
-  data/level_specs.dart  the 150 levels (board size, arrow count, length range, clock, faces)
+  data/level_specs.dart  the 200 levels (board size, arrow count, length range, clock, faces)
   data/riddle_bank.dart  250 riddles in English + 250 पहेलियाँ in Hindi
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot),
                        riddle (question, answers, hint)
   providers/           app_providers (DI root), settings_provider, progress_provider, game_provider,
                        saved_game_provider (the one level in progress), riddle_provider (the deck),
-                       intro_provider (which chapter cards have been shown)
+                       intro_provider (which chapter cards have been shown),
+                       trail_provider (which chapters of the home trail are folded)
   services/            haptics_service (injectable HapticEngine), sfx_service (whoosh + bump),
                        audio_service (looping music)
   data/audio_credits.dart  attribution for the bundled track
@@ -333,7 +342,7 @@ Key patterns:
   along its own track and sprung back with the other, the tether lit
   between them, so the second arrow is seen to be tied to the first
   rather than appearing to bump on its own.
-- **The block** (levels 101–150, after the hundred flat ones; `LevelSpec.faces` = 6, `Puzzle.cube`,
+- **The block** (levels 101–150, after the hundred flat ones, and the squeeze, 151–200, after it; `LevelSpec.faces` = 6, `Puzzle.cube`,
   `engine/cube.dart`): a cube level is six square faces, each a board of its
   own, laid side by side in one strip of the *same* `Puzzle` — face `f` is
   columns `f·n … f·n+n-1` (`faceSize` = n). `traceRay` takes an `originX`, so
@@ -682,8 +691,17 @@ Key patterns:
   and a tap on it plays the level. The first cut was a thin dotted line
   from node to node down a lot of empty page, each stretch its own
   S-curve, a caption under every node and a bordered card for each
-  chapter heading: a list. A locked node still shows its number (a small lock
-  badge sits on it) and the journey heading reads "N of 100 cleared", so the
+  chapter heading: a list. **A chapter folds** to its heading: a tap on
+  `_ChapterBand` (a button with `expanded` in the semantics, and a
+  chevron) flips it, and a chapter whose every level is cleared is folded
+  unless the player opened it (`providers/trail_provider.dart`, prefs
+  `arrow_trail_folds`, only the player's own choices stored; Reset progress
+  clears them). `_Trail.build` lays the page out chapter by chapter — a
+  band, then its levels if it is open, `foldedGap` if not — and draws
+  roads and nodes for the open ones only. Before this, a player past level
+  100 had a hundred nodes to scroll through to find level 101 on the trail;
+  now the cleared chapters are five headings above it. A locked node still shows its number (a small lock
+  badge sits on it) and the journey heading reads "N of 200 cleared", so the
   player can see what is ahead and where the trail ends. The header (`_HomeHeader`, a
   `SliverPersistentHeaderDelegate`) is **pinned**: the trail is a hundred
   levels long, and the star count and the way into Settings should not be a
@@ -702,7 +720,7 @@ Key patterns:
   count, lengths, clock, `openMoves` (3 on levels 1–3 and on every teaching
   board, 2 otherwise: how many taps the generator leaves available at once),
   `features` (mirrors, locks, hidden, pairs), `faces` and `variant`. Levels
-  1–20 are untouched from the first release. **Levels 21–150 are printed by
+  1–20 are untouched from the first release. **Levels 21–200 are printed by
   `tool/make_levels.dart`** from the chapter rules rather than tuned a row
   at a time — the first hundred levels were the same level played eighty
   times, climbing to 464 arrows and a fifteen-minute read with nothing new
@@ -720,8 +738,8 @@ Key patterns:
   3.0 s in Mirrors to 3.4 s in Pairs, since every twist is one more thing
   to read on every arrow — plus 1 s a mirror, 4 s a lock and 3 s a hidden
   head or tether, the whole thing capped at 599 s and then trimmed to
-  `kClockTrim` (95%, every level 1–150, the table's numbers already
-  trimmed; the daily board keeps its flat five minutes, which its card
+  `kClockTrim` (85.5%: 95%, then another 10% off that, every level 1–200,
+  the table's numbers already trimmed; the daily board keeps its flat five minutes, which its card
   promises; the tests read the rule's paces back through `untrimmed`), so a later chapter's
   level is never shorter on the clock than the chapter before's; mirrors
   one per eight arrows through their own chapter and one per fourteen
@@ -749,18 +767,31 @@ Key patterns:
   every face keeps the rules (`PuzzleGenerator.keepsRules`;
   `pick_variants` checks a cube level face by face), that the faces keep
   to themselves and that their chains grow deeper ten levels by ten.
+  **The squeeze (151–200)** is the block again with `openMoves` 1: a
+  teaching cube of six arrows a face and no twists (8×8), warm-up faces of
+  20, 25 and 28 arrows with one of each twist (two mirrors) a face, then
+  from 155 level 150's block plus one, one level gaining an arrow and the
+  next a twist (mirrors by two, locks, hidden heads, pairs in turn) to 200
+  arrows; past the warm-up the clock sits at the ten-minute cap.
+  `level_specs_test` pins that (`openMoves` 1, a strict climb, ≤ 34 a
+  face) and the generator test that the squeeze is a harder hunt than the
+  end of the block.
 - **Chapters and the daily board:** `data/chapters.dart` is the map (five
-  flat chapters of `kChapterLength` = 20, then the block from
-  `kFirstCubeLevel` = 101 to 150; each `Chapter` carries its own
+  flat chapters of `kChapterLength` = 20 (`kFlatChapterCount`), then the
+  block from `kFirstCubeLevel` = 101 to 150 and the squeeze from
+  `kFirstSqueezeLevel` = 151 to 200 (`ChapterRule.onBlock` for both); each `Chapter` carries its own
   `firstLevel`/`lastLevel`; `chapterOf`, `ruleTaughtAt`,
-  `chapterForProgress`, `dailyChapterFor` — Pairs once on the block);
+  `chapterForProgress`, `dailyChapterFor` — the block once level 100 is
+  cleared, `kFlatChapterCount` + 1);
   `data/chapter_demos.dart` holds the tiny solvable boards each chapter card
   plays and the script of taps that shows the twist
   (`demoScriptFor`; the
   lock demo taps the lock first on purpose, for the rattle and the pointer,
   and the fog demo taps the hidden arrow first for the same reason; the
   block's demo is a tiny cube with one arrow on each face round its middle,
-  and the card turns the block to each arrow's face before playing it).
+  and the card turns the block to each arrow's face before playing it; the
+  squeeze has no card, `ChapterRule.hasCard`, since it brings nothing new
+  to show and its demo read as a frivolous extra).
   `widgets/chapter_demo.dart` runs that script on a real `GameNotifier`
   every `kDemoStep`, rests `kDemoRest` on the cleared board and starts over,
   so the card is a title, one line and a loop of the rule being played
@@ -783,14 +814,16 @@ Key patterns:
   over a resumed game, and the pause is deferred a frame since a provider
   may not change while the tree builds; the teaching levels also get a line
   under the board like levels 1–2. The home trail is headed by a
-  `_ChapterBand` per chapter (`_Trail.topOf` adds a band's height per
-  chapter, scaled with the system font). The **daily board**
+  `_ChapterBand` per chapter (its height scaled with the system font). The **daily board**
   (`data/daily.dart`, `providers/daily_provider.dart`, prefs `arrow_daily_*`)
   is `LevelSpec.dailyLevel` (0) in `gameProvider` — dealt from
   `DailyNotifier.spec`, its clear recorded to the streak rather than the
   trail: seed = `dailySeed(day, salt)` with the day the local calendar day
   (`dayIndexOf`) and the salt drawn once per install, 80 arrows on a
-  24×37 board (3.75 s an arrow of a flat five-minute clock), the
+  24×37 board (3.75 s an arrow of a flat five-minute clock) — or, for a
+  player on the block, `_dailyBlock`: six 12×12 faces of fifteen arrows
+  with 12–16 mirrors, a lock and a hidden head a face and 6–8 pairs, which
+  the block's clock rule also puts at five minutes — the
   mirror count (8–12) and twist counts turning with the day, the chapter fixed the first time
   the day's board is looked at (`arrow_daily_<day>_chapter`) so clearing a
   level mid-day does not re-deal it. The streak counts consecutive days

@@ -9,7 +9,7 @@
 // its own share of the level (the generator re-deals a face on its own
 // until it does, so a cube level rarely needs a variant):
 //
-//   dart run tool/pick_variants.dart            # levels 21..150
+//   dart run tool/pick_variants.dart            # levels 21..200
 //   dart run tool/pick_variants.dart 38 46 80   # just these
 import 'dart:math';
 

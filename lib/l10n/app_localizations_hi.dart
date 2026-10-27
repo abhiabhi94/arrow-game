@@ -712,6 +712,156 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName150 => 'आख़िरी घन';
 
   @override
+  String get levelName151 => 'तंग जगह';
+
+  @override
+  String get levelName152 => 'दबाव';
+
+  @override
+  String get levelName153 => 'कसाव';
+
+  @override
+  String get levelName154 => 'नज़दीकियाँ';
+
+  @override
+  String get levelName155 => 'ठसाठस';
+
+  @override
+  String get levelName156 => 'डिब्बाबंद';
+
+  @override
+  String get levelName157 => 'बोतल की गर्दन';
+
+  @override
+  String get levelName158 => 'धागा पिरोना';
+
+  @override
+  String get levelName159 => 'बाल-बाल बचे';
+
+  @override
+  String get levelName160 => 'कसमसाहट';
+
+  @override
+  String get levelName161 => 'भीड़ का वक़्त';
+
+  @override
+  String get levelName162 => 'ज़रा सी जगह';
+
+  @override
+  String get levelName163 => 'धक्का-मुक्की';
+
+  @override
+  String get levelName164 => 'चुटकी';
+
+  @override
+  String get levelName165 => 'लकड़ियों का जाम';
+
+  @override
+  String get levelName166 => 'रुका पहिया';
+
+  @override
+  String get levelName167 => 'खचाखच';
+
+  @override
+  String get levelName168 => 'खड़े-खड़े';
+
+  @override
+  String get levelName169 => 'लबालब';
+
+  @override
+  String get levelName170 => 'दबा-दबाया';
+
+  @override
+  String get levelName171 => 'दबाव में';
+
+  @override
+  String get levelName172 => 'पकड़';
+
+  @override
+  String get levelName173 => 'गुँथा हुआ';
+
+  @override
+  String get levelName174 => 'नपा-तुला';
+
+  @override
+  String get levelName175 => 'आख़िरी इंच';
+
+  @override
+  String get levelName176 => 'भीड़ भरा कमरा';
+
+  @override
+  String get levelName177 => 'छेद';
+
+  @override
+  String get levelName178 => 'हारमोनियम';
+
+  @override
+  String get levelName179 => 'प्रेशर कुकर';
+
+  @override
+  String get levelName180 => 'कसता फंदा';
+
+  @override
+  String get levelName181 => 'बाल भर';
+
+  @override
+  String get levelName182 => 'सुई की नोक';
+
+  @override
+  String get levelName183 => 'ताले का छेद';
+
+  @override
+  String get levelName184 => 'मुश्किल से';
+
+  @override
+  String get levelName185 => 'तंग गली';
+
+  @override
+  String get levelName186 => 'पिछली गली';
+
+  @override
+  String get levelName187 => 'बारीक फ़र्क़';
+
+  @override
+  String get levelName188 => 'छोटी लाइन';
+
+  @override
+  String get levelName189 => 'एक ही रास्ता';
+
+  @override
+  String get levelName190 => 'घिरते हुए';
+
+  @override
+  String get levelName191 => 'ज़ोर का दबाव';
+
+  @override
+  String get levelName192 => 'हीरा';
+
+  @override
+  String get levelName193 => 'गहरा दबाव';
+
+  @override
+  String get levelName194 => 'छलकता प्याला';
+
+  @override
+  String get levelName195 => 'पलड़ा';
+
+  @override
+  String get levelName196 => 'टूटने की कगार';
+
+  @override
+  String get levelName197 => 'आख़िरी कसाव';
+
+  @override
+  String get levelName198 => 'आख़िरी साँस';
+
+  @override
+  String get levelName199 => 'अंतिम दाँव';
+
+  @override
+  String get levelName200 => 'आख़िरी पड़ाव';
+
+  @override
   String get tutorialTap =>
       'किसी तीर पर टैप करो — वह अपनी दिशा में निकल जाएगा।';
 
@@ -1273,6 +1423,16 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get tutorialCube =>
       'क्यूब को उँगली से घुमाओ। सामने वाली सतह खेलो; बगल की सतह छुओ तो वो सामने आ जाएगी।';
+
+  @override
+  String get chapterName7 => 'शिकंजा';
+
+  @override
+  String get chapterBlurb7 => 'कसकर भरा क्यूब: हर सतह से एक साथ कम ही रास्ते।';
+
+  @override
+  String get tutorialSqueeze =>
+      'हर सतह से एक साथ कम ही तीर निकल पाते हैं। जो निकल सके उसे ढूँढो, फिर अगला खुलेगा।';
 
   @override
   String get cubeTurnLeft => 'बाईं सतह पर घुमाओ';
