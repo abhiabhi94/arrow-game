@@ -112,11 +112,13 @@ void main() {
   test('the daily board borrows the last flat chapter once the player is on the block', () {
     expect(dailyChapterFor(0).rule, ChapterRule.lines);
     expect(dailyChapterFor(45).rule, ChapterRule.locks);
-    expect(dailyChapterFor(100).rule, ChapterRule.pairs);
-    expect(dailyChapterFor(101).rule, ChapterRule.pairs);
-    expect(dailyChapterFor(150).rule, ChapterRule.pairs);
-    expect(dailyChapterFor(151).rule, ChapterRule.pairs);
-    expect(dailyChapterFor(200).rule, ChapterRule.pairs);
+    expect(dailyChapterFor(99).rule, ChapterRule.pairs);
+    // Every flat level cleared: the block is open, and so is the daily one.
+    expect(dailyChapterFor(100).rule, ChapterRule.cube);
+    expect(dailyChapterFor(101).rule, ChapterRule.cube);
+    expect(dailyChapterFor(150).rule, ChapterRule.cube);
+    expect(dailyChapterFor(151).rule, ChapterRule.cube);
+    expect(dailyChapterFor(200).rule, ChapterRule.cube);
   });
 
   test('every chapter card has a small, solvable board that shows its twist, and a script that plays it', () {

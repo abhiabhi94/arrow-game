@@ -39,8 +39,9 @@ level to 150 at its twentieth (the same top for every chapter: the twist
 is what makes a later chapter harder), with a clock that grows chapter by
 chapter and never passes ten minutes. A **daily board**
 (home card; `data/daily.dart`) is a fresh ~5-minute deal every day (80
-arrows) with the twists of the chapter the player has reached (Pairs, once
-they are on the block — the daily board is always flat), seeded from
+arrows) with the twists of the chapter the player has reached — and, once
+all hundred flat levels are cleared, a 3D block of its own (six faces of
+fifteen, every twist on every face, the same five minutes), seeded from
 the date and a per-install salt so no two phones share one; it keeps a
 streak. Everything
 is drawn in a single ink like a printed puzzle (the sun-coloured key badge
@@ -780,7 +781,8 @@ Key patterns:
   block from `kFirstCubeLevel` = 101 to 150 and the squeeze from
   `kFirstSqueezeLevel` = 151 to 200 (`ChapterRule.onBlock` for both); each `Chapter` carries its own
   `firstLevel`/`lastLevel`; `chapterOf`, `ruleTaughtAt`,
-  `chapterForProgress`, `dailyChapterFor` — Pairs once on the block);
+  `chapterForProgress`, `dailyChapterFor` — the block once level 100 is
+  cleared, `kFlatChapterCount` + 1);
   `data/chapter_demos.dart` holds the tiny solvable boards each chapter card
   plays and the script of taps that shows the twist
   (`demoScriptFor`; the
@@ -818,7 +820,10 @@ Key patterns:
   `DailyNotifier.spec`, its clear recorded to the streak rather than the
   trail: seed = `dailySeed(day, salt)` with the day the local calendar day
   (`dayIndexOf`) and the salt drawn once per install, 80 arrows on a
-  24×37 board (3.75 s an arrow of a flat five-minute clock), the
+  24×37 board (3.75 s an arrow of a flat five-minute clock) — or, for a
+  player on the block, `_dailyBlock`: six 12×12 faces of fifteen arrows
+  with 12–16 mirrors, a lock and a hidden head a face and 6–8 pairs, which
+  the block's clock rule also puts at five minutes — the
   mirror count (8–12) and twist counts turning with the day, the chapter fixed the first time
   the day's board is looked at (`arrow_daily_<day>_chapter`) so clearing a
   level mid-day does not re-deal it. The streak counts consecutive days

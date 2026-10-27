@@ -47,11 +47,28 @@ void main() {
           expect(f.hidden, inInclusiveRange(3, 5));
           expect(f.locks, 2);
           expect(f.pairs, 0);
-        case ChapterRule.pairs || ChapterRule.cube || ChapterRule.squeeze:
-          // The daily board is flat: on the block it keeps the flat twists.
+        case ChapterRule.pairs:
           expect(spec.isCube, isFalse);
           expect(f.pairs, inInclusiveRange(3, 5));
           expect(f.hidden, 2);
+        case ChapterRule.cube || ChapterRule.squeeze:
+          // On the block, the daily board is a block too: six faces of
+          // fifteen, every twist on every face.
+          expect(spec.isCube, isTrue);
+          expect(spec.faces, kDailyFaces);
+          expect(spec.arrows, 90);
+          for (final n in <int>[f.mirrors, f.locks, f.hidden, f.pairs]) {
+            expect(n, greaterThanOrEqualTo(spec.faces));
+          }
+          expect(f.mirrors, inInclusiveRange(12, 16));
+          expect(f.pairs, inInclusiveRange(6, 8));
+          // The block's clock rule (2.4 s an arrow, the twists' seconds and
+          // 2 s a face) comes to about the same five minutes.
+          final rule = spec.arrows * 2.4 + f.mirrors + 4 * f.locks + 3 * f.hidden + 3 * f.pairs + 2 * spec.faces;
+          expect(rule, inInclusiveRange(270, 330));
+          // A face's room, at the block's density.
+          expect(spec.freeCellCount / spec.arrows, greaterThan(9));
+          continue;
       }
       // Room for its arrows at the trail's density.
       expect(spec.freeCellCount / spec.arrows, greaterThan(10.5), reason: chapter.rule.name);
@@ -68,6 +85,15 @@ void main() {
     }
     expect(mirrors, {8, 9, 10, 11, 12});
     expect(counts, {3, 4, 5});
+  });
+
+  test('the daily block\'s faces each keep the rules', () {
+    for (var d = 0; d < 3; d++) {
+      final spec = dailySpec(day: 20748 + d, chapter: chapters[5], salt: 5);
+      for (final face in spec.faceSpecs) {
+        expect(PuzzleGenerator.keepsRules(face, PuzzleGenerator.dealFace(face)), isTrue, reason: 'day $d ${face.seed}');
+      }
+    }
   });
 
   test('a daily board deals its full count with its twists, solvable', () {

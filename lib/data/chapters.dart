@@ -114,10 +114,11 @@ ChapterRule? ruleTaughtAt(int level) {
 Chapter chapterForProgress(int levelsCleared) =>
     chapterOf(levelsCleared.clamp(1, totalLevels));
 
-/// The chapter whose twists the daily board borrows for a player who has
-/// cleared [levelsCleared] levels: the one they are in, or — once they are
-/// on the block, since the daily board is flat — the last flat chapter.
+/// The chapter the daily board is dealt in for a player who has cleared
+/// [levelsCleared] levels: the one they are in, or — once every flat level
+/// is cleared and the block is open to them — the block (the squeeze's
+/// daily board is the block's too).
 Chapter dailyChapterFor(int levelsCleared) {
-  final chapter = chapterForProgress(levelsCleared);
-  return chapter.rule.onBlock ? chapters[kFlatChapterCount - 1] : chapter;
+  if (levelsCleared >= kFirstCubeLevel - 1) return chapters[kFlatChapterCount];
+  return chapterForProgress(levelsCleared);
 }
