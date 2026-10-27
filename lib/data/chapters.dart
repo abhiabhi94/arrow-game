@@ -1,11 +1,12 @@
-/// The trail in seven chapters. The first five are flat boards of twenty
+/// The trail in eight chapters. The first five are flat boards of twenty
 /// levels each, each built on one twist: plain lines, then mirrors, then
 /// locks, then hidden heads, then tethered pairs. The sixth is the block:
 /// fifty levels on a cube past the first hundred, six faces of arrows
 /// played one at a time, the twists coming back one by one on the faces.
 /// The seventh is the squeeze: fifty more on the block, each face packed so
 /// that fewer of its arrows can leave at once, and the work climbing on from
-/// level 150's.
+/// level 150's. The eighth is the box: fifty on a block that is no longer a
+/// cube, its faces of three sizes and bigger than the cube's.
 /// Every chapter opens on a small teaching board that carries the new thing
 /// alone, and the game screen puts an illustrated card over that board the
 /// first time it is played.
@@ -36,14 +37,18 @@ enum ChapterRule {
   cube,
 
   /// The block packed tighter: fewer ways out of each face at once.
-  squeeze;
+  squeeze,
+
+  /// The block as a box: faces of three sizes, bigger than the cube's.
+  box;
 
   /// Whether the chapter is played on the block rather than a flat board.
-  bool get onBlock => this == cube || this == squeeze;
+  bool get onBlock => this == cube || this == squeeze || this == box;
 
-  /// Whether the chapter opens on an illustrated card. The squeeze does
-  /// not: it is the block again, with nothing new to show.
-  bool get hasCard => this != squeeze;
+  /// Whether the chapter opens on an illustrated card. The squeeze and the
+  /// box do not: they are the block again, with nothing new to show that a
+  /// line under the board does not say.
+  bool get hasCard => this != squeeze && this != box;
 }
 
 class Chapter {
@@ -79,6 +84,9 @@ const int kFirstCubeLevel = 101;
 /// The first level of the squeeze, the second chapter on the block.
 const int kFirstSqueezeLevel = 151;
 
+/// The first level of the box, the third chapter on the block.
+const int kFirstBoxLevel = 201;
+
 /// How many chapters are flat boards (the daily board borrows from these).
 const int kFlatChapterCount = 5;
 
@@ -89,7 +97,8 @@ const List<Chapter> chapters = <Chapter>[
   Chapter(index: 4, rule: ChapterRule.fog, firstLevel: 61, lastLevel: 80),
   Chapter(index: 5, rule: ChapterRule.pairs, firstLevel: 81, lastLevel: 100),
   Chapter(index: 6, rule: ChapterRule.cube, firstLevel: kFirstCubeLevel, lastLevel: kFirstSqueezeLevel - 1),
-  Chapter(index: 7, rule: ChapterRule.squeeze, firstLevel: kFirstSqueezeLevel, lastLevel: totalLevels),
+  Chapter(index: 7, rule: ChapterRule.squeeze, firstLevel: kFirstSqueezeLevel, lastLevel: kFirstBoxLevel - 1),
+  Chapter(index: 8, rule: ChapterRule.box, firstLevel: kFirstBoxLevel, lastLevel: totalLevels),
 ];
 
 /// The chapter [level] (1..[totalLevels]) belongs to.

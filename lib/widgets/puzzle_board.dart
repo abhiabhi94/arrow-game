@@ -469,10 +469,10 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   /// [kTouchSlopPx] of it. Null when the finger is over open space.
   int? _arrowFor(Offset local, double cellSize) {
     final puzzle = widget.state.puzzle!;
-    final (originX, windowWidth) = _window(puzzle, widget.face);
+    final (originX, windowWidth, windowHeight) = _window(puzzle, widget.face);
     // In the board's own cells: the face shown starts [originX] cells in.
     final p = local + Offset(originX * cellSize, 0);
-    bool inside(Cell c) => c.x >= originX && c.x < originX + windowWidth && c.y >= 0 && c.y < puzzle.height;
+    bool inside(Cell c) => c.x >= originX && c.x < originX + windowWidth && c.y >= 0 && c.y < windowHeight;
     final cell = Cell((p.dx / cellSize).floor(), (p.dy / cellSize).floor());
     if (inside(cell)) {
       final under = puzzle.arrowAt(cell);
@@ -523,14 +523,14 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     final puzzle = widget.state.puzzle!;
     final p = context.palette;
     final l10n = AppLocalizations.of(context);
-    final (_, windowWidth) = _window(puzzle, widget.face);
+    final (_, windowWidth, windowHeight) = _window(puzzle, widget.face);
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellSize = min(
           constraints.maxWidth / windowWidth,
-          constraints.maxHeight / puzzle.height,
+          constraints.maxHeight / windowHeight,
         );
-        final size = Size(cellSize * windowWidth, cellSize * puzzle.height);
+        final size = Size(cellSize * windowWidth, cellSize * windowHeight);
         _cellSize = cellSize;
         _paintOffset = Offset(
           (constraints.maxWidth - size.width) / 2,
@@ -587,10 +587,11 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   }
 }
 
-/// The columns a board shows: from where, and how many — one face of a
-/// cube level, or the whole board.
-(int, int) _window(Puzzle puzzle, int? face) =>
-    face == null || !puzzle.isCube ? (0, puzzle.width) : (face * puzzle.faceWidth, puzzle.faceWidth);
+/// The part of the board a board widget shows: the column it starts at,
+/// and how many columns and rows — one face of a block, or the whole board.
+(int, int, int) _window(Puzzle puzzle, int? face) => face == null || !puzzle.isCube
+    ? (0, puzzle.width, puzzle.height)
+    : (puzzle.faceOriginOf(face), puzzle.faceWidthOf(face), puzzle.faceHeightOf(face));
 
 class _BoardPainter extends CustomPainter {
   _BoardPainter({
@@ -708,7 +709,7 @@ class _BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final (originX, windowWidth) = _window(puzzle, face);
+    final (originX, windowWidth, windowHeight) = _window(puzzle, face);
     final cs = size.width / windowWidth;
     // Drawn in the board's own cells: a face of the block is shifted so it
     // sits at the canvas's origin, and the rest of the strip is never drawn.
@@ -731,7 +732,7 @@ class _BoardPainter extends CustomPainter {
         final px = firstX + x * cs;
         canvas.drawLine(Offset(px, first), Offset(px, lastY), grid);
       }
-      for (var y = 0; y < puzzle.height; y++) {
+      for (var y = 0; y < windowHeight; y++) {
         final py = first + y * cs;
         canvas.drawLine(Offset(firstX, py), Offset(lastX, py), grid);
       }
@@ -761,7 +762,7 @@ class _BoardPainter extends CustomPainter {
     // Mirrors: drawn under everything, so an arrow slides over the glass as
     // it turns.
     for (final e in puzzle.mirrors.entries) {
-      if (puzzle.faceOfCell(e.key) * puzzle.faceWidth != originX) continue;
+      if (face != null && puzzle.faceOfCell(e.key) != face) continue;
       glyphs.mirror(canvas, Rect.fromLTWH(e.key.x * cs, e.key.y * cs, cs, cs), e.value);
     }
 
@@ -1013,7 +1014,7 @@ class _BoardPainter extends CustomPainter {
     final strings = l10n;
     if (strings == null) return null;
     return (Size size) {
-      final (originX, windowWidth) = _window(puzzle, face);
+      final (originX, windowWidth, _) = _window(puzzle, face);
       final cs = size.width / windowWidth;
       final nodes = <CustomPainterSemantics>[];
       // Reading order: by the head's row, then its column.

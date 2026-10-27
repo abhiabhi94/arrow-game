@@ -47,7 +47,7 @@ LevelSpec dailySpec({required int day, required Chapter chapter, required int sa
     ChapterRule.mirrors => LevelFeatures(mirrors: mirrors),
     ChapterRule.locks => LevelFeatures(mirrors: mirrors, locks: twist),
     ChapterRule.fog => LevelFeatures(mirrors: mirrors, locks: 2, hidden: twist),
-    ChapterRule.pairs || ChapterRule.cube || ChapterRule.squeeze => LevelFeatures(mirrors: mirrors, locks: 2, hidden: 2, pairs: twist),
+    ChapterRule.pairs || ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box => LevelFeatures(mirrors: mirrors, locks: 2, hidden: 2, pairs: twist),
   };
   // Eighty arrows at ~11.3 free cells each: 3.75 s an arrow of the five
   // minutes, the trail's own pace with room for the twists.

@@ -9,14 +9,17 @@ import 'puzzle_board.dart';
 /// How long the block takes to come round to a face.
 const Duration kCubeTurn = Duration(milliseconds: 520);
 
-/// How much of the stage's shorter side the block's edge takes at zoom 1:
-/// room for the block leaning, and turning through a corner, without
-/// leaving the stage.
-const double kCubeFill = 0.6;
+/// How much of the stage the block's outline takes at zoom 1, leaning the
+/// way a level opens — whichever face is in front, so the block keeps one
+/// size as it turns. The first cut sized a cube's edge at 0.6 of the
+/// stage's shorter side, which left the block small in the middle of a
+/// tall phone screen; now the block is fitted to the stage both ways, so a
+/// tall box stands as tall as the stage allows.
+const double kCubeFill = 0.94;
 
-/// How far the block can be zoomed: until the face in front fills the
-/// stage's width.
-const double kCubeMaxZoom = 1 / kCubeFill;
+/// How far the block can be zoomed: about until the face in front fills
+/// the stage's width.
+const double kCubeMaxZoom = 1.5;
 
 /// The gap between a face's edge and its board, in logical pixels.
 const double kFacePadding = 6;
@@ -58,6 +61,7 @@ class CubeStage extends StatefulWidget {
     super.key,
     required this.face,
     required this.faceBuilder,
+    this.box = const (1, 1, 1),
     this.onFaceChanged,
     this.onZoom,
     this.zoom = 1,
@@ -67,6 +71,10 @@ class CubeStage extends StatefulWidget {
 
   final int face;
   final CubeFaceBuilder faceBuilder;
+
+  /// The block's width, height and depth in cells: all one on a cube, a
+  /// box otherwise. A cell is the same size on every face.
+  final (int, int, int) box;
   final ValueChanged<int>? onFaceChanged;
   final ValueChanged<double>? onZoom;
   final double zoom;
@@ -108,11 +116,38 @@ class CubeStageState extends State<CubeStage>
   double _zoomAtStart = 1;
 
   /// The block as it stands now, as seen on this stage.
-  CubeCamera get camera => CubeCamera(
-    orientation: _orientation,
-    side: min(_size.width, _size.height) * kCubeFill,
-    zoom: widget.zoom,
-  );
+  CubeCamera get camera {
+    final u = _unit();
+    final (x, y, z) = widget.box;
+    return CubeCamera(
+      orientation: _orientation,
+      box: (x * u, y * u, z * u),
+      zoom: widget.zoom,
+    );
+  }
+
+  (Size, (int, int, int))? _unitFor;
+  double _unitCache = 0;
+
+  /// The length of a cell on screen at zoom 1: as big as lets the block,
+  /// leaning the way a level opens with any face in front, fill
+  /// [kCubeFill] of the stage both ways.
+  double _unit() {
+    if (_unitFor == (_size, widget.box)) return _unitCache;
+    final (x, y, z) = widget.box;
+    var w = 0.0, h = 0.0;
+    for (var f = 0; f < 6; f++) {
+      final b = CubeCamera(
+        orientation: openingPose(f),
+        box: (x.toDouble(), y.toDouble(), z.toDouble()),
+      ).bounds;
+      w = max(w, 2 * max(-b.left, b.right));
+      h = max(h, 2 * max(-b.top, b.bottom));
+    }
+    _unitFor = (_size, widget.box);
+    _unitCache = w <= 0 || h <= 0 ? 0 : min(_size.width / w, _size.height / h) * kCubeFill;
+    return _unitCache;
+  }
 
   /// Whether the block is still or moving (a finger on it, or a turn).
   bool get settled => !_dragging && !_turn.isAnimating;
@@ -203,16 +238,16 @@ class CubeStageState extends State<CubeStage>
       builder: (context, constraints) {
         _size = constraints.biggest;
         final cam = camera;
-        final side = cam.side;
+        final side = cam.longest;
         if (side <= 0) return const SizedBox.shrink();
         const light = _light;
         final faces = <Widget>[
           for (final f in cam.visibleFaces)
             Positioned(
-              left: _size.width / 2 - side / 2,
-              top: _size.height / 2 - side / 2,
-              width: side,
-              height: side,
+              left: _size.width / 2 - cam.faceSize(f).$1 / 2,
+              top: _size.height / 2 - cam.faceSize(f).$2 / 2,
+              width: cam.faceSize(f).$1,
+              height: cam.faceSize(f).$2,
               // The faces draw nothing a finger can press: the stage works
               // out from the geometry what a tap meant.
               child: IgnorePointer(
@@ -260,7 +295,11 @@ class CubeStageState extends State<CubeStage>
           children: [
             Positioned.fill(
               child: CustomPaint(
-                painter: _StagePainter(side: side * widget.zoom, palette: p),
+                painter: _StagePainter(
+                  width: max(cam.size.$1, cam.size.$3) * widget.zoom,
+                  height: cam.size.$2 * widget.zoom,
+                  palette: p,
+                ),
               ),
             ),
             ...faces,
@@ -321,15 +360,17 @@ class _Face extends StatelessWidget {
 /// The stage under the block: a soft pool of light behind it and its
 /// shadow on the floor below.
 class _StagePainter extends CustomPainter {
-  _StagePainter({required this.side, required this.palette});
+  _StagePainter({required this.width, required this.height, required this.palette});
 
-  final double side;
+  /// The block's breadth (its wider of width and depth) and its height.
+  final double width;
+  final double height;
   final ArrowPalette palette;
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
-    final pool = Rect.fromCircle(center: c, radius: side * 1.25);
+    final pool = Rect.fromCircle(center: c, radius: max(width, height) * 1.25);
     canvas.drawRect(
       Offset.zero & size,
       Paint()
@@ -341,9 +382,9 @@ class _StagePainter extends CustomPainter {
         ).createShader(pool),
     );
     final floor = Rect.fromCenter(
-      center: c + Offset(0, side * 0.8),
-      width: side * 1.9,
-      height: side * 0.42,
+      center: c + Offset(0, height / 2 + width * 0.3),
+      width: width * 1.9,
+      height: width * 0.42,
     );
     canvas.drawOval(
       floor,
@@ -359,5 +400,5 @@ class _StagePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_StagePainter old) =>
-      old.side != side || old.palette != palette;
+      old.width != width || old.height != height || old.palette != palette;
 }

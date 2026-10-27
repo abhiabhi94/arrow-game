@@ -679,6 +679,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               if (state.puzzle?.isCube ?? false) {
                                 return CubeStage(
                                   face: _face,
+                                  box: state.puzzle!.blockSize,
                                   zoom: _scale,
                                   reduceMotion: _calm,
                                   onFaceChanged: (face) => _turnTo(face),
@@ -973,6 +974,7 @@ extension on _GameScreenState {
       ChapterRule.pairs => l10n.tutorialPairs,
       ChapterRule.cube => l10n.tutorialCube,
       ChapterRule.squeeze => l10n.tutorialSqueeze,
+      ChapterRule.box => l10n.tutorialBox,
     };
   }
 }
@@ -995,8 +997,8 @@ class _IntroCard extends StatelessWidget {
       ChapterRule.locks => ('🔒', l10n.introTitleLocks, l10n.introBodyLocks),
       ChapterRule.fog => ('🌫️', l10n.introTitleFog, l10n.introBodyFog),
       ChapterRule.pairs => ('🔗', l10n.introTitlePairs, l10n.introBodyPairs),
-      // The squeeze has no card of its own (`ChapterRule.hasCard`).
-      ChapterRule.cube || ChapterRule.squeeze => ('🧊', l10n.introTitleCube, l10n.introBodyCube),
+      // The squeeze and the box have no card of their own (`ChapterRule.hasCard`).
+      ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box => ('🧊', l10n.introTitleCube, l10n.introBodyCube),
     };
     return ResultCard(
       emoji: emoji,

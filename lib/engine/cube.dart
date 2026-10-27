@@ -252,26 +252,51 @@ Quat leanOf(Quat orientation, int face) =>
 
 /// The block in front of the player: how it is turned ([orientation], from
 /// the block's own axes to the viewer's), how big it is ([side], the length
-/// of an edge on screen at [zoom] 1), and how far the eye is ([distance]).
+/// of an edge on screen at [zoom] 1 — or [box], its width, height and depth
+/// along the block's own x, y and z when it is a box rather than a cube),
+/// and how far the eye is ([distance]).
 ///
 /// Screen coordinates are measured from the middle of the stage, x to the
 /// right and y *down*, the way the widget layer counts.
 class CubeCamera {
   const CubeCamera({
     required this.orientation,
-    required this.side,
+    this.side = 0,
+    this.box,
     this.zoom = 1,
     this.distance = 0,
-  });
+  }) : assert(side > 0 || box != null);
 
   final Quat orientation;
   final double side;
+
+  /// The block's width, height and depth on screen at zoom 1, when it is
+  /// not a cube of [side].
+  final Vec3? box;
   final double zoom;
 
-  /// The eye's distance from the block's middle; 0 for [side] × 3.2.
+  /// The eye's distance from the block's middle; 0 for 3.2 of its longest
+  /// edge.
   final double distance;
 
-  double get eye => distance > 0 ? distance : side * 3.2;
+  /// The block's edges along its own x, y and z.
+  Vec3 get size => box ?? (side, side, side);
+
+  /// The block's longest edge.
+  double get longest => math.max(size.$1, math.max(size.$2, size.$3));
+
+  double get eye => distance > 0 ? distance : longest * 3.2;
+
+  /// The block's length along the unit [axis] (one of its own axes, either
+  /// way).
+  double _along(Vec3 axis) =>
+      axis.$1.abs() * size.$1 + axis.$2.abs() * size.$2 + axis.$3.abs() * size.$3;
+
+  /// [face]'s width and height on screen at zoom 1, square on.
+  (double, double) faceSize(int face) => (_along(_rights[face]), _along(_ups[face]));
+
+  /// How far [face] lies from the block's middle.
+  double _depthOf(int face) => _along(_normals[face]) / 2;
 
   /// The whole turn from the block's own axes to the viewer's.
   Quat get view => orientation;
@@ -310,24 +335,24 @@ class CubeCamera {
   }
 
   /// The point at ([u], [v]) on [face] — from its top-left corner, in the
-  /// face's own units of [side] — in the viewer's space.
+  /// same units as [side] — in the viewer's space.
   Vec3 pointOn(int face, double u, double v) {
-    final h = side / 2;
+    final (w, ht) = faceSize(face);
     final local = _add(
-      _add(_scale(_normals[face], h), _scale(_rights[face], u - h)),
-      _scale(_ups[face], h - v),
+      _add(_scale(_normals[face], _depthOf(face)), _scale(_rights[face], u - w / 2)),
+      _scale(_ups[face], ht / 2 - v),
     );
     return toView(local);
   }
 
   /// The 4×4 matrix (column-major, the way Flutter's `Matrix4` stores it)
-  /// that draws a [side]-square face widget, laid out centred on the
+  /// that draws a face widget of [faceSize], laid out centred on the
   /// stage, as [face] on the turned block.
   List<double> faceMatrix(int face) {
     final r = toView(_rights[face]);
     final u = toView(_ups[face]);
     final n = toView(_normals[face]);
-    final h = side / 2;
+    final h = _depthOf(face);
     final d = eye;
     // A face-widget point (px, py) — from its middle, y down — is the block
     // point n·h + r·px − u·py; the screen keeps x, flips y, and divides by
@@ -347,27 +372,48 @@ class CubeCamera {
 
   /// Where a touch at ([sx], [sy]) on the screen (from the stage's middle,
   /// y down) lands on the block: the nearest face it meets, and the point
-  /// on it from its top-left corner in units of [side]; null when it misses
-  /// the block.
+  /// on it from its top-left corner in the units of [side]; null when it
+  /// misses the block.
   ({int face, double u, double v})? hit(double sx, double sy) {
     final d = eye;
     // The ray from the eye through the touch on the screen plane (z = 0).
     final dir = (sx / zoom, -sy / zoom, -d);
     final faces = visibleFaces.reversed; // nearest first
-    final h = side / 2;
     for (final f in faces) {
+      final h = _depthOf(f);
+      final (w, ht) = faceSize(f);
       final n = toView(_normals[f]);
       final denom = dot(n, dir);
       if (denom.abs() < 1e-9) continue;
       final t = (h - n.$3 * d) / denom;
       if (t <= 0) continue;
       final p = (dir.$1 * t, dir.$2 * t, d + dir.$3 * t);
-      final u = dot(p, toView(_rights[f])) + h;
-      final v = h - dot(p, toView(_ups[f]));
-      if (u >= 0 && u <= side && v >= 0 && v <= side) {
+      final u = dot(p, toView(_rights[f])) + w / 2;
+      final v = ht / 2 - dot(p, toView(_ups[f]));
+      if (u >= 0 && u <= w && v >= 0 && v <= ht) {
         return (face: f, u: u, v: v);
       }
     }
     return null;
+  }
+
+  /// The block's outline on the screen (from the stage's middle, y down):
+  /// the box round the projection of its eight corners.
+  ({double left, double top, double right, double bottom}) get bounds {
+    var l = double.infinity, t = double.infinity;
+    var rr = -double.infinity, b = -double.infinity;
+    final (x, y, z) = size;
+    for (final cx in <double>[-x / 2, x / 2]) {
+      for (final cy in <double>[-y / 2, y / 2]) {
+        for (final cz in <double>[-z / 2, z / 2]) {
+          final (px, py) = project(toView((cx, cy, cz)));
+          if (px < l) l = px;
+          if (px > rr) rr = px;
+          if (py < t) t = py;
+          if (py > b) b = py;
+        }
+      }
+    }
+    return (left: l, top: t, right: rr, bottom: b);
   }
 }
