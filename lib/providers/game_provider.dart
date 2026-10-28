@@ -5,7 +5,7 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' show compute, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/level_specs.dart';
@@ -39,11 +39,15 @@ const int kTickMs = 100;
 const int kEndingStingMs = 320;
 
 /// Builds a level's board; the default runs on a background isolate so the
-/// big late boards never freeze the UI (on web it runs inline).
+/// big late boards never freeze the UI. The web has no isolates there, so
+/// it builds on the screen's own thread a face at a time, a frame between
+/// faces, rather than freezing the screen for a whole block.
 typedef PuzzleBuilder = Future<Puzzle> Function(LevelSpec spec);
 
 // coverage:ignore-start
-Future<Puzzle> defaultPuzzleBuilder(LevelSpec spec) => compute(puzzleForLevel, spec);
+Future<Puzzle> defaultPuzzleBuilder(LevelSpec spec) => kIsWeb
+    ? puzzleForLevelInSteps(spec, () => Future<void>.delayed(const Duration(milliseconds: 20)))
+    : compute(puzzleForLevel, spec);
 // coverage:ignore-end
 
 class GameNotifier extends StateNotifier<GameState> {

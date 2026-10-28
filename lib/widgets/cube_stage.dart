@@ -10,11 +10,13 @@ import 'puzzle_board.dart';
 const Duration kCubeTurn = Duration(milliseconds: 520);
 
 /// How much of the stage the block's outline takes at zoom 1, leaning the
-/// way a level opens — whichever face is in front, so the block keeps one
-/// size as it turns. The first cut sized a cube's edge at 0.6 of the
-/// stage's shorter side, which left the block small in the middle of a
-/// tall phone screen; now the block is fitted to the stage both ways, so a
-/// tall box stands as tall as the stage allows.
+/// way a level opens with the face being played in front. The first cut
+/// sized a cube's edge at 0.6 of the stage's shorter side, which left the
+/// block small in the middle of a tall phone screen; the next fitted it
+/// with *any* face in front, so a box with a wide top stayed as small as
+/// that top allowed even while its tall front was played (a third of the
+/// stage on a phone). Now the block is fitted to the face being played,
+/// and grows or shrinks along with a turn to another ([CubeStageState]).
 const double kCubeFill = 0.94;
 
 /// How far the block can be zoomed: about until the face in front fills
@@ -86,7 +88,7 @@ class CubeStage extends StatefulWidget {
 }
 
 class CubeStageState extends State<CubeStage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late Quat _orientation = openingPose(widget.face);
 
   /// How the block leans away from the face being played squared up — the
@@ -105,6 +107,14 @@ class CubeStageState extends State<CubeStage>
           ),
         ),
       );
+
+  /// Eases the block's size from [_fromUnit] to the fit of [_sizedFor]
+  /// when the face being played changes.
+  late final AnimationController _resize =
+      AnimationController(vsync: this, duration: kCubeTurn)
+        ..addListener(() => setState(() {}));
+  late int _sizedFor = widget.face;
+  double _fromUnit = 0;
 
   final Map<int, GlobalKey<PuzzleBoardState>> _boards =
       <int, GlobalKey<PuzzleBoardState>>{};
@@ -126,27 +136,42 @@ class CubeStageState extends State<CubeStage>
     );
   }
 
-  (Size, (int, int, int))? _unitFor;
-  double _unitCache = 0;
+  final Map<(Size, (int, int, int), int), double> _fits =
+      <(Size, (int, int, int), int), double>{};
 
-  /// The length of a cell on screen at zoom 1: as big as lets the block,
-  /// leaning the way a level opens with any face in front, fill
-  /// [kCubeFill] of the stage both ways.
-  double _unit() {
-    if (_unitFor == (_size, widget.box)) return _unitCache;
+  /// The length of a cell on screen at zoom 1 with [face] being played: as
+  /// big as lets the block, leaning the way a level opens with that face
+  /// in front, fill [kCubeFill] of the stage both ways.
+  double _fit(int face) => _fits.putIfAbsent((_size, widget.box, face), () {
     final (x, y, z) = widget.box;
-    var w = 0.0, h = 0.0;
-    for (var f = 0; f < 6; f++) {
-      final b = CubeCamera(
-        orientation: openingPose(f),
-        box: (x.toDouble(), y.toDouble(), z.toDouble()),
-      ).bounds;
-      w = max(w, 2 * max(-b.left, b.right));
-      h = max(h, 2 * max(-b.top, b.bottom));
+    final b = CubeCamera(
+      orientation: openingPose(face),
+      box: (x.toDouble(), y.toDouble(), z.toDouble()),
+    ).bounds;
+    final w = 2 * max(-b.left, b.right);
+    final h = 2 * max(-b.top, b.bottom);
+    return w <= 0 || h <= 0 ? 0 : min(_size.width / w, _size.height / h) * kCubeFill;
+  });
+
+  /// The length of a cell on screen at zoom 1 now: the fit of the face
+  /// being played, or on the way to it.
+  double _unit() {
+    final to = _fit(_sizedFor);
+    if (!_resize.isAnimating) return to;
+    return _fromUnit + (to - _fromUnit) * Curves.easeOutCubic.transform(_resize.value);
+  }
+
+  /// Grows or shrinks the block to fit [face] in front.
+  void _resizeTo(int face) {
+    if (face == _sizedFor) return;
+    if (widget.reduceMotion || _size.isEmpty) {
+      _resize.stop();
+      setState(() => _sizedFor = face);
+      return;
     }
-    _unitFor = (_size, widget.box);
-    _unitCache = w <= 0 || h <= 0 ? 0 : min(_size.width / w, _size.height / h) * kCubeFill;
-    return _unitCache;
+    _fromUnit = _unit();
+    _sizedFor = face;
+    _resize.forward(from: 0);
   }
 
   /// Whether the block is still or moving (a finger on it, or a turn).
@@ -161,15 +186,18 @@ class CubeStageState extends State<CubeStage>
         (camera.nearestFace != widget.face || _turn.isAnimating)) {
       _turnTo(widget.face);
     }
+    if (widget.face != oldWidget.face) _resizeTo(widget.face);
   }
 
   @override
   void dispose() {
     _turn.dispose();
+    _resize.dispose();
     super.dispose();
   }
 
   void _turnTo(int face) {
+    _resizeTo(face);
     final target = (_lean * faceOn(face)).normalized;
     if (widget.reduceMotion) {
       _turn.stop();
@@ -211,6 +239,7 @@ class CubeStageState extends State<CubeStage>
     setState(() => _dragging = false);
     final face = camera.nearestFace;
     _lean = leanOf(_orientation, face);
+    _resizeTo(face);
     if (face != widget.face) widget.onFaceChanged?.call(face);
   }
 

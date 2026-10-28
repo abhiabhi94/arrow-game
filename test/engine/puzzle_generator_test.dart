@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/data/level_specs.dart';
+import 'package:arrow_game/engine/puzzle.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
 import 'package:arrow_game/models/level_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -124,6 +125,29 @@ void main() {
     expect(a.arrows.map((x) => x.toString()), b.arrows.map((x) => x.toString()));
     final c = PuzzleGenerator(random: Random(1)).generate(spec);
     expect(c.arrowCount, spec.arrows);
+  });
+
+  test('built a face at a time, a level is the same board, with a pause before each face', () async {
+    String shape(Puzzle p) =>
+        '${p.faceSizes} ${p.arrows.map((a) => a.toString()).join()} ${p.mirrors} ${p.locks} ${p.hidden} ${p.pairs}';
+    for (final level in <int>[9, 120, 201, 205]) {
+      final spec = specForLevel(level);
+      var pauses = 0;
+      final stepped = await puzzleForLevelInSteps(spec, () async => pauses++);
+      expect(shape(stepped), shape(puzzleForLevel(spec)), reason: 'level $level');
+      expect(pauses, spec.isCube ? spec.faces : 1, reason: 'level $level');
+    }
+  });
+
+  test('a box picks each face from fewer boards; a cube is dealt as it always was', () {
+    expect(PuzzleGenerator.faceCandidatesFor(specForLevel(150)), isNull);
+    expect(PuzzleGenerator.faceCandidatesFor(specForLevel(200)), isNull);
+    expect(PuzzleGenerator.faceCandidatesFor(specForLevel(201)), PuzzleGenerator.kBoxFaceCandidates);
+    expect(PuzzleGenerator.faceCandidatesFor(specForLevel(250)), PuzzleGenerator.kBoxFaceCandidates);
+    // A face of a box, dealt from five boards, keeps every rule.
+    final face = specForLevel(230).faceSpecs.first;
+    final p = PuzzleGenerator.dealFace(face, candidates: PuzzleGenerator.kBoxFaceCandidates);
+    expect(PuzzleGenerator.keepsRules(face, p), isTrue);
   });
 
   test('later levels are more tangled than the first', () {

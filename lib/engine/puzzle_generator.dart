@@ -91,16 +91,18 @@ class PuzzleGenerator {
   /// its own seeded from its [LevelSpec.faceSpecs] entry (not from this
   /// generator's random), and the faces joined into one block with
   /// `Puzzle.cube`.
-  Puzzle generate(LevelSpec spec) {
+  Puzzle generate(LevelSpec spec, {int? candidates}) {
     if (spec.isCube) {
-      return Puzzle.cube(<Puzzle>[for (final face in spec.faceSpecs) dealFace(face)]);
+      return Puzzle.cube(<Puzzle>[
+        for (final face in spec.faceSpecs) dealFace(face, candidates: faceCandidatesFor(spec)),
+      ]);
     }
     Puzzle? best;
     var bestHeld = false;
     var bestOpen = double.infinity;
     var bestTangle = 0;
-    final candidates = candidatesFor(spec.arrows);
-    for (var i = 0; i < candidates; i++) {
+    final tries = candidates ?? candidatesFor(spec.arrows);
+    for (var i = 0; i < tries; i++) {
       final p = _Builder(spec, _random).build();
       final profile = p.openMoveProfile();
       final held = holdsChoice(spec, profile);
@@ -127,11 +129,11 @@ class PuzzleGenerator {
   /// find no key, and six faces have to hold at once, so a face is re-dealt
   /// on its own rather than the whole level by its variant. Failing that,
   /// the board with the most twists placed (then the first).
-  static Puzzle dealFace(LevelSpec face) {
+  static Puzzle dealFace(LevelSpec face, {int? candidates}) {
     Puzzle? best;
     var bestPlaced = -1;
     for (var r = 0; r < kFaceDeals; r++) {
-      final p = PuzzleGenerator(random: Random(face.seed + r * 7919)).generate(face);
+      final p = PuzzleGenerator(random: Random(face.seed + r * 7919)).generate(face, candidates: candidates);
       if (keepsRules(face, p)) return p;
       final placed = p.arrowCount * 100 + p.mirrors.length + p.locks.length + p.hidden.length + p.pairs.length;
       if (placed > bestPlaced) {
@@ -144,6 +146,19 @@ class PuzzleGenerator {
 
   /// How many boards [dealFace] tries for a face.
   static const int kFaceDeals = 24;
+
+  /// How many candidate boards each face of [spec]'s block is picked from:
+  /// [kBoxFaceCandidates] on a box, the flat rule ([candidatesFor]) on a
+  /// cube, whose boards were dealt that way and must stay as they are.
+  static int? faceCandidatesFor(LevelSpec spec) => spec.isBox ? kBoxFaceCandidates : null;
+
+  /// A box's faces are picked from this many boards each. The flat rule
+  /// gave a box face 12–24, and a box took 3–7 s to deal as JavaScript —
+  /// many times that on a phone, where the web build deals on the one
+  /// thread the screen has, and the game froze. Five keeps every face to
+  /// its rules ([keepsRules]; a face still re-deals until it does) in
+  /// about a sixth of the time.
+  static const int kBoxFaceCandidates = 5;
 
   /// Whether [p] keeps every rule the level table is tested for under
   /// [spec]: the full arrow count, every twist placed, most of the mirrors
@@ -868,3 +883,20 @@ class _FeaturePlanner {
 /// retry (or a replay) is always the same board.
 Puzzle puzzleForLevel(LevelSpec spec) =>
     PuzzleGenerator(random: Random(spec.seed)).generate(spec);
+
+/// [puzzleForLevel], with [pause] awaited before each face of a block is
+/// dealt: the same board, built a face at a time, so where it runs on the
+/// screen's own thread (the web build) the screen gets a frame between
+/// faces rather than freezing for the whole block.
+Future<Puzzle> puzzleForLevelInSteps(LevelSpec spec, Future<void> Function() pause) async {
+  if (!spec.isCube) {
+    await pause();
+    return puzzleForLevel(spec);
+  }
+  final faces = <Puzzle>[];
+  for (final face in spec.faceSpecs) {
+    await pause();
+    faces.add(PuzzleGenerator.dealFace(face, candidates: PuzzleGenerator.faceCandidatesFor(spec)));
+  }
+  return Puzzle.cube(faces);
+}

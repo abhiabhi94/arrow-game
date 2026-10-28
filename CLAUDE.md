@@ -396,11 +396,17 @@ Key patterns:
   with the block's shadow on the floor. **The block fills the stage:**
   `CubeStage(box:)` takes the block in cells and picks the cell size that
   keeps its outline (`CubeCamera.bounds`, the eight corners projected),
-  in the opening lean with any face in front, within `kCubeFill` (0.94)
-  of the stage both ways — the first cut drew a cube's edge at 0.6 of the
-  stage's shorter side, which left a tall phone half empty — so every
-  block level, cubes too, is as big as the stage allows at rest, and a
-  pinch adds up to `kCubeMaxZoom` (1.5) on top. **A finger turns the block
+  in the opening lean **with the face being played in front**, within
+  `kCubeFill` (0.94) of the stage both ways (`_fit(face)`), and eases to
+  the next face's fit along with a turn (`_resizeTo`, a second controller
+  on `kCubeTurn`; a jump with motion reduced). The first cut drew a
+  cube's edge at 0.6 of the stage's shorter side, which left a tall phone
+  half empty; the next fitted the block with *any* face in front, so a
+  box with a wide top stayed as small as that top allowed while its tall
+  front was played — the front a third of the stage on a phone, about
+  12 px a cell. Fitted to the face played, a box's front is about half the
+  stage and runs nearly edge to edge. A pinch adds up to `kCubeMaxZoom`
+  (1.5) on top. **A finger turns the block
   freely** (`onScale*`: one finger turns, two zoom up to `kCubeMaxZoom`,
   where the front face fills the stage), and **it stays where the finger
   leaves it** — the first cut eased it back to a leaning pose on release,
@@ -475,7 +481,7 @@ Key patterns:
   neighbour can leave before, preferring one not free at the start). One
   twist per arrow. `LevelFeatures` on `LevelSpec` says how many of each. It runs on a background isolate
   (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
-  it runs inline (~0.4 s for level 20, about 2.5 s for level 60 and ~4 s for
+  it runs inline, a block a face at a time (~0.4 s for level 20, about 2.5 s for level 60 and ~4 s for
   the 52×84 level 80, which takes 1.7× level 60's time in the VM, and level
   100's 57×92 board about 2.5 s in the VM). `dart run tool/level_report.dart
   [level] [extraSeeds]` prints arrows placed vs asked, fill, depth,
@@ -818,8 +824,17 @@ Key patterns:
   `level_specs_test` pins the curve (a strict climb, every twist on every
   face, ≤ 55 arrows a face, the end past level 200's work) and the
   generator test deals every box in full (variants 1 on 243 and 248).
-  A box's front face takes ~1.5–4.5 s to deal in the VM, about level
-  100's.
+  **A box face is picked from `kBoxFaceCandidates` (5) boards**
+  (`PuzzleGenerator.faceCandidatesFor`), not the flat rule's 12–24: with
+  the flat rule a box took 3–7 s to deal as JavaScript, many times that
+  on a phone, and the web build froze; with five it is ~0.7 s (1.3 s at
+  worst) on the same machine and every face still keeps its rules. Cube
+  levels keep the flat rule — their boards must not change under saved
+  games. And on the web, which has no isolate to deal on, the default
+  builder deals a block **a face at a time** (`puzzleForLevelInSteps`,
+  the same board as `puzzleForLevel`, a 20 ms pause before each face), so
+  the loading screen keeps drawing instead of freezing for the whole
+  block.
 - **Chapters and the daily board:** `data/chapters.dart` is the map (five
   flat chapters of `kChapterLength` = 20 (`kFlatChapterCount`), then the
   block from `kFirstCubeLevel` = 101 to 150, the squeeze from

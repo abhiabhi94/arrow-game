@@ -327,5 +327,39 @@ void main() {
       expect(container.read(gameProvider(level)).removed, {0, 1});
       expect(container.read(gameProvider(level)).mistakes, 0);
     });
+
+    testWidgets('the block is fitted to the face being played, and resizes as it turns', (tester) async {
+      await pumpBox(tester);
+      CubeCamera cam() => tester.state<CubeStageState>(find.byType(CubeStage)).camera;
+      double cell() => cam().faceSize(0).$1 / 3;
+      void insideStage() {
+        final size = tester.getSize(find.byType(CubeStage));
+        final b = cam().bounds;
+        expect(2 * max(-b.left, b.right), lessThanOrEqualTo(size.width + 1e-6));
+        expect(2 * max(-b.top, b.bottom), lessThanOrEqualTo(size.height + 1e-6));
+      }
+
+      Future<void> turn(String tooltip) async {
+        await tester.tap(find.byTooltip(tooltip));
+        await tester.pump();
+        for (var i = 0; i < 6; i++) {
+          await tester.pump(const Duration(milliseconds: 300));
+        }
+      }
+
+      final tall = cell();
+      insideStage();
+      // The top (3 by 4 cells) in front: the block leans over to show it,
+      // reaches further across, and comes down to fit.
+      await turn('Turn to the face above');
+      expect(_face(tester), cubeNeighbour(0, CubeTurn.up));
+      expect(cell(), lessThan(tall));
+      insideStage();
+      // Back to the front, the block grows to fit it again.
+      await turn('Turn to the face below');
+      expect(_face(tester), 0);
+      expect(cell(), closeTo(tall, 1e-6));
+      insideStage();
+    });
   });
 }
