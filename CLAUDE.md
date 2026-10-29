@@ -70,7 +70,7 @@ flutter pub get                 # deps
 flutter gen-l10n                # regenerate localizations after editing lib/l10n/*.arb
 flutter analyze --fatal-infos   # static analysis (must be clean; CI fails on infos)
 flutter test                    # full test suite
-tool/coverage.sh 92             # coverage gate (fails under threshold)
+tool/coverage.sh 98.5           # coverage gate (fails under threshold)
 
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
 node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-viewport screenshots -> shots/
@@ -1213,7 +1213,7 @@ GitHub Actions runs on every push to `main` and every PR targeting `main`
 (`.github/workflows/ci.yml`). Flutter is pinned in **`.flutter-version`**
 (3.47.4 / stable — match `.metadata`; bump both together; the session-start
 hook reads the same file). Job "Analyze & test" runs `flutter analyze
---fatal-infos` and `bash tool/coverage.sh 92`. Job "Web smoke & screenshots"
+--fatal-infos` and `bash tool/coverage.sh 98.5`. Job "Web smoke & screenshots"
 builds the web app, drives it in headless Chromium (`tool/screenshot.mjs`)
 at a phone viewport and at 1440×900 with keyboard presses, fails on any
 Flutter exception, and uploads `shots/`.

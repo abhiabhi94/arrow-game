@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Coverage gate. Runs the test suite with coverage and fails if hand-written
-# line coverage falls below the threshold (default 92%).
+# line coverage falls below the threshold (default 98.5%).
 #
 # Excluded from the denominator:
 #   - generated localizations (lib/l10n/app_localizations*.dart)
@@ -11,7 +11,7 @@
 # Usage: tool/coverage.sh [threshold]
 set -euo pipefail
 
-THRESHOLD="${1:-92}"
+THRESHOLD="${1:-98.5}"
 cd "$(dirname "$0")/.."
 
 # Quiet when green; a failure prints the failing tests (CI has nothing else
@@ -37,6 +37,6 @@ for line in open('coverage/lcov.info'):
         cov += 1 if int(hits) > 0 else 0
 pct = 100 * cov / tot if tot else 0.0
 status = 'PASS' if pct >= threshold else 'FAIL'
-print(f'[{status}] coverage {cov}/{tot} = {pct:.1f}%  (threshold {threshold:.0f}%)')
+print(f'[{status}] coverage {cov}/{tot} = {pct:.1f}%  (threshold {threshold:g}%)')
 sys.exit(0 if pct >= threshold else 1)
 PY
