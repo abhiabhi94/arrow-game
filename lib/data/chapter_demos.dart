@@ -72,8 +72,8 @@ Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
           ],
           pairs: const {0: 1},
         ),
-      // The squeeze has no card of its own (`ChapterRule.hasCard`).
-      ChapterRule.cube || ChapterRule.squeeze => _cubeDemo,
+      // The squeeze and the box have no card of their own (`ChapterRule.hasCard`).
+      ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box => _cubeDemo,
     };
 
 /// The block: one arrow on each face round its middle, each pointing a
@@ -101,7 +101,7 @@ List<int> demoScriptFor(ChapterRule rule) => switch (rule) {
       ChapterRule.locks => const [0, 1, 0],
       ChapterRule.fog => const [1, 0, 2, 1],
       ChapterRule.pairs => const [0, 2],
-      ChapterRule.cube || ChapterRule.squeeze => const [0, 1, 2, 3],
+      ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box => const [0, 1, 2, 3],
     };
 
 /// A spec that fits [demoPuzzleFor]'s boards (nothing on it matters but the
@@ -110,7 +110,7 @@ LevelSpec demoSpecFor(ChapterRule rule) {
   final p = demoPuzzleFor(rule);
   return LevelSpec(
     level: 1,
-    width: p.faceWidth,
+    width: p.faceWidthOf(0),
     height: p.height,
     faces: p.isCube ? p.faceCount : 0,
     arrows: p.arrowCount,

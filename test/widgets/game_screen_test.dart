@@ -109,7 +109,7 @@ Future<void> _crackRiddle(WidgetTester tester, ProviderContainer container) asyn
 
 /// Taps the centre of grid [cell] on a [width]-column board.
 Future<void> _tapCell(WidgetTester tester, Cell cell, {int width = 4}) async {
-  final board = find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint));
+  final board = find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint)).first;
   final rect = tester.getRect(board);
   final cs = rect.width / width;
   await tester.tapAt(rect.topLeft + Offset((cell.x + 0.5) * cs, (cell.y + 0.5) * cs));
@@ -128,6 +128,48 @@ void main() {
     expect(find.byTooltip('Restart level'), findsOneWidget);
     expect(find.byTooltip('Hint · 3 hints left'), findsOneWidget);
     expect(container.read(gameProvider(1)).phase, GamePhase.playing);
+  });
+
+  testWidgets('the clock ticks without rebuilding the board', (tester) async {
+    final container = await _pumpGame(tester);
+    final board = tester.widget<PuzzleBoard>(find.byType(PuzzleBoard));
+    container.read(gameProvider(1).notifier).tick(4000);
+    await tester.pump();
+    // The clock moved on…
+    expect(find.text('0:26'), findsOneWidget);
+    // …and the rest of the screen was left alone: the very same board
+    // widget, not a new one built for a tick. (Each tick used to rebuild
+    // the whole screen, ten times a second — on a phone, the lag a tap
+    // waited behind.)
+    expect(tester.widget<PuzzleBoard>(find.byType(PuzzleBoard)), same(board));
+  });
+
+  testWidgets('a tick redraws no arrow, and a slide redraws only what moves', (tester) async {
+    final container = await _pumpGame(tester);
+    await tester.pump(const Duration(seconds: 1));
+    boardPaintCounts.clear();
+    // The clock: the board is not drawn at all.
+    container.read(gameProvider(1).notifier).tick(1000);
+    await tester.pump();
+    container.read(gameProvider(1).notifier).tick(1000);
+    await tester.pump();
+    expect(boardPaintCounts[BoardLayer.still] ?? 0, 0);
+    expect(boardPaintCounts[BoardLayer.moving] ?? 0, 0);
+    // A slide, frame by frame: the arrow moves on the moving layer every
+    // frame, and the board at rest is drawn only as the move starts and as
+    // it ends — not once a frame, which is what made a tap lag on a phone.
+    await _tapCell(tester, const Cell(2, 1));
+    boardPaintCounts.clear();
+    final board = tester.getRect(find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint)).first);
+    final cs = board.width / 4;
+    await tester.tapAt(board.topLeft + Offset(3.5 * cs, 3.5 * cs)); // arrow 1 slides out
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    final frames = boardPaintCounts[BoardLayer.moving] ?? 0;
+    expect(frames, greaterThan(5));
+    expect(boardPaintCounts[BoardLayer.still] ?? 0, lessThanOrEqualTo(2));
+    expect(container.read(gameProvider(1)).removed, {0, 1});
   });
 
   testWidgets('tapping a free arrow slides it out; the last clears the level', (tester) async {
@@ -260,7 +302,7 @@ void main() {
     final board = find.descendant(
       of: find.byType(PuzzleBoard),
       matching: find.byType(CustomPaint),
-    );
+    ).first;
     final rect = tester.getRect(board);
     final cell = rect.width / 5;
     await tester.tapAt(rect.topLeft + Offset(1.5 * cell, 2.5 * cell));
@@ -324,7 +366,7 @@ void main() {
       final board = find.descendant(
         of: find.byType(PuzzleBoard),
         matching: find.byType(CustomPaint),
-      );
+      ).first;
       final rect = tester.getRect(board);
       return (rect, rect.width / 4);
     }
@@ -408,7 +450,7 @@ void main() {
   testWidgets('a bump runs into the blocker, jolts it, and springs back', (tester) async {
     final container = await _pumpGame(tester);
     final notifier = container.read(gameProvider(1).notifier);
-    final board = find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint));
+    final board = find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint)).first;
     final rect = tester.getRect(board);
     final cs = rect.width / 4;
     await tester.tapAt(rect.topLeft + Offset(1.5 * cs, 2.5 * cs)); // arrow 2's head
@@ -1018,7 +1060,7 @@ void main() {
       themeMode: ThemeMode.dark,
     );
     await _settle(tester, 300);
-    expect(find.text('The Final Arrow'), findsOneWidget);
+    expect(find.text('Last Delivery'), findsOneWidget);
     expect(find.byType(PuzzleBoard), findsOneWidget);
   });
 

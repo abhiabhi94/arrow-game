@@ -9,14 +9,19 @@ import 'puzzle_board.dart';
 /// How long the block takes to come round to a face.
 const Duration kCubeTurn = Duration(milliseconds: 520);
 
-/// How much of the stage's shorter side the block's edge takes at zoom 1:
-/// room for the block leaning, and turning through a corner, without
-/// leaving the stage.
-const double kCubeFill = 0.6;
+/// How much of the stage the block's outline takes at zoom 1, leaning the
+/// way a level opens with the face being played in front. The first cut
+/// sized a cube's edge at 0.6 of the stage's shorter side, which left the
+/// block small in the middle of a tall phone screen; the next fitted it
+/// with *any* face in front, so a box with a wide top stayed as small as
+/// that top allowed even while its tall front was played (a third of the
+/// stage on a phone). Now the block is fitted to the face being played,
+/// and grows or shrinks along with a turn to another ([CubeStageState]).
+const double kCubeFill = 0.94;
 
-/// How far the block can be zoomed: until the face in front fills the
-/// stage's width.
-const double kCubeMaxZoom = 1 / kCubeFill;
+/// How far the block can be zoomed: about until the face in front fills
+/// the stage's width.
+const double kCubeMaxZoom = 1.5;
 
 /// The gap between a face's edge and its board, in logical pixels.
 const double kFacePadding = 6;
@@ -58,6 +63,7 @@ class CubeStage extends StatefulWidget {
     super.key,
     required this.face,
     required this.faceBuilder,
+    this.box = const (1, 1, 1),
     this.onFaceChanged,
     this.onZoom,
     this.zoom = 1,
@@ -67,6 +73,10 @@ class CubeStage extends StatefulWidget {
 
   final int face;
   final CubeFaceBuilder faceBuilder;
+
+  /// The block's width, height and depth in cells: all one on a cube, a
+  /// box otherwise. A cell is the same size on every face.
+  final (int, int, int) box;
   final ValueChanged<int>? onFaceChanged;
   final ValueChanged<double>? onZoom;
   final double zoom;
@@ -78,7 +88,7 @@ class CubeStage extends StatefulWidget {
 }
 
 class CubeStageState extends State<CubeStage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late Quat _orientation = openingPose(widget.face);
 
   /// How the block leans away from the face being played squared up — the
@@ -98,6 +108,14 @@ class CubeStageState extends State<CubeStage>
         ),
       );
 
+  /// Eases the block's size from [_fromUnit] to the fit of [_sizedFor]
+  /// when the face being played changes.
+  late final AnimationController _resize =
+      AnimationController(vsync: this, duration: kCubeTurn)
+        ..addListener(() => setState(() {}));
+  late int _sizedFor = widget.face;
+  double _fromUnit = 0;
+
   final Map<int, GlobalKey<PuzzleBoardState>> _boards =
       <int, GlobalKey<PuzzleBoardState>>{};
 
@@ -108,11 +126,77 @@ class CubeStageState extends State<CubeStage>
   double _zoomAtStart = 1;
 
   /// The block as it stands now, as seen on this stage.
-  CubeCamera get camera => CubeCamera(
-    orientation: _orientation,
-    side: min(_size.width, _size.height) * kCubeFill,
-    zoom: widget.zoom,
-  );
+  CubeCamera get camera {
+    final u = _unit();
+    final (x, y, z) = widget.box;
+    return CubeCamera(
+      orientation: _orientation,
+      box: (x * u, y * u, z * u),
+      zoom: widget.zoom,
+    );
+  }
+
+  final Map<(Size, (int, int, int), int), double> _fits =
+      <(Size, (int, int, int), int), double>{};
+
+  /// The length of a cell on screen at zoom 1 with [face] being played: as
+  /// big as lets the block, leaning the way a level opens with that face
+  /// in front, fill [kCubeFill] of the stage both ways.
+  double _fit(int face) => _fits.putIfAbsent((_size, widget.box, face), () {
+    final (x, y, z) = widget.box;
+    final b = CubeCamera(
+      orientation: openingPose(face),
+      box: (x.toDouble(), y.toDouble(), z.toDouble()),
+    ).bounds;
+    final w = 2 * max(-b.left, b.right);
+    final h = 2 * max(-b.top, b.bottom);
+    return w <= 0 || h <= 0 ? 0 : min(_size.width / w, _size.height / h) * kCubeFill;
+  });
+
+  /// The length of a cell on screen at zoom 1 now: the fit of the face
+  /// being played, or on the way to it.
+  double _unit() {
+    final to = _fit(_sizedFor);
+    if (!_resize.isAnimating) return to;
+    return _fromUnit + (to - _fromUnit) * Curves.easeOutCubic.transform(_resize.value);
+  }
+
+  /// The length of a cell the faces are laid out at: the largest fit of
+  /// any face, fixed for the level. The block's size on screen comes from
+  /// the projection ([CubeCamera.faceMatrix], scaled by [_unit] over this),
+  /// not from the faces' layout, so a turn that grows or shrinks the block
+  /// never lays a face out again — each face's board keeps the picture it
+  /// has and only the transform changes. (Laid out at the size on screen,
+  /// every frame of a turn repainted every arrow of every face showing.)
+  double get _layoutUnit {
+    var most = 0.0;
+    for (var f = 0; f < 6; f++) {
+      most = max(most, _fit(f));
+    }
+    return most;
+  }
+
+  /// [local], a point on [face]'s widget (laid out at [_layoutUnit], from
+  /// its top-left corner), where it is drawn on the stage (from the stage's
+  /// top-left corner) as the block stands now.
+  Offset stagePointOf(int face, Offset local) {
+    final k = _unit() / _layoutUnit;
+    final (sx, sy) = camera.project(camera.pointOn(face, local.dx * k, local.dy * k));
+    return Offset(_size.width / 2 + sx, _size.height / 2 + sy);
+  }
+
+  /// Grows or shrinks the block to fit [face] in front.
+  void _resizeTo(int face) {
+    if (face == _sizedFor) return;
+    if (widget.reduceMotion || _size.isEmpty) {
+      _resize.stop();
+      setState(() => _sizedFor = face);
+      return;
+    }
+    _fromUnit = _unit();
+    _sizedFor = face;
+    _resize.forward(from: 0);
+  }
 
   /// Whether the block is still or moving (a finger on it, or a turn).
   bool get settled => !_dragging && !_turn.isAnimating;
@@ -126,15 +210,18 @@ class CubeStageState extends State<CubeStage>
         (camera.nearestFace != widget.face || _turn.isAnimating)) {
       _turnTo(widget.face);
     }
+    if (widget.face != oldWidget.face) _resizeTo(widget.face);
   }
 
   @override
   void dispose() {
     _turn.dispose();
+    _resize.dispose();
     super.dispose();
   }
 
   void _turnTo(int face) {
+    _resizeTo(face);
     final target = (_lean * faceOn(face)).normalized;
     if (widget.reduceMotion) {
       _turn.stop();
@@ -176,6 +263,7 @@ class CubeStageState extends State<CubeStage>
     setState(() => _dragging = false);
     final face = camera.nearestFace;
     _lean = leanOf(_orientation, face);
+    _resizeTo(face);
     if (face != widget.face) widget.onFaceChanged?.call(face);
   }
 
@@ -191,35 +279,48 @@ class CubeStageState extends State<CubeStage>
       widget.onFaceChanged?.call(hit.face);
       return;
     }
+    // From the face as drawn (the camera's units) to the face as laid out.
+    final k = _unit() / _layoutUnit;
     _boards[hit.face]?.currentState?.tapAtBox(
-      Offset(hit.u - kFacePadding, hit.v - kFacePadding),
+      Offset(hit.u / k - kFacePadding, hit.v / k - kFacePadding),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    return LayoutBuilder(
+    // A layer of its own: whatever else on the screen repaints (the HUD's
+    // lives, the counter) leaves the block, its faces and its shadow alone.
+    return RepaintBoundary(child: LayoutBuilder(
       builder: (context, constraints) {
         _size = constraints.biggest;
         final cam = camera;
-        final side = cam.side;
+        final side = cam.longest;
         if (side <= 0) return const SizedBox.shrink();
+        // The faces are laid out at [_layoutUnit] a cell and scaled to the
+        // block's size on screen by their transforms.
+        final layout = _layoutUnit;
+        final k = _unit() / layout;
+        final (bx, by, bz) = widget.box;
+        (double, double) laidOut(int f) {
+          final (w, h) = CubeCamera(orientation: Quat.identity, box: (bx * layout, by * layout, bz * layout)).faceSize(f);
+          return (w, h);
+        }
         const light = _light;
         final faces = <Widget>[
           for (final f in cam.visibleFaces)
             Positioned(
-              left: _size.width / 2 - side / 2,
-              top: _size.height / 2 - side / 2,
-              width: side,
-              height: side,
+              left: _size.width / 2 - laidOut(f).$1 / 2,
+              top: _size.height / 2 - laidOut(f).$2 / 2,
+              width: laidOut(f).$1,
+              height: laidOut(f).$2,
               // The faces draw nothing a finger can press: the stage works
               // out from the geometry what a tap meant.
               child: IgnorePointer(
                 child: Transform(
                   key: ValueKey<int>(f),
                   alignment: Alignment.center,
-                  transform: Matrix4.fromList(cam.faceMatrix(f)),
+                  transform: Matrix4.fromList(cam.faceMatrix(f))..scaleByDouble(k, k, 1, 1),
                   child: _Face(
                     // The face being played keeps its full light: its
                     // arrows are the ones being read.
@@ -260,7 +361,11 @@ class CubeStageState extends State<CubeStage>
           children: [
             Positioned.fill(
               child: CustomPaint(
-                painter: _StagePainter(side: side * widget.zoom, palette: p),
+                painter: _StagePainter(
+                  width: max(cam.size.$1, cam.size.$3) * widget.zoom,
+                  height: cam.size.$2 * widget.zoom,
+                  palette: p,
+                ),
               ),
             ),
             ...faces,
@@ -276,7 +381,7 @@ class CubeStageState extends State<CubeStage>
           child: stage,
         );
       },
-    );
+    ));
   }
 
   /// The light, from above, a little left and in front.
@@ -321,15 +426,17 @@ class _Face extends StatelessWidget {
 /// The stage under the block: a soft pool of light behind it and its
 /// shadow on the floor below.
 class _StagePainter extends CustomPainter {
-  _StagePainter({required this.side, required this.palette});
+  _StagePainter({required this.width, required this.height, required this.palette});
 
-  final double side;
+  /// The block's breadth (its wider of width and depth) and its height.
+  final double width;
+  final double height;
   final ArrowPalette palette;
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
-    final pool = Rect.fromCircle(center: c, radius: side * 1.25);
+    final pool = Rect.fromCircle(center: c, radius: max(width, height) * 1.25);
     canvas.drawRect(
       Offset.zero & size,
       Paint()
@@ -341,9 +448,9 @@ class _StagePainter extends CustomPainter {
         ).createShader(pool),
     );
     final floor = Rect.fromCenter(
-      center: c + Offset(0, side * 0.8),
-      width: side * 1.9,
-      height: side * 0.42,
+      center: c + Offset(0, height / 2 + width * 0.3),
+      width: width * 1.9,
+      height: width * 0.42,
     );
     canvas.drawOval(
       floor,
@@ -359,5 +466,5 @@ class _StagePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_StagePainter old) =>
-      old.side != side || old.palette != palette;
+      old.width != width || old.height != height || old.palette != palette;
 }

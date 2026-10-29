@@ -70,7 +70,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get chapterBlurb1 =>
-      'एक ही नियम: जिस तीर का रास्ता साफ़ हो उसे छुओ और वह निकल जाता है।';
+      'एक ही नियम: जिस तीर का रास्ता खुला हो उसे छुओ और वह निकल जाता है।';
 
   @override
   String get chapterBlurb2 =>
@@ -108,7 +108,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get introBodyPairs =>
-      'एक छुअन, दोनों निकलते हैं। दोनों रास्ते साफ़ चाहिए।';
+      'एक छुअन, दोनों निकलते हैं। दोनों रास्ते खुले चाहिए।';
 
   @override
   String get introGotIt => 'समझ गया';
@@ -862,6 +862,156 @@ class AppLocalizationsHi extends AppLocalizations {
   String get levelName200 => 'आख़िरी पड़ाव';
 
   @override
+  String get levelName201 => 'डिब्बा खुला';
+
+  @override
+  String get levelName202 => 'पार्सल';
+
+  @override
+  String get levelName203 => 'पेटी';
+
+  @override
+  String get levelName204 => 'ईंट';
+
+  @override
+  String get levelName205 => 'जूतों का डिब्बा';
+
+  @override
+  String get levelName206 => 'माचिस';
+
+  @override
+  String get levelName207 => 'टिफ़िन';
+
+  @override
+  String get levelName208 => 'औज़ार पेटी';
+
+  @override
+  String get levelName209 => 'जादुई डिब्बा';
+
+  @override
+  String get levelName210 => 'किताबों की अलमारी';
+
+  @override
+  String get levelName211 => 'डोमिनो';
+
+  @override
+  String get levelName212 => 'ऊँची इमारत';
+
+  @override
+  String get levelName213 => 'गगनचुंबी';
+
+  @override
+  String get levelName214 => 'दराज़';
+
+  @override
+  String get levelName215 => 'अलमारी';
+
+  @override
+  String get levelName216 => 'कपड़ों की अलमारी';
+
+  @override
+  String get levelName217 => 'सूटकेस';
+
+  @override
+  String get levelName218 => 'संदूक';
+
+  @override
+  String get levelName219 => 'कंटेनर';
+
+  @override
+  String get levelName220 => 'माल';
+
+  @override
+  String get levelName221 => 'मालगाड़ी';
+
+  @override
+  String get levelName222 => 'समुद्री रास्ता';
+
+  @override
+  String get levelName223 => 'गोदाम';
+
+  @override
+  String get levelName224 => 'लदाई';
+
+  @override
+  String get levelName225 => 'फ़ोर्कलिफ़्ट';
+
+  @override
+  String get levelName226 => 'तख़्ता';
+
+  @override
+  String get levelName227 => 'ढेर';
+
+  @override
+  String get levelName228 => 'घर बदली';
+
+  @override
+  String get levelName229 => 'पैकिंग टेप';
+
+  @override
+  String get levelName230 => 'बुलबुले वाली पन्नी';
+
+  @override
+  String get levelName231 => 'डाक टिकट';
+
+  @override
+  String get levelName232 => 'तेज़ डाक';
+
+  @override
+  String get levelName233 => 'रातोंरात';
+
+  @override
+  String get levelName234 => 'डाकघर';
+
+  @override
+  String get levelName235 => 'वापस भेजो';
+
+  @override
+  String get levelName236 => 'नाज़ुक';
+
+  @override
+  String get levelName237 => 'यह तरफ़ ऊपर';
+
+  @override
+  String get levelName238 => 'सँभाल के';
+
+  @override
+  String get levelName239 => 'भारी बोझ';
+
+  @override
+  String get levelName240 => 'दूर की ढुलाई';
+
+  @override
+  String get levelName241 => 'शिलाखंड';
+
+  @override
+  String get levelName242 => 'मीनार';
+
+  @override
+  String get levelName243 => 'खंभा';
+
+  @override
+  String get levelName244 => 'स्तंभ';
+
+  @override
+  String get levelName245 => 'पगोडा';
+
+  @override
+  String get levelName246 => 'प्रकाशस्तंभ';
+
+  @override
+  String get levelName247 => 'घंटाघर';
+
+  @override
+  String get levelName248 => 'बड़ी फ़रमाइश';
+
+  @override
+  String get levelName249 => 'लंबा रास्ता';
+
+  @override
+  String get levelName250 => 'आख़िरी डिलीवरी';
+
+  @override
   String get tutorialTap =>
       'किसी तीर पर टैप करो — वह अपनी दिशा में निकल जाएगा।';
 
@@ -1251,7 +1401,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get settingsResetProgressSubtitle =>
-      'हर लेवल फिर से बंद और सारे तारे साफ़';
+      'हर लेवल फिर से बंद और सारे तारे मिट जाएँगे';
 
   @override
   String get settingsResetConfirmTitle => 'सारी प्रगति मिटा दें?';
@@ -1304,7 +1454,7 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get arrowPathClear => 'किनारे तक रास्ता साफ़ है।';
+  String get arrowPathClear => 'किनारे तक रास्ता खुला है।';
 
   @override
   String get arrowPathMirror => 'इसका रास्ता आईने से टकराकर मुड़ता है।';
@@ -1355,7 +1505,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get arrowTethered =>
-      'दूसरे तीर से बँधा है: दोनों साथ निकलते हैं, इसलिए दोनों के रास्ते साफ़ होने चाहिए।';
+      'दूसरे तीर से बँधा है: दोनों साथ निकलते हैं, इसलिए दोनों के रास्ते खुले होने चाहिए।';
 
   @override
   String get arrowTapHint => 'इसे बाहर निकालें';
@@ -1435,6 +1585,17 @@ class AppLocalizationsHi extends AppLocalizations {
       'हर सतह से एक साथ कम ही तीर निकल पाते हैं। जो निकल सके उसे ढूँढो, फिर अगला खुलेगा।';
 
   @override
+  String get chapterName8 => 'बक्सा';
+
+  @override
+  String get chapterBlurb8 =>
+      'अब क्यूब नहीं, बक्सा: तीन नाप की सतहें, पहले से बड़ी।';
+
+  @override
+  String get tutorialBox =>
+      'यह ब्लॉक बक्सा है: इसकी सतहें तीन नाप की हैं। हर सतह देखने के लिए इसे घुमाओ।';
+
+  @override
   String get cubeTurnLeft => 'बाईं सतह पर घुमाओ';
 
   @override
@@ -1453,19 +1614,19 @@ class AppLocalizationsHi extends AppLocalizations {
       locale: localeName,
       other: 'इस सतह पर $count तीर',
       one: 'इस सतह पर 1 तीर',
-      zero: 'सतह साफ़',
+      zero: 'सतह खाली',
     );
     return '$_temp0';
   }
 
   @override
   String cubeFacesClear(int cleared, int total) {
-    return '$total में से $cleared सतहें साफ़';
+    return '$total में से $cleared सतहें खाली';
   }
 
   @override
   String cubeMapLabel(int face, int cleared, int total) {
-    return 'क्यूब, सामने सतह $face, $total में से $cleared सतहें साफ़';
+    return 'क्यूब, सामने सतह $face, $total में से $cleared सतहें खाली';
   }
 
   @override

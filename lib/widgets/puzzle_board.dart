@@ -312,10 +312,11 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     controller.addListener(() => setState(() {}));
     controller.forward().whenComplete(() {
       if (!mounted) return;
-      setState(() {
-        if (slot[id] == controller) slot.remove(id);
-        controller.dispose();
-      });
+      // Replaced meanwhile (the same mirror flashing again): already
+      // disposed by the one that replaced it.
+      if (slot[id] != controller) return;
+      setState(() => slot.remove(id));
+      controller.dispose();
     });
   }
 
@@ -329,13 +330,17 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     controller.addListener(() => setState(() {}));
     controller.forward().whenComplete(() {
       if (!mounted) return;
+      // Disposed here only while it is still the pointer: a pointer started
+      // on top of it (a second locked tap) has disposed it already — on the
+      // web a frame's rebuild runs before this callback, so a tap in the
+      // frame this one ends in gets there first — and a second dispose
+      // throws.
+      if (_pointer != controller) return;
       setState(() {
-        if (_pointer == controller) {
-          _pointer = null;
-          _pointerTargets = const <int>[];
-        }
-        controller.dispose();
+        _pointer = null;
+        _pointerTargets = const <int>[];
       });
+      controller.dispose();
     });
   }
 
@@ -353,14 +358,15 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     controller.addListener(() => setState(() {}));
     controller.forward().whenComplete(() {
       if (!mounted) return;
+      // As for the pointer: a bump started on top of this one has disposed
+      // it already.
+      if (_bump != controller) return;
       setState(() {
-        if (_bump == controller) {
-          _bump = null;
-          _bumpId = null;
-          _bumpMotion = null;
-        }
-        controller.dispose();
+        _bump = null;
+        _bumpId = null;
+        _bumpMotion = null;
       });
+      controller.dispose();
       // The last life is spent by a bump like any other, and the board only
       // gives up once the player has seen it happen.
       _syncSlump();
@@ -469,10 +475,10 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   /// [kTouchSlopPx] of it. Null when the finger is over open space.
   int? _arrowFor(Offset local, double cellSize) {
     final puzzle = widget.state.puzzle!;
-    final (originX, windowWidth) = _window(puzzle, widget.face);
+    final (originX, windowWidth, windowHeight) = _window(puzzle, widget.face);
     // In the board's own cells: the face shown starts [originX] cells in.
     final p = local + Offset(originX * cellSize, 0);
-    bool inside(Cell c) => c.x >= originX && c.x < originX + windowWidth && c.y >= 0 && c.y < puzzle.height;
+    bool inside(Cell c) => c.x >= originX && c.x < originX + windowWidth && c.y >= 0 && c.y < windowHeight;
     final cell = Cell((p.dx / cellSize).floor(), (p.dy / cellSize).floor());
     if (inside(cell)) {
       final under = puzzle.arrowAt(cell);
@@ -523,18 +529,43 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     final puzzle = widget.state.puzzle!;
     final p = context.palette;
     final l10n = AppLocalizations.of(context);
-    final (_, windowWidth) = _window(puzzle, widget.face);
+    final (_, windowWidth, windowHeight) = _window(puzzle, widget.face);
     return LayoutBuilder(
       builder: (context, constraints) {
         final cellSize = min(
           constraints.maxWidth / windowWidth,
-          constraints.maxHeight / puzzle.height,
+          constraints.maxHeight / windowHeight,
         );
-        final size = Size(cellSize * windowWidth, cellSize * puzzle.height);
+        final size = Size(cellSize * windowWidth, cellSize * windowHeight);
         _cellSize = cellSize;
         _paintOffset = Offset(
           (constraints.maxWidth - size.width) / 2,
           (constraints.maxHeight - size.height) / 2,
+        );
+        _BoardPainter painterFor(BoardLayer layer) => _BoardPainter(
+          layer: layer,
+          state: widget.state,
+          palette: p,
+          showGrid: widget.showGrid,
+          exits: <int, double>{for (final e in _exits.entries) e.key: e.value.value},
+          hintPing: _hintPing?.value,
+          slump: _slump?.value,
+          bumpId: _bumpId,
+          bump: _bump?.value,
+          bumpMotion: _bumpMotion,
+          pointer: _pointer?.value,
+          pointerTargets: _pointerTargets,
+          unlocks: <int, double>{for (final e in _unlocks.entries) e.key: e.value.value},
+          reveals: <int, double>{for (final e in _reveals.entries) e.key: e.value.value},
+          pendingUnlocks: Set<int>.of(_pendingUnlocks),
+          pendingReveals: <int>{for (final owed in _pendingReveals.values) ...owed},
+          bounces: <int, double>{for (final e in _bounces.entries) e.key: e.value.value},
+          travel: widget.reduceMotion ? 0 : 1,
+          focusedId: widget.focusedArrowId,
+          l10n: l10n,
+          textDirection: Directionality.of(context),
+          onTapArrow: widget.onTapArrow,
+          face: widget.face,
         );
         return Center(
           // The board is a labelled container and the painter supplies one
@@ -551,31 +582,32 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
                 behavior: HitTestBehavior.opaque,
                 excludeFromSemantics: true,
                 onTapUp: (d) => _onTapUp(d, cellSize),
-                child: CustomPaint(
+                // Two layers, each its own picture: the board at rest, which
+                // repaints only when the board changes (an arrow leaves, a
+                // head is uncovered), and over it whatever is moving — a
+                // slide, a bump, a lock popping, the hint's ring, the
+                // cursor — which repaints every frame of the move but holds
+                // only those few things. One painter drew both, so every
+                // frame of every slide redrew every arrow on the board; on a
+                // phone that was the lag between a tap and the arrow going.
+                // Each layer is behind a boundary of its own, so nothing
+                // else on the screen (the clock, a card, the block turning)
+                // repaints either.
+                child: SizedBox.fromSize(
                   size: size,
-                  painter: _BoardPainter(
-                    state: widget.state,
-                    palette: p,
-                    showGrid: widget.showGrid,
-                    exits: <int, double>{for (final e in _exits.entries) e.key: e.value.value},
-                    hintPing: _hintPing?.value,
-                    slump: _slump?.value,
-                    bumpId: _bumpId,
-                    bump: _bump?.value,
-                    bumpMotion: _bumpMotion,
-                    pointer: _pointer?.value,
-                    pointerTargets: _pointerTargets,
-                    unlocks: <int, double>{for (final e in _unlocks.entries) e.key: e.value.value},
-                    reveals: <int, double>{for (final e in _reveals.entries) e.key: e.value.value},
-                    pendingUnlocks: Set<int>.of(_pendingUnlocks),
-                    pendingReveals: <int>{for (final owed in _pendingReveals.values) ...owed},
-                    bounces: <int, double>{for (final e in _bounces.entries) e.key: e.value.value},
-                    travel: widget.reduceMotion ? 0 : 1,
-                    focusedId: widget.focusedArrowId,
-                    l10n: l10n,
-                    textDirection: Directionality.of(context),
-                    onTapArrow: widget.onTapArrow,
-                    face: widget.face,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: CustomPaint(painter: painterFor(BoardLayer.still)),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: CustomPaint(painter: painterFor(BoardLayer.moving)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -587,13 +619,31 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   }
 }
 
-/// The columns a board shows: from where, and how many — one face of a
-/// cube level, or the whole board.
-(int, int) _window(Puzzle puzzle, int? face) =>
-    face == null || !puzzle.isCube ? (0, puzzle.width) : (face * puzzle.faceWidth, puzzle.faceWidth);
+/// The part of the board a board widget shows: the column it starts at,
+/// and how many columns and rows — one face of a block, or the whole board.
+(int, int, int) _window(Puzzle puzzle, int? face) => face == null || !puzzle.isCube
+    ? (0, puzzle.width, puzzle.height)
+    : (puzzle.faceOriginOf(face), puzzle.faceWidthOf(face), puzzle.faceHeightOf(face));
+
+/// The two layers a board is drawn in (see [PuzzleBoardState.build]).
+enum BoardLayer {
+  /// Everything at rest: the grid, the mirrors, the washes and every arrow
+  /// lying still.
+  still,
+
+  /// Everything moving: arrows sliding, bumping, popping open or coming out
+  /// of the fog, flashes, rings, the hint and the cursor.
+  moving,
+}
+
+/// How many times each board layer has been drawn (see
+/// [_BoardPainter.debugPaints]); tests clear it and count.
+@visibleForTesting
+Map<BoardLayer, int> get boardPaintCounts => _BoardPainter.debugPaints;
 
 class _BoardPainter extends CustomPainter {
   _BoardPainter({
+    required this.layer,
     required this.state,
     required this.palette,
     required this.showGrid,
@@ -620,6 +670,16 @@ class _BoardPainter extends CustomPainter {
 
   final GameState state;
   final ArrowPalette palette;
+
+  /// How many times each layer has been drawn: what the tests count to pin
+  /// that the clock and a slide leave the board at rest alone (a frame that
+  /// redraws every arrow is the lag, on a phone, and on every platform).
+  @visibleForTesting
+  static final Map<BoardLayer, int> debugPaints = <BoardLayer, int>{};
+
+  /// Which of the board's two layers this painter draws.
+  final BoardLayer layer;
+  bool get _still => layer == BoardLayer.still;
 
   /// The face of a cube level being shown, or null for the whole board.
   final int? face;
@@ -687,6 +747,25 @@ class _BoardPainter extends CustomPainter {
       bumpId == state.lastMoveId &&
       (state.blockedCell != null || state.blockedKey != null || state.lastOutcome == MoveOutcome.hidden);
 
+  /// The arrow taking a bump's hit (flashed and shoved), if any.
+  int? get _hitId {
+    final blocked = state.blockedCell;
+    return _bumping && blocked != null ? puzzle.arrowAt(blocked) : null;
+  }
+
+  /// The arrows drawn on the moving layer: sliding out, bumping (with a
+  /// partner), taking a bump's hit, popping open or coming out of the fog —
+  /// or every arrow while the board slumps.
+  late final Set<int> _live = <int>{
+    ...exits.keys,
+    ..._bumpGroup,
+    ?_hitId,
+    ...unlocks.keys,
+    ...reveals.keys,
+    if (slump != null)
+      for (final a in puzzle.arrows) a.id,
+  };
+
   /// The arrows moving with the bump: the one that bumped and its partner.
   List<int> get _bumpGroup => _bumping ? puzzle.exitGroup(bumpId!) : const <int>[];
 
@@ -708,7 +787,8 @@ class _BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final (originX, windowWidth) = _window(puzzle, face);
+    debugPaints[layer] = (debugPaints[layer] ?? 0) + 1;
+    final (originX, windowWidth, windowHeight) = _window(puzzle, face);
     final cs = size.width / windowWidth;
     // Drawn in the board's own cells: a face of the block is shifted so it
     // sits at the canvas's origin, and the rest of the strip is never drawn.
@@ -719,7 +799,7 @@ class _BoardPainter extends CustomPainter {
     // No frame: the arrows sit straight on the page. Grid lines, when on,
     // run through the cell centres — the lattice the arrows are drawn on —
     // so every body lies exactly on a line and every head points along one.
-    if (showGrid) {
+    if (showGrid && _still) {
       final grid = Paint()
         ..color = palette.gridLine
         ..strokeWidth = 1;
@@ -731,7 +811,7 @@ class _BoardPainter extends CustomPainter {
         final px = firstX + x * cs;
         canvas.drawLine(Offset(px, first), Offset(px, lastY), grid);
       }
-      for (var y = 0; y < puzzle.height; y++) {
+      for (var y = 0; y < windowHeight; y++) {
         final py = first + y * cs;
         canvas.drawLine(Offset(firstX, py), Offset(lastX, py), grid);
       }
@@ -752,7 +832,7 @@ class _BoardPainter extends CustomPainter {
     for (final e in puzzle.pairs.entries) {
       final a = e.key;
       final b = e.value;
-      if (a > b || state.removed.contains(a) || state.removed.contains(b) || !_shown(a)) continue;
+      if (!_still || a > b || state.removed.contains(a) || state.removed.contains(b) || !_shown(a)) continue;
       glyphs.washPair(canvas, <Rect>[
         for (final id in <int>[a, b])
           for (final c in puzzle.arrows[id].cells) Rect.fromLTWH(c.x * cs, c.y * cs, cs, cs),
@@ -761,7 +841,7 @@ class _BoardPainter extends CustomPainter {
     // Mirrors: drawn under everything, so an arrow slides over the glass as
     // it turns.
     for (final e in puzzle.mirrors.entries) {
-      if (puzzle.faceOfCell(e.key) * puzzle.faceWidth != originX) continue;
+      if (!_still || (face != null && puzzle.faceOfCell(e.key) != face)) continue;
       glyphs.mirror(canvas, Rect.fromLTWH(e.key.x * cs, e.key.y * cs, cs, cs), e.value);
     }
 
@@ -776,8 +856,8 @@ class _BoardPainter extends CustomPainter {
     final motion = bumpMotion;
     final flash = bumping && blocked != null ? motion!.flashAt(bumpT!) : 0.0;
     final shove = bumping && blocked != null ? motion!.shoveAt(bumpT!) * travel : 0.0;
-    final hitId = bumping && blocked != null ? puzzle.arrowAt(blocked) : null;
-    if (flash > 0) {
+    final hitId = _hitId;
+    if (flash > 0 && !_still) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(blocked!.x * cs, blocked.y * cs, cs, cs).deflate(cs * 0.08),
@@ -798,6 +878,8 @@ class _BoardPainter extends CustomPainter {
       if (a > b || !_shown(a)) continue;
       bool gone(int id) => state.removed.contains(id) && !exits.containsKey(id);
       if (gone(a) || gone(b)) continue;
+      // On the moving layer while either half moves.
+      if ((_live.contains(a) || _live.contains(b)) == _still) continue;
       final arrowA = puzzle.arrows[a];
       final arrowB = puzzle.arrows[b];
       final (ca, cb) = _nearestCells(arrowA, arrowB);
@@ -815,7 +897,7 @@ class _BoardPainter extends CustomPainter {
     for (final arrow in puzzle.arrows) {
       final exiting = exits[arrow.id];
       if (state.removed.contains(arrow.id) && exiting == null) continue;
-      if (!_shown(arrow.id)) continue;
+      if (!_shown(arrow.id) || _live.contains(arrow.id) == _still) continue;
       final offset = _offsetOf(arrow);
       final shoved = bumping && arrow.id == hitId && shove > 0;
       if (shoved) {
@@ -840,14 +922,16 @@ class _BoardPainter extends CustomPainter {
       if (slumping) canvas.restore();
       if (shoved) canvas.restore();
     }
-    _paintBounces(canvas, cs, glyphs);
-    _paintSparks(canvas, cs);
-    _paintPointer(canvas, cs, glyphs);
-    _paintHint(canvas, rect, cs);
+    if (!_still) {
+      _paintBounces(canvas, cs, glyphs);
+      _paintSparks(canvas, cs);
+      _paintPointer(canvas, cs, glyphs);
+      _paintHint(canvas, rect, cs);
+    }
     canvas.restore();
     // Outside the clip: the ring sits a little proud of the cells, and an
     // arrow on the board's edge would otherwise lose that side of it.
-    _paintCursor(canvas, cs);
+    if (!_still) _paintCursor(canvas, cs);
     canvas.restore();
   }
 
@@ -1011,9 +1095,9 @@ class _BoardPainter extends CustomPainter {
   @override
   SemanticsBuilderCallback? get semanticsBuilder {
     final strings = l10n;
-    if (strings == null) return null;
+    if (strings == null || !_still) return null;
     return (Size size) {
-      final (originX, windowWidth) = _window(puzzle, face);
+      final (originX, windowWidth, _) = _window(puzzle, face);
       final cs = size.width / windowWidth;
       final nodes = <CustomPainterSemantics>[];
       // Reading order: by the head's row, then its column.
@@ -1224,12 +1308,25 @@ class _BoardPainter extends CustomPainter {
     final headLen = min(cs * 0.3, 8.0) * headScale;
     final bodyEnd = headShown ? head - dir * (headLen * 0.55) : head;
     final longBody = arrow.length > 1;
-    final path = longBody
-        ? _pathAlong(track, offset, headAt - (headShown ? headLen * 0.55 / cs : 0), cs)
-        : (Path()..moveTo(bodyEnd.dx, bodyEnd.dy));
+    // An arrow at rest has the same body every time the board is drawn, so
+    // it is built once (its rounded corners and its dashes are most of the
+    // cost of drawing a board) and kept for as long as the puzzle is.
+    final resting = offset == 0 && reveal == null;
+    final restKey = (arrow.id, cs, headShown);
+    final bodies = _restingBodies[puzzle];
+    final kept = resting && bodies != null ? bodies[restKey] : null;
+    final path = kept?.$1 ??
+        (longBody
+            ? _pathAlong(track, offset, headAt - (headShown ? headLen * 0.55 / cs : 0), cs)
+            : (Path()..moveTo(bodyEnd.dx, bodyEnd.dy)));
     // A hidden head is drawn as a dashed body with no head at either end:
     // the player can see where it lies, not which way it goes.
-    final dashedPath = !headShown || solidity < 1 ? BoardGlyphs.dashed(path, stroke * 1.6, stroke * 1.4) : null;
+    final dashedPath = kept != null
+        ? kept.$2
+        : (!headShown || solidity < 1 ? BoardGlyphs.dashed(path, stroke * 1.6, stroke * 1.4) : null);
+    if (resting && kept == null) {
+      (_restingBodies[puzzle] ??= <(int, double, bool), (Path, Path?)>{})[restKey] = (path, dashedPath);
+    }
 
     // The glow: the hint's halo at full strength, or the moment's — a head
     // out of the fog, a lock open (lit as the spark lands, not before) —
@@ -1344,6 +1441,11 @@ class _BoardPainter extends CustomPainter {
     }
   }
 
+  /// The bodies of arrows at rest, by puzzle, arrow, cell size and whether
+  /// the head shows (see [_paintArrow]).
+  static final Expando<Map<(int, double, bool), (Path, Path?)>> _restingBodies =
+      Expando<Map<(int, double, bool), (Path, Path?)>>();
+
   static Offset _center(Cell c, double cs) => Offset((c.x + 0.5) * cs, (c.y + 0.5) * cs);
 
   static Offset _unit(Direction d) {
@@ -1352,8 +1454,26 @@ class _BoardPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BoardPainter old) =>
+  bool shouldRepaint(_BoardPainter old) => _still ? _stillChanged(old) : _movingChanged(old);
+
+  /// The board at rest: only what changes the arrows lying still. (The
+  /// clock ticks ten times a second; an arrow sliding moves every frame —
+  /// neither counts here.)
+  bool _stillChanged(_BoardPainter old) =>
+      old.state.puzzle != state.puzzle ||
+      _changedHere(old.state.removed, state.removed) ||
+      _changedHere(old.state.revealed, state.revealed) ||
+      old.showGrid != showGrid ||
+      old.palette != palette ||
+      old.face != face ||
+      old.layer != layer ||
+      !setEquals(old.pendingUnlocks, pendingUnlocks) ||
+      !setEquals(old.pendingReveals, pendingReveals) ||
+      !setEquals(old._live, _live);
+
+  bool _movingChanged(_BoardPainter old) =>
       // The clock ticks ten times a second; only board-relevant state counts.
+      old.layer != layer ||
       old.state.puzzle != state.puzzle ||
       old.state.removed != state.removed ||
       old.state.hintArrowId != state.hintArrowId ||
@@ -1378,6 +1498,21 @@ class _BoardPainter extends CustomPainter {
       old.travel != travel ||
       old.face != face ||
       old.focusedId != focusedId;
+
+  /// Whether [before] and [now] differ by an arrow on the face shown: an
+  /// arrow leaving one face of a block leaves the other faces' drawings as
+  /// they were (comparing the sets whole re-drew every face showing on
+  /// every move).
+  bool _changedHere(Set<int> before, Set<int> now) {
+    if (identical(before, now)) return false;
+    for (final id in now) {
+      if (!before.contains(id) && _shown(id)) return true;
+    }
+    for (final id in before) {
+      if (!now.contains(id) && _shown(id)) return true;
+    }
+    return false;
+  }
 
   static bool _sameMap(Map<int, double> a, Map<int, double> b) {
     if (a.length != b.length) return false;

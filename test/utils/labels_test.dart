@@ -1,5 +1,6 @@
 import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/l10n/app_localizations_en.dart';
+import 'package:arrow_game/l10n/app_localizations_hi.dart';
 import 'package:arrow_game/utils/labels.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,6 +21,16 @@ void main() {
     expect(levelName(l10n, 150), 'The Last Block');
     expect(levelName(l10n, 151), 'Tight Spot');
     expect(levelName(l10n, 200), 'The Final Arrow');
-    expect(levelName(l10n, 201), 'The Final Arrow');
+    expect(levelName(l10n, 201), 'Unboxing');
+    expect(levelName(l10n, 250), 'Last Delivery');
+    expect(levelName(l10n, 251), 'Last Delivery');
+  });
+
+  test('every level has a distinct name in Hindi too', () {
+    final hi = AppLocalizationsHi();
+    final names = <String>{for (var l = 1; l <= totalLevels; l++) levelName(hi, l)};
+    expect(names, hasLength(totalLevels));
+    expect(levelName(hi, 201), 'डिब्बा खुला');
+    expect(levelName(hi, 250), 'आख़िरी डिलीवरी');
   });
 }

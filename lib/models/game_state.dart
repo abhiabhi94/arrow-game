@@ -132,6 +132,31 @@ class GameState {
   /// exactly one more mistake, and the next one asks again.
   final int continues;
 
+  /// Everything about the game but its clock, as one value that is equal
+  /// when nothing but the clock has changed: what the game screen watches
+  /// (`select`), so the ten ticks a second redraw the clock and nothing
+  /// else. Each tick used to rebuild the whole screen — the board, every
+  /// face of a block — which on a phone kept the screen busy most of the
+  /// time and made a tap wait its turn.
+  Object get withoutClock => (
+        spec,
+        puzzle,
+        phase,
+        removed,
+        bumped,
+        mistakes,
+        hintsLeft,
+        hintArrowId,
+        lastMoveId,
+        lastOutcome,
+        blockedCell,
+        moveToken,
+        blockedKey,
+        revealed,
+        resumeOffered,
+        continues,
+      );
+
   int get level => spec.level;
   int get arrowsOut => removed.length;
   int get arrowsTotal => puzzle?.arrowCount ?? spec.arrows;

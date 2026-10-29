@@ -57,6 +57,71 @@ jobs:
       - name: Smoke test + screenshots
         uses: ./.github/actions/web-smoke
 
+  perf:
+    name: Performance (phone-speed frame budget)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write # the frame budget comment on PRs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Read pinned Flutter version
+        id: flutter
+        run: echo "version=$(tr -d '[:space:]' < .flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter.outputs.version }}
+          channel: stable
+          cache: true
+
+      # A release build, as players get it (a debug build is many times
+      # slower and measures nothing a player sees), with every level open
+      # and so with the profiling hooks (lib/utils/perf_hooks.dart).
+      - name: Build web (release, every level open)
+        run: |
+          flutter pub get
+          flutter gen-l10n
+          flutter build web --release --dart-define=UNLOCK_ALL=true --no-web-resources-cdn --no-wasm-dry-run
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install Playwright + Chromium
+        run: |
+          npm install -g "playwright@1.56.1"
+          npx --yes "playwright@1.56.1" install --with-deps chromium
+
+      # Plays a level from every chapter in headless Chromium slowed to a
+      # phone's speed (4x CPU throttle): the deal, the board idle, the block
+      # turning and dragged, arrows played. Fails when a frame's Dart work
+      # goes over its budget (BUDGETS in tool/perf.mjs) — the lag a player
+      # feels between a tap and the arrow going.
+      - name: Profile levels against the frame budget
+        run: |
+          export NODE_PATH="$(npm root -g)"
+          node tool/perf.mjs --levels 1,20,100,150,200,201,230,250 --throttle 4 --out perf
+
+      - name: Upload the profile
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf
+          path: perf/
+          if-no-files-found: warn
+
+      - name: Comment the frame budget on the PR
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: perf
+          path: perf/summary.md
+
   apk:
     name: Debug APK
     runs-on: ubuntu-24.04

@@ -22,8 +22,9 @@
 ///   both of their paths have to be clear, and each waits for whatever the
 ///   other waits for. The graph treats the pair as one node.
 ///
-/// A **cube** level ([faceSize] set, see [Puzzle.cube]) is six square faces
-/// laid side by side in one strip, [faceSize] cells each. An arrow's way out
+/// A **cube** level ([faceSizes] set, see [Puzzle.cube]) is six faces laid
+/// side by side in one strip, each a rectangle of its own size — six equal
+/// squares on a cube, three pairs of rectangles on a box. An arrow's way out
 /// ends at its own face's edge — it leaves the block there — so the faces
 /// never get in each other's way, and every rule above works face by face
 /// unchanged. The player sees one face at a time and turns the block to
@@ -44,22 +45,32 @@ class Puzzle {
     Map<int, int> locks = const <int, int>{},
     Set<int> hidden = const <int>{},
     Map<int, int> pairs = const <int, int>{},
-    this.faceSize,
+    List<(int, int)>? faceSizes,
   })  : arrows = List<ArrowPiece>.unmodifiable(arrows),
+        faceSizes = faceSizes == null ? null : List<(int, int)>.unmodifiable(faceSizes),
         mirrors = Map<Cell, Mirror>.unmodifiable(mirrors),
         locks = Map<int, int>.unmodifiable(locks),
         hidden = Set<int>.unmodifiable(hidden),
         pairs = Map<int, int>.unmodifiable(_symmetric(pairs)),
         assert(width > 0 && height > 0),
-        assert(faceSize == null || (height == faceSize && width % faceSize == 0)) {
+        assert(faceSizes == null ||
+            (faceSizes.fold<int>(0, (w, f) => w + f.$1) == width &&
+                faceSizes.fold<int>(0, (h, f) => f.$2 > h ? f.$2 : h) == height)) {
+    if (faceSizes != null) {
+      var x = 0;
+      for (final (w, _) in faceSizes) {
+        _origins.add(x);
+        x += w;
+      }
+    }
     for (final c in mirrors.keys) {
-      assert(c.isInside(width, height), 'mirror $c is off the board');
+      assert(c.isInside(width, height) && faceOfCell(c) >= 0, 'mirror $c is off the board');
       _occupancy[c] = kMirror;
     }
     for (var i = 0; i < arrows.length; i++) {
       assert(arrows[i].id == i, 'arrow ids must be their index');
       for (final c in arrows[i].cells) {
-        assert(c.isInside(width, height), '$c is off the board');
+        assert(c.isInside(width, height) && faceOfCell(c) >= 0, '$c is off the board');
         assert(!_occupancy.containsKey(c), '$c is used twice (an arrow or a mirror)');
         _occupancy[c] = i;
       }
@@ -71,9 +82,9 @@ class Puzzle {
       final trace = traceRay(
         head: a.head,
         heading: a.heading,
-        width: faceWidth,
-        height: height,
-        originX: face * faceWidth,
+        width: faceWidthOf(face),
+        height: faceHeightOf(face),
+        originX: faceOriginOf(face),
         mirrorAt: (c) => this.mirrors[c],
       );
       assert(trace != null, 'arrow ${a.id} is sent round in a ring');
@@ -101,12 +112,12 @@ class Puzzle {
     }
   }
 
-  /// A cube level built from its six (or any number of) square [faces],
-  /// each a board of its own: laid side by side in one strip, the ids and
-  /// cells of each face shifted past the ones before it.
+  /// A block built from its six (or any number of) [faces], each a board of
+  /// its own of any size: laid side by side in one strip along the top, the
+  /// ids and cells of each face shifted past the ones before it. The strip
+  /// is as tall as the tallest face; below a shorter face is no cell at all.
   factory Puzzle.cube(List<Puzzle> faces) {
     assert(faces.isNotEmpty);
-    final n = faces.first.width;
     final arrows = <ArrowPiece>[];
     final mirrors = <Cell, Mirror>{};
     final locks = <int, int>{};
@@ -114,8 +125,8 @@ class Puzzle {
     final pairs = <int, int>{};
     for (var f = 0; f < faces.length; f++) {
       final face = faces[f];
-      assert(face.width == n && face.height == n && face.faceSize == null, 'faces are equal squares');
-      final dx = f * n;
+      assert(face.faceSizes == null, 'a face is a flat board');
+      final dx = faces.take(f).fold<int>(0, (x, p) => x + p.width);
       final base = arrows.length;
       Cell shift(Cell c) => Cell(c.x + dx, c.y);
       for (final a in face.arrows) {
@@ -135,14 +146,14 @@ class Puzzle {
       }
     }
     return Puzzle(
-      width: n * faces.length,
-      height: n,
+      width: faces.fold<int>(0, (w, p) => w + p.width),
+      height: faces.fold<int>(0, (h, p) => p.height > h ? p.height : h),
       arrows: arrows,
       mirrors: mirrors,
       locks: locks,
       hidden: hidden,
       pairs: pairs,
-      faceSize: n,
+      faceSizes: <(int, int)>[for (final p in faces) (p.width, p.height)],
     );
   }
 
@@ -152,8 +163,9 @@ class Puzzle {
   final int width;
   final int height;
 
-  /// The side of a cube level's faces, or null for a flat board.
-  final int? faceSize;
+  /// The width and height of each face of a block, in the strip's order,
+  /// or null for a flat board.
+  final List<(int, int)>? faceSizes;
   final List<ArrowPiece> arrows;
 
   /// The mirrors on the board: never occupied, slid through with a turn.
@@ -174,6 +186,9 @@ class Puzzle {
   final Map<int, int> _lockNumbers = <int, int>{};
   final List<int> _faces = <int>[];
 
+  /// Where each face starts in the strip.
+  final List<int> _origins = <int>[];
+
   static Map<int, int> _symmetric(Map<int, int> pairs) {
     final out = <int, int>{};
     for (final e in pairs.entries) {
@@ -185,25 +200,44 @@ class Puzzle {
 
   int get arrowCount => arrows.length;
 
-  /// Whether this is a cube level: faces of [faceSize], played one at a time.
-  bool get isCube => faceSize != null;
+  /// Whether this is a cube level: [faceSizes] faces, played one at a time.
+  bool get isCube => faceSizes != null;
 
-  /// How many faces the board has: six on a cube, one flat.
-  int get faceCount => width ~/ faceWidth;
+  /// How many faces the board has: six on a block, one flat.
+  int get faceCount => faceSizes?.length ?? 1;
 
-  /// The size of the board the player sees at once: a face, or the board.
-  int get faceWidth => faceSize ?? width;
-  int get faceHeight => height;
+  /// The size of [face], the board the player sees at once (the whole
+  /// board when flat).
+  int faceWidthOf(int face) => faceSizes == null ? width : faceSizes![face].$1;
+  int faceHeightOf(int face) => faceSizes == null ? height : faceSizes![face].$2;
 
-  /// The face [c] lies on (0 on a flat board).
-  int faceOfCell(Cell c) => faceSize == null ? 0 : c.x ~/ faceSize!;
+  /// A block's width, height and depth in cells, read off its front (face
+  /// 0) and its right side (face 1): the box the faces fold up into.
+  (int, int, int) get blockSize =>
+      (faceWidthOf(0), faceHeightOf(0), faceCount > 1 ? faceWidthOf(1) : faceWidthOf(0));
+
+  /// The column of the strip [face] starts at.
+  int faceOriginOf(int face) => faceSizes == null ? 0 : _origins[face];
+
+  /// The face [c] lies on (0 on a flat board), or -1 for a cell of the
+  /// strip that is on no face (below a shorter face, or off the strip).
+  int faceOfCell(Cell c) {
+    final sizes = faceSizes;
+    if (sizes == null) return 0;
+    if (c.x < 0 || c.y < 0) return -1;
+    for (var f = 0; f < sizes.length; f++) {
+      final x = c.x - _origins[f];
+      if (x < sizes[f].$1) return x >= 0 && c.y < sizes[f].$2 ? f : -1;
+    }
+    return -1;
+  }
 
   /// The face arrow [id] lies on (0 on a flat board).
   int faceOf(int id) => _faces[id];
 
   /// [c] as seen on its own face: the column counted from the face's left
   /// edge.
-  Cell onFace(Cell c) => faceSize == null ? c : Cell(c.x % faceSize!, c.y);
+  Cell onFace(Cell c) => faceSizes == null ? c : Cell(c.x - _origins[faceOfCell(c)], c.y);
 
   /// The ids of the arrows on [face].
   List<int> arrowsOn(int face) => <int>[
@@ -212,7 +246,8 @@ class Puzzle {
       ];
 
   /// Cells an arrow may use: the board less its mirrors.
-  int get freeCellCount => width * height - mirrors.length;
+  int get freeCellCount =>
+      (faceSizes?.fold<int>(0, (n, f) => n + f.$1 * f.$2) ?? width * height) - mirrors.length;
 
   /// Whether the board has any of the chapter twists on it.
   bool get hasFeatures =>

@@ -1724,6 +1724,306 @@ abstract class AppLocalizations {
   /// **'The Final Arrow'**
   String get levelName200;
 
+  /// No description provided for @levelName201.
+  ///
+  /// In en, this message translates to:
+  /// **'Unboxing'**
+  String get levelName201;
+
+  /// No description provided for @levelName202.
+  ///
+  /// In en, this message translates to:
+  /// **'Parcel'**
+  String get levelName202;
+
+  /// No description provided for @levelName203.
+  ///
+  /// In en, this message translates to:
+  /// **'Crate'**
+  String get levelName203;
+
+  /// No description provided for @levelName204.
+  ///
+  /// In en, this message translates to:
+  /// **'Brick'**
+  String get levelName204;
+
+  /// No description provided for @levelName205.
+  ///
+  /// In en, this message translates to:
+  /// **'Shoebox'**
+  String get levelName205;
+
+  /// No description provided for @levelName206.
+  ///
+  /// In en, this message translates to:
+  /// **'Matchbox'**
+  String get levelName206;
+
+  /// No description provided for @levelName207.
+  ///
+  /// In en, this message translates to:
+  /// **'Lunchbox'**
+  String get levelName207;
+
+  /// No description provided for @levelName208.
+  ///
+  /// In en, this message translates to:
+  /// **'Toolbox'**
+  String get levelName208;
+
+  /// No description provided for @levelName209.
+  ///
+  /// In en, this message translates to:
+  /// **'Jack in the Box'**
+  String get levelName209;
+
+  /// No description provided for @levelName210.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookshelf'**
+  String get levelName210;
+
+  /// No description provided for @levelName211.
+  ///
+  /// In en, this message translates to:
+  /// **'Domino'**
+  String get levelName211;
+
+  /// No description provided for @levelName212.
+  ///
+  /// In en, this message translates to:
+  /// **'Tower Block'**
+  String get levelName212;
+
+  /// No description provided for @levelName213.
+  ///
+  /// In en, this message translates to:
+  /// **'Skyscraper'**
+  String get levelName213;
+
+  /// No description provided for @levelName214.
+  ///
+  /// In en, this message translates to:
+  /// **'Chest of Drawers'**
+  String get levelName214;
+
+  /// No description provided for @levelName215.
+  ///
+  /// In en, this message translates to:
+  /// **'Cupboard'**
+  String get levelName215;
+
+  /// No description provided for @levelName216.
+  ///
+  /// In en, this message translates to:
+  /// **'Wardrobe'**
+  String get levelName216;
+
+  /// No description provided for @levelName217.
+  ///
+  /// In en, this message translates to:
+  /// **'Suitcase'**
+  String get levelName217;
+
+  /// No description provided for @levelName218.
+  ///
+  /// In en, this message translates to:
+  /// **'Trunk'**
+  String get levelName218;
+
+  /// No description provided for @levelName219.
+  ///
+  /// In en, this message translates to:
+  /// **'Container'**
+  String get levelName219;
+
+  /// No description provided for @levelName220.
+  ///
+  /// In en, this message translates to:
+  /// **'Cargo'**
+  String get levelName220;
+
+  /// No description provided for @levelName221.
+  ///
+  /// In en, this message translates to:
+  /// **'Freight'**
+  String get levelName221;
+
+  /// No description provided for @levelName222.
+  ///
+  /// In en, this message translates to:
+  /// **'Shipping Lane'**
+  String get levelName222;
+
+  /// No description provided for @levelName223.
+  ///
+  /// In en, this message translates to:
+  /// **'Warehouse'**
+  String get levelName223;
+
+  /// No description provided for @levelName224.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading Bay'**
+  String get levelName224;
+
+  /// No description provided for @levelName225.
+  ///
+  /// In en, this message translates to:
+  /// **'Forklift'**
+  String get levelName225;
+
+  /// No description provided for @levelName226.
+  ///
+  /// In en, this message translates to:
+  /// **'Pallet'**
+  String get levelName226;
+
+  /// No description provided for @levelName227.
+  ///
+  /// In en, this message translates to:
+  /// **'Stacked'**
+  String get levelName227;
+
+  /// No description provided for @levelName228.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving Day'**
+  String get levelName228;
+
+  /// No description provided for @levelName229.
+  ///
+  /// In en, this message translates to:
+  /// **'Packing Tape'**
+  String get levelName229;
+
+  /// No description provided for @levelName230.
+  ///
+  /// In en, this message translates to:
+  /// **'Bubble Wrap'**
+  String get levelName230;
+
+  /// No description provided for @levelName231.
+  ///
+  /// In en, this message translates to:
+  /// **'Postage'**
+  String get levelName231;
+
+  /// No description provided for @levelName232.
+  ///
+  /// In en, this message translates to:
+  /// **'Express'**
+  String get levelName232;
+
+  /// No description provided for @levelName233.
+  ///
+  /// In en, this message translates to:
+  /// **'Overnight'**
+  String get levelName233;
+
+  /// No description provided for @levelName234.
+  ///
+  /// In en, this message translates to:
+  /// **'Sorting Office'**
+  String get levelName234;
+
+  /// No description provided for @levelName235.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to Sender'**
+  String get levelName235;
+
+  /// No description provided for @levelName236.
+  ///
+  /// In en, this message translates to:
+  /// **'Fragile'**
+  String get levelName236;
+
+  /// No description provided for @levelName237.
+  ///
+  /// In en, this message translates to:
+  /// **'This Side Up'**
+  String get levelName237;
+
+  /// No description provided for @levelName238.
+  ///
+  /// In en, this message translates to:
+  /// **'Handle with Care'**
+  String get levelName238;
+
+  /// No description provided for @levelName239.
+  ///
+  /// In en, this message translates to:
+  /// **'Heavy Load'**
+  String get levelName239;
+
+  /// No description provided for @levelName240.
+  ///
+  /// In en, this message translates to:
+  /// **'Long Haul'**
+  String get levelName240;
+
+  /// No description provided for @levelName241.
+  ///
+  /// In en, this message translates to:
+  /// **'Monolith'**
+  String get levelName241;
+
+  /// No description provided for @levelName242.
+  ///
+  /// In en, this message translates to:
+  /// **'Obelisk'**
+  String get levelName242;
+
+  /// No description provided for @levelName243.
+  ///
+  /// In en, this message translates to:
+  /// **'Pillar'**
+  String get levelName243;
+
+  /// No description provided for @levelName244.
+  ///
+  /// In en, this message translates to:
+  /// **'Column'**
+  String get levelName244;
+
+  /// No description provided for @levelName245.
+  ///
+  /// In en, this message translates to:
+  /// **'Pagoda'**
+  String get levelName245;
+
+  /// No description provided for @levelName246.
+  ///
+  /// In en, this message translates to:
+  /// **'Lighthouse'**
+  String get levelName246;
+
+  /// No description provided for @levelName247.
+  ///
+  /// In en, this message translates to:
+  /// **'Clock Tower'**
+  String get levelName247;
+
+  /// No description provided for @levelName248.
+  ///
+  /// In en, this message translates to:
+  /// **'Tall Order'**
+  String get levelName248;
+
+  /// No description provided for @levelName249.
+  ///
+  /// In en, this message translates to:
+  /// **'The Long Way Round'**
+  String get levelName249;
+
+  /// No description provided for @levelName250.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Delivery'**
+  String get levelName250;
+
   /// No description provided for @tutorialTap.
   ///
   /// In en, this message translates to:
@@ -2659,6 +2959,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Few arrows can leave a face at once. Find the one that can, and the next opens up.'**
   String get tutorialSqueeze;
+
+  /// No description provided for @chapterName8.
+  ///
+  /// In en, this message translates to:
+  /// **'The Box'**
+  String get chapterName8;
+
+  /// No description provided for @chapterBlurb8.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a cube now: a box with faces of three sizes, bigger than before.'**
+  String get chapterBlurb8;
+
+  /// No description provided for @tutorialBox.
+  ///
+  /// In en, this message translates to:
+  /// **'This block is a box: its faces come in three sizes. Turn it to see each one.'**
+  String get tutorialBox;
 
   /// No description provided for @cubeTurnLeft.
   ///

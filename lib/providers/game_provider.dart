@@ -5,7 +5,7 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' show compute, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/level_specs.dart';
@@ -22,6 +22,7 @@ import 'daily_provider.dart';
 import 'progress_provider.dart';
 import 'saved_game_provider.dart';
 import 'settings_provider.dart';
+import '../utils/perf_hooks.dart';
 
 /// Called once when a level is cleared, with the clear time and star rating.
 /// [elapsedMs] is null on an untimed level: no time was counted.
@@ -39,11 +40,15 @@ const int kTickMs = 100;
 const int kEndingStingMs = 320;
 
 /// Builds a level's board; the default runs on a background isolate so the
-/// big late boards never freeze the UI (on web it runs inline).
+/// big late boards never freeze the UI. The web has no isolates there, so
+/// it builds on the screen's own thread a face at a time, a frame between
+/// faces, rather than freezing the screen for a whole block.
 typedef PuzzleBuilder = Future<Puzzle> Function(LevelSpec spec);
 
 // coverage:ignore-start
-Future<Puzzle> defaultPuzzleBuilder(LevelSpec spec) => compute(puzzleForLevel, spec);
+Future<Puzzle> defaultPuzzleBuilder(LevelSpec spec) => kIsWeb
+    ? puzzleForLevelInSteps(spec, () => Future<void>.delayed(const Duration(milliseconds: 20)))
+    : compute(puzzleForLevel, spec);
 // coverage:ignore-end
 
 class GameNotifier extends StateNotifier<GameState> {
@@ -87,9 +92,11 @@ class GameNotifier extends StateNotifier<GameState> {
   Future<void> get ready => _ready.future;
 
   Future<void> _load(PuzzleBuilder builder) async {
+    perfMark('dealing ${spec.level}');
     final puzzle = await builder(spec);
     if (!mounted) return;
     _begin(puzzle);
+    perfMark('dealt ${spec.level}');
   }
 
   /// Puts [puzzle] on the board: fresh and playing, or — when a saved game
@@ -146,6 +153,7 @@ class GameNotifier extends StateNotifier<GameState> {
   /// beside it.
   void tapArrow(int id) {
     if (!state.isPlaying || state.removed.contains(id)) return;
+    perfMark('tap $id');
     final puzzle = state.puzzle!;
     final token = state.moveToken + 1;
     if (puzzle.canExit(id, state.removed)) {

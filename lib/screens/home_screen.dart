@@ -1137,6 +1137,7 @@ class _ChapterBand extends StatelessWidget {
       ChapterRule.pairs => Icons.link_rounded,
       ChapterRule.cube => Icons.view_in_ar_rounded,
       ChapterRule.squeeze => Icons.compress_rounded,
+      ChapterRule.box => Icons.inventory_2_rounded,
     };
     final ink = reached ? p.textInk : p.textMuted;
     final share = cleared / chapter.length;

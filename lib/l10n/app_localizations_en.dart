@@ -862,6 +862,156 @@ class AppLocalizationsEn extends AppLocalizations {
   String get levelName200 => 'The Final Arrow';
 
   @override
+  String get levelName201 => 'Unboxing';
+
+  @override
+  String get levelName202 => 'Parcel';
+
+  @override
+  String get levelName203 => 'Crate';
+
+  @override
+  String get levelName204 => 'Brick';
+
+  @override
+  String get levelName205 => 'Shoebox';
+
+  @override
+  String get levelName206 => 'Matchbox';
+
+  @override
+  String get levelName207 => 'Lunchbox';
+
+  @override
+  String get levelName208 => 'Toolbox';
+
+  @override
+  String get levelName209 => 'Jack in the Box';
+
+  @override
+  String get levelName210 => 'Bookshelf';
+
+  @override
+  String get levelName211 => 'Domino';
+
+  @override
+  String get levelName212 => 'Tower Block';
+
+  @override
+  String get levelName213 => 'Skyscraper';
+
+  @override
+  String get levelName214 => 'Chest of Drawers';
+
+  @override
+  String get levelName215 => 'Cupboard';
+
+  @override
+  String get levelName216 => 'Wardrobe';
+
+  @override
+  String get levelName217 => 'Suitcase';
+
+  @override
+  String get levelName218 => 'Trunk';
+
+  @override
+  String get levelName219 => 'Container';
+
+  @override
+  String get levelName220 => 'Cargo';
+
+  @override
+  String get levelName221 => 'Freight';
+
+  @override
+  String get levelName222 => 'Shipping Lane';
+
+  @override
+  String get levelName223 => 'Warehouse';
+
+  @override
+  String get levelName224 => 'Loading Bay';
+
+  @override
+  String get levelName225 => 'Forklift';
+
+  @override
+  String get levelName226 => 'Pallet';
+
+  @override
+  String get levelName227 => 'Stacked';
+
+  @override
+  String get levelName228 => 'Moving Day';
+
+  @override
+  String get levelName229 => 'Packing Tape';
+
+  @override
+  String get levelName230 => 'Bubble Wrap';
+
+  @override
+  String get levelName231 => 'Postage';
+
+  @override
+  String get levelName232 => 'Express';
+
+  @override
+  String get levelName233 => 'Overnight';
+
+  @override
+  String get levelName234 => 'Sorting Office';
+
+  @override
+  String get levelName235 => 'Return to Sender';
+
+  @override
+  String get levelName236 => 'Fragile';
+
+  @override
+  String get levelName237 => 'This Side Up';
+
+  @override
+  String get levelName238 => 'Handle with Care';
+
+  @override
+  String get levelName239 => 'Heavy Load';
+
+  @override
+  String get levelName240 => 'Long Haul';
+
+  @override
+  String get levelName241 => 'Monolith';
+
+  @override
+  String get levelName242 => 'Obelisk';
+
+  @override
+  String get levelName243 => 'Pillar';
+
+  @override
+  String get levelName244 => 'Column';
+
+  @override
+  String get levelName245 => 'Pagoda';
+
+  @override
+  String get levelName246 => 'Lighthouse';
+
+  @override
+  String get levelName247 => 'Clock Tower';
+
+  @override
+  String get levelName248 => 'Tall Order';
+
+  @override
+  String get levelName249 => 'The Long Way Round';
+
+  @override
+  String get levelName250 => 'Last Delivery';
+
+  @override
   String get tutorialTap => 'Tap an arrow to slide it out the way it points.';
 
   @override
@@ -1437,6 +1587,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tutorialSqueeze =>
       'Few arrows can leave a face at once. Find the one that can, and the next opens up.';
+
+  @override
+  String get chapterName8 => 'The Box';
+
+  @override
+  String get chapterBlurb8 =>
+      'Not a cube now: a box with faces of three sizes, bigger than before.';
+
+  @override
+  String get tutorialBox =>
+      'This block is a box: its faces come in three sizes. Turn it to see each one.';
 
   @override
   String get cubeTurnLeft => 'Turn to the face on the left';

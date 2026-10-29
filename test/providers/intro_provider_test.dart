@@ -45,6 +45,11 @@ void main() {
       n.due(level: 200),
       [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
     );
+    // Nor has the box: at level 250 still nothing more.
+    expect(
+      n.due(level: 250),
+      [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
+    );
     expect(n.due(chapter: chapters[2]), [ChapterRule.mirrors, ChapterRule.locks]);
     expect(n.due(), isEmpty);
     // A player who met Mirrors at 21 is shown only Locks at 41.

@@ -1,5 +1,5 @@
-// Prints the `LevelSpec` rows for levels 21–200 — the four chapters past the
-// plain rectangle, and the two chapters of fifty on the block after them — so the
+// Prints the `LevelSpec` rows for levels 21–250 — the four chapters past the
+// plain rectangle, and the three chapters of fifty on the block after them — so the
 // table in lib/data/level_specs.dart is drawn from one set of rules rather
 // than tuned a row at a time:
 //
@@ -149,6 +149,9 @@ void main() {
   for (var level = 151; level <= 200; level++) {
     _squeeze(level);
   }
+  for (var level = 201; level <= 250; level++) {
+    _box(level);
+  }
 }
 
 void _cube(int level) {
@@ -259,8 +262,74 @@ void _squeeze(int level) {
   _print(level, side, side, arrows, minLength, maxLength, timeLimitMs, 1, mirrors, locks, hidden, pairs, faces);
 }
 
+/// The proportions of the box, width : height : depth, level by level
+/// round the list: mostly taller than wide, since a phone screen is, and a
+/// different shape every level so no two in a row fold up the same.
+const List<(int, int, int)> boxShapes = <(int, int, int)>[
+  (3, 4, 2),
+  (3, 5, 2),
+  (2, 4, 3),
+  (4, 5, 2),
+  (3, 4, 3),
+];
+
+/// Levels 201–250, the box: the block is no longer a cube but a box — six
+/// faces of three sizes, front and back, two sides, top and bottom — each
+/// face a board as big as its share of the box, so the faces are bigger
+/// than the cube's and differ in shape, and the block is drawn to fill the
+/// stage. A small teaching box with no twists, three warm-up levels on
+/// 100, 140 and 170 arrows with every twist, then from level 205 a little
+/// under level 200's count (190) with two ways out of a face again
+/// (`openMoves` 2, where the squeeze had one) — the bigger, uneven faces
+/// are the new work, so the hunt itself is let off a little — gaining an
+/// arrow every third level to 205 and a twist on the levels between
+/// (mirrors by two, locks, hidden heads, pairs in turn), so every level
+/// holds a little more than the one before. The clock is the block's rule,
+/// at the cap past the warm-up.
+void _box(int level) {
+  final k = level - 200; // 1..50 in the chapter
+  final teach = k == 1;
+  final on = max(0, k - 5); // 0..45 past the warm-up
+  final arrows = switch (k) {
+    1 => 24,
+    2 => 100,
+    3 => 140,
+    4 => 170,
+    _ => 190 + (on + 2) ~/ 3,
+  };
+  final int mirrors, locks, hidden, pairs;
+  if (teach) {
+    (mirrors, locks, hidden, pairs) = (0, 0, 0, 0);
+  } else if (k < 5) {
+    (mirrors, locks, hidden, pairs) = (2 * faces + (k - 2) * 6, faces + k - 2, faces + k - 2, faces + k - 2);
+  } else {
+    // Twist steps so far: one on every level that did not gain an arrow.
+    final steps = on - (arrows - 190);
+    int taken(int twist) => steps <= twist ? 0 : (steps - twist + 3) ~/ 4;
+    mirrors = 40 + 2 * taken(0);
+    locks = 16 + taken(1);
+    hidden = 15 + taken(2);
+    pairs = 15 + taken(3);
+  }
+  // The box's shape, scaled so its six faces hold ~9.5 free cells an arrow
+  // beside the mirrors.
+  final (rx, ry, rz) = teach ? boxShapes.first : boxShapes[k % boxShapes.length];
+  final area = arrows * cubeCellsPerArrow + mirrors;
+  final unit = sqrt(area / (2 * (rx * ry + ry * rz + rx * rz)));
+  final (w, h, d) = ((rx * unit).round(), (ry * unit).round(), (rz * unit).round());
+  final shortest = min(w, min(h, d));
+  final minLength = shortest < 8 ? 2 : 3;
+  final maxLength = min(shortest - 1, teach ? 4 : min(14, max(5, shortest - 1)));
+  final slack = (teach ? 25.0 : 15.0) + 2.0 * faces;
+  final think = mirrors * 1.0 + locks * 4.0 + hidden * 3.0 + pairs * 3.0;
+  final seconds = arrows * (teach ? 3.0 : cubePace) + slack + think;
+  final timeLimitMs = (min((seconds * 1000).round(), 599000) * kClockTrim).round();
+  _print(level, w, h, arrows, minLength, maxLength, timeLimitMs, teach ? 3 : 2, mirrors, locks, hidden, pairs, faces,
+      depth: d);
+}
+
 void _print(int level, int width, int height, int arrows, int minLength, int maxLength, int timeLimitMs,
-    int openMoves, int mirrors, int locks, int hidden, int pairs, int faces) {
+    int openMoves, int mirrors, int locks, int hidden, int pairs, int faces, {int depth = 0}) {
   final features = <String>[
     if (mirrors > 0) 'mirrors: $mirrors',
     if (locks > 0) 'locks: $locks',
@@ -268,7 +337,7 @@ void _print(int level, int width, int height, int arrows, int minLength, int max
     if (pairs > 0) 'pairs: $pairs',
   ];
   final featureText = features.isEmpty ? '' : ', features: LevelFeatures(${features.join(', ')})';
-  final faceText = faces > 0 ? ', faces: $faces' : '';
+  final faceText = (faces > 0 ? ', faces: $faces' : '') + (depth > 0 ? ', depth: $depth' : '');
   // ignore: avoid_print
   print(
     '  LevelSpec(level: $level, width: $width, height: $height, arrows: $arrows, '

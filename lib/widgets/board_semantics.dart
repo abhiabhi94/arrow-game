@@ -21,8 +21,8 @@ String boardLabel(AppLocalizations l10n, GameState state, {int? face}) {
     final ids = puzzle.arrowsOn(face);
     return l10n.boardFaceLabel(
       face + 1,
-      puzzle.faceWidth,
-      puzzle.height,
+      puzzle.faceWidthOf(face),
+      puzzle.faceHeightOf(face),
       ids.where((id) => !state.removed.contains(id)).length,
       ids.length,
     );

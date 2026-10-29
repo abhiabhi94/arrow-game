@@ -32,7 +32,15 @@ climbing on from level 150's by an arrow or a twist a level to 200 arrows,
 never more than thirty-four on a face, under a clock held at its
 ten-minute cap (trimmed like every clock). It has no chapter card: it
 is the block again (`ChapterRule.hasCard`), so level 151 opens straight
-on the board with a one-line tip under it. Every flat chapter opens on a
+on the board with a one-line tip under it — and then **The Box** (201–250,
+an eighth chapter, no card either, a one-line tip under level 201): the
+block is no longer a cube but a cuboid (`LevelSpec.depth`), mostly taller
+than wide like a phone, its faces in three sizes and bigger than the
+cube's (up to fifty-five arrows on the front), drawn to fill the stage;
+after a 24-arrow teaching box and a three-level warm-up it starts at 190
+arrows with every twist on every face, two ways out of a face again
+(`openMoves` 2: the bigger, uneven faces are the new work) and climbs by
+an arrow or a twist a level to 205, on the capped clock. Every flat chapter opens on a
 small teaching board under a card that is one line and a self-playing
 demo of the twist, then climbs steadily from 30 arrows at its second
 level to 150 at its twentieth (the same top for every chapter: the twist
@@ -68,8 +76,9 @@ flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build 
 node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-viewport screenshots -> shots/
 node tool/screenshot.mjs --levels 21,41,61,81 --daily                # each chapter's card (mid-demo) + teaching board, and today's daily board
 node tool/screenshot.mjs --levels 101,140 --keys Shift+ArrowRight,Shift+ArrowUp  # the block in 3D, then turned right and up
+node tool/screenshot.mjs --levels 201,250 --keys Shift+ArrowRight,Shift+ArrowUp  # the box: faces of three sizes
 node tool/screenshot.mjs --levels 120 --drag -90,40                  # a drag across the block: it stays where it is left
-dart run tool/make_levels.dart        # prints levels 21-200 from the chapter rules (paste into lib/data/level_specs.dart)
+dart run tool/make_levels.dart        # prints levels 21-250 from the chapter rules (paste into lib/data/level_specs.dart)
 dart run tool/pick_variants.dart      # the first variant of each level from 21 that keeps every pinned rule
 dart run tool/level_report.dart 41 3  # a level (and its next 3 variants): arrows placed, twists placed, fill, open moves
 node tool/screenshot.mjs --levels 3 --resume                        # + a saved game: Continue card, Welcome back
@@ -83,6 +92,9 @@ node tool/screenshot.mjs --levels 81 --crash 4,4,450                # a pair bum
 node tool/screenshot.mjs --levels 1 --riddle 2,4,2,3,2,2            # spend all 3 lives -> Out of lives, the riddle, its hint, solved
 node tool/screenshot.mjs --lang hi --settings --levels 1 --riddle 2,4,2,3,2,2 --riddle-answer aam  # the same in Hindi
 node tool/screenshot.mjs --levels 1 --riddle-hint 2,4                # spend the 3 hints -> the riddle button, its riddle, the hint it buys
+flutter build web --release --dart-define=UNLOCK_ALL=true --no-web-resources-cdn --no-wasm-dry-run
+node tool/perf.mjs --levels 1,20,100,150,200,201,230,250 --throttle 4  # phone-speed frame budget (CI job "Performance"); fails over budget
+node tool/perf.mjs --levels 250 --throttle 1 --cpu-profile           # + CPU profiles of idle and play (a --profile web build keeps the names)
 
 flutter run                     # debug build = "Arrow Testing", all levels unlocked
 flutter run --release           # release build = "Arrow", locked progression
@@ -255,7 +267,7 @@ lib/
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N;
                          dealFace re-deals a cube face on its own until it keepsRules
     answer_match.dart    judging a typed riddle answer (exact / close / wrong)
-  data/level_specs.dart  the 200 levels (board size, arrow count, length range, clock, faces)
+  data/level_specs.dart  the 250 levels (board size, arrow count, length range, clock, faces, depth)
   data/riddle_bank.dart  250 riddles in English + 250 पहेलियाँ in Hindi
   models/              level_spec, level_progress (stars), settings, game_state (phases, moves),
                        bump_motion (the blocked-tap animation), saved_game (resume snapshot),
@@ -274,7 +286,7 @@ lib/
   widgets/             puzzle_board (painter + slide/bump animations; one face of a cube), board_toolbar,
                        cube_stage (the whole block in 3D: drag, settle, taps by ray), cube_map (turn keys),
                        keycap (raised 3D buttons), lives_indicator, timer_bar, stars_row, result_card, riddle_card
-  utils/               format.dart, labels.dart (level names)
+  utils/               format.dart, labels.dart (level names), perf_hooks.dart (?perf: the profiler's hooks)
   l10n/                app_en.arb (+ generated app_localizations*.dart)
 ```
 
@@ -342,19 +354,31 @@ Key patterns:
   along its own track and sprung back with the other, the tether lit
   between them, so the second arrow is seen to be tied to the first
   rather than appearing to bump on its own.
-- **The block** (levels 101–150, after the hundred flat ones, and the squeeze, 151–200, after it; `LevelSpec.faces` = 6, `Puzzle.cube`,
-  `engine/cube.dart`): a cube level is six square faces, each a board of its
-  own, laid side by side in one strip of the *same* `Puzzle` — face `f` is
-  columns `f·n … f·n+n-1` (`faceSize` = n). `traceRay` takes an `originX`, so
+- **The block** (levels 101–150, after the hundred flat ones, the squeeze, 151–200, and the box, 201–250, after it; `LevelSpec.faces` = 6, `Puzzle.cube`,
+  `engine/cube.dart`): a block level is six faces, each a board of its
+  own, laid side by side in one strip of the *same* `Puzzle` along its top
+  — `Puzzle.faceSizes` is each face's (width, height), `faceOriginOf(f)`
+  the column it starts at, `faceWidthOf` / `faceHeightOf` its size, and
+  the strip is as tall as the tallest face (`faceOfCell` is -1 under a
+  shorter one). On a cube the six are equal squares; on a **box**
+  (`LevelSpec.depth` > 0, `isBox`: width × height × depth) the front and
+  back are width×height, the sides depth×height and the top and bottom
+  width×depth (`LevelSpec.faceSizeOf`, faces numbered as in `cube.dart`:
+  0 front, 1 right, 2 back, 3 left, 4 top, 5 bottom), and
+  `Puzzle.blockSize` reads the box back off faces 0 and 1. `traceRay` takes an `originX` and the face's own size, so
   a ray ends at its own face's edge (the arrow leaves the block there), and
   `neighboursOf` / `openTapRisk` never look across a seam; locks and pairs
   stay on one face (asserted). Every rule above, the game state, the saved
   game (ids are the strip's), hints and the twists therefore work face by
   face unchanged — the faces never interfere, which is the point: a mirror,
   lock, hidden head or pair on the block means exactly what it means flat.
-  `LevelSpec`'s size is a face's; its `arrows` and `features` are the whole
-  block's, shared out by `faceSpecs` (odd ones spread round the block, each
-  face seeded from the level's seed and its number), and the generator
+  `LevelSpec`'s width and height are the front face's; its `arrows` and
+  `features` are the whole block's, shared out by `faceSpecs` by face area
+  (`_shareByArea`: one to every face first when there are enough to go
+  round, the rest by area, the odd ones spread round the block — on a
+  cube exactly the old even share, which `level_specs_test` pins over
+  levels 101–200 — each face seeded from the level's seed and its
+  number), and the generator
   deals each face with `PuzzleGenerator.dealFace` — up to `kFaceDeals`
   seeds until the face `keepsRules` (full count, every twist, mirrors hit,
   the choice held) — so a cube level needs no variant.
@@ -366,12 +390,26 @@ Key patterns:
   `openingPose` (a lean of `kOpeningYaw` / `kOpeningPitch`, so the top and
   the right side show beside the face being played and the block reads as
   a block); after that the pose is the player's. For each face it gives a perspective `Matrix4` (`faceMatrix`,
-  column-major) that draws a plain square face widget — the face's own
+  column-major) that draws a plain face widget of the face's own size
+  (`CubeCamera(box:)`, `faceSize(face)`) — the face's own
   `PuzzleBoard(face:)` on a card — where that face lies on the turned
   block; faces turned away are culled and the rest painted far to near
   (`visibleFaces`), each shaded by how it faces the light (the face being
   played keeps its full light and a primary rim), over a pool of light
-  with the block's shadow on the floor. **A finger turns the block
+  with the block's shadow on the floor. **The block fills the stage:**
+  `CubeStage(box:)` takes the block in cells and picks the cell size that
+  keeps its outline (`CubeCamera.bounds`, the eight corners projected),
+  in the opening lean **with the face being played in front**, within
+  `kCubeFill` (0.94) of the stage both ways (`_fit(face)`), and eases to
+  the next face's fit along with a turn (`_resizeTo`, a second controller
+  on `kCubeTurn`; a jump with motion reduced). The first cut drew a
+  cube's edge at 0.6 of the stage's shorter side, which left a tall phone
+  half empty; the next fitted the block with *any* face in front, so a
+  box with a wide top stayed as small as that top allowed while its tall
+  front was played — the front a third of the stage on a phone, about
+  12 px a cell. Fitted to the face played, a box's front is about half the
+  stage and runs nearly edge to edge. A pinch adds up to `kCubeMaxZoom`
+  (1.5) on top. **A finger turns the block
   freely** (`onScale*`: one finger turns, two zoom up to `kCubeMaxZoom`,
   where the front face fills the stage), and **it stays where the finger
   leaves it** — the first cut eased it back to a leaning pose on release,
@@ -446,7 +484,7 @@ Key patterns:
   neighbour can leave before, preferring one not free at the start). One
   twist per arrow. `LevelFeatures` on `LevelSpec` says how many of each. It runs on a background isolate
   (`defaultPuzzleBuilder` → `compute`) behind `GamePhase.loading`; on web
-  it runs inline (~0.4 s for level 20, about 2.5 s for level 60 and ~4 s for
+  it runs inline, a block a face at a time (~0.4 s for level 20, about 2.5 s for level 60 and ~4 s for
   the 52×84 level 80, which takes 1.7× level 60's time in the VM, and level
   100's 57×92 board about 2.5 s in the VM). `dart run tool/level_report.dart
   [level] [extraSeeds]` prints arrows placed vs asked, fill, depth,
@@ -701,7 +739,7 @@ Key patterns:
   roads and nodes for the open ones only. Before this, a player past level
   100 had a hundred nodes to scroll through to find level 101 on the trail;
   now the cleared chapters are five headings above it. A locked node still shows its number (a small lock
-  badge sits on it) and the journey heading reads "N of 200 cleared", so the
+  badge sits on it) and the journey heading reads "N of 250 cleared", so the
   player can see what is ahead and where the trail ends. The header (`_HomeHeader`, a
   `SliverPersistentHeaderDelegate`) is **pinned**: the trail is a hundred
   levels long, and the star count and the way into Settings should not be a
@@ -720,7 +758,7 @@ Key patterns:
   count, lengths, clock, `openMoves` (3 on levels 1–3 and on every teaching
   board, 2 otherwise: how many taps the generator leaves available at once),
   `features` (mirrors, locks, hidden, pairs), `faces` and `variant`. Levels
-  1–20 are untouched from the first release. **Levels 21–200 are printed by
+  1–20 are untouched from the first release. **Levels 21–250 are printed by
   `tool/make_levels.dart`** from the chapter rules rather than tuned a row
   at a time — the first hundred levels were the same level played eighty
   times, climbing to 464 arrows and a fifteen-minute read with nothing new
@@ -738,7 +776,7 @@ Key patterns:
   3.0 s in Mirrors to 3.4 s in Pairs, since every twist is one more thing
   to read on every arrow — plus 1 s a mirror, 4 s a lock and 3 s a hidden
   head or tether, the whole thing capped at 599 s and then trimmed to
-  `kClockTrim` (85.5%: 95%, then another 10% off that, every level 1–200,
+  `kClockTrim` (85.5%: 95%, then another 10% off that, every level 1–250,
   the table's numbers already trimmed; the daily board keeps its flat five minutes, which its card
   promises; the tests read the rule's paces back through `untrimmed`), so a later chapter's
   level is never shorter on the clock than the chapter before's; mirrors
@@ -776,10 +814,36 @@ Key patterns:
   `level_specs_test` pins that (`openMoves` 1, a strict climb, ≤ 34 a
   face) and the generator test that the squeeze is a harder hunt than the
   end of the block.
+  **The box (201–250)**, `tool/make_levels.dart` `_box()`: the shape
+  turns through `boxShapes` (width : height : depth, mostly taller than
+  wide, a different one every level) scaled to ~9.5 free cells an arrow
+  over the six faces, `maxLength` under the box's shortest edge. A
+  teaching box of 24 arrows with no twists (6×8×4, `openMoves` 3), a
+  warm-up of 100, 140 and 170 arrows with every twist, then from 205 190
+  arrows (a little under level 200's work: `openMoves` is back to 2,
+  since the big uneven faces are the new work) gaining an arrow every
+  third level and a twist on the levels between (mirrors by two, locks,
+  hidden heads, pairs in turn) to 205 arrows, clock at the cap.
+  `level_specs_test` pins the curve (a strict climb, every twist on every
+  face, ≤ 55 arrows a face, the end past level 200's work) and the
+  generator test deals every box in full (variants 1 on 243 and 248).
+  **A box face is picked from `kBoxFaceCandidates` (5) boards**
+  (`PuzzleGenerator.faceCandidatesFor`), not the flat rule's 12–24: with
+  the flat rule a box took 3–7 s to deal as JavaScript, many times that
+  on a phone, and the web build froze; with five it is ~0.7 s (1.3 s at
+  worst) on the same machine and every face still keeps its rules. Cube
+  levels keep the flat rule — their boards must not change under saved
+  games. And on the web, which has no isolate to deal on, the default
+  builder deals a block **a face at a time** (`puzzleForLevelInSteps`,
+  the same board as `puzzleForLevel`, a 20 ms pause before each face), so
+  the loading screen keeps drawing instead of freezing for the whole
+  block.
 - **Chapters and the daily board:** `data/chapters.dart` is the map (five
   flat chapters of `kChapterLength` = 20 (`kFlatChapterCount`), then the
-  block from `kFirstCubeLevel` = 101 to 150 and the squeeze from
-  `kFirstSqueezeLevel` = 151 to 200 (`ChapterRule.onBlock` for both); each `Chapter` carries its own
+  block from `kFirstCubeLevel` = 101 to 150, the squeeze from
+  `kFirstSqueezeLevel` = 151 to 200 and the box from `kFirstBoxLevel` =
+  201 to 250 (`ChapterRule.onBlock` for all three; the daily board stays
+  the block's); each `Chapter` carries its own
   `firstLevel`/`lastLevel`; `chapterOf`, `ruleTaughtAt`,
   `chapterForProgress`, `dailyChapterFor` — the block once level 100 is
   cleared, `kFlatChapterCount` + 1);
@@ -790,8 +854,9 @@ Key patterns:
   and the fog demo taps the hidden arrow first for the same reason; the
   block's demo is a tiny cube with one arrow on each face round its middle,
   and the card turns the block to each arrow's face before playing it; the
-  squeeze has no card, `ChapterRule.hasCard`, since it brings nothing new
-  to show and its demo read as a frivolous extra).
+  squeeze and the box have no card, `ChapterRule.hasCard`, since they
+  bring nothing new a line under the board cannot say and the squeeze's
+  demo read as a frivolous extra).
   `widgets/chapter_demo.dart` runs that script on a real `GameNotifier`
   every `kDemoStep`, rests `kDemoRest` on the cleared board and starts over,
   so the card is a title, one line and a loop of the rule being played
@@ -1026,6 +1091,83 @@ Key patterns:
     was 34). Cells on late boards are the game's own problem and the zoom's
     answer (`kFingerCellPx`).
 
+## Performance (a phone, not a laptop)
+
+The game lagged on phones — a tap, then a wait before the arrow went — while
+every test and screenshot passed, because nothing measured it. Now
+`tool/perf.mjs` does, and CI fails a change that breaks its budget (job
+"Performance (phone-speed frame budget)", which also posts the table on the
+PR). It plays levels of the **release** web build in headless Chromium with
+the CPU throttled 4× through the DevTools protocol (about a mid-range
+phone's JavaScript against a CI runner): the deal, 3 s idle, the block
+turning and dragged, arrows played with the keyboard. The app reports every
+frame's build and raster time itself (`lib/utils/perf_hooks.dart`,
+Flutter's `FrameTiming`, printed as `perf:frames`), and what is budgeted is
+a frame's **Dart work** — build, layout and paint — the same code a phone
+runs, so it scales with the throttle. Drawing is *not* budgeted: a runner
+has no GPU, Chromium draws in software (most of a frame's time there is
+`createImageBitmap`), and that says little about a phone's GPU; it is
+reported for reading. The hooks live only in a build with every level open
+and only on a page opened with `?perf`: `?level=N` opens a level straight
+onto its board (no semantics tree — the screenshot harness has to switch it
+on to find buttons, and it is real work on a big board) and `perfMark`
+prints when a deal starts and ends, and each tap.
+
+What the profiler found, and what keeps a frame cheap — keep these:
+- **The clock rebuilt the whole screen ten times a second.** The game
+  screen watches `GameState.withoutClock` (`select`), a record of every
+  field but `elapsedMs`; the clock is `_Clock`'s alone (in its own
+  `RepaintBoundary`). A widget test pins that a tick leaves the board
+  widget untouched. Anything new on the game screen that needs the time
+  goes in a widget of its own that watches it.
+- **One painter drew the whole board every frame of every slide.** The
+  board is two layers (`BoardLayer`): the board at rest (grid, mirrors,
+  washes, every arrow lying still) and, over it, what moves (arrows sliding,
+  bumping, taking a hit, popping open or coming out of the fog — the
+  painter's `_live` set — flashes, rings, the hint, the cursor). The still
+  layer repaints only when the board at rest changes (`_stillChanged`); the
+  moving one every frame, but it holds a handful of things.
+- **No bitmap of the still layer.** The web renderer keeps no raster
+  cache, so the still layer's picture is replayed path by path every frame
+  (on a phone, by its GPU). Drawing it once into an image
+  (`Picture.toImageSync`) looked like the fix and was tried: on CanvasKit
+  making the image reads its pixels back from the GPU (`SkImage_readPixels`,
+  ~100 ms a board on the runner, and it lands right after a move), which
+  cost more than it saved. Don't bring it back without the profiler
+  showing otherwise.
+- **A turn re-laid-out every face.** The block's faces are laid out once at
+  `_layoutUnit` (the largest fit of any face) and scaled to the size on
+  screen by their transforms, so growing or shrinking the block with a turn
+  (`_resizeTo`) repaints nothing; `CubeStageState.stagePointOf` maps a point
+  on a face as laid out to the stage, which the tap handling and the tests
+  use.
+- **Everything that moves on its own sits behind its own
+  `RepaintBoundary`**: each board layer, the clock, the arrows-out counter,
+  the lives, the turn keys, the toolbar, the block's stage, and the whole
+  play column under the bump's jolt and the clear's hop (which move it
+  every frame). Without them a repaint anywhere in the column — a heart
+  shaking — repainted the block, every face and its shadow with it.
+- **An arrow leaving one face redrew every face showing**, because the
+  still layer compared the whole `removed` set; it compares only the
+  arrows on its own face (`_changedHere`).
+- **An arrow's body at rest is built once** (`_restingBodies`, by puzzle,
+  arrow, cell size and whether the head shows): its rounded corners and
+  its dashes were most of the cost of re-drawing a face when a move
+  starts.
+- **On the web a frame's rebuild runs before the callbacks of the
+  animations that ended in it** (natively, and in `flutter_test`, those
+  callbacks run first). A locked tap landing in the frame the last
+  pointer ended in disposed that pointer's controller, and its
+  `whenComplete` disposed it again — a JS error only the profiler, which
+  plays the real web build and fails on any, could see. A controller's
+  completion disposes it only while it is still the one in its slot.
+- `boardPaintCounts` (the painters' own count, by layer) is what
+  `test/widgets/game_screen_test.dart` pins: a clock tick draws neither
+  layer, and a whole slide draws the board at rest at most twice. That
+  holds on every platform — the Android app runs the same widgets, native
+  instead of compiled to JavaScript, so it had the same faults, milder —
+  and it is the check that runs without a browser.
+
 ## Testing
 
 - `flutter test` + `tool/coverage.sh`. The gate excludes generated l10n,
@@ -1086,6 +1228,12 @@ folder, since the preview deploy wipes its own folder on every push) and
 are removed with the comments when the PR closes. The guideline test uses
 the hand-built sample board: on a real late level the arrow nodes are far
 under 48 px, which is the game's design and the zoom's job, not a failure.
+
+Job "Performance (phone-speed frame budget)" builds the release web app with
+every level open and runs `tool/perf.mjs` over a level from every chapter at
+4× CPU throttle (see **Performance** above): it fails when a frame's Dart work
+or a deal's freeze goes over `BUDGETS`, uploads `perf/` (the JSON and the
+table) and keeps a sticky comment with the table on the PR.
 
 Job "Debug APK" builds `flutter build apk --debug` ("Arrow Testing", every
 level unlocked), uploads it as the `arrow-debug-apk` artifact and, on a PR,

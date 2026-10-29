@@ -59,10 +59,12 @@ class LevelSpec {
     this.variant = 0,
     this.features = LevelFeatures.none,
     this.faces = 0,
+    this.depth = 0,
     this.timed = true,
     this._seed,
   })  : assert(level >= 0),
-        assert(faces == 0 || (faces >= 1 && width == height)),
+        assert(faces == 0 || (faces == 6 && (depth > 0 || width == height))),
+        assert(depth == 0 || faces == 6),
         assert(openMoves >= 1),
         assert(variant >= 0),
         assert(width >= 3 && height >= 3),
@@ -112,11 +114,32 @@ class LevelSpec {
   final LevelFeatures features;
 
   /// How many faces a cube level has (six), or 0 for a flat board. Each
-  /// face is a square [width]×[height] board of its own ([faceSpecs]); the
-  /// player plays one at a time and turns the block to reach the next.
+  /// face is a board of its own ([faceSpecs]); the player plays one at a
+  /// time and turns the block to reach the next.
   final int faces;
 
+  /// The block's depth in cells, front to back, when it is a box rather
+  /// than a cube; 0 for a cube ([width] deep) or a flat board. A box is
+  /// [width] wide, [height] tall and [depth] deep: its front and back are
+  /// [width]×[height], its sides [depth]×[height] and its top and bottom
+  /// [width]×[depth].
+  final int depth;
+
   bool get isCube => faces > 0;
+
+  /// Whether the block is a box with faces of different sizes.
+  bool get isBox => depth > 0 && (depth != width || width != height);
+
+  /// The block's depth in cells: [depth], or [width] on a cube.
+  int get blockDepth => depth > 0 ? depth : width;
+
+  /// The size of [face] of the block (faces numbered as `engine/cube.dart`
+  /// numbers them: 0 front, 1 right, 2 back, 3 left, 4 top, 5 bottom).
+  (int, int) faceSizeOf(int face) => switch (face) {
+        0 || 2 => (width, height),
+        1 || 3 => (blockDepth, height),
+        _ => (width, blockDepth),
+      };
 
   final int? _seed;
 
@@ -127,33 +150,75 @@ class LevelSpec {
 
   bool get isDaily => level == dailyLevel;
 
-  /// Cells on the board, every face of a cube counted.
-  int get cellCount => width * height * (isCube ? faces : 1);
+  /// Cells on the board, every face of a block counted.
+  int get cellCount {
+    if (!isCube) return width * height;
+    var n = 0;
+    for (var f = 0; f < faces; f++) {
+      final (w, h) = faceSizeOf(f);
+      n += w * h;
+    }
+    return n;
+  }
 
-  /// A cube level's faces as boards of their own: the arrows and the twists
-  /// shared out between them as evenly as they go (the odd ones spread
-  /// round the block rather than heaped on the first face), each face
-  /// seeded from the level's seed and its number. Empty for a flat board.
+  /// [total] shared out over the faces by their area — evenly on a cube —
+  /// the odd ones going to the faces with the biggest leftover share, ties
+  /// spread round the block from [offset] rather than heaped on the first
+  /// face.
+  ///
+  /// When there are enough to go round, every face gets one first, so a
+  /// small face of a box is never left without a twist the level has.
+  List<int> _shareByArea(int total, int offset) {
+    final areas = <int>[
+      for (var f = 0; f < faces; f++) faceSizeOf(f).$1 * faceSizeOf(f).$2,
+    ];
+    final sum = areas.fold<int>(0, (a, b) => a + b);
+    final base = total >= faces ? 1 : 0;
+    final rest = total - base * faces;
+    final out = <int>[for (final a in areas) base + rest * a ~/ sum];
+    final order = List<int>.generate(faces, (f) => f)
+      ..sort((a, b) {
+        final ra = rest * areas[a] % sum, rb = rest * areas[b] % sum;
+        if (ra != rb) return rb.compareTo(ra);
+        return ((a + offset) % faces).compareTo((b + offset) % faces);
+      });
+    var left = total - out.fold<int>(0, (a, b) => a + b);
+    for (final f in order) {
+      if (left == 0) break;
+      out[f]++;
+      left--;
+    }
+    return out;
+  }
+
+  /// A block's faces as boards of their own: the arrows and the twists
+  /// shared out between them by area — evenly on a cube, the odd ones
+  /// spread round the block rather than heaped on the first face — each
+  /// face its own size and seeded from the level's seed and its number.
+  /// Empty for a flat board.
   List<LevelSpec> get faceSpecs {
     if (!isCube) return const <LevelSpec>[];
-    int share(int total, int face, int offset) =>
-        total ~/ faces + ((face + offset) % faces < total % faces ? 1 : 0);
+    final arrowShare = _shareByArea(arrows, 0);
+    final mirrorShare = _shareByArea(features.mirrors, 1);
+    final lockShare = _shareByArea(features.locks, 3);
+    final hiddenShare = _shareByArea(features.hidden, 5);
+    final pairShare = _shareByArea(features.pairs, 2);
     return <LevelSpec>[
       for (var f = 0; f < faces; f++)
         LevelSpec(
           level: level,
-          width: width,
-          height: height,
-          arrows: share(arrows, f, 0),
+          width: faceSizeOf(f).$1,
+          height: faceSizeOf(f).$2,
+          arrows: arrowShare[f],
           minLength: minLength,
           maxLength: maxLength,
           timeLimitMs: timeLimitMs,
           openMoves: openMoves,
           features: LevelFeatures(
-            mirrors: share(features.mirrors, f, 1),
-            locks: share(features.locks, f, 3),
-            hidden: share(features.hidden, f, 5),
-            pairs: share(features.pairs, f, 2),
+            mirrors: mirrorShare[f],
+            locks: lockShare[f],
+            hidden: hiddenShare[f],
+            pairs: pairShare[f],
           ),
           seed: seed * 31 + (f + 1) * 104_729,
         ),
@@ -182,6 +247,7 @@ class LevelSpec {
       variant: variant,
       features: features,
       faces: faces,
+      depth: depth,
       timed: timed,
       seed: _seed,
     );
@@ -203,6 +269,7 @@ class LevelSpec {
       variant: variant,
       features: features,
       faces: faces,
+      depth: depth,
       timed: false,
       seed: _seed,
     );
@@ -221,12 +288,15 @@ class LevelSpec {
         variant: variant,
         features: features,
         faces: faces,
+        depth: depth,
         timed: timed,
         seed: _seed,
       );
 
   @override
-  String toString() => isCube
+  String toString() => isBox
+      ? 'LevelSpec($level: a ${width}x${height}x$depth box, $arrows arrows, ${timeLimitMs}ms)'
+      : isCube
       ? 'LevelSpec($level: $faces faces of ${width}x$height, $arrows arrows, ${timeLimitMs}ms)'
       : 'LevelSpec($level: ${width}x$height, $arrows arrows, ${timeLimitMs}ms)';
 }

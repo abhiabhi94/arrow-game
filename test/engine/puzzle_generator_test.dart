@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/data/level_specs.dart';
+import 'package:arrow_game/engine/puzzle.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
 import 'package:arrow_game/models/level_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,12 +13,13 @@ void main() {
       final sw = Stopwatch()..start();
       final p = puzzleForLevel(spec);
       sw.stop();
-      expect(p.width, spec.width * (spec.isCube ? spec.faces : 1));
-      expect(p.height, spec.height);
+      final faceSizes = [for (var f = 0; f < spec.faces; f++) spec.faceSizeOf(f)];
+      expect(p.width, spec.isCube ? faceSizes.fold<int>(0, (w, f) => w + f.$1) : spec.width);
+      expect(p.height, spec.isCube ? faceSizes.map((f) => f.$2).reduce(max) : spec.height);
       expect(p.isCube, spec.isCube);
       if (spec.isCube) {
         expect(p.faceCount, spec.faces);
-        expect(p.faceWidth, spec.width);
+        expect(p.faceSizes, faceSizes);
       }
       expect(p.arrowCount, spec.arrows, reason: 'level ${spec.level} arrow count');
       expect(p.isSolvable, isTrue, reason: 'level ${spec.level} solvable');
@@ -43,7 +45,8 @@ void main() {
         expect(used / spec.freeCellCount, greaterThanOrEqualTo(teaching ? 0.4 : 0.7), reason: 'level ${spec.level} fill');
         for (var f = 0; f < p.faceCount; f++) {
           final onFace = p.arrowsOn(f).fold<int>(0, (n, id) => n + p.arrows[id].length);
-          final free = spec.width * spec.height - p.mirrors.keys.where((m) => p.faceOfCell(m) == f).length;
+          final (fw, fh) = spec.faceSizeOf(f);
+          final free = fw * fh - p.mirrors.keys.where((m) => p.faceOfCell(m) == f).length;
           expect(onFace / free, greaterThanOrEqualTo(teaching ? 0.3 : 0.6), reason: 'level ${spec.level} face $f fill');
         }
       } else {
@@ -55,8 +58,9 @@ void main() {
       expect(p.mirrors, hasLength(f.mirrors), reason: 'level ${spec.level} mirrors');
       for (final m in p.mirrors.keys) {
         // Mirrors stand clear of the edge (of their face) and of each other.
-        expect(p.onFace(m).x, inInclusiveRange(kMirrorMargin, spec.width - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
-        expect(m.y, inInclusiveRange(kMirrorMargin, spec.height - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
+        final face = p.faceOfCell(m);
+        expect(p.onFace(m).x, inInclusiveRange(kMirrorMargin, p.faceWidthOf(face) - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
+        expect(m.y, inInclusiveRange(kMirrorMargin, p.faceHeightOf(face) - 1 - kMirrorMargin), reason: 'level ${spec.level} $m');
         for (final other in p.mirrors.keys) {
           if (other == m) continue;
           expect((m.x - other.x).abs() > 1 || (m.y - other.y).abs() > 1, isTrue, reason: 'level ${spec.level} $m $other');
@@ -123,6 +127,29 @@ void main() {
     expect(c.arrowCount, spec.arrows);
   });
 
+  test('built a face at a time, a level is the same board, with a pause before each face', () async {
+    String shape(Puzzle p) =>
+        '${p.faceSizes} ${p.arrows.map((a) => a.toString()).join()} ${p.mirrors} ${p.locks} ${p.hidden} ${p.pairs}';
+    for (final level in <int>[9, 120, 201, 205]) {
+      final spec = specForLevel(level);
+      var pauses = 0;
+      final stepped = await puzzleForLevelInSteps(spec, () async => pauses++);
+      expect(shape(stepped), shape(puzzleForLevel(spec)), reason: 'level $level');
+      expect(pauses, spec.isCube ? spec.faces : 1, reason: 'level $level');
+    }
+  });
+
+  test('a box picks each face from fewer boards; a cube is dealt as it always was', () {
+    expect(PuzzleGenerator.faceCandidatesFor(specForLevel(150)), isNull);
+    expect(PuzzleGenerator.faceCandidatesFor(specForLevel(200)), isNull);
+    expect(PuzzleGenerator.faceCandidatesFor(specForLevel(201)), PuzzleGenerator.kBoxFaceCandidates);
+    expect(PuzzleGenerator.faceCandidatesFor(specForLevel(250)), PuzzleGenerator.kBoxFaceCandidates);
+    // A face of a box, dealt from five boards, keeps every rule.
+    final face = specForLevel(230).faceSpecs.first;
+    final p = PuzzleGenerator.dealFace(face, candidates: PuzzleGenerator.kBoxFaceCandidates);
+    expect(PuzzleGenerator.keepsRules(face, p), isTrue);
+  });
+
   test('later levels are more tangled than the first', () {
     final first = puzzleForLevel(specForLevel(1));
     final last = puzzleForLevel(specForLevel(100));
@@ -187,7 +214,7 @@ void main() {
   test('on the block the faces keep to themselves and grow deeper level by level', () {
     // Every arrow leaves by its own face, and nothing on one face waits for
     // anything on another.
-    for (final level in <int>[101, 120, 135, 150, 151, 175, 200]) {
+    for (final level in <int>[101, 120, 135, 150, 151, 175, 200, 201, 230, 250]) {
       final p = puzzleForLevel(specForLevel(level));
       for (final a in p.arrows) {
         final face = p.faceOf(a.id);
