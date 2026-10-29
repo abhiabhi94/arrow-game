@@ -14,7 +14,7 @@ Future<void> _settle(WidgetTester tester, int ms) async {
 
 /// Taps grid [cell] on the (4x3) tutorial board.
 Future<void> _tapCell(WidgetTester tester, Cell cell) async {
-  final board = find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint));
+  final board = find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint)).first;
   final rect = tester.getRect(board);
   final cs = rect.width / 4;
   await tester.tapAt(rect.topLeft + Offset((cell.x + 0.5) * cs, (cell.y + 0.5) * cs));

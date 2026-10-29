@@ -264,17 +264,18 @@ void main() {
     }
 
     /// Where the centre of [cell] on [face] is drawn: the face's board is
-    /// its own width and height of cells, centred in the face's card.
+    /// its own width and height of cells, centred in the face's card, which
+    /// the stage lays out once and scales onto the block.
     Offset onBox(WidgetTester tester, int face, Cell cell) {
-      final cam = tester.state<CubeStageState>(find.byType(CubeStage)).camera;
-      final (fw, fh) = cam.faceSize(face);
+      final stage = tester.state<CubeStageState>(find.byType(CubeStage));
+      final board = tester.getSize(find.byWidgetPredicate((w) => w is PuzzleBoard && w.face == face));
       final (w, h) = spec.faceSizeOf(face);
-      final bw = fw - 2 * kFacePadding, bh = fh - 2 * kFacePadding;
-      final cs = bw / w < bh / h ? bw / w : bh / h;
-      final u = kFacePadding + (bw - cs * w) / 2 + (cell.x + 0.5) * cs;
-      final v = kFacePadding + (bh - cs * h) / 2 + (cell.y + 0.5) * cs;
-      final (sx, sy) = cam.project(cam.pointOn(face, u, v));
-      return tester.getCenter(find.byType(CubeStage)) + Offset(sx, sy);
+      final cs = board.width / w < board.height / h ? board.width / w : board.height / h;
+      final local = Offset(
+        kFacePadding + (board.width - cs * w) / 2 + (cell.x + 0.5) * cs,
+        kFacePadding + (board.height - cs * h) / 2 + (cell.y + 0.5) * cs,
+      );
+      return tester.getTopLeft(find.byType(CubeStage)) + stage.stagePointOf(face, local);
     }
 
     testWidgets('faces of their own sizes, the block filling the stage, and taps on the right cell', (tester) async {
@@ -349,6 +350,8 @@ void main() {
 
       final tall = cell();
       insideStage();
+      Size laidOut() => tester.getSize(find.byWidgetPredicate((w) => w is PuzzleBoard && w.face == 0));
+      final front = laidOut();
       // The top (3 by 4 cells) in front: the block leans over to show it,
       // reaches further across, and comes down to fit.
       await turn('Turn to the face above');
@@ -360,6 +363,9 @@ void main() {
       expect(_face(tester), 0);
       expect(cell(), closeTo(tall, 1e-6));
       insideStage();
+      // The block grew and shrank by its transform alone: the face's board
+      // was laid out once, so a turn never repaints its arrows.
+      expect(laidOut(), front);
     });
   });
 }

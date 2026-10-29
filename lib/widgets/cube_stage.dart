@@ -161,6 +161,30 @@ class CubeStageState extends State<CubeStage>
     return _fromUnit + (to - _fromUnit) * Curves.easeOutCubic.transform(_resize.value);
   }
 
+  /// The length of a cell the faces are laid out at: the largest fit of
+  /// any face, fixed for the level. The block's size on screen comes from
+  /// the projection ([CubeCamera.faceMatrix], scaled by [_unit] over this),
+  /// not from the faces' layout, so a turn that grows or shrinks the block
+  /// never lays a face out again — each face's board keeps the picture it
+  /// has and only the transform changes. (Laid out at the size on screen,
+  /// every frame of a turn repainted every arrow of every face showing.)
+  double get _layoutUnit {
+    var most = 0.0;
+    for (var f = 0; f < 6; f++) {
+      most = max(most, _fit(f));
+    }
+    return most;
+  }
+
+  /// [local], a point on [face]'s widget (laid out at [_layoutUnit], from
+  /// its top-left corner), where it is drawn on the stage (from the stage's
+  /// top-left corner) as the block stands now.
+  Offset stagePointOf(int face, Offset local) {
+    final k = _unit() / _layoutUnit;
+    final (sx, sy) = camera.project(camera.pointOn(face, local.dx * k, local.dy * k));
+    return Offset(_size.width / 2 + sx, _size.height / 2 + sy);
+  }
+
   /// Grows or shrinks the block to fit [face] in front.
   void _resizeTo(int face) {
     if (face == _sizedFor) return;
@@ -255,8 +279,10 @@ class CubeStageState extends State<CubeStage>
       widget.onFaceChanged?.call(hit.face);
       return;
     }
+    // From the face as drawn (the camera's units) to the face as laid out.
+    final k = _unit() / _layoutUnit;
     _boards[hit.face]?.currentState?.tapAtBox(
-      Offset(hit.u - kFacePadding, hit.v - kFacePadding),
+      Offset(hit.u / k - kFacePadding, hit.v / k - kFacePadding),
     );
   }
 
@@ -269,21 +295,30 @@ class CubeStageState extends State<CubeStage>
         final cam = camera;
         final side = cam.longest;
         if (side <= 0) return const SizedBox.shrink();
+        // The faces are laid out at [_layoutUnit] a cell and scaled to the
+        // block's size on screen by their transforms.
+        final layout = _layoutUnit;
+        final k = _unit() / layout;
+        final (bx, by, bz) = widget.box;
+        (double, double) laidOut(int f) {
+          final (w, h) = CubeCamera(orientation: Quat.identity, box: (bx * layout, by * layout, bz * layout)).faceSize(f);
+          return (w, h);
+        }
         const light = _light;
         final faces = <Widget>[
           for (final f in cam.visibleFaces)
             Positioned(
-              left: _size.width / 2 - cam.faceSize(f).$1 / 2,
-              top: _size.height / 2 - cam.faceSize(f).$2 / 2,
-              width: cam.faceSize(f).$1,
-              height: cam.faceSize(f).$2,
+              left: _size.width / 2 - laidOut(f).$1 / 2,
+              top: _size.height / 2 - laidOut(f).$2 / 2,
+              width: laidOut(f).$1,
+              height: laidOut(f).$2,
               // The faces draw nothing a finger can press: the stage works
               // out from the geometry what a tap meant.
               child: IgnorePointer(
                 child: Transform(
                   key: ValueKey<int>(f),
                   alignment: Alignment.center,
-                  transform: Matrix4.fromList(cam.faceMatrix(f)),
+                  transform: Matrix4.fromList(cam.faceMatrix(f))..scaleByDouble(k, k, 1, 1),
                   child: _Face(
                     // The face being played keeps its full light: its
                     // arrows are the ones being read.

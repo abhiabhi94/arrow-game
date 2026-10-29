@@ -22,6 +22,7 @@ import 'daily_provider.dart';
 import 'progress_provider.dart';
 import 'saved_game_provider.dart';
 import 'settings_provider.dart';
+import '../utils/perf_hooks.dart';
 
 /// Called once when a level is cleared, with the clear time and star rating.
 /// [elapsedMs] is null on an untimed level: no time was counted.
@@ -91,9 +92,11 @@ class GameNotifier extends StateNotifier<GameState> {
   Future<void> get ready => _ready.future;
 
   Future<void> _load(PuzzleBuilder builder) async {
+    perfMark('dealing ${spec.level}');
     final puzzle = await builder(spec);
     if (!mounted) return;
     _begin(puzzle);
+    perfMark('dealt ${spec.level}');
   }
 
   /// Puts [puzzle] on the board: fresh and playing, or — when a saved game
@@ -150,6 +153,7 @@ class GameNotifier extends StateNotifier<GameState> {
   /// beside it.
   void tapArrow(int id) {
     if (!state.isPlaying || state.removed.contains(id)) return;
+    perfMark('tap $id');
     final puzzle = state.puzzle!;
     final token = state.moveToken + 1;
     if (puzzle.canExit(id, state.removed)) {

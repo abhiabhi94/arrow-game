@@ -556,7 +556,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
         }
       }
     });
-    final state = ref.watch(provider);
+    // Rebuilt when the game changes, not when its clock ticks: the clock
+    // is [_Clock]'s alone.
+    ref.watch(provider.select((s) => s.withoutClock));
+    final state = ref.read(provider);
     final notifier = ref.read(provider.notifier);
     final settings = ref.watch(settingsProvider);
     // Watch progress so the grid toggle unlocks live.
@@ -643,10 +646,11 @@ class _GameScreenState extends ConsumerState<GameScreen>
                               // With time limits removed there is no clock at all.
                               if (state.spec.timed)
                                 Expanded(
-                                  child: TimerBar(
-                                    remainingMs: state.remainingMs,
-                                    fraction: state.timeFraction,
-                                  ),
+                                  // Its own layer: the clock repaints ten
+                                  // times a second, and without a boundary
+                                  // every repaint took the whole screen,
+                                  // every arrow of the board, with it.
+                                  child: RepaintBoundary(child: _Clock(level: widget.level)),
                                 )
                               else
                                 const Spacer(),
@@ -1107,4 +1111,18 @@ class _LoadingView extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// The level's clock: the one thing on the game screen that watches the
+/// ticks.
+class _Clock extends ConsumerWidget {
+  const _Clock({required this.level});
+
+  final int level;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final (remainingMs, fraction) = ref.watch(gameProvider(level).select((s) => (s.remainingMs, s.timeFraction)));
+    return TimerBar(remainingMs: remainingMs, fraction: fraction);
+  }
 }

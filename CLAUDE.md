@@ -92,6 +92,9 @@ node tool/screenshot.mjs --levels 81 --crash 4,4,450                # a pair bum
 node tool/screenshot.mjs --levels 1 --riddle 2,4,2,3,2,2            # spend all 3 lives -> Out of lives, the riddle, its hint, solved
 node tool/screenshot.mjs --lang hi --settings --levels 1 --riddle 2,4,2,3,2,2 --riddle-answer aam  # the same in Hindi
 node tool/screenshot.mjs --levels 1 --riddle-hint 2,4                # spend the 3 hints -> the riddle button, its riddle, the hint it buys
+flutter build web --release --dart-define=UNLOCK_ALL=true --no-web-resources-cdn --no-wasm-dry-run
+node tool/perf.mjs --levels 1,20,100,150,200,201,230,250 --throttle 4  # phone-speed frame budget (CI job "Performance"); fails over budget
+node tool/perf.mjs --levels 250 --throttle 1 --cpu-profile           # + CPU profiles of idle and play (a --profile web build keeps the names)
 
 flutter run                     # debug build = "Arrow Testing", all levels unlocked
 flutter run --release           # release build = "Arrow", locked progression
@@ -283,7 +286,7 @@ lib/
   widgets/             puzzle_board (painter + slide/bump animations; one face of a cube), board_toolbar,
                        cube_stage (the whole block in 3D: drag, settle, taps by ray), cube_map (turn keys),
                        keycap (raised 3D buttons), lives_indicator, timer_bar, stars_row, result_card, riddle_card
-  utils/               format.dart, labels.dart (level names)
+  utils/               format.dart, labels.dart (level names), perf_hooks.dart (?perf: the profiler's hooks)
   l10n/                app_en.arb (+ generated app_localizations*.dart)
 ```
 
@@ -1088,6 +1091,60 @@ Key patterns:
     was 34). Cells on late boards are the game's own problem and the zoom's
     answer (`kFingerCellPx`).
 
+## Performance (a phone, not a laptop)
+
+The game lagged on phones — a tap, then a wait before the arrow went — while
+every test and screenshot passed, because nothing measured it. Now
+`tool/perf.mjs` does, and CI fails a change that breaks its budget (job
+"Performance (phone-speed frame budget)", which also posts the table on the
+PR). It plays levels of the **release** web build in headless Chromium with
+the CPU throttled 4× through the DevTools protocol (about a mid-range
+phone's JavaScript against a CI runner): the deal, 3 s idle, the block
+turning and dragged, arrows played with the keyboard. The app reports every
+frame's build and raster time itself (`lib/utils/perf_hooks.dart`,
+Flutter's `FrameTiming`, printed as `perf:frames`), and what is budgeted is
+a frame's **Dart work** — build, layout and paint — the same code a phone
+runs, so it scales with the throttle. Drawing is *not* budgeted: a runner
+has no GPU, Chromium draws in software (most of a frame's time there is
+`createImageBitmap`), and that says little about a phone's GPU; it is
+reported for reading. The hooks live only in a build with every level open
+and only on a page opened with `?perf`: `?level=N` opens a level straight
+onto its board (no semantics tree — the screenshot harness has to switch it
+on to find buttons, and it is real work on a big board) and `perfMark`
+prints when a deal starts and ends, each tap, and each bitmap made.
+
+What the profiler found, and what keeps a frame cheap — keep these:
+- **The clock rebuilt the whole screen ten times a second.** The game
+  screen watches `GameState.withoutClock` (`select`), a record of every
+  field but `elapsedMs`; the clock is `_Clock`'s alone (in its own
+  `RepaintBoundary`). A widget test pins that a tick leaves the board
+  widget untouched. Anything new on the game screen that needs the time
+  goes in a widget of its own that watches it.
+- **One painter drew the whole board every frame of every slide.** The
+  board is two layers (`BoardLayer`): the board at rest (grid, mirrors,
+  washes, every arrow lying still) and, over it, what moves (arrows sliding,
+  bumping, taking a hit, popping open or coming out of the fog — the
+  painter's `_live` set — flashes, rings, the hint, the cursor). The still
+  layer repaints only when the board at rest changes (`_stillChanged`); the
+  moving one every frame, but it holds a handful of things.
+- **The web renderer has no raster cache**: a picture behind a repaint
+  boundary is still replayed path by path every frame. So the board at rest
+  is drawn once into a **bitmap** (`_StillLayer`, `Picture.toImageSync` at
+  the screen's pixel ratio) and the bitmap is what idle, turn and drag
+  frames draw. Making it is itself a whole drawing of the board, so it is
+  **never made while anything moves** — the frame after a tap is the one a
+  player waits on: during a move the still layer is a plain picture,
+  recorded once as it starts, and `kStillRasterDelay` after the board is
+  still the bitmap is made (a timer already running is left to run — the
+  first cut restarted it on every rebuild and it never went off).
+- **A turn re-laid-out every face.** The block's faces are laid out once at
+  `_layoutUnit` (the largest fit of any face) and scaled to the size on
+  screen by their transforms, so growing or shrinking the block with a turn
+  (`_resizeTo`) repaints nothing; `CubeStageState.stagePointOf` maps a point
+  on a face as laid out to the stage, which the tap handling and the tests
+  use.
+- Every board, and the clock, sits behind its own `RepaintBoundary`.
+
 ## Testing
 
 - `flutter test` + `tool/coverage.sh`. The gate excludes generated l10n,
@@ -1148,6 +1205,12 @@ folder, since the preview deploy wipes its own folder on every push) and
 are removed with the comments when the PR closes. The guideline test uses
 the hand-built sample board: on a real late level the arrow nodes are far
 under 48 px, which is the game's design and the zoom's job, not a failure.
+
+Job "Performance (phone-speed frame budget)" builds the release web app with
+every level open and runs `tool/perf.mjs` over a level from every chapter at
+4× CPU throttle (see **Performance** above): it fails when a frame's Dart work
+or a deal's freeze goes over `BUDGETS`, uploads `perf/` (the JSON and the
+table) and keeps a sticky comment with the table on the PR.
 
 Job "Debug APK" builds `flutter build apk --debug` ("Arrow Testing", every
 level unlocked), uploads it as the `arrow-debug-apk` artifact and, on a PR,

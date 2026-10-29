@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show listEquals, setEquals;
 import 'package:flutter/material.dart';
@@ -15,6 +17,7 @@ import '../models/reaction_motion.dart';
 import '../ui/colors.dart';
 import 'board_glyphs.dart';
 import 'board_semantics.dart';
+import '../utils/perf_hooks.dart';
 
 /// How far the arrow that was hit is shoved along, in cells, at full jolt.
 const double kShoveDistance = 0.12;
@@ -536,6 +539,31 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
           (constraints.maxWidth - size.width) / 2,
           (constraints.maxHeight - size.height) / 2,
         );
+        _BoardPainter painterFor(BoardLayer layer) => _BoardPainter(
+          layer: layer,
+          state: widget.state,
+          palette: p,
+          showGrid: widget.showGrid,
+          exits: <int, double>{for (final e in _exits.entries) e.key: e.value.value},
+          hintPing: _hintPing?.value,
+          slump: _slump?.value,
+          bumpId: _bumpId,
+          bump: _bump?.value,
+          bumpMotion: _bumpMotion,
+          pointer: _pointer?.value,
+          pointerTargets: _pointerTargets,
+          unlocks: <int, double>{for (final e in _unlocks.entries) e.key: e.value.value},
+          reveals: <int, double>{for (final e in _reveals.entries) e.key: e.value.value},
+          pendingUnlocks: Set<int>.of(_pendingUnlocks),
+          pendingReveals: <int>{for (final owed in _pendingReveals.values) ...owed},
+          bounces: <int, double>{for (final e in _bounces.entries) e.key: e.value.value},
+          travel: widget.reduceMotion ? 0 : 1,
+          focusedId: widget.focusedArrowId,
+          l10n: l10n,
+          textDirection: Directionality.of(context),
+          onTapArrow: widget.onTapArrow,
+          face: widget.face,
+        );
         return Center(
           // The board is a labelled container and the painter supplies one
           // node per arrow; the gesture detector adds nothing of its own,
@@ -551,31 +579,30 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
                 behavior: HitTestBehavior.opaque,
                 excludeFromSemantics: true,
                 onTapUp: (d) => _onTapUp(d, cellSize),
-                child: CustomPaint(
+                // Two layers, each its own picture: the board at rest, which
+                // repaints only when the board changes (an arrow leaves, a
+                // head is uncovered), and over it whatever is moving — a
+                // slide, a bump, a lock popping, the hint's ring, the
+                // cursor — which repaints every frame of the move but holds
+                // only those few things. One painter drew both, so every
+                // frame of every slide redrew every arrow on the board; on a
+                // phone that was the lag between a tap and the arrow going.
+                // Each layer is behind a boundary of its own, so nothing
+                // else on the screen (the clock, a card, the block turning)
+                // repaints either.
+                child: SizedBox.fromSize(
                   size: size,
-                  painter: _BoardPainter(
-                    state: widget.state,
-                    palette: p,
-                    showGrid: widget.showGrid,
-                    exits: <int, double>{for (final e in _exits.entries) e.key: e.value.value},
-                    hintPing: _hintPing?.value,
-                    slump: _slump?.value,
-                    bumpId: _bumpId,
-                    bump: _bump?.value,
-                    bumpMotion: _bumpMotion,
-                    pointer: _pointer?.value,
-                    pointerTargets: _pointerTargets,
-                    unlocks: <int, double>{for (final e in _unlocks.entries) e.key: e.value.value},
-                    reveals: <int, double>{for (final e in _reveals.entries) e.key: e.value.value},
-                    pendingUnlocks: Set<int>.of(_pendingUnlocks),
-                    pendingReveals: <int>{for (final owed in _pendingReveals.values) ...owed},
-                    bounces: <int, double>{for (final e in _bounces.entries) e.key: e.value.value},
-                    travel: widget.reduceMotion ? 0 : 1,
-                    focusedId: widget.focusedArrowId,
-                    l10n: l10n,
-                    textDirection: Directionality.of(context),
-                    onTapArrow: widget.onTapArrow,
-                    face: widget.face,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: _StillLayer(painter: painterFor(BoardLayer.still)),
+                      ),
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: CustomPaint(painter: painterFor(BoardLayer.moving)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -593,8 +620,20 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     ? (0, puzzle.width, puzzle.height)
     : (puzzle.faceOriginOf(face), puzzle.faceWidthOf(face), puzzle.faceHeightOf(face));
 
+/// The two layers a board is drawn in (see [PuzzleBoardState.build]).
+enum BoardLayer {
+  /// Everything at rest: the grid, the mirrors, the washes and every arrow
+  /// lying still.
+  still,
+
+  /// Everything moving: arrows sliding, bumping, popping open or coming out
+  /// of the fog, flashes, rings, the hint and the cursor.
+  moving,
+}
+
 class _BoardPainter extends CustomPainter {
   _BoardPainter({
+    required this.layer,
     required this.state,
     required this.palette,
     required this.showGrid,
@@ -621,6 +660,10 @@ class _BoardPainter extends CustomPainter {
 
   final GameState state;
   final ArrowPalette palette;
+
+  /// Which of the board's two layers this painter draws.
+  final BoardLayer layer;
+  bool get _still => layer == BoardLayer.still;
 
   /// The face of a cube level being shown, or null for the whole board.
   final int? face;
@@ -688,6 +731,25 @@ class _BoardPainter extends CustomPainter {
       bumpId == state.lastMoveId &&
       (state.blockedCell != null || state.blockedKey != null || state.lastOutcome == MoveOutcome.hidden);
 
+  /// The arrow taking a bump's hit (flashed and shoved), if any.
+  int? get _hitId {
+    final blocked = state.blockedCell;
+    return _bumping && blocked != null ? puzzle.arrowAt(blocked) : null;
+  }
+
+  /// The arrows drawn on the moving layer: sliding out, bumping (with a
+  /// partner), taking a bump's hit, popping open or coming out of the fog —
+  /// or every arrow while the board slumps.
+  late final Set<int> _live = <int>{
+    ...exits.keys,
+    ..._bumpGroup,
+    ?_hitId,
+    ...unlocks.keys,
+    ...reveals.keys,
+    if (slump != null)
+      for (final a in puzzle.arrows) a.id,
+  };
+
   /// The arrows moving with the bump: the one that bumped and its partner.
   List<int> get _bumpGroup => _bumping ? puzzle.exitGroup(bumpId!) : const <int>[];
 
@@ -720,7 +782,7 @@ class _BoardPainter extends CustomPainter {
     // No frame: the arrows sit straight on the page. Grid lines, when on,
     // run through the cell centres — the lattice the arrows are drawn on —
     // so every body lies exactly on a line and every head points along one.
-    if (showGrid) {
+    if (showGrid && _still) {
       final grid = Paint()
         ..color = palette.gridLine
         ..strokeWidth = 1;
@@ -753,7 +815,7 @@ class _BoardPainter extends CustomPainter {
     for (final e in puzzle.pairs.entries) {
       final a = e.key;
       final b = e.value;
-      if (a > b || state.removed.contains(a) || state.removed.contains(b) || !_shown(a)) continue;
+      if (!_still || a > b || state.removed.contains(a) || state.removed.contains(b) || !_shown(a)) continue;
       glyphs.washPair(canvas, <Rect>[
         for (final id in <int>[a, b])
           for (final c in puzzle.arrows[id].cells) Rect.fromLTWH(c.x * cs, c.y * cs, cs, cs),
@@ -762,7 +824,7 @@ class _BoardPainter extends CustomPainter {
     // Mirrors: drawn under everything, so an arrow slides over the glass as
     // it turns.
     for (final e in puzzle.mirrors.entries) {
-      if (face != null && puzzle.faceOfCell(e.key) != face) continue;
+      if (!_still || (face != null && puzzle.faceOfCell(e.key) != face)) continue;
       glyphs.mirror(canvas, Rect.fromLTWH(e.key.x * cs, e.key.y * cs, cs, cs), e.value);
     }
 
@@ -777,8 +839,8 @@ class _BoardPainter extends CustomPainter {
     final motion = bumpMotion;
     final flash = bumping && blocked != null ? motion!.flashAt(bumpT!) : 0.0;
     final shove = bumping && blocked != null ? motion!.shoveAt(bumpT!) * travel : 0.0;
-    final hitId = bumping && blocked != null ? puzzle.arrowAt(blocked) : null;
-    if (flash > 0) {
+    final hitId = _hitId;
+    if (flash > 0 && !_still) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(blocked!.x * cs, blocked.y * cs, cs, cs).deflate(cs * 0.08),
@@ -799,6 +861,8 @@ class _BoardPainter extends CustomPainter {
       if (a > b || !_shown(a)) continue;
       bool gone(int id) => state.removed.contains(id) && !exits.containsKey(id);
       if (gone(a) || gone(b)) continue;
+      // On the moving layer while either half moves.
+      if ((_live.contains(a) || _live.contains(b)) == _still) continue;
       final arrowA = puzzle.arrows[a];
       final arrowB = puzzle.arrows[b];
       final (ca, cb) = _nearestCells(arrowA, arrowB);
@@ -816,7 +880,7 @@ class _BoardPainter extends CustomPainter {
     for (final arrow in puzzle.arrows) {
       final exiting = exits[arrow.id];
       if (state.removed.contains(arrow.id) && exiting == null) continue;
-      if (!_shown(arrow.id)) continue;
+      if (!_shown(arrow.id) || _live.contains(arrow.id) == _still) continue;
       final offset = _offsetOf(arrow);
       final shoved = bumping && arrow.id == hitId && shove > 0;
       if (shoved) {
@@ -841,14 +905,16 @@ class _BoardPainter extends CustomPainter {
       if (slumping) canvas.restore();
       if (shoved) canvas.restore();
     }
-    _paintBounces(canvas, cs, glyphs);
-    _paintSparks(canvas, cs);
-    _paintPointer(canvas, cs, glyphs);
-    _paintHint(canvas, rect, cs);
+    if (!_still) {
+      _paintBounces(canvas, cs, glyphs);
+      _paintSparks(canvas, cs);
+      _paintPointer(canvas, cs, glyphs);
+      _paintHint(canvas, rect, cs);
+    }
     canvas.restore();
     // Outside the clip: the ring sits a little proud of the cells, and an
     // arrow on the board's edge would otherwise lose that side of it.
-    _paintCursor(canvas, cs);
+    if (!_still) _paintCursor(canvas, cs);
     canvas.restore();
   }
 
@@ -1012,7 +1078,7 @@ class _BoardPainter extends CustomPainter {
   @override
   SemanticsBuilderCallback? get semanticsBuilder {
     final strings = l10n;
-    if (strings == null) return null;
+    if (strings == null || !_still) return null;
     return (Size size) {
       final (originX, windowWidth, _) = _window(puzzle, face);
       final cs = size.width / windowWidth;
@@ -1353,8 +1419,26 @@ class _BoardPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BoardPainter old) =>
+  bool shouldRepaint(_BoardPainter old) => _still ? _stillChanged(old) : _movingChanged(old);
+
+  /// The board at rest: only what changes the arrows lying still. (The
+  /// clock ticks ten times a second; an arrow sliding moves every frame —
+  /// neither counts here.)
+  bool _stillChanged(_BoardPainter old) =>
+      old.state.puzzle != state.puzzle ||
+      old.state.removed != state.removed ||
+      old.state.revealed != state.revealed ||
+      old.showGrid != showGrid ||
+      old.palette != palette ||
+      old.face != face ||
+      old.layer != layer ||
+      !setEquals(old.pendingUnlocks, pendingUnlocks) ||
+      !setEquals(old.pendingReveals, pendingReveals) ||
+      !setEquals(old._live, _live);
+
+  bool _movingChanged(_BoardPainter old) =>
       // The clock ticks ten times a second; only board-relevant state counts.
+      old.layer != layer ||
       old.state.puzzle != state.puzzle ||
       old.state.removed != state.removed ||
       old.state.hintArrowId != state.hintArrowId ||
@@ -1387,4 +1471,135 @@ class _BoardPainter extends CustomPainter {
     }
     return true;
   }
+}
+
+/// The board at rest, drawn once into a bitmap and the bitmap drawn after
+/// that. The web renderer keeps no cache of a layer's drawing: a picture
+/// behind a repaint boundary is still replayed path by path every frame,
+/// so a face of fifty arrows — three faces, under the block's perspective —
+/// was drawn again on every frame. A bitmap is one textured quad.
+///
+/// Making the bitmap is itself a whole drawing of the board, so it is never
+/// made while anything moves: the frame after a tap is the one a player
+/// waits on. While an arrow slides or bumps, the board at rest is a plain
+/// picture, recorded once as the move starts (the arrow on its way leaves
+/// it then); [kStillRasterDelay] after the board is still again, the
+/// picture becomes the bitmap that idling, turning and dragging draw.
+class _StillLayer extends StatefulWidget {
+  const _StillLayer({required this.painter});
+
+  final _BoardPainter painter;
+
+  @override
+  State<_StillLayer> createState() => _StillLayerState();
+}
+
+/// How long the board has to be still before its bitmap is made.
+const Duration kStillRasterDelay = Duration(milliseconds: 150);
+
+class _StillLayerState extends State<_StillLayer> {
+  ui.Image? _image;
+  _BoardPainter? _drawn;
+  Size _drawnSize = Size.zero;
+  double _drawnRatio = 0;
+  Size _size = Size.zero;
+  double _ratio = 1;
+  Timer? _later;
+
+  @override
+  void dispose() {
+    _later?.cancel();
+    _image?.dispose();
+    super.dispose();
+  }
+
+  /// Whether the bitmap shows the board as [widget.painter] would draw it.
+  bool get _fresh {
+    final drawn = _drawn;
+    return _image != null &&
+        drawn != null &&
+        _size == _drawnSize &&
+        _ratio == _drawnRatio &&
+        !widget.painter.shouldRepaint(drawn);
+  }
+
+  bool get _moving => widget.painter._live.isNotEmpty;
+
+  void _rasterize() {
+    if (_size.isEmpty) return;
+    perfMark('bitmap 0');
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)..scale(_ratio);
+    widget.painter.paint(canvas, _size);
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync((_size.width * _ratio).ceil(), (_size.height * _ratio).ceil());
+    picture.dispose();
+    _image?.dispose();
+    _image = image;
+    _drawn = widget.painter;
+    _drawnSize = _size;
+    _drawnRatio = _ratio;
+  }
+
+  /// Makes the bitmap once the board has been still for [kStillRasterDelay].
+  /// A timer already running is left to run: the clock rebuilds the board
+  /// ten times a second, and restarting it on every rebuild meant it never
+  /// went off.
+  void _rasterizeLater() {
+    if (_later?.isActive ?? false) return;
+    _later = Timer(kStillRasterDelay, () {
+      if (!mounted || _fresh) return;
+      // Still moving: try again once it has stopped.
+      if (_moving) return;
+      setState(_rasterize);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _ratio = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _size = constraints.biggest;
+        final fresh = _fresh;
+        if (!fresh && !_moving) _rasterizeLater();
+        return RepaintBoundary(
+          child: CustomPaint(
+            size: _size,
+            painter: fresh
+                ? _ImagePainter(image: _image!, ratio: _ratio, board: widget.painter)
+                : widget.painter,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Draws [image] (made at [ratio] pixels a logical pixel) over its box, and
+/// gives the screen reader [board]'s nodes: the arrows are only a picture
+/// here, but each is still a button to a reader.
+class _ImagePainter extends CustomPainter {
+  _ImagePainter({required this.image, required this.ratio, required this.board});
+
+  final ui.Image image;
+  final double ratio;
+  final _BoardPainter board;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(1 / ratio);
+    canvas.drawImage(image, Offset.zero, Paint()..filterQuality = FilterQuality.medium);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_ImagePainter old) => old.image != image || old.ratio != ratio;
+
+  @override
+  SemanticsBuilderCallback? get semanticsBuilder => board.semanticsBuilder;
+
+  @override
+  bool shouldRebuildSemantics(_ImagePainter old) => board.shouldRebuildSemantics(old.board);
 }

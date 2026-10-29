@@ -7,16 +7,19 @@ import 'l10n/app_localizations.dart';
 import 'models/settings.dart';
 import 'providers/app_providers.dart';
 import 'providers/settings_provider.dart';
+import 'screens/game_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/audio_service.dart';
 import 'services/sfx_service.dart';
 import 'ui/layout.dart';
 import 'ui/theme.dart';
+import 'utils/perf_hooks.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
+  reportFrameTimings();
   runApp(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
@@ -100,7 +103,11 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
+        home: switch (startLevelFrom(Uri.base, allowed: perfHooksOn)) {
+          // The profiler (tool/perf.mjs) opens a level straight away.
+          final int level => GameScreen(level: level),
+          null => settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
+        },
       ),
     );
   }
