@@ -632,135 +632,140 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     child: child,
                   ),
                 ),
-                child: ContentColumn(
-                  child: Padding(
-                    // No side padding here: the board runs edge to edge and the
-                    // HUD and toolbar take the gutter themselves.
-                    padding: const EdgeInsets.fromLTRB(0, 4, 0, 16),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: _gutter,
-                          child: Row(
-                            children: [
-                              // With time limits removed there is no clock at all.
-                              if (state.spec.timed)
-                                Expanded(
-                                  // Its own layer: the clock repaints ten
-                                  // times a second, and without a boundary
-                                  // every repaint took the whole screen,
-                                  // every arrow of the board, with it.
-                                  child: RepaintBoundary(child: _Clock(level: widget.level)),
-                                )
-                              else
-                                const Spacer(),
-                              const SizedBox(width: 12),
-                              _ArrowsOut(out: state.arrowsOut, total: state.arrowsTotal),
-                              const SizedBox(width: 12),
-                              LivesIndicator(livesLeft: state.livesLeft, reduceMotion: _calm),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        if (state.puzzle?.isCube ?? false) ...[
+                // A layer of its own: the jolt and the hop move the whole
+                // column every frame, and without a boundary every frame of
+                // them repainted all of it — HUD, keys and board.
+                child: RepaintBoundary(
+                  child: ContentColumn(
+                    child: Padding(
+                      // No side padding here: the board runs edge to edge and the
+                      // HUD and toolbar take the gutter themselves.
+                      padding: const EdgeInsets.fromLTRB(0, 4, 0, 16),
+                      child: Column(
+                        children: [
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: CubeControls(
-                              face: _face,
-                              faceLeft: _faceLeft(state),
-                              onTurn: _turnCube,
-                              enabled: state.isPlaying,
+                            padding: _gutter,
+                            child: Row(
+                              children: [
+                                // With time limits removed there is no clock at all.
+                                if (state.spec.timed)
+                                  Expanded(
+                                    // Its own layer: the clock repaints ten
+                                    // times a second, and without a boundary
+                                    // every repaint took the whole screen,
+                                    // every arrow of the board, with it.
+                                    child: RepaintBoundary(child: _Clock(level: widget.level)),
+                                  )
+                                else
+                                  const Spacer(),
+                                const SizedBox(width: 12),
+                                RepaintBoundary(child: _ArrowsOut(out: state.arrowsOut, total: state.arrowsTotal)),
+                                const SizedBox(width: 12),
+                                RepaintBoundary(child: LivesIndicator(livesLeft: state.livesLeft, reduceMotion: _calm)),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 8),
-                        ],
-                        Expanded(
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              _viewport = constraints.biggest;
-                              // The block is its own 3D stage: a finger turns
-                              // it and two zoom it, so it takes no viewer.
-                              if (state.puzzle?.isCube ?? false) {
-                                return CubeStage(
-                                  face: _face,
-                                  box: state.puzzle!.blockSize,
-                                  zoom: _scale,
-                                  reduceMotion: _calm,
-                                  onFaceChanged: (face) => _turnTo(face),
-                                  onZoom: _setZoom,
-                                  interactive: state.isPlaying,
-                                  faceBuilder: (context, face, boardKey, front) => PuzzleBoard(
-                                    key: boardKey,
-                                    state: state,
-                                    face: face,
-                                    showGrid: gridUnlocked && settings.gridLinesOn,
-                                    onTapArrow: notifier.tapArrow,
-                                    onBounce: front ? notifier.bounce : null,
+                          const SizedBox(height: 12),
+                          if (state.puzzle?.isCube ?? false) ...[
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: RepaintBoundary(child: CubeControls(
+                                face: _face,
+                                faceLeft: _faceLeft(state),
+                                onTurn: _turnCube,
+                                enabled: state.isPlaying,
+                              )),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          Expanded(
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                _viewport = constraints.biggest;
+                                // The block is its own 3D stage: a finger turns
+                                // it and two zoom it, so it takes no viewer.
+                                if (state.puzzle?.isCube ?? false) {
+                                  return CubeStage(
+                                    face: _face,
+                                    box: state.puzzle!.blockSize,
                                     zoom: _scale,
-                                    focusedArrowId: front ? _cursor : null,
                                     reduceMotion: _calm,
-                                  ),
-                                );
-                              }
-                              return ClipRect(
-                                child: InteractiveViewer(
-                                  transformationController: _zoom,
-                                  minScale: kMinZoom,
-                                  maxScale: _maxZoom,
-                                  onInteractionEnd: (_) {
-                                    final s = _zoom.value.getMaxScaleOnAxis();
-                                    if (s != _scale) setState(() => _scale = s);
-                                  },
-                                  child: SizedBox.expand(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(4),
-                                      child: state.isLoading
-                                          ? _LoadingView(message: l10n.gameLoading)
-                                          : PuzzleBoard(
-                                              state: state,
-                                              showGrid: gridUnlocked && settings.gridLinesOn,
-                                              onTapArrow: notifier.tapArrow,
-                                              onBounce: notifier.bounce,
-                                              zoom: _scale,
-                                              focusedArrowId: _cursor,
-                                              reduceMotion: _calm,
-                                            ),
+                                    onFaceChanged: (face) => _turnTo(face),
+                                    onZoom: _setZoom,
+                                    interactive: state.isPlaying,
+                                    faceBuilder: (context, face, boardKey, front) => PuzzleBoard(
+                                      key: boardKey,
+                                      state: state,
+                                      face: face,
+                                      showGrid: gridUnlocked && settings.gridLinesOn,
+                                      onTapArrow: notifier.tapArrow,
+                                      onBounce: front ? notifier.bounce : null,
+                                      zoom: _scale,
+                                      focusedArrowId: front ? _cursor : null,
+                                      reduceMotion: _calm,
+                                    ),
+                                  );
+                                }
+                                return ClipRect(
+                                  child: InteractiveViewer(
+                                    transformationController: _zoom,
+                                    minScale: kMinZoom,
+                                    maxScale: _maxZoom,
+                                    onInteractionEnd: (_) {
+                                      final s = _zoom.value.getMaxScaleOnAxis();
+                                      if (s != _scale) setState(() => _scale = s);
+                                    },
+                                    child: SizedBox.expand(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(4),
+                                        child: state.isLoading
+                                            ? _LoadingView(message: l10n.gameLoading)
+                                            : PuzzleBoard(
+                                                state: state,
+                                                showGrid: gridUnlocked && settings.gridLinesOn,
+                                                onTapArrow: notifier.tapArrow,
+                                                onBounce: notifier.bounce,
+                                                zoom: _scale,
+                                                focusedArrowId: _cursor,
+                                                reduceMotion: _calm,
+                                              ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        if (_tutorialLine(l10n) case final line?)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                            child: Text(
-                              line,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: p.textMuted, fontSize: 13),
+                                );
+                              },
                             ),
                           ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: _gutter,
-                          child: BoardToolbar(
-                            hintsLeft: state.hintsLeft,
-                            hintActive: state.hintArrowId != null,
-                            onHint: state.isPlaying ? _onHint : null,
-                            gridUnlocked: gridUnlocked,
-                            gridUnlockLevel: kGridLinesUnlockAfterLevel,
-                            gridOn: settings.gridLinesOn,
-                            onToggleGrid: () => ref
-                                .read(settingsProvider.notifier)
-                                .setGridLines(!settings.gridLinesOn),
-                            onZoomIn: () => _setZoom(_scale * kZoomStep),
-                            onZoomOut: () => _setZoom(_scale / kZoomStep),
-                            canZoomIn: _scale < _maxZoom - 0.001,
-                            canZoomOut: _scale > kMinZoom + 0.001,
+                          if (_tutorialLine(l10n) case final line?)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                              child: Text(
+                                line,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: p.textMuted, fontSize: 13),
+                              ),
+                            ),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: _gutter,
+                            child: RepaintBoundary(child: BoardToolbar(
+                              hintsLeft: state.hintsLeft,
+                              hintActive: state.hintArrowId != null,
+                              onHint: state.isPlaying ? _onHint : null,
+                              gridUnlocked: gridUnlocked,
+                              gridUnlockLevel: kGridLinesUnlockAfterLevel,
+                              gridOn: settings.gridLinesOn,
+                              onToggleGrid: () => ref
+                                  .read(settingsProvider.notifier)
+                                  .setGridLines(!settings.gridLinesOn),
+                              onZoomIn: () => _setZoom(_scale * kZoomStep),
+                              onZoomOut: () => _setZoom(_scale / kZoomStep),
+                              canZoomIn: _scale < _maxZoom - 0.001,
+                              canZoomOut: _scale > kMinZoom + 0.001,
+                            )),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

@@ -144,6 +144,34 @@ void main() {
     expect(tester.widget<PuzzleBoard>(find.byType(PuzzleBoard)), same(board));
   });
 
+  testWidgets('a tick redraws no arrow, and a slide redraws only what moves', (tester) async {
+    final container = await _pumpGame(tester);
+    await tester.pump(const Duration(seconds: 1));
+    boardPaintCounts.clear();
+    // The clock: the board is not drawn at all.
+    container.read(gameProvider(1).notifier).tick(1000);
+    await tester.pump();
+    container.read(gameProvider(1).notifier).tick(1000);
+    await tester.pump();
+    expect(boardPaintCounts[BoardLayer.still] ?? 0, 0);
+    expect(boardPaintCounts[BoardLayer.moving] ?? 0, 0);
+    // A slide, frame by frame: the arrow moves on the moving layer every
+    // frame, and the board at rest is drawn only as the move starts and as
+    // it ends — not once a frame, which is what made a tap lag on a phone.
+    await _tapCell(tester, const Cell(2, 1));
+    boardPaintCounts.clear();
+    final board = tester.getRect(find.descendant(of: find.byType(PuzzleBoard), matching: find.byType(CustomPaint)).first);
+    final cs = board.width / 4;
+    await tester.tapAt(board.topLeft + Offset(3.5 * cs, 3.5 * cs)); // arrow 1 slides out
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    final frames = boardPaintCounts[BoardLayer.moving] ?? 0;
+    expect(frames, greaterThan(5));
+    expect(boardPaintCounts[BoardLayer.still] ?? 0, lessThanOrEqualTo(2));
+    expect(container.read(gameProvider(1)).removed, {0, 1});
+  });
+
   testWidgets('tapping a free arrow slides it out; the last clears the level', (tester) async {
     final container = await _pumpGame(tester);
     final notifier = container.read(gameProvider(1).notifier);

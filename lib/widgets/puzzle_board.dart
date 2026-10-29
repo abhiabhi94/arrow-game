@@ -630,6 +630,11 @@ enum BoardLayer {
   moving,
 }
 
+/// How many times each board layer has been drawn (see
+/// [_BoardPainter.debugPaints]); tests clear it and count.
+@visibleForTesting
+Map<BoardLayer, int> get boardPaintCounts => _BoardPainter.debugPaints;
+
 class _BoardPainter extends CustomPainter {
   _BoardPainter({
     required this.layer,
@@ -659,6 +664,12 @@ class _BoardPainter extends CustomPainter {
 
   final GameState state;
   final ArrowPalette palette;
+
+  /// How many times each layer has been drawn: what the tests count to pin
+  /// that the clock and a slide leave the board at rest alone (a frame that
+  /// redraws every arrow is the lag, on a phone, and on every platform).
+  @visibleForTesting
+  static final Map<BoardLayer, int> debugPaints = <BoardLayer, int>{};
 
   /// Which of the board's two layers this painter draws.
   final BoardLayer layer;
@@ -770,6 +781,7 @@ class _BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    debugPaints[layer] = (debugPaints[layer] ?? 0) + 1;
     final (originX, windowWidth, windowHeight) = _window(puzzle, face);
     final cs = size.width / windowWidth;
     // Drawn in the board's own cells: a face of the block is shifted so it
@@ -1290,12 +1302,25 @@ class _BoardPainter extends CustomPainter {
     final headLen = min(cs * 0.3, 8.0) * headScale;
     final bodyEnd = headShown ? head - dir * (headLen * 0.55) : head;
     final longBody = arrow.length > 1;
-    final path = longBody
-        ? _pathAlong(track, offset, headAt - (headShown ? headLen * 0.55 / cs : 0), cs)
-        : (Path()..moveTo(bodyEnd.dx, bodyEnd.dy));
+    // An arrow at rest has the same body every time the board is drawn, so
+    // it is built once (its rounded corners and its dashes are most of the
+    // cost of drawing a board) and kept for as long as the puzzle is.
+    final resting = offset == 0 && reveal == null;
+    final restKey = (arrow.id, cs, headShown);
+    final bodies = _restingBodies[puzzle];
+    final kept = resting && bodies != null ? bodies[restKey] : null;
+    final path = kept?.$1 ??
+        (longBody
+            ? _pathAlong(track, offset, headAt - (headShown ? headLen * 0.55 / cs : 0), cs)
+            : (Path()..moveTo(bodyEnd.dx, bodyEnd.dy)));
     // A hidden head is drawn as a dashed body with no head at either end:
     // the player can see where it lies, not which way it goes.
-    final dashedPath = !headShown || solidity < 1 ? BoardGlyphs.dashed(path, stroke * 1.6, stroke * 1.4) : null;
+    final dashedPath = kept != null
+        ? kept.$2
+        : (!headShown || solidity < 1 ? BoardGlyphs.dashed(path, stroke * 1.6, stroke * 1.4) : null);
+    if (resting && kept == null) {
+      (_restingBodies[puzzle] ??= <(int, double, bool), (Path, Path?)>{})[restKey] = (path, dashedPath);
+    }
 
     // The glow: the hint's halo at full strength, or the moment's — a head
     // out of the fog, a lock open (lit as the spark lands, not before) —
@@ -1410,6 +1435,11 @@ class _BoardPainter extends CustomPainter {
     }
   }
 
+  /// The bodies of arrows at rest, by puzzle, arrow, cell size and whether
+  /// the head shows (see [_paintArrow]).
+  static final Expando<Map<(int, double, bool), (Path, Path?)>> _restingBodies =
+      Expando<Map<(int, double, bool), (Path, Path?)>>();
+
   static Offset _center(Cell c, double cs) => Offset((c.x + 0.5) * cs, (c.y + 0.5) * cs);
 
   static Offset _unit(Direction d) {
@@ -1425,8 +1455,8 @@ class _BoardPainter extends CustomPainter {
   /// neither counts here.)
   bool _stillChanged(_BoardPainter old) =>
       old.state.puzzle != state.puzzle ||
-      old.state.removed != state.removed ||
-      old.state.revealed != state.revealed ||
+      _changedHere(old.state.removed, state.removed) ||
+      _changedHere(old.state.revealed, state.revealed) ||
       old.showGrid != showGrid ||
       old.palette != palette ||
       old.face != face ||
@@ -1462,6 +1492,21 @@ class _BoardPainter extends CustomPainter {
       old.travel != travel ||
       old.face != face ||
       old.focusedId != focusedId;
+
+  /// Whether [before] and [now] differ by an arrow on the face shown: an
+  /// arrow leaving one face of a block leaves the other faces' drawings as
+  /// they were (comparing the sets whole re-drew every face showing on
+  /// every move).
+  bool _changedHere(Set<int> before, Set<int> now) {
+    if (identical(before, now)) return false;
+    for (final id in now) {
+      if (!before.contains(id) && _shown(id)) return true;
+    }
+    for (final id in before) {
+      if (!now.contains(id) && _shown(id)) return true;
+    }
+    return false;
+  }
 
   static bool _sameMap(Map<int, double> a, Map<int, double> b) {
     if (a.length != b.length) return false;

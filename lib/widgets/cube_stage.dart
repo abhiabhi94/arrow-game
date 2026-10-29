@@ -289,7 +289,9 @@ class CubeStageState extends State<CubeStage>
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    return LayoutBuilder(
+    // A layer of its own: whatever else on the screen repaints (the HUD's
+    // lives, the counter) leaves the block, its faces and its shadow alone.
+    return RepaintBoundary(child: LayoutBuilder(
       builder: (context, constraints) {
         _size = constraints.biggest;
         final cam = camera;
@@ -379,7 +381,7 @@ class CubeStageState extends State<CubeStage>
           child: stage,
         );
       },
-    );
+    ));
   }
 
   /// The light, from above, a little left and in front.

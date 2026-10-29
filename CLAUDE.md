@@ -1141,7 +1141,25 @@ What the profiler found, and what keeps a frame cheap — keep these:
   (`_resizeTo`) repaints nothing; `CubeStageState.stagePointOf` maps a point
   on a face as laid out to the stage, which the tap handling and the tests
   use.
-- Every board, and the clock, sits behind its own `RepaintBoundary`.
+- **Everything that moves on its own sits behind its own
+  `RepaintBoundary`**: each board layer, the clock, the arrows-out counter,
+  the lives, the turn keys, the toolbar, the block's stage, and the whole
+  play column under the bump's jolt and the clear's hop (which move it
+  every frame). Without them a repaint anywhere in the column — a heart
+  shaking — repainted the block, every face and its shadow with it.
+- **An arrow leaving one face redrew every face showing**, because the
+  still layer compared the whole `removed` set; it compares only the
+  arrows on its own face (`_changedHere`).
+- **An arrow's body at rest is built once** (`_restingBodies`, by puzzle,
+  arrow, cell size and whether the head shows): its rounded corners and
+  its dashes were most of the cost of re-drawing a face when a move
+  starts.
+- `boardPaintCounts` (the painters' own count, by layer) is what
+  `test/widgets/game_screen_test.dart` pins: a clock tick draws neither
+  layer, and a whole slide draws the board at rest at most twice. That
+  holds on every platform — the Android app runs the same widgets, native
+  instead of compiled to JavaScript, so it had the same faults, milder —
+  and it is the check that runs without a browser.
 
 ## Testing
 
