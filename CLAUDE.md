@@ -1154,6 +1154,13 @@ What the profiler found, and what keeps a frame cheap — keep these:
   arrow, cell size and whether the head shows): its rounded corners and
   its dashes were most of the cost of re-drawing a face when a move
   starts.
+- **On the web a frame's rebuild runs before the callbacks of the
+  animations that ended in it** (natively, and in `flutter_test`, those
+  callbacks run first). A locked tap landing in the frame the last
+  pointer ended in disposed that pointer's controller, and its
+  `whenComplete` disposed it again — a JS error only the profiler, which
+  plays the real web build and fails on any, could see. A controller's
+  completion disposes it only while it is still the one in its slot.
 - `boardPaintCounts` (the painters' own count, by layer) is what
   `test/widgets/game_screen_test.dart` pins: a clock tick draws neither
   layer, and a whole slide draws the board at rest at most twice. That
