@@ -187,7 +187,9 @@ async function profile(level) {
     if (mark) marks[mark[1]] = page.evaluate(() => performance.now()).catch(() => 0);
     if (text.includes('EXCEPTION CAUGHT BY')) problems.push(`level ${level}: ${text.split('\n').slice(0, 3).join(' ')}`);
   });
-  page.on('pageerror', (e) => problems.push(`level ${level}: JS error ${e.message}`));
+  page.on('pageerror', (e) =>
+    problems.push(`level ${level}: JS error ${e.message}\n${String(e.stack ?? '').split('\n').slice(0, 8).join('\n')}`),
+  );
 
   const result = { level };
   await page.goto(`${base}?perf&level=${level}`, { waitUntil: 'load' });
