@@ -19,26 +19,44 @@
   [
    "home-scrolled-light-resume.png",
    1
+  ],
+  [
+   "level-01-keys-light-1440x900.png",
+   7
+  ],
+  [
+   "level-01-light-1440x900.png",
+   7
+  ],
+  [
+   "level-01-light.png",
+   4
+  ],
+  [
+   "level-16-dark-grid.png",
+   17
+  ],
+  [
+   "level-20-light.png",
+   3
+  ],
+  [
+   "onboarding-light.png",
+   1
   ]
  ],
  "same": [
   "home-scrolled-dark-grid.png",
   "home-scrolled-light.png",
   "level-01-hint-light.png",
-  "level-01-keys-light-1440x900.png",
-  "level-01-light-1440x900.png",
-  "level-01-light.png",
   "level-01-outoflives-light.png",
   "level-01-riddle-hint-light.png",
   "level-01-riddle-letter-light.png",
   "level-01-riddle-light.png",
   "level-01-riddle-solved-light.png",
   "level-03-light-resume.png",
-  "level-16-dark-grid.png",
   "level-16-hint-dark-grid.png",
   "level-20-hint-light.png",
-  "level-20-light.png",
-  "onboarding-light.png",
   "settings-light.png"
  ],
  "only_after": [],
