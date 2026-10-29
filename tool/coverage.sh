@@ -16,7 +16,10 @@ cd "$(dirname "$0")/.."
 
 # Quiet when green; a failure prints the failing tests (CI has nothing else
 # to go on).
-flutter test --coverage --reporter failures-only
+# Every core: the default is half of them, and the level deals are
+# split over several files (test/engine/levels_*_test.dart) to run side
+# by side.
+flutter test --coverage --reporter failures-only --concurrency="$(getconf _NPROCESSORS_ONLN)"
 
 python3 - "$THRESHOLD" <<'PY'
 import sys
