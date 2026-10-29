@@ -70,7 +70,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get chapterBlurb1 =>
-      'एक ही नियम: जिस तीर का रास्ता साफ़ हो उसे छुओ और वह निकल जाता है।';
+      'एक ही नियम: जिस तीर का रास्ता खुला हो उसे छुओ और वह निकल जाता है।';
 
   @override
   String get chapterBlurb2 =>
@@ -108,7 +108,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get introBodyPairs =>
-      'एक छुअन, दोनों निकलते हैं। दोनों रास्ते साफ़ चाहिए।';
+      'एक छुअन, दोनों निकलते हैं। दोनों रास्ते खुले चाहिए।';
 
   @override
   String get introGotIt => 'समझ गया';
@@ -1401,7 +1401,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get settingsResetProgressSubtitle =>
-      'हर लेवल फिर से बंद और सारे तारे साफ़';
+      'हर लेवल फिर से बंद और सारे तारे मिट जाएँगे';
 
   @override
   String get settingsResetConfirmTitle => 'सारी प्रगति मिटा दें?';
@@ -1454,7 +1454,7 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get arrowPathClear => 'किनारे तक रास्ता साफ़ है।';
+  String get arrowPathClear => 'किनारे तक रास्ता खुला है।';
 
   @override
   String get arrowPathMirror => 'इसका रास्ता आईने से टकराकर मुड़ता है।';
@@ -1505,7 +1505,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get arrowTethered =>
-      'दूसरे तीर से बँधा है: दोनों साथ निकलते हैं, इसलिए दोनों के रास्ते साफ़ होने चाहिए।';
+      'दूसरे तीर से बँधा है: दोनों साथ निकलते हैं, इसलिए दोनों के रास्ते खुले होने चाहिए।';
 
   @override
   String get arrowTapHint => 'इसे बाहर निकालें';
@@ -1614,19 +1614,19 @@ class AppLocalizationsHi extends AppLocalizations {
       locale: localeName,
       other: 'इस सतह पर $count तीर',
       one: 'इस सतह पर 1 तीर',
-      zero: 'सतह साफ़',
+      zero: 'सतह खाली',
     );
     return '$_temp0';
   }
 
   @override
   String cubeFacesClear(int cleared, int total) {
-    return '$total में से $cleared सतहें साफ़';
+    return '$total में से $cleared सतहें खाली';
   }
 
   @override
   String cubeMapLabel(int face, int cleared, int total) {
-    return 'क्यूब, सामने सतह $face, $total में से $cleared सतहें साफ़';
+    return 'क्यूब, सामने सतह $face, $total में से $cleared सतहें खाली';
   }
 
   @override
