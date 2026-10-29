@@ -172,9 +172,7 @@ async function profile(level) {
 
   const marks = {};
   const frameTimings = [];
-  const rasters = [];
   const played = [];
-  frameTimings.rasters = rasters;
   page.on('console', (m) => {
     const text = m.text();
     if (text.startsWith('perf:frames ')) {
@@ -184,7 +182,6 @@ async function profile(level) {
       }));
       return;
     }
-    if (text.startsWith('perf:bitmap')) { rasters.push(Date.now()); return; }
     if (text.startsWith('perf:tap ')) { played.push(Number(text.slice(9))); return; }
     const mark = /^perf:(\w+) (\d+)/.exec(text);
     if (mark) marks[mark[1]] = page.evaluate(() => performance.now()).catch(() => 0);
@@ -282,7 +279,6 @@ async function profile(level) {
 /// filled from its `perf:frames` lines).
 async function phase(page, frameTimings, act) {
   const before = frameTimings.length;
-  const bitmapsBefore = frameTimings.rasters.length;
   const from = await page.evaluate(() => performance.now());
   await act();
   const to = await page.evaluate(() => performance.now());
@@ -293,7 +289,6 @@ async function phase(page, frameTimings, act) {
     raster: spread(timings.map((t) => t.raster)),
     gap: await gaps(page, from, to),
     frames: timings.length,
-    bitmaps: frameTimings.rasters.length - bitmapsBefore,
   };
 }
 

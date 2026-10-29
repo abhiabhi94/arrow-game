@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'dart:math';
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show listEquals, setEquals;
 import 'package:flutter/material.dart';
@@ -17,7 +15,6 @@ import '../models/reaction_motion.dart';
 import '../ui/colors.dart';
 import 'board_glyphs.dart';
 import 'board_semantics.dart';
-import '../utils/perf_hooks.dart';
 
 /// How far the arrow that was hit is shoved along, in cells, at full jolt.
 const double kShoveDistance = 0.12;
@@ -595,7 +592,9 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
                   child: Stack(
                     children: [
                       Positioned.fill(
-                        child: _StillLayer(painter: painterFor(BoardLayer.still)),
+                        child: RepaintBoundary(
+                          child: CustomPaint(painter: painterFor(BoardLayer.still)),
+                        ),
                       ),
                       Positioned.fill(
                         child: RepaintBoundary(
@@ -1471,135 +1470,4 @@ class _BoardPainter extends CustomPainter {
     }
     return true;
   }
-}
-
-/// The board at rest, drawn once into a bitmap and the bitmap drawn after
-/// that. The web renderer keeps no cache of a layer's drawing: a picture
-/// behind a repaint boundary is still replayed path by path every frame,
-/// so a face of fifty arrows — three faces, under the block's perspective —
-/// was drawn again on every frame. A bitmap is one textured quad.
-///
-/// Making the bitmap is itself a whole drawing of the board, so it is never
-/// made while anything moves: the frame after a tap is the one a player
-/// waits on. While an arrow slides or bumps, the board at rest is a plain
-/// picture, recorded once as the move starts (the arrow on its way leaves
-/// it then); [kStillRasterDelay] after the board is still again, the
-/// picture becomes the bitmap that idling, turning and dragging draw.
-class _StillLayer extends StatefulWidget {
-  const _StillLayer({required this.painter});
-
-  final _BoardPainter painter;
-
-  @override
-  State<_StillLayer> createState() => _StillLayerState();
-}
-
-/// How long the board has to be still before its bitmap is made.
-const Duration kStillRasterDelay = Duration(milliseconds: 150);
-
-class _StillLayerState extends State<_StillLayer> {
-  ui.Image? _image;
-  _BoardPainter? _drawn;
-  Size _drawnSize = Size.zero;
-  double _drawnRatio = 0;
-  Size _size = Size.zero;
-  double _ratio = 1;
-  Timer? _later;
-
-  @override
-  void dispose() {
-    _later?.cancel();
-    _image?.dispose();
-    super.dispose();
-  }
-
-  /// Whether the bitmap shows the board as [widget.painter] would draw it.
-  bool get _fresh {
-    final drawn = _drawn;
-    return _image != null &&
-        drawn != null &&
-        _size == _drawnSize &&
-        _ratio == _drawnRatio &&
-        !widget.painter.shouldRepaint(drawn);
-  }
-
-  bool get _moving => widget.painter._live.isNotEmpty;
-
-  void _rasterize() {
-    if (_size.isEmpty) return;
-    perfMark('bitmap 0');
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder)..scale(_ratio);
-    widget.painter.paint(canvas, _size);
-    final picture = recorder.endRecording();
-    final image = picture.toImageSync((_size.width * _ratio).ceil(), (_size.height * _ratio).ceil());
-    picture.dispose();
-    _image?.dispose();
-    _image = image;
-    _drawn = widget.painter;
-    _drawnSize = _size;
-    _drawnRatio = _ratio;
-  }
-
-  /// Makes the bitmap once the board has been still for [kStillRasterDelay].
-  /// A timer already running is left to run: the clock rebuilds the board
-  /// ten times a second, and restarting it on every rebuild meant it never
-  /// went off.
-  void _rasterizeLater() {
-    if (_later?.isActive ?? false) return;
-    _later = Timer(kStillRasterDelay, () {
-      if (!mounted || _fresh) return;
-      // Still moving: try again once it has stopped.
-      if (_moving) return;
-      setState(_rasterize);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    _ratio = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        _size = constraints.biggest;
-        final fresh = _fresh;
-        if (!fresh && !_moving) _rasterizeLater();
-        return RepaintBoundary(
-          child: CustomPaint(
-            size: _size,
-            painter: fresh
-                ? _ImagePainter(image: _image!, ratio: _ratio, board: widget.painter)
-                : widget.painter,
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Draws [image] (made at [ratio] pixels a logical pixel) over its box, and
-/// gives the screen reader [board]'s nodes: the arrows are only a picture
-/// here, but each is still a button to a reader.
-class _ImagePainter extends CustomPainter {
-  _ImagePainter({required this.image, required this.ratio, required this.board});
-
-  final ui.Image image;
-  final double ratio;
-  final _BoardPainter board;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.scale(1 / ratio);
-    canvas.drawImage(image, Offset.zero, Paint()..filterQuality = FilterQuality.medium);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_ImagePainter old) => old.image != image || old.ratio != ratio;
-
-  @override
-  SemanticsBuilderCallback? get semanticsBuilder => board.semanticsBuilder;
-
-  @override
-  bool shouldRebuildSemantics(_ImagePainter old) => board.shouldRebuildSemantics(old.board);
 }

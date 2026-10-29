@@ -1111,7 +1111,7 @@ reported for reading. The hooks live only in a build with every level open
 and only on a page opened with `?perf`: `?level=N` opens a level straight
 onto its board (no semantics tree — the screenshot harness has to switch it
 on to find buttons, and it is real work on a big board) and `perfMark`
-prints when a deal starts and ends, each tap, and each bitmap made.
+prints when a deal starts and ends, and each tap.
 
 What the profiler found, and what keeps a frame cheap — keep these:
 - **The clock rebuilt the whole screen ten times a second.** The game
@@ -1127,16 +1127,14 @@ What the profiler found, and what keeps a frame cheap — keep these:
   painter's `_live` set — flashes, rings, the hint, the cursor). The still
   layer repaints only when the board at rest changes (`_stillChanged`); the
   moving one every frame, but it holds a handful of things.
-- **The web renderer has no raster cache**: a picture behind a repaint
-  boundary is still replayed path by path every frame. So the board at rest
-  is drawn once into a **bitmap** (`_StillLayer`, `Picture.toImageSync` at
-  the screen's pixel ratio) and the bitmap is what idle, turn and drag
-  frames draw. Making it is itself a whole drawing of the board, so it is
-  **never made while anything moves** — the frame after a tap is the one a
-  player waits on: during a move the still layer is a plain picture,
-  recorded once as it starts, and `kStillRasterDelay` after the board is
-  still the bitmap is made (a timer already running is left to run — the
-  first cut restarted it on every rebuild and it never went off).
+- **No bitmap of the still layer.** The web renderer keeps no raster
+  cache, so the still layer's picture is replayed path by path every frame
+  (on a phone, by its GPU). Drawing it once into an image
+  (`Picture.toImageSync`) looked like the fix and was tried: on CanvasKit
+  making the image reads its pixels back from the GPU (`SkImage_readPixels`,
+  ~100 ms a board on the runner, and it lands right after a move), which
+  cost more than it saved. Don't bring it back without the profiler
+  showing otherwise.
 - **A turn re-laid-out every face.** The block's faces are laid out once at
   `_layoutUnit` (the largest fit of any face) and scaled to the size on
   screen by their transforms, so growing or shrinking the block with a turn
