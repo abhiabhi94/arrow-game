@@ -200,6 +200,30 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
   });
 
+  testWidgets('a second locked tap before the first pointer is done throws nothing', (tester) async {
+    // The first tap's pointer replaced by the second's as it ends. On the
+    // web the frame's rebuild runs before the first pointer's completion
+    // callback (natively, and here, the callback runs first), so the
+    // rebuild disposed it and the callback disposed it again, which threw:
+    // tool/perf.mjs caught it on level 250. This pins the sequence the
+    // tests can play; the profiler, which fails on any JS error, pins the
+    // web's order.
+    final puzzle = featurePuzzle();
+    final fresh = GameState.fresh(featureSpecFor(1), puzzle);
+    final push = await _pumpBoard(tester, fresh);
+    GameState locked(int token) =>
+        fresh.copyWith(lastMoveId: 1, lastOutcome: MoveOutcome.locked, blockedKey: 0, moveToken: token);
+    push(locked(1));
+    await tester.pump();
+    push(locked(2));
+    await tester.pump(const Duration(milliseconds: kKeyPingMs));
+    expect(tester.takeException(), isNull);
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('a tap on a hidden arrow rattles it and points at the arrows that uncover it', (tester) async {
     final puzzle = featurePuzzle(hidden: const {2});
     final fresh = GameState.fresh(featureSpecFor(1), puzzle);

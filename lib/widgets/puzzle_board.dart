@@ -312,10 +312,11 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     controller.addListener(() => setState(() {}));
     controller.forward().whenComplete(() {
       if (!mounted) return;
-      setState(() {
-        if (slot[id] == controller) slot.remove(id);
-        controller.dispose();
-      });
+      // Replaced meanwhile (the same mirror flashing again): already
+      // disposed by the one that replaced it.
+      if (slot[id] != controller) return;
+      setState(() => slot.remove(id));
+      controller.dispose();
     });
   }
 
@@ -329,13 +330,17 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     controller.addListener(() => setState(() {}));
     controller.forward().whenComplete(() {
       if (!mounted) return;
+      // Disposed here only while it is still the pointer: a pointer started
+      // on top of it (a second locked tap) has disposed it already — on the
+      // web a frame's rebuild runs before this callback, so a tap in the
+      // frame this one ends in gets there first — and a second dispose
+      // throws.
+      if (_pointer != controller) return;
       setState(() {
-        if (_pointer == controller) {
-          _pointer = null;
-          _pointerTargets = const <int>[];
-        }
-        controller.dispose();
+        _pointer = null;
+        _pointerTargets = const <int>[];
       });
+      controller.dispose();
     });
   }
 
@@ -353,14 +358,15 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     controller.addListener(() => setState(() {}));
     controller.forward().whenComplete(() {
       if (!mounted) return;
+      // As for the pointer: a bump started on top of this one has disposed
+      // it already.
+      if (_bump != controller) return;
       setState(() {
-        if (_bump == controller) {
-          _bump = null;
-          _bumpId = null;
-          _bumpMotion = null;
-        }
-        controller.dispose();
+        _bump = null;
+        _bumpId = null;
+        _bumpMotion = null;
       });
+      controller.dispose();
       // The last life is spent by a bump like any other, and the board only
       // gives up once the player has seen it happen.
       _syncSlump();

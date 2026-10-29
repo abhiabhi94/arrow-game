@@ -65,12 +65,19 @@ const port = Number(args.port ?? 0);
 /// (`ms`) and its longest freeze (`freeze`). See BUDGETS_NOTE.
 const BUDGETS = {
   deal: { ms: 20_000, freeze: 4_000 },
-  idle: { p95: 60, max: 120 },
-  turn: { p95: 120, max: 250 },
-  drag: { p95: 120, max: 250 },
-  play: { p95: 150, max: 300 },
+  idle: { p95: 40, max: 80 },
+  turn: { p95: 120, max: 200 },
+  drag: { p95: 60, max: 150 },
+  play: { p95: 150, max: 250 },
 };
-const BUDGETS_NOTE = '';
+// Set from CI's own runs (ubuntu-24.04, 4x) of the code that fixed the lag,
+// with room for a runner's noise: idle 5-13 ms p95, turn ≤ 53, drag ≤ 16,
+// play ≤ 94. The code before those fixes spent 87-407 ms of Dart work on
+// an idle frame at 4x on a dev box (the clock rebuilt the whole screen ten
+// times a second) — the idle budget is the one that would have caught it.
+const BUDGETS_NOTE =
+  'Budgets are set from this job\'s own runs of the code that fixed the phone lag, with room for a runner\'s noise; ' +
+  'the code before those fixes spent 87–407 ms of Dart work on an *idle* frame at 4x.';
 // Budgets hold at the throttle they were set for; another throttle scales
 // them (a phone twice as slow does twice the work in a frame's time).
 const scale = throttle / 4;
