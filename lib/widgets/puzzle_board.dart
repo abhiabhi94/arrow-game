@@ -641,6 +641,30 @@ enum BoardLayer {
 @visibleForTesting
 Map<BoardLayer, int> get boardPaintCounts => _BoardPainter.debugPaints;
 
+/// The closest two cells of [a] and [b], for the tether between them —
+/// never a head (unless an arrow is nothing but its head): an ink ring over
+/// a head merged with it into one dark dot, and the one part of the arrow
+/// that says which way it goes was gone. The first cut only charged a head
+/// less than a cell's distance, so a head nearest its partner still took
+/// the ring.
+@visibleForTesting
+(Cell, Cell) tetherCells(ArrowPiece a, ArrowPiece b) {
+  Iterable<Cell> body(ArrowPiece arrow) =>
+      arrow.length > 1 ? arrow.cells.where((c) => c != arrow.head) : arrow.cells;
+  var best = (a.cells.first, b.cells.first);
+  var bestD = 1 << 30;
+  for (final ca in body(a)) {
+    for (final cb in body(b)) {
+      final d = (ca.x - cb.x).abs() + (ca.y - cb.y).abs();
+      if (d < bestD) {
+        bestD = d;
+        best = (ca, cb);
+      }
+    }
+  }
+  return best;
+}
+
 class _BoardPainter extends CustomPainter {
   _BoardPainter({
     required this.layer,
@@ -882,7 +906,7 @@ class _BoardPainter extends CustomPainter {
       if ((_live.contains(a) || _live.contains(b)) == _still) continue;
       final arrowA = puzzle.arrows[a];
       final arrowB = puzzle.arrows[b];
-      final (ca, cb) = _nearestCells(arrowA, arrowB);
+      final (ca, cb) = tetherCells(arrowA, arrowB);
       final offsetA = _offsetOf(arrowA);
       final offsetB = _offsetOf(arrowB);
       final moving = offsetA > 0 || offsetB > 0;
@@ -1165,26 +1189,6 @@ class _BoardPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = max(2.5, min(cs * 0.26, 5.0)),
     );
-  }
-
-  /// The closest two cells of [a] and [b], for the tether between them —
-  /// off the heads where there is a choice, so the ring never sits on the
-  /// one part of an arrow that says which way it goes.
-  static (Cell, Cell) _nearestCells(ArrowPiece a, ArrowPiece b) {
-    var best = (a.cells.first, b.cells.first);
-    var bestD = 1 << 30;
-    for (final ca in a.cells) {
-      for (final cb in b.cells) {
-        var d = 4 * ((ca.x - cb.x).abs() + (ca.y - cb.y).abs());
-        if (ca == a.head) d += 3;
-        if (cb == b.head) d += 3;
-        if (d < bestD) {
-          bestD = d;
-          best = (ca, cb);
-        }
-      }
-    }
-    return best;
   }
 
   /// [arrow]'s track: its cells, then its exit ray — which turns at a

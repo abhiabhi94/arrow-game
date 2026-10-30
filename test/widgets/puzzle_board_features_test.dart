@@ -1,4 +1,6 @@
+import 'package:arrow_game/engine/arrow_piece.dart';
 import 'package:arrow_game/engine/cell.dart';
+import 'package:arrow_game/engine/direction.dart';
 import 'package:arrow_game/l10n/app_localizations.dart';
 import 'package:arrow_game/models/game_state.dart';
 import 'package:arrow_game/widgets/board_semantics.dart';
@@ -47,6 +49,29 @@ Future<void Function(GameState)> _pumpBoard(
 }
 
 void main() {
+  test("a tether's rings never sit on a head, even the head nearest the partner", () {
+    // Level 93's pair in its top-left corner: 51 comes down and turns left
+    // with its head right under 6's body. Charged less than a cell's step, a
+    // head nearest its partner took the ring, and the two inks made one dark
+    // dot where the head should be.
+    final six = ArrowPiece(
+      id: 6,
+      cells: const [Cell(5, 3), Cell(4, 3), Cell(3, 3), Cell(2, 3), Cell(1, 3)],
+      heading: Direction.left,
+    );
+    final fiftyOne = ArrowPiece(
+      id: 51,
+      cells: const [Cell(8, 0), Cell(8, 1), Cell(8, 2), Cell(8, 3), Cell(8, 4), Cell(7, 4), Cell(6, 4), Cell(5, 4)],
+      heading: Direction.left,
+    );
+    expect(tetherCells(six, fiftyOne), (const Cell(5, 3), const Cell(6, 4)));
+    expect(tetherCells(fiftyOne, six), (const Cell(6, 4), const Cell(5, 3)));
+    // Two heads face to face: both rings step back onto the bodies.
+    final right = ArrowPiece(id: 0, cells: const [Cell(0, 0), Cell(1, 0)], heading: Direction.right);
+    final left = ArrowPiece(id: 1, cells: const [Cell(3, 0), Cell(2, 0)], heading: Direction.left);
+    expect(tetherCells(right, left), (const Cell(0, 0), const Cell(3, 0)));
+  });
+
   testWidgets('draws a board with every twist in both themes', (tester) async {
     for (final mode in <ThemeMode>[ThemeMode.light, ThemeMode.dark]) {
       final state = GameState.fresh(featureSpecFor(1), featurePuzzle());

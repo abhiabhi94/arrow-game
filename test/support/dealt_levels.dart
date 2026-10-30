@@ -5,6 +5,7 @@ import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/engine/puzzle.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
 import 'package:arrow_game/models/level_spec.dart';
+import 'package:arrow_game/widgets/puzzle_board.dart' show tetherCells;
 import 'package:flutter_test/flutter_test.dart';
 
 // Dealing a level is the slow part of the suite (all 250 take about two
@@ -141,6 +142,18 @@ void levelChecks({required int from, required int to}) {
       expect(profile.reduce(max), lessThanOrEqualTo(spec.openMoves + PuzzleGenerator.widestSlack), reason: 'level ${spec.level} widest');
       expect(PuzzleGenerator.holdsChoice(spec, profile), isTrue, reason: 'level ${spec.level}');
       expect(p.meanOpenMoves, lessThanOrEqualTo(spec.openMoves + 1), reason: 'level ${spec.level} mean');
+    }
+  });
+
+  test('levels $from-$to: no tether ring sits on an arrow\'s head', () {
+    for (final spec in specs.where((s) => s.features.pairs > 0)) {
+      final p = dealtLevel(spec.level);
+      for (final e in p.pairs.entries) {
+        final a = p.arrows[e.key];
+        final b = p.arrows[e.value];
+        final (ca, cb) = tetherCells(a, b);
+        expect(ca == a.head || cb == b.head, isFalse, reason: 'level ${spec.level} pair ${a.id}-${b.id}');
+      }
     }
   });
 
