@@ -113,8 +113,10 @@ jobs:
       - name: Analyze
         run: flutter analyze --fatal-infos
 
+      # Every core (the default is half): the level deals are split over
+      # several files that run side by side, about two minutes in all.
       - name: Test
-        run: flutter test
+        run: flutter test --concurrency="$(nproc)"
 
       - name: Restore upload keystore
         env:

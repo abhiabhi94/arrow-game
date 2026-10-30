@@ -42,7 +42,7 @@ jobs:
       # Runs the full suite with coverage and fails under the threshold.
       # Same gate developers run locally.
       - name: Test with coverage gate
-        run: bash tool/coverage.sh 92
+        run: bash tool/coverage.sh 98.5
 
   smoke:
     name: Web smoke & screenshots

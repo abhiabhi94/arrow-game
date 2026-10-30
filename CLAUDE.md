@@ -70,7 +70,7 @@ flutter pub get                 # deps
 flutter gen-l10n                # regenerate localizations after editing lib/l10n/*.arb
 flutter analyze --fatal-infos   # static analysis (must be clean; CI fails on infos)
 flutter test                    # full test suite
-tool/coverage.sh 92             # coverage gate (fails under threshold)
+tool/coverage.sh 98.5           # coverage gate (fails under threshold)
 
 flutter build web --debug --no-web-resources-cdn --no-wasm-dry-run  # web build (debug = all levels unlocked)
 node tool/screenshot.mjs --levels 1,7,20,40 --settings --hint       # phone-viewport screenshots -> shots/
@@ -222,7 +222,10 @@ Identity is tied to the **build type**, not a product flavor:
   dispatch) restores the upload key from the `ANDROID_UPLOAD_*` secrets,
   runs analyze + tests, builds the signed `.aab`/`.apk` with
   `--obfuscate --split-debug-info`, and uploads them (plus R8 mapping and
-  Dart symbols) as an artifact and a GitHub Release. Cloud sessions
+  Dart symbols) as an artifact and a GitHub Release. **Release notes**
+  (asked for since the last tag) go in the Play Console's `<en-US>` /
+  `<hi-IN>` form, each under 500 characters: `docs/release.md` → "Release
+  notes (Play Console)". Cloud sessions
   have no key, so a bundle built here is debug-signed and only proves the
   build compiles. Guide: `docs/release.md`.
 - **Cutting a release** is `tool/bump_version.sh` from an up-to-date `main`:
@@ -464,7 +467,7 @@ Key patterns:
   is kept (`kMinCandidates` = 5 on the big boards). Fill is ~85–95%; the level table
   is sized at roughly ten cells per arrow so every level gets its full
   count, and the levels open with ≤ 5 free arrows and offer ~2 taps at a
-  typical moment (`test/engine/puzzle_generator_test.dart` pins that).
+  typical moment (`test/engine/levels_*_test.dart` pin that).
   `puzzleForLevel(spec)` seeds `Random` from `LevelSpec.seed`, so each
   level is a fixed puzzle. The mirrors go on *first* (`_placeMirrors`:
   `LevelFeatures.mirrors` of them, spread over the interior at random,
@@ -782,10 +785,11 @@ Key patterns:
   level is never shorter on the clock than the chapter before's; mirrors
   one per eight arrows through their own chapter and one per fourteen
   after, never under two) and
-  `test/engine/puzzle_generator_test.dart` pins that every level deals its
+  the generator tests (`test/engine/levels_*_test.dart`, see **Testing**)
+  pin that every level deals its
   full count with its twists, solvable, tight, and that the hunt (arrows on
   the board per open move) climbs chapter by chapter. Keep the generator
-  test green — it is what guarantees a level is playable. The board is
+  tests green — it is what guarantees a level is playable. The board is
   sized to ~11.3 free cells an arrow (`freeCellCount`: the rectangle less
   the mirrors), which fills to ~0.88. **The block (101–150)** comes after
   the hundred flat levels, changes none of them, and — after a short
@@ -1170,6 +1174,18 @@ What the profiler found, and what keeps a frame cheap — keep these:
 
 ## Testing
 
+- **Every level is dealt and checked in full** by `test/engine/levels_*_test.dart`
+  (flat 1–100, block, squeeze in two parts, box), a range to a file, through
+  `test/support/dealt_levels.dart`: `levelChecks(from:, to:)` holds the
+  checks that guarantee a level is playable, and `dealtLevel` / `dealtFace`
+  deal each level once per file and share it. The suite used to deal every
+  level three or four times in `puzzle_generator_test.dart` alone, one file
+  on one core for twelve minutes; split and shared it is about two. A new
+  level-wide check goes in `levelChecks` (or the range's file) and reads
+  `dealtLevel`, never `puzzleForLevel` — and a new chapter gets a file of its
+  own, sized so no file takes much longer than the others. `flutter test`
+  runs half the cores by default; CI and `tool/coverage.sh` pass
+  `--concurrency` with all of them.
 - `flutter test` + `tool/coverage.sh`. The gate excludes generated l10n,
   `main.dart`, and glue marked `// coverage:ignore` (the real periodic timer).
   Don't add `coverage:ignore` to hide untested logic — only true glue.
@@ -1197,7 +1213,7 @@ GitHub Actions runs on every push to `main` and every PR targeting `main`
 (`.github/workflows/ci.yml`). Flutter is pinned in **`.flutter-version`**
 (3.47.4 / stable — match `.metadata`; bump both together; the session-start
 hook reads the same file). Job "Analyze & test" runs `flutter analyze
---fatal-infos` and `bash tool/coverage.sh 92`. Job "Web smoke & screenshots"
+--fatal-infos` and `bash tool/coverage.sh 98.5`. Job "Web smoke & screenshots"
 builds the web app, drives it in headless Chromium (`tool/screenshot.mjs`)
 at a phone viewport and at 1440×900 with keyboard presses, fails on any
 Flutter exception, and uploads `shots/`.

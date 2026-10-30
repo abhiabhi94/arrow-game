@@ -189,6 +189,43 @@ Then download the artifact. It contains:
 In Play Console: Release → Testing (internal) or Production → Create new
 release → upload the `.aab` → release notes → review → roll out.
 
+## Release notes (Play Console)
+
+When asked for release notes since the last tag, write them in the Play
+Console's multi-language form, ready to paste into Release → "Release
+notes", each language **under 500 characters** (Play's limit per language):
+
+- Short and exciting: what a player will notice, an emoji a line.
+- No exact level counts ("two new chapters", not "levels 151–250").
+- The Hindi is written in Hindi, not translated word for word — a clear
+  path is "खुला", not "साफ़" — and names chapters by their in-game Hindi
+  names (`chapterName*` in `lib/l10n/app_hi.arb`: रेखाएँ, आईने, ताले,
+  धुंध, जोड़ियाँ, क्यूब, शिकंजा, बक्सा).
+
+The v2.2.0 note, as the example:
+
+```
+<en-US>
+🧊 Two new chapters on the block!
+• The Squeeze: the cube, packed tight. Only one arrow can leave at a time. Can you find it?
+• The Box: the cube grows into a tall box with faces of three sizes, and it now fills your screen.
+• 📅 Reach the block and your daily board becomes a 3D puzzle too.
+• 🗺️ Finished chapters fold away, so your next level is always close by.
+• ⚡ Much smoother on phones: arrows leave the moment you tap.
+• ⏱️ Tighter clocks. Think fast!
+</en-US>
+
+<hi-IN>
+🧊 ब्लॉक पर दो नए अध्याय!
+• शिकंजा: कसकर भरा क्यूब, जहाँ एक बार में बस एक तीर निकल सकता है। ढूँढ पाओगे?
+• बक्सा: क्यूब अब ऊँचा बक्सा बन गया है, तीन नाप की सतहों वाला, और पूरी स्क्रीन भरता है।
+• 📅 ब्लॉक तक पहुँचो, तो रोज़ का बोर्ड भी 3D पहेली बन जाता है।
+• 🗺️ पूरे हुए अध्याय सिमट जाते हैं, तो अगला लेवल हमेशा पास ही मिलता है।
+• ⚡ फ़ोन पर पहले से कहीं ज़्यादा स्मूथ: छूते ही तीर निकल जाता है।
+• ⏱️ घड़ी अब और तेज़। जल्दी सोचो!
+</hi-IN>
+```
+
 ## Building locally instead
 
 `flutter build appbundle --release` works on any machine that has
