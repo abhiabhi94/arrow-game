@@ -26,9 +26,7 @@ void main() {
       reason: 'version $major.x is past $kIntroCatchUpLastMajor.x: the chapter-card catch-up has had its '
           'two major versions. Remove it (kIntroCatchUp in lib/providers/intro_provider.dart).',
     );
-    // Tagged so the Release workflow leaves it out: CI on main flags it
-    // after the bump, but a reminder never stops a release already tagged.
-  }, tags: 'sunset');
+  });
 
   test('every card at or before the level is owed, in trail order, until dismissed', () async {
     final n = await _notifier();
