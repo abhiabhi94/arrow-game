@@ -12,7 +12,7 @@ import 'package:arrow_game/screens/settings_screen.dart';
 import 'package:arrow_game/ui/layout.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/pump_app.dart';

@@ -6,7 +6,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show compute, kIsWeb;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../data/level_specs.dart';
 import '../engine/puzzle.dart';

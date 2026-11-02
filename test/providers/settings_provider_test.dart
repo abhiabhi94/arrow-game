@@ -2,6 +2,7 @@ import 'package:arrow_game/models/settings.dart';
 import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/settings_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -106,6 +107,10 @@ void main() {
   test('sharedPreferencesProvider throws until overridden', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
-    expect(() => container.read(sharedPreferencesProvider), throwsUnimplementedError);
+    // Riverpod 3 wraps what a provider throws in a ProviderException.
+    expect(
+      () => container.read(sharedPreferencesProvider),
+      throwsA(isA<ProviderException>().having((e) => e.exception, 'exception', isUnimplementedError)),
+    );
   });
 }

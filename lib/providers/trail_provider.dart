@@ -4,7 +4,7 @@
 /// a tap on a chapter's heading flips it, and that choice is kept.
 library;
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_providers.dart';
