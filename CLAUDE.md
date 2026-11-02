@@ -868,12 +868,18 @@ Key patterns:
   The game screen shows the card (`_IntroCard`) over the paused board
   once per install: `providers/intro_provider.dart` (prefs
   `arrow_intros_seen`, cleared by Reset progress) remembers which cards
-  have been dismissed, and `IntroNotifier.due(level:)` is the card of the
-  chapter the level is the first of, if it has not been shown (a catch-up
-  that showed every card a player was behind on, for installs already past
-  level 20 when the chapters arrived, ran for four releases and was
-  removed in build 20). The daily board brings the card of the chapter it
-  borrows from, for a player who gets there before its first level. Never
+  have been dismissed, and `IntroNotifier.due(level:)` is every chapter
+  past the first at or before the level whose card has not been, in trail
+  order — so a chapter's first level brings its card, and a player who was
+  already at level 65 when the chapters arrived (the levels re-dealt under
+  them, so a saved board from before is refused and the level restarts) is
+  shown Mirrors, Locks and Fog one after another when they next open a
+  level, "Got it" marking each seen and the last one resuming the clock.
+  The daily board brings the cards of the chapter it borrows from. That
+  catch-up is a bridge, not the game: `kIntroCatchUp` turns it off, and
+  `test/providers/intro_provider_test.dart` fails the first release build
+  past `kIntroCatchUpLastBuild` (18, four releases after the chapters
+  shipped in build 15) until the flag and the catch-up branch are deleted. Never
   over a resumed game, and the pause is deferred a frame since a provider
   may not change while the tree builds; the teaching levels also get a line
   under the board like levels 1–2. The home trail is headed by a
