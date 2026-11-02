@@ -117,9 +117,8 @@ laptop via GitHub Pages); `--crash x,y` taps a grid cell on the first level
 and captures the bump 330 ms in (or `x,y,ms`) on Playwright's fake clock
 (a screenshot takes longer than the bump), with the semantics layer made pointer-transparent
 for the tap — a click on the board's accessibility node would otherwise be a
-semantic tap at the board's centre; a fresh profile opened straight at a
-late level is owed every chapter card it skipped, and the driver puts
-them all away before the board flows. On a cube level `--keys Shift+ArrowRight`
+semantic tap at the board's centre; a chapter's first level opens on its
+card, which the driver captures and puts away before the board flows. On a cube level `--keys Shift+ArrowRight`
 turns the block, and `--drag dx,dy` drags the mouse across the middle of
 each opened level and captures the block a second after letting go. `--cleared N` records levels 1..N as cleared (stars and a best time), so
 the trail shows its walked road, the stars and a chapter's progress.
