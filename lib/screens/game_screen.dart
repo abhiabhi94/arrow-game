@@ -200,11 +200,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _face = first < 0 ? 0 : first;
   }
 
-  /// The chapter cards still to show over the paused board, in trail
-  /// order: every twist this level is at or past whose card the player has
-  /// not yet dismissed (`introProvider`). Usually one, on a chapter's first
-  /// level; several for a player who was already past a chapter when it
-  /// arrived. The first is the one up.
+  /// The chapter card still to show over the paused board: the twist this
+  /// level is the first of, if the player has not yet dismissed its card
+  /// (`introProvider`). The daily board brings none. The first is the one up.
   List<ChapterRule> _intros = const <ChapterRule>[];
   bool _introsChecked = false;
 
@@ -219,9 +217,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   void _maybeIntro(GameState state) {
     if (_introsChecked || state.phase != GamePhase.playing) return;
     final intro = ref.read(introProvider.notifier);
-    final due = widget.isDaily
-        ? intro.due(chapter: ref.read(dailyProvider).chapter)
-        : intro.due(level: widget.level);
+    final due = widget.isDaily ? const <ChapterRule>[] : intro.due(level: widget.level);
     _introsChecked = true;
     if (due.isEmpty) return;
     _intros = due;
