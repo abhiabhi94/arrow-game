@@ -115,8 +115,11 @@ jobs:
 
       # Every core (the default is half): the level deals are split over
       # several files that run side by side, about two minutes in all.
+      # The `sunset` reminders are left out: tool/bump_version.sh already ran
+      # them on this version before it was tagged, and a reminder must never
+      # stop a release that is already out of the door.
       - name: Test
-        run: flutter test --concurrency="$(nproc)"
+        run: flutter test --concurrency="$(nproc)" --exclude-tags sunset
 
       - name: Restore upload keystore
         env:

@@ -268,6 +268,16 @@ rm -f pubspec.yaml.bak
 [ "$(sed -n 's/^version: *//p' pubspec.yaml | head -1 | tr -d '[:space:]')" = "$new_version" ] \
   || die "pubspec.yaml did not take the new version"
 
+# The `sunset` tests (dart_test.yaml) read pubspec's version and fail once a
+# bridge has outlived its releases. Run them on the new version now, before
+# anything is committed or tagged: the Release workflow leaves them out, so
+# this is where they stop a release.
+echo "bump_version: checking the sunset tests on $new_version"
+if ! flutter test --tags sunset --reporter failures-only; then
+  git checkout --quiet -- pubspec.yaml
+  die "a sunset test fails on $new_version (above) — do what it asks first; pubspec.yaml is restored"
+fi
+
 git add pubspec.yaml
 git commit --quiet --message "Bump version to $new_version"
 echo "bump_version: committed $(git rev-parse --short HEAD)"
