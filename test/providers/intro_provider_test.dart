@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/providers/intro_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,19 +13,49 @@ Future<IntroNotifier> _notifier([Map<String, Object> seed = const {}]) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test("a chapter's card is owed on its first level, until dismissed", () async {
+  test('the catch-up is a bridge for installs from before the chapters, with a sunset', () {
+    // Two major versions after the chapters shipped, every such install has
+    // had its chance: turn kIntroCatchUp off, delete the catch-up branch of
+    // IntroNotifier.due and the tests of it, and this test with them.
+    final version = RegExp(r'^version:\s*(\d+)\.', multiLine: true)
+        .firstMatch(File('pubspec.yaml').readAsStringSync())!;
+    final major = int.parse(version.group(1)!);
+    expect(
+      !kIntroCatchUp || major <= kIntroCatchUpLastMajor,
+      isTrue,
+      reason: 'version $major.x is past $kIntroCatchUpLastMajor.x: the chapter-card catch-up has had its '
+          'two major versions. Remove it (kIntroCatchUp in lib/providers/intro_provider.dart).',
+    );
+  });
+
+  test('every card at or before the level is owed, in trail order, until dismissed', () async {
     final n = await _notifier();
     expect(n.due(level: 1), isEmpty);
     expect(n.due(level: 20), isEmpty);
     expect(n.due(level: 21), [ChapterRule.mirrors]);
-    expect(n.due(level: 41), [ChapterRule.locks]);
-    expect(n.due(level: 101), [ChapterRule.cube]);
-    // Not past a chapter's first level, and not on the cardless chapters.
-    expect(n.due(level: 46), isEmpty);
-    expect(n.due(level: 151), isEmpty);
-    expect(n.due(level: 201), isEmpty);
+    expect(n.due(level: 46), [ChapterRule.mirrors, ChapterRule.locks]);
+    expect(n.due(level: 65), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog]);
+    expect(n.due(level: 100), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs]);
+    expect(
+      n.due(level: 150),
+      [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
+    );
+    // The squeeze has no card: past level 150 nothing more is owed.
+    expect(
+      n.due(level: 200),
+      [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
+    );
+    // Nor has the box: at level 250 still nothing more.
+    expect(
+      n.due(level: 250),
+      [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
+    );
+    expect(n.due(chapter: chapters[2]), [ChapterRule.mirrors, ChapterRule.locks]);
+    expect(n.due(), isEmpty);
+    // A player who met Mirrors at 21 is shown only Locks at 41.
     n.markSeen(ChapterRule.mirrors);
-    expect(n.due(level: 21), isEmpty);
+    expect(n.due(level: 41), [ChapterRule.locks]);
+    expect(n.due(level: 22), isEmpty);
     n.markSeen(ChapterRule.mirrors); // again: nothing changes
     expect(n.state, {ChapterRule.mirrors});
     n.dispose();

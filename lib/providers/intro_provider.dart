@@ -1,5 +1,9 @@
 /// Which chapter cards the player has been shown. A card is shown once per
-/// install, on a chapter's first level.
+/// install, on a chapter's first level — and, while [kIntroCatchUp] is on,
+/// on the first board the player opens that is at or past the chapter, so
+/// a player who was already deep in the trail when the chapters arrived
+/// (they landed in an update, with the levels re-dealt) is shown every
+/// card they are behind on, one after another, rather than never.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +12,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/chapters.dart';
 import 'app_providers.dart';
+
+/// Whether cards are caught up on: the bridge for installs that were past
+/// level 20 when the chapters landed. It is a one-time thing, not the
+/// game: once every such install has had two major versions to open a
+/// level, turn it off and delete the catch-up branch of [IntroNotifier.due]
+/// (and the tests of it). `test/providers/intro_provider_test.dart` fails
+/// the first version past major [kIntroCatchUpLastMajor] until that is done.
+const bool kIntroCatchUp = true;
+
+/// The last major version (`pubspec.yaml`'s `X` in `X.Y.Z+N`) to carry the
+/// catch-up: the chapters shipped in 2.0.0, and two major versions is 2.x
+/// and 3.x, so it goes in 4.0.0.
+const int kIntroCatchUpLastMajor = 3;
 
 class IntroRepository {
   IntroRepository(this._prefs);
@@ -35,11 +52,22 @@ class IntroNotifier extends StateNotifier<Set<ChapterRule>> {
 
   final IntroRepository _repo;
 
-  /// The cards still owed to a player opening [level]: the card of the
-  /// chapter [level] is the first of, if it has not been shown.
-  List<ChapterRule> due({required int level}) {
-    final rule = ruleTaughtAt(level);
-    return rule == null || !rule.hasCard || state.contains(rule) ? const <ChapterRule>[] : <ChapterRule>[rule];
+  /// The cards still owed to a player opening [level] (or the daily board of
+  /// [chapter]): the card of the chapter [level] is the first of, if it has
+  /// not been shown — and, with [kIntroCatchUp], every chapter past the
+  /// first up to and including the one the level (or the daily) is in,
+  /// whose card has not been shown, in trail order.
+  List<ChapterRule> due({int? level, Chapter? chapter}) {
+    if (!kIntroCatchUp) {
+      final rule = level == null ? null : ruleTaughtAt(level);
+      return rule == null || !rule.hasCard || state.contains(rule) ? const <ChapterRule>[] : <ChapterRule>[rule];
+    }
+    final upTo = chapter ?? (level == null ? null : chapterOf(level));
+    if (upTo == null) return const <ChapterRule>[];
+    return <ChapterRule>[
+      for (final c in chapters)
+        if (c.index >= 2 && c.index <= upTo.index && c.rule.hasCard && !state.contains(c.rule)) c.rule,
+    ];
   }
 
   /// The card for [rule] has been dismissed.

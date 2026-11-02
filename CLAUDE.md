@@ -117,8 +117,9 @@ laptop via GitHub Pages); `--crash x,y` taps a grid cell on the first level
 and captures the bump 330 ms in (or `x,y,ms`) on Playwright's fake clock
 (a screenshot takes longer than the bump), with the semantics layer made pointer-transparent
 for the tap — a click on the board's accessibility node would otherwise be a
-semantic tap at the board's centre; a chapter's first level opens on its
-card, which the driver captures and puts away before the board flows. On a cube level `--keys Shift+ArrowRight`
+semantic tap at the board's centre; a fresh profile opened straight at a
+late level is owed every chapter card it skipped, and the driver puts
+them all away before the board flows. On a cube level `--keys Shift+ArrowRight`
 turns the block, and `--drag dx,dy` drags the mouse across the middle of
 each opened level and captures the block a second after letting go. `--cleared N` records levels 1..N as cleared (stars and a best time), so
 the trail shows its walked road, the stars and a chapter's progress.
@@ -867,11 +868,18 @@ Key patterns:
   The game screen shows the card (`_IntroCard`) over the paused board
   once per install: `providers/intro_provider.dart` (prefs
   `arrow_intros_seen`, cleared by Reset progress) remembers which cards
-  have been dismissed, and `IntroNotifier.due(level:)` is the card of the
-  chapter the level is the first of, if not yet seen. (A catch-up that
-  showed a player past a chapter every card they had missed, and the
-  daily board its chapter's cards, bridged the installs from before the
-  chapters for four releases and was removed after build 18.) Never
+  have been dismissed, and `IntroNotifier.due(level:)` is every chapter
+  past the first at or before the level whose card has not been, in trail
+  order — so a chapter's first level brings its card, and a player who was
+  already at level 65 when the chapters arrived (the levels re-dealt under
+  them, so a saved board from before is refused and the level restarts) is
+  shown Mirrors, Locks and Fog one after another when they next open a
+  level, "Got it" marking each seen and the last one resuming the clock.
+  The daily board brings the cards of the chapter it borrows from. That
+  catch-up is a bridge, not the game: `kIntroCatchUp` turns it off, and
+  `test/providers/intro_provider_test.dart` fails the first release build
+  past major `kIntroCatchUpLastMajor` (3: the chapters shipped in 2.0.0,
+  so it runs through 2.x and 3.x and goes in 4.0.0) until the flag and the catch-up branch are deleted. Never
   over a resumed game, and the pause is deferred a frame since a provider
   may not change while the tree builds; the teaching levels also get a line
   under the board like levels 1–2. The home trail is headed by a
