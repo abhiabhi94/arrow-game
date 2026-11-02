@@ -1,6 +1,6 @@
 # Test tags. `sunset` marks a test that fails once pubspec's version passes
-# a date-like limit (a reminder to delete a bridge): tool/bump_version.sh
-# runs it on the new version before committing, and the Release workflow
-# excludes it, so it can stop a bump but never a release already tagged.
+# a limit (a reminder to delete a temporary bridge). CI runs it on every PR
+# and push to main, so a bump past the limit turns main red; the Release
+# workflow excludes it, so it never stops a release already tagged.
 tags:
   sunset:

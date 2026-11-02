@@ -254,10 +254,10 @@ Identity is tied to the **build type**, not a product flavor:
 - **Sunset tests** (`tags: 'sunset'`, declared in `dart_test.yaml`) read
   pubspec's version and fail once a temporary bridge has outlived its
   releases (today: the chapter-card catch-up, `kIntroCatchUpLastMajor`).
-  `tool/bump_version.sh` runs them on the *new* version before it commits
-  or tags, and restores pubspec if one fails; `release.yml` runs the suite
-  with `--exclude-tags sunset`. A reminder stops a bump, never a release
-  already tagged — 2.2.2's release failed on one, counted in builds.
+  CI runs them on every PR and push, so a bump past the limit turns `main`
+  red; `release.yml` runs the suite with `--exclude-tags sunset`, so a
+  reminder never stops a release already tagged — 2.2.2's release failed
+  on one, counted in builds.
 
 ## Architecture
 
