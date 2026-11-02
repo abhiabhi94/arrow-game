@@ -22,6 +22,9 @@ Future<void> main() async {
   reportFrameTimings();
   runApp(
     ProviderScope(
+      // Riverpod 3 retries a provider that throws; none of ours fails for a
+      // reason a retry would fix, so an error surfaces once, as in 2.x.
+      retry: (_, _) => null,
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       child: const ArrowApp(),
     ),

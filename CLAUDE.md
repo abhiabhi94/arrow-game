@@ -1293,6 +1293,11 @@ composite action check the `uses:` inside it too.
 - **Theming:** light + dark via `ThemeMode` (default `system`, set in Settings). Widgets read colours through `context.palette` (an `ArrowPalette` chosen by brightness) — never hardcode a `Color`. Add new tokens as fields on `ArrowPalette` with both light/dark values in `ui/colors.dart`.
 - `snake_case` filenames; const-heavy; trailing commas; imports at the top.
 - Immutable state with `copyWith`; Riverpod **StateNotifier** style (not codegen).
+  On `flutter_riverpod` 3, `StateNotifier` / `StateNotifierProvider` come from
+  `package:flutter_riverpod/legacy.dart` and `Override` / `ProviderException`
+  from `package:flutter_riverpod/misc.dart`; a provider that throws surfaces
+  wrapped in `ProviderException`, and `main.dart` turns Riverpod 3's
+  auto-retry off (`retry: (_, _) => null`).
 - **No `try/except`** unless explicitly required.
 - Prefer "allowedlist/blocklist" over black/white; format large numbers as `10_000`.
 
