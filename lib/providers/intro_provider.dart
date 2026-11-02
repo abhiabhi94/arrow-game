@@ -14,15 +14,16 @@ import 'app_providers.dart';
 
 /// Whether cards are caught up on: the bridge for installs that were past
 /// level 20 when the chapters landed. It is a one-time thing, not the
-/// game: once every such install has had its four releases to open a
+/// game: once every such install has had two major versions to open a
 /// level, turn it off and delete the catch-up branch of [IntroNotifier.due]
 /// (and the tests of it). `test/providers/intro_provider_test.dart` fails
-/// the build that comes after [kIntroCatchUpLastBuild] until that is done.
+/// the first version past major [kIntroCatchUpLastMajor] until that is done.
 const bool kIntroCatchUp = true;
 
-/// The last release build (`pubspec.yaml`'s `+N`) to carry the catch-up:
-/// the chapters shipped in build 15, and four releases on is 18.
-const int kIntroCatchUpLastBuild = 18;
+/// The last major version (`pubspec.yaml`'s `X` in `X.Y.Z+N`) to carry the
+/// catch-up: the chapters shipped in 2.0.0, and two major versions is 2.x
+/// and 3.x, so it goes in 4.0.0.
+const int kIntroCatchUpLastMajor = 3;
 
 class IntroRepository {
   IntroRepository(this._prefs);
