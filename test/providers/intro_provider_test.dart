@@ -14,17 +14,17 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('the catch-up is a bridge for installs from before the chapters, with a sunset', () {
-    // Four releases after the chapters shipped, every such install has had
-    // its chance: turn kIntroCatchUp off, delete the catch-up branch of
+    // Two major versions after the chapters shipped, every such install has
+    // had its chance: turn kIntroCatchUp off, delete the catch-up branch of
     // IntroNotifier.due and the tests of it, and this test with them.
-    final version = RegExp(r'^version:\s*\S+\+(\d+)', multiLine: true)
+    final version = RegExp(r'^version:\s*(\d+)\.', multiLine: true)
         .firstMatch(File('pubspec.yaml').readAsStringSync())!;
-    final build = int.parse(version.group(1)!);
+    final major = int.parse(version.group(1)!);
     expect(
-      !kIntroCatchUp || build <= kIntroCatchUpLastBuild,
+      !kIntroCatchUp || major <= kIntroCatchUpLastMajor,
       isTrue,
-      reason: 'build $build is past $kIntroCatchUpLastBuild: the chapter-card catch-up has had its '
-          'four releases. Remove it (kIntroCatchUp in lib/providers/intro_provider.dart).',
+      reason: 'version $major.x is past $kIntroCatchUpLastMajor.x: the chapter-card catch-up has had its '
+          'two major versions. Remove it (kIntroCatchUp in lib/providers/intro_provider.dart).',
     );
   });
 
