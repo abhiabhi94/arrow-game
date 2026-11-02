@@ -13,6 +13,7 @@ import '../engine/direction.dart';
 import '../l10n/app_localizations.dart';
 import '../models/board_cursor.dart';
 import '../models/bump_motion.dart';
+import '../models/exit_motion.dart';
 import '../models/game_state.dart';
 import '../models/level_spec.dart';
 import '../models/reaction_motion.dart';
@@ -119,6 +120,13 @@ class _GameScreenState extends ConsumerState<GameScreen>
   /// frame as the tap, and the player would never see the crash that cost
   /// them the level — only the card telling them about it.
   bool _endingHeld = false;
+
+  /// True while the arrow that cleared the level is still sliding off. The
+  /// card (and the hop) would otherwise land in the same frame as the tap,
+  /// and the last arrow's exit — the moment the level was won — would play
+  /// out unseen under it.
+  bool _clearHeld = false;
+  Timer? _clearTimer;
 
   /// The riddle standing between a spent allowance and one more life, or
   /// between a spent hint allowance and one more hint — null while no card
@@ -372,6 +380,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _turnTimer?.cancel();
     _crash.dispose();
     _hop.dispose();
+    _clearTimer?.cancel();
     _confetti.dispose();
     _zoom.dispose();
     super.dispose();
@@ -548,12 +557,24 @@ class _GameScreenState extends ConsumerState<GameScreen>
         _gridJustUnlocked =
             widget.level == kGridLinesUnlockAfterLevel &&
             !progress.progressFor(widget.level).completed;
-        // The hop and the confetti are the celebration; with motion reduced
-        // the card and its sound are the celebration.
-        if (!_calm) {
-          _hop.forward(from: 0);
-          _confetti.play();
-        }
+        // The last arrow slides off first; then the card, and the hop and
+        // the confetti — the celebration (with motion reduced, the card and
+        // its sound are the celebration).
+        _clearHeld = true;
+        _clearTimer?.cancel();
+        _clearTimer = Timer(Duration(milliseconds: exitSlideMs(next.puzzle!, next.lastMoveId!)), () {
+          if (!mounted) return;
+          setState(() => _clearHeld = false);
+          if (!_calm) {
+            _hop.forward(from: 0);
+            _confetti.play();
+          }
+        });
+      }
+      // A restart (or anything else out of the clear) drops a pending card.
+      if (next.phase != GamePhase.cleared && _clearHeld) {
+        _clearTimer?.cancel();
+        setState(() => _clearHeld = false);
       }
     });
     // Rebuilt when the game changes, not when its clock ticks: the clock
@@ -853,6 +874,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
                     ),
                   ],
                 ),
+                // Nothing over the board until the last arrow has left it.
+                GamePhase.cleared when _clearHeld => const SizedBox.shrink(),
                 GamePhase.cleared => ResultCard(
                   mood: EmojiMood.cheer,
                   emoji: state.stars == 3 ? '🏆' : '🎉',

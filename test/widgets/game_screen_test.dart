@@ -7,6 +7,7 @@ import 'package:arrow_game/data/riddle_bank.dart';
 import 'package:arrow_game/engine/puzzle.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/engine/puzzle_generator.dart';
+import 'package:arrow_game/models/exit_motion.dart';
 import 'package:arrow_game/models/game_state.dart';
 import 'package:arrow_game/models/riddle.dart';
 import 'package:arrow_game/providers/app_providers.dart';
@@ -914,6 +915,22 @@ void main() {
     expect(container.read(settingsProvider).gridLinesOn, isTrue);
   });
 
+  testWidgets('the last arrow is seen to leave before the card comes up', (tester) async {
+    final container = await _pumpGame(tester);
+    final notifier = container.read(gameProvider(1).notifier);
+    notifier.tapArrow(0);
+    notifier.tapArrow(1);
+    await _settle(tester, 1500);
+    notifier.tapArrow(2);
+    expect(notifier.state.phase, GamePhase.cleared);
+    final slideMs = exitSlideMs(notifier.state.puzzle!, 2);
+    await _settle(tester, slideMs - 50);
+    expect(find.text('Level cleared!'), findsNothing);
+    await _settle(tester, 100);
+    expect(find.text('Level cleared!'), findsOneWidget);
+    await _settle(tester, 1500);
+  });
+
   testWidgets('clearing level 4 announces the grid unlock', (tester) async {
     final container = await _pumpGame(tester, level: 4, unlockAll: false);
     final notifier = container.read(gameProvider(4).notifier);
@@ -922,6 +939,7 @@ void main() {
     notifier.tapArrow(2);
     await _settle(tester, 1500);
     expect(find.text('Grid lines unlocked! Find the toggle under the board.'), findsOneWidget);
+    await _settle(tester, 1500);
   });
 
   testWidgets('zoom buttons scale the board within bounds', (tester) async {
@@ -1048,6 +1066,7 @@ void main() {
     await _settle(tester, 1500);
     expect(find.text('Made it! Fewer slips next time for more stars.'), findsOneWidget);
     expect(find.text('Tap an arrow to slide it out the way it points.'), findsNothing);
+    await _settle(tester, 1500);
   });
 
   testWidgets('dark theme renders the board with grid lines on', (tester) async {

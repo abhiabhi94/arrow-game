@@ -10,6 +10,7 @@ import '../engine/direction.dart';
 import '../engine/puzzle.dart';
 import '../l10n/app_localizations.dart';
 import '../models/bump_motion.dart';
+import '../models/exit_motion.dart';
 import '../models/game_state.dart';
 import '../models/reaction_motion.dart';
 import '../ui/colors.dart';
@@ -53,10 +54,6 @@ const int kRevealMs = 1000;
 
 /// How long the flash on a mirror lasts as an arrow bounces through it.
 const int kBounceMs = 600;
-
-/// How much longer a slide takes for every mirror it turns at, so a bounce
-/// is a moment and not a blink.
-const int kBounceDwellMs = 140;
 
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
 /// on its way out) in a single ink — thin lines with a small head, like a
@@ -233,20 +230,9 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
 
   void _startExit(int id) {
     final puzzle = widget.state.puzzle!;
-    // A tethered pair leaves together, so both halves run on one clock —
-    // the longer half's.
     final group = puzzle.exitGroup(id);
-    var travel = 0;
-    var turns = 0;
-    for (final member in group) {
-      travel = max(travel, puzzle.arrows[member].length + puzzle.rayOf(member).length);
-      turns = max(turns, puzzle.rayOf(member).where(puzzle.isMirror).length);
-    }
-    // Quick but still readable as a slide: a short arrow at the edge is gone
-    // in about a quarter second; a long crossing of a big board never drags.
-    // A turn at a mirror buys a little more, so the bounce is watched.
-    final dwell = turns * kBounceDwellMs;
-    final duration = Duration(milliseconds: (140 + travel * 30 + dwell).clamp(240, 600 + dwell));
+    // A tethered pair leaves together, on one clock (see [exitSlideMs]).
+    final duration = Duration(milliseconds: exitSlideMs(puzzle, id));
     // The locks this exit opens stay shut until it is over.
     for (final member in group) {
       for (final lock in puzzle.locksOpenedBy(member)) {
