@@ -4,7 +4,6 @@ import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/models/game_state.dart';
 import 'package:arrow_game/providers/daily_provider.dart';
-import 'package:arrow_game/providers/app_providers.dart';
 import 'package:arrow_game/providers/game_provider.dart';
 import 'package:arrow_game/providers/intro_provider.dart';
 import 'package:arrow_game/providers/progress_provider.dart';
@@ -108,34 +107,15 @@ void main() {
     expect(find.text('A locked arrow waits for its key.'), findsOneWidget);
   });
 
-  testWidgets('a player already past a chapter is shown every card owed, one after another', (tester) async {
-    // Forty-five levels cleared before the chapters arrived: opening level
-    // 46 brings the Mirrors card, then the Locks card, then the level.
+  testWidgets('a level past a chapter\'s first opens on the board, with no card', (tester) async {
     final container = await _pump(
       tester,
       const GameScreen(level: 46),
       seed: {for (var l = 1; l <= 45; l++) 'arrow_level_${l}_done': true},
     );
-    expect(find.text('Mirrors'), findsOneWidget);
-    expect(find.text('Arrows bounce off mirrors.'), findsOneWidget);
-    expect(container.read(gameProvider(46)).phase, GamePhase.paused);
-    await tester.tap(find.text('Got it'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Mirrors'), findsNothing);
-    expect(find.text('The key goes first. Then the lock opens.'), findsOneWidget);
-    expect(container.read(gameProvider(46)).phase, GamePhase.paused);
-    await tester.tap(find.text('Got it'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Got it'), findsNothing);
     expect(container.read(gameProvider(46)).phase, GamePhase.playing);
-    // Both are remembered: the next level opens straight onto the board.
-    expect(container.read(introProvider), {ChapterRule.mirrors, ChapterRule.locks});
-    final prefs = container.read(sharedPreferencesProvider);
-    expect(prefs.getStringList(IntroRepository.key), ['mirrors', 'locks']);
-    // Not the Fog card: that chapter is still ahead.
-    expect(find.text('Clear an arrow beside it to see where it points.'), findsNothing);
+    expect(container.read(introProvider), isEmpty);
   });
 
   testWidgets('the daily board brings the cards of the chapter it borrows from', (tester) async {
