@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:arrow_game/data/level_specs.dart';
 import 'package:arrow_game/engine/cell.dart';
 import 'package:arrow_game/engine/puzzle.dart';
+import 'package:arrow_game/models/exit_motion.dart';
 import 'package:arrow_game/models/game_state.dart';
 import 'package:arrow_game/models/saved_game.dart';
 import 'package:arrow_game/providers/app_providers.dart';
@@ -90,46 +91,52 @@ void main() {
   });
 
   test('a free arrow slides out; the last one clears the level', () {
-    final cleared = <(int, int?, int)>[];
-    final engine = RecordingHapticEngine();
-    final sfxBackend = RecordingSfxBackend();
-    final n = _notifier(
-      haptics: HapticsService(() => true, engine: engine),
-      sfx: SfxService(() => true, backend: sfxBackend),
-      onCleared: (l, ms, stars) => cleared.add((l, ms, stars)),
-    );
-    n.tick(1200);
-    n.tapArrow(1);
-    expect(n.state.removed, {1});
-    expect(n.state.arrowsOut, 1);
-    expect(n.state.lastMoveId, 1);
-    expect(n.state.lastOutcome, MoveOutcome.exited);
-    expect(n.state.moveToken, 1);
+    fakeAsync((async) {
+      final cleared = <(int, int?, int)>[];
+      final engine = RecordingHapticEngine();
+      final sfxBackend = RecordingSfxBackend();
+      final n = _notifier(
+        haptics: HapticsService(() => true, engine: engine),
+        sfx: SfxService(() => true, backend: sfxBackend),
+        onCleared: (l, ms, stars) => cleared.add((l, ms, stars)),
+      );
+      n.tick(1200);
+      n.tapArrow(1);
+      expect(n.state.removed, {1});
+      expect(n.state.arrowsOut, 1);
+      expect(n.state.lastMoveId, 1);
+      expect(n.state.lastOutcome, MoveOutcome.exited);
+      expect(n.state.moveToken, 1);
 
-    n.tapArrow(1); // already gone: ignored
-    expect(n.state.moveToken, 1);
+      n.tapArrow(1); // already gone: ignored
+      expect(n.state.moveToken, 1);
 
-    n.tapArrow(0);
-    n.tapArrow(2);
-    expect(n.state.phase, GamePhase.cleared);
-    expect(n.state.stars, 3);
-    expect(n.state.isOver, isTrue);
-    expect(cleared, [(1, 1200, 3)]);
-    expect(engine.calls, ['light', 'light', 'medium']);
-    // Every exit whooshes, the streak climbing, and the clear sings.
-    expect(sfxBackend.calls, hasLength(4));
-    expect(sfxBackend.calls.first, '$kWhooshSound@1.00');
-    expect(sfxBackend.calls[2], '$kWhooshSound@1.12');
-    expect(sfxBackend.calls.last, '$kWinSound@1.00');
+      n.tapArrow(0);
+      n.tapArrow(2);
+      expect(n.state.phase, GamePhase.cleared);
+      expect(n.state.stars, 3);
+      expect(n.state.isOver, isTrue);
+      expect(cleared, [(1, 1200, 3)]);
+      // The cheer waits for the last arrow to be off the board.
+      expect(engine.calls, ['light', 'light']);
+      expect(sfxBackend.calls, hasLength(3));
+      async.elapse(Duration(milliseconds: exitSlideMs(n.state.puzzle!, 2)));
+      expect(engine.calls, ['light', 'light', 'medium']);
+      // Every exit whooshes, the streak climbing, and the clear sings.
+      expect(sfxBackend.calls, hasLength(4));
+      expect(sfxBackend.calls.first, '$kWhooshSound@1.00');
+      expect(sfxBackend.calls[2], '$kWhooshSound@1.12');
+      expect(sfxBackend.calls.last, '$kWinSound@1.00');
 
-    // Nothing moves after the end.
-    n.tick(1000);
-    expect(n.state.elapsedMs, 1200);
-    // A bounce the board reports is a sound and nothing more.
-    n.bounce();
-    expect(sfxBackend.calls.last, '$kBounceSound@1.00');
-    expect(n.state.moveToken, 3);
-    n.dispose();
+      // Nothing moves after the end.
+      n.tick(1000);
+      expect(n.state.elapsedMs, 1200);
+      // A bounce the board reports is a sound and nothing more.
+      n.bounce();
+      expect(sfxBackend.calls.last, '$kBounceSound@1.00');
+      expect(n.state.moveToken, 3);
+      n.dispose();
+    });
   });
 
   test('a blocked arrow bumps, costs a life and records the blocking cell', () {

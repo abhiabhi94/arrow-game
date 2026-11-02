@@ -12,6 +12,7 @@ import '../data/level_specs.dart';
 import '../engine/puzzle.dart';
 import '../engine/puzzle_generator.dart';
 import '../models/bump_motion.dart';
+import '../models/exit_motion.dart';
 import '../models/game_state.dart';
 import '../models/level_progress.dart';
 import '../models/level_spec.dart';
@@ -174,8 +175,14 @@ class GameNotifier extends StateNotifier<GameState> {
       );
       sfx?.whoosh();
       if (cleared) {
-        sfx?.win();
-        haptics?.victory();
+        // The fanfare waits for the last arrow to be off the board, as the
+        // card does: a clear is the slide, then the cheer.
+        _sting?.cancel();
+        _sting = Timer(Duration(milliseconds: exitSlideMs(puzzle, id)), () {
+          _sting = null;
+          sfx?.win();
+          haptics?.victory();
+        });
         onCleared?.call(spec.level, spec.timed ? state.elapsedMs : null, state.stars);
       } else {
         haptics?.hit();
