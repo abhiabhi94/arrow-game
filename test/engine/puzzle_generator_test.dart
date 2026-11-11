@@ -73,7 +73,7 @@ void main() {
   });
 
   test('a box picks each face from fewer boards; a cube is dealt as it always was', () {
-    expect(PuzzleGenerator.faceCandidatesFor(specForLevel(150)), isNull);
+    expect(PuzzleGenerator.faceCandidatesFor(specForLevel(200)), isNull);
     expect(PuzzleGenerator.faceCandidatesFor(specForLevel(200)), isNull);
     expect(PuzzleGenerator.faceCandidatesFor(specForLevel(201)), PuzzleGenerator.kBoxFaceCandidates);
     expect(PuzzleGenerator.faceCandidatesFor(specForLevel(250)), PuzzleGenerator.kBoxFaceCandidates);

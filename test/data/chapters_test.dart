@@ -4,8 +4,8 @@ import 'package:arrow_game/data/level_specs.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('five chapters of twenty levels, then three of fifty on the block, cover the trail in order', () {
-    expect(chapters, hasLength(8));
+  test('five chapters of twenty, two of the Rush, two of fifty on the block, cover the trail in order', () {
+    expect(chapters, hasLength(9));
     expect(chapters.first.firstLevel, 1);
     expect(chapters.last.lastLevel, totalLevels);
     for (var i = 1; i < chapters.length; i++) {
@@ -14,13 +14,17 @@ void main() {
     for (final c in chapters.take(5)) {
       expect(c.length, kChapterLength);
     }
-    expect(chapters[5].firstLevel, kFirstCubeLevel);
-    expect(chapters[5].length, 50);
-    expect(chapters[6].firstLevel, kFirstSqueezeLevel);
-    expect(chapters[6].length, 50);
+    expect(chapters[5].firstLevel, kFirstRushLevel);
+    expect(chapters[5].length, 25);
+    expect(chapters[6].firstLevel, kFirstBlocksLevel);
+    expect(chapters[6].length, 25);
+    expect(chapters[7].firstLevel, kFirstCubeLevel);
+    expect(chapters[7].length, 50);
     expect(chapters.last.firstLevel, kFirstBoxLevel);
     expect(chapters.last.length, 50);
-    expect(chapters.where((c) => !c.rule.onBlock), hasLength(kFlatChapterCount));
+    expect(chapters.where((c) => !c.rule.onBlock && !c.rule.isRush), hasLength(kFlatChapterCount));
+    expect(chapters.where((c) => c.rule.isRush), hasLength(2));
+    expect(cubeChapter.index, 8);
     expect(chapterOf(1).rule, ChapterRule.lines);
     expect(chapterOf(20).rule, ChapterRule.lines);
     expect(chapterOf(21).rule, ChapterRule.mirrors);
@@ -31,10 +35,13 @@ void main() {
     expect(chapterOf(100).rule, ChapterRule.pairs);
     expect(chapterOf(100).contains(81), isTrue);
     expect(chapterOf(100).contains(80), isFalse);
-    expect(chapterOf(101).rule, ChapterRule.cube);
-    expect(chapterOf(150).rule, ChapterRule.cube);
-    expect(chapterOf(151).rule, ChapterRule.squeeze);
-    expect(chapterOf(200).rule, ChapterRule.squeeze);
+    expect(chapterOf(101).rule, ChapterRule.rush);
+    expect(chapterOf(125).rule, ChapterRule.rush);
+    expect(chapterOf(126).rule, ChapterRule.rushBlocks);
+    expect(chapterOf(150).rule, ChapterRule.rushBlocks);
+    expect(chapterOf(150).rule.onBlock, isFalse);
+    expect(chapterOf(151).rule, ChapterRule.cube);
+    expect(chapterOf(200).rule, ChapterRule.cube);
     expect(chapterOf(201).rule, ChapterRule.box);
     expect(chapterOf(250).rule, ChapterRule.box);
     expect(chapterOf(250).rule.onBlock, isTrue);
@@ -51,13 +58,14 @@ void main() {
     expect(ruleTaughtAt(61), ChapterRule.fog);
     expect(ruleTaughtAt(81), ChapterRule.pairs);
     expect(ruleTaughtAt(100), isNull);
-    expect(ruleTaughtAt(101), ChapterRule.cube);
+    expect(ruleTaughtAt(101), ChapterRule.rush);
     expect(ruleTaughtAt(111), isNull);
-    expect(ruleTaughtAt(151), ChapterRule.squeeze);
-    // The squeeze and the box are the block again: no card of their own.
-    expect(ChapterRule.squeeze.hasCard, isFalse);
+    expect(ruleTaughtAt(126), ChapterRule.rushBlocks);
+    expect(ruleTaughtAt(151), ChapterRule.cube);
+    // The Rush and the box say what they bring in a line under the board:
+    // no card of their own. The block's card is at 151, where it now starts.
     expect(ChapterRule.box.hasCard, isFalse);
-    expect(ChapterRule.values.where((r) => !r.hasCard), [ChapterRule.squeeze, ChapterRule.box]);
+    expect(ChapterRule.values.where((r) => !r.hasCard), [ChapterRule.rush, ChapterRule.rushBlocks, ChapterRule.box]);
     expect(ruleTaughtAt(152), isNull);
     expect(ruleTaughtAt(201), ChapterRule.box);
     expect(ruleTaughtAt(202), isNull);
@@ -85,15 +93,20 @@ void main() {
           expect(f.hidden, greaterThan(0), reason: 'level ${s.level}');
         case ChapterRule.pairs:
           expect(f.pairs, greaterThan(0), reason: 'level ${s.level}');
-        case ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box:
+        case ChapterRule.rush || ChapterRule.rushBlocks:
+          // The plain rectangle again, with arrows landing on it.
+          expect(f.isPlain, isTrue, reason: 'level ${s.level}');
+          expect(s.isDynamic, isTrue, reason: 'level ${s.level}');
+        case ChapterRule.cube || ChapterRule.box:
           fail('level ${s.level} is flat');
       }
+      expect(s.isDynamic, chapter.rule.isRush, reason: 'level ${s.level}');
       // A teaching board carries the new twist alone, on a small board.
       if (teaching) {
         expect(s.arrows, lessThanOrEqualTo(12), reason: 'level ${s.level}');
         expect(s.openMoves, 3, reason: 'level ${s.level}');
         final twists = (f.locks > 0 ? 1 : 0) + (f.hidden > 0 ? 1 : 0) + (f.pairs > 0 ? 1 : 0) + (f.mirrors > 0 ? 1 : 0);
-        expect(twists, 1, reason: 'level ${s.level}');
+        expect(twists, chapter.rule.isRush ? 0 : 1, reason: 'level ${s.level}');
       }
     }
   });
@@ -111,11 +124,13 @@ void main() {
     expect(chapterForProgress(81).index, 5);
     expect(chapterForProgress(100).index, 5);
     expect(chapterForProgress(101).index, 6);
-    expect(chapterForProgress(150).index, 6);
-    expect(chapterForProgress(151).index, 7);
-    expect(chapterForProgress(200).index, 7);
-    expect(chapterForProgress(201).index, 8);
-    expect(chapterForProgress(500).index, 8);
+    expect(chapterForProgress(125).index, 6);
+    expect(chapterForProgress(126).index, 7);
+    expect(chapterForProgress(150).index, 7);
+    expect(chapterForProgress(151).index, 8);
+    expect(chapterForProgress(200).index, 8);
+    expect(chapterForProgress(201).index, 9);
+    expect(chapterForProgress(500).index, 9);
     expect(chapterForProgress(-3).index, 1);
   });
 
@@ -130,6 +145,15 @@ void main() {
     expect(dailyChapterFor(151).rule, ChapterRule.cube);
     expect(dailyChapterFor(200).rule, ChapterRule.cube);
     expect(dailyChapterFor(250).rule, ChapterRule.cube);
+  });
+
+  test('a stored daily chapter reads back, the block\'s old place included', () {
+    expect(dailyChapterAt(1).rule, ChapterRule.lines);
+    expect(dailyChapterAt(5).rule, ChapterRule.pairs);
+    // Index 6 was the block before the Rush took its place; 8 is it now.
+    expect(dailyChapterAt(6).rule, ChapterRule.cube);
+    expect(dailyChapterAt(8).rule, ChapterRule.cube);
+    expect(dailyChapterAt(0).rule, ChapterRule.cube);
   });
 
   test('every chapter card has a small, solvable board that shows its twist, and a script that plays it', () {
@@ -178,7 +202,7 @@ void main() {
           expect(p.isCube, isTrue);
           expect(p.faceCount, 6);
           expect(<int>[for (final id in demoScriptFor(rule)) p.faceOf(id)], [0, 1, 2, 3]);
-        case ChapterRule.squeeze || ChapterRule.box:
+        case ChapterRule.rush || ChapterRule.rushBlocks || ChapterRule.box:
           fail('${rule.name} has no card');
       }
     }

@@ -63,7 +63,7 @@ void main() {
   test('a player who has reached the block gets a daily block', () async {
     final prefs = await _prefs();
     final n = DailyNotifier(DailyRepository(prefs), levelsCleared: () => 120, clock: () => _day, random: Random(1));
-    expect(n.state.chapter.index, 6);
+    expect(n.state.chapter, cubeChapter);
     expect(n.spec.isCube, isTrue);
     expect(n.spec.features.pairs, greaterThan(0));
     n.dispose();

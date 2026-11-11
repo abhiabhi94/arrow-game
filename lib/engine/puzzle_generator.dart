@@ -365,7 +365,9 @@ class _Builder {
       if (best == null) break;
       _commit(best.$1);
     }
-    _fillGaps();
+    // A board that arrows land on while it is played (the Rush chapters)
+    // keeps its leftover cells empty: they are where the drops land.
+    if (spec.drops == null) _fillGaps();
     // Reverse: the first arrow placed is the last one out (roughly — an
     // arrow may point at an earlier one and so leave before it).
     final ordered = placed.reversed.toList();

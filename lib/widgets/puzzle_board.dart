@@ -55,6 +55,10 @@ const int kRevealMs = 1000;
 /// How long the flash on a mirror lasts as an arrow bounces through it.
 const int kBounceMs = 600;
 
+/// How long an arrow (or block) landing on a Rush board takes to pop into
+/// place, in milliseconds.
+const int kArriveMs = 450;
+
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
 /// on its way out) in a single ink — thin lines with a small head, like a
 /// printed puzzle, straight on the page with no frame — plus optional grid
@@ -171,6 +175,11 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   /// bounce is seen as well as implied by the path.
   final Map<int, AnimationController> _bounces = <int, AnimationController>{};
 
+  /// Arrows that have just landed on a Rush board, popping into place, and
+  /// blocks the same (keyed by cell, `y * width + x`).
+  final Map<int, AnimationController> _arrivals = <int, AnimationController>{};
+  final Map<int, AnimationController> _blockArrivals = <int, AnimationController>{};
+
   @override
   void initState() {
     super.initState();
@@ -190,10 +199,16 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     _syncHintPing();
     final s = widget.state;
     if (s.puzzle != oldWidget.state.puzzle || s.moveToken < oldWidget.state.moveToken) {
-      // A restart: forget every animation.
-      _disposeAll();
-      _syncSlump();
-      return;
+      if (s.grewFrom(oldWidget.state)) {
+        // A drop landed: the new arrows and blocks pop in, and whatever was
+        // already moving carries on.
+        _startArrivals(oldWidget.state.puzzle!, s.puzzle!);
+      } else {
+        // A restart: forget every animation.
+        _disposeAll();
+        _syncSlump();
+        return;
+      }
     }
     final moved = s.moveToken != oldWidget.state.moveToken && s.lastMoveId != null;
     final uncovered = s.revealed.difference(oldWidget.state.revealed);
@@ -289,6 +304,18 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   }
 
   void _startReveal(int id) => _startOneShot(_reveals, id, kRevealMs);
+
+  /// The arrows and blocks [now] has that [before] did not, popping in
+  /// (at once, with motion reduced).
+  void _startArrivals(Puzzle before, Puzzle now) {
+    if (widget.reduceMotion) return;
+    for (var id = before.arrowCount; id < now.arrowCount; id++) {
+      _startOneShot(_arrivals, id, kArriveMs);
+    }
+    for (final c in now.blocks.difference(before.blocks)) {
+      _startOneShot(_blockArrivals, c.y * now.width + c.x, kArriveMs);
+    }
+  }
 
   /// Starts (or restarts) a one-shot [ms] animation for [id] in [slot].
   void _startOneShot(Map<int, AnimationController> slot, int id, int ms) {
@@ -404,7 +431,7 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
       c.dispose();
     }
     _exits.clear();
-    for (final slot in <Map<int, AnimationController>>[_unlocks, _reveals, _bounces]) {
+    for (final slot in <Map<int, AnimationController>>[_unlocks, _reveals, _bounces, _arrivals, _blockArrivals]) {
       for (final c in slot.values) {
         c.dispose();
       }
@@ -546,6 +573,8 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
           pendingUnlocks: Set<int>.of(_pendingUnlocks),
           pendingReveals: <int>{for (final owed in _pendingReveals.values) ...owed},
           bounces: <int, double>{for (final e in _bounces.entries) e.key: e.value.value},
+          arrivals: <int, double>{for (final e in _arrivals.entries) e.key: e.value.value},
+          blockArrivals: <int, double>{for (final e in _blockArrivals.entries) e.key: e.value.value},
           travel: widget.reduceMotion ? 0 : 1,
           focusedId: widget.focusedArrowId,
           l10n: l10n,
@@ -670,6 +699,8 @@ class _BoardPainter extends CustomPainter {
     required this.pendingUnlocks,
     required this.pendingReveals,
     required this.bounces,
+    this.arrivals = const <int, double>{},
+    this.blockArrivals = const <int, double>{},
     required this.travel,
     required this.focusedId,
     required this.l10n,
@@ -747,6 +778,11 @@ class _BoardPainter extends CustomPainter {
   /// Mirrors mid-flash, by packed cell: an arrow has just turned there.
   final Map<int, double> bounces;
 
+  /// Arrows landing on a Rush board, and blocks (by cell, `y * width + x`):
+  /// how far each is into popping into place, 0..1.
+  final Map<int, double> arrivals;
+  final Map<int, double> blockArrivals;
+
   Puzzle get puzzle => state.puzzle!;
 
   /// Whether a bump is being drawn now: the last tap ran into a cell, a
@@ -772,6 +808,7 @@ class _BoardPainter extends CustomPainter {
     ?_hitId,
     ...unlocks.keys,
     ...reveals.keys,
+    ...arrivals.keys,
     if (slump != null)
       for (final a in puzzle.arrows) a.id,
   };
@@ -854,6 +891,13 @@ class _BoardPainter extends CustomPainter {
       if (!_still || (face != null && puzzle.faceOfCell(e.key) != face)) continue;
       glyphs.mirror(canvas, Rect.fromLTWH(e.key.x * cs, e.key.y * cs, cs, cs), e.value);
     }
+    // Blocks: solid squares of ink, under the arrows; one that has just
+    // landed pops in on the moving layer.
+    for (final c in puzzle.blocks) {
+      final arriving = blockArrivals[c.y * puzzle.width + c.x];
+      if ((arriving != null) == _still) continue;
+      _paintBlock(canvas, c, cs, arriving == null ? 1 : _popScale(arriving));
+    }
 
     // The bump: the tapped arrow runs into the arrow in its way, which takes
     // the hit — its cell flashes and it is shoved a touch — then springs
@@ -928,7 +972,18 @@ class _BoardPainter extends CustomPainter {
         canvas.rotate(slumpTiltFor(arrow.id, slump!));
         canvas.translate(-pivot.dx, -pivot.dy);
       }
+      // Just landed on a Rush board: it pops into place about its middle.
+      final arriving = arrivals[arrow.id];
+      if (arriving != null) {
+        final pivot = _center(arrow.cells[arrow.length ~/ 2], cs);
+        final k = _popScale(arriving);
+        canvas.save();
+        canvas.translate(pivot.dx, pivot.dy);
+        canvas.scale(k, k);
+        canvas.translate(-pivot.dx, -pivot.dy);
+      }
       _paintArrow(canvas, arrow, cs, offset, false, glyphs);
+      if (arriving != null) canvas.restore();
       if (slumping) canvas.restore();
       if (shoved) canvas.restore();
     }
@@ -943,6 +998,30 @@ class _BoardPainter extends CustomPainter {
     // arrow on the board's edge would otherwise lose that side of it.
     if (!_still) _paintCursor(canvas, cs);
     canvas.restore();
+  }
+
+  /// How big something landing is drawn [t] (0..1) into its arrival: from
+  /// small, a little past full size, then settled.
+  static double _popScale(double t) => 0.3 + 0.7 * Curves.easeOutBack.transform(t);
+
+  /// A block on [c], [scale] of its full size: a rounded square of ink with
+  /// a hairline of paper inside, so it reads as a solid thing and not as an
+  /// arrow's body.
+  void _paintBlock(Canvas canvas, Cell c, double cs, double scale) {
+    final rect = Rect.fromCenter(
+      center: _center(c, cs),
+      width: cs * 0.84 * scale,
+      height: cs * 0.84 * scale,
+    );
+    final r = Radius.circular(cs * 0.16 * scale);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, r), Paint()..color = palette.arrowInk.withValues(alpha: 0.82));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect.deflate(cs * 0.14 * scale), r * 0.6),
+      Paint()
+        ..color = palette.backgroundSoft.withValues(alpha: 0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1.0, cs * 0.05),
+    );
   }
 
   /// A mirror an arrow has just turned at: its diagonal lights up in the
@@ -1459,7 +1538,8 @@ class _BoardPainter extends CustomPainter {
       old.layer != layer ||
       !setEquals(old.pendingUnlocks, pendingUnlocks) ||
       !setEquals(old.pendingReveals, pendingReveals) ||
-      !setEquals(old._live, _live);
+      !setEquals(old._live, _live) ||
+      !setEquals(old.blockArrivals.keys.toSet(), blockArrivals.keys.toSet());
 
   bool _movingChanged(_BoardPainter old) =>
       // The clock ticks ten times a second; only board-relevant state counts.
@@ -1485,6 +1565,8 @@ class _BoardPainter extends CustomPainter {
       !setEquals(old.pendingUnlocks, pendingUnlocks) ||
       !setEquals(old.pendingReveals, pendingReveals) ||
       !_sameMap(old.bounces, bounces) ||
+      !_sameMap(old.arrivals, arrivals) ||
+      !_sameMap(old.blockArrivals, blockArrivals) ||
       old.travel != travel ||
       old.face != face ||
       old.focusedId != focusedId;

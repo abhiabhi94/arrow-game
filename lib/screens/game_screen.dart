@@ -527,7 +527,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
       }
       // A restart (or a new board) forgets the keyboard cursor, and puts
       // the block down again.
-      final fresh = next.puzzle != prev?.puzzle || next.moveToken < (prev?.moveToken ?? 0);
+      // A drop landing on a Rush board is not a new board: the cursor stays.
+      final grew = prev != null && next.grewFrom(prev);
+      final fresh = (next.puzzle != prev?.puzzle && !grew) || next.moveToken < (prev?.moveToken ?? 0);
       if (_cursor != null && fresh) {
         setState(() => _cursor = null);
       }
@@ -1004,8 +1006,9 @@ extension on _GameScreenState {
       ChapterRule.locks => l10n.tutorialLocks,
       ChapterRule.fog => l10n.tutorialFog,
       ChapterRule.pairs => l10n.tutorialPairs,
+      ChapterRule.rush => l10n.tutorialRush,
+      ChapterRule.rushBlocks => l10n.tutorialRushBlocks,
       ChapterRule.cube => l10n.tutorialCube,
-      ChapterRule.squeeze => l10n.tutorialSqueeze,
       ChapterRule.box => l10n.tutorialBox,
     };
   }
@@ -1029,8 +1032,9 @@ class _IntroCard extends StatelessWidget {
       ChapterRule.locks => ('🔒', l10n.introTitleLocks, l10n.introBodyLocks),
       ChapterRule.fog => ('🌫️', l10n.introTitleFog, l10n.introBodyFog),
       ChapterRule.pairs => ('🔗', l10n.introTitlePairs, l10n.introBodyPairs),
-      // The squeeze and the box have no card of their own (`ChapterRule.hasCard`).
-      ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box => ('🧊', l10n.introTitleCube, l10n.introBodyCube),
+      // The Rush and the box have no card of their own (`ChapterRule.hasCard`).
+      ChapterRule.cube || ChapterRule.rush || ChapterRule.rushBlocks || ChapterRule.box =>
+        ('🧊', l10n.introTitleCube, l10n.introBodyCube),
     };
     return ResultCard(
       emoji: emoji,

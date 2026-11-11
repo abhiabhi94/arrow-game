@@ -1558,10 +1558,29 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsExtraTimeSubtitle => 'हर लेवल पर दुगनी घड़ी';
 
   @override
-  String get chapterName6 => 'क्यूब';
+  String get chapterName6 => 'भागदौड़';
 
   @override
-  String get chapterBlurb6 =>
+  String get chapterBlurb6 => 'खेलते-खेलते बोर्ड पर नए तीर आते रहते हैं।';
+
+  @override
+  String get tutorialRush => 'समय के साथ नए तीर आते रहेंगे।';
+
+  @override
+  String get chapterName7 => 'भागदौड़ और ब्लॉक';
+
+  @override
+  String get chapterBlurb7 =>
+      'नए तीर आते हैं, और साथ में ब्लॉक भी, जो टिके रहते हैं।';
+
+  @override
+  String get tutorialRushBlocks => 'समय के साथ नए तीर आते रहेंगे, और ब्लॉक भी।';
+
+  @override
+  String get chapterName8 => 'क्यूब';
+
+  @override
+  String get chapterBlurb8 =>
       'एक क्यूब की छह सतहों पर तीर। हर सतह तक पहुँचने के लिए उसे घुमाओ।';
 
   @override
@@ -1575,20 +1594,10 @@ class AppLocalizationsHi extends AppLocalizations {
       'क्यूब को उँगली से घुमाओ। सामने वाली सतह खेलो; बगल की सतह छुओ तो वो सामने आ जाएगी।';
 
   @override
-  String get chapterName7 => 'शिकंजा';
+  String get chapterName9 => 'बक्सा';
 
   @override
-  String get chapterBlurb7 => 'कसकर भरा क्यूब: हर सतह से एक साथ कम ही रास्ते।';
-
-  @override
-  String get tutorialSqueeze =>
-      'हर सतह से एक साथ कम ही तीर निकल पाते हैं। जो निकल सके उसे ढूँढो, फिर अगला खुलेगा।';
-
-  @override
-  String get chapterName8 => 'बक्सा';
-
-  @override
-  String get chapterBlurb8 =>
+  String get chapterBlurb9 =>
       'अब क्यूब नहीं, बक्सा: तीन नाप की सतहें, पहले से बड़ी।';
 
   @override

@@ -33,4 +33,18 @@ void main() {
       throwsA(isA<AssertionError>()),
     );
   });
+
+  test('twists and drops compare by value and say what they are', () {
+    const a = LevelFeatures(mirrors: 2, locks: 1);
+    expect(a, const LevelFeatures(mirrors: 2, locks: 1));
+    expect(a.hashCode, const LevelFeatures(mirrors: 2, locks: 1).hashCode);
+    expect(a, isNot(const LevelFeatures(mirrors: 2)));
+    expect(a.toString(), 'LevelFeatures(mirrors 2, locks 1, hidden 0, pairs 0)');
+    const d = LevelDrops(count: 3, everyMs: 5000, arrows: 2, blocks: 1);
+    expect(d, const LevelDrops(count: 3, everyMs: 5000, arrows: 2, blocks: 1));
+    expect(d.hashCode, const LevelDrops(count: 3, everyMs: 5000, arrows: 2, blocks: 1).hashCode);
+    expect(d, isNot(const LevelDrops(count: 3, everyMs: 5000, arrows: 2)));
+    expect(d.arrowTotal, 6);
+    expect(d.toString(), 'LevelDrops(3 of 2 arrows + 1 blocks every 5000ms)');
+  });
 }

@@ -36,11 +36,13 @@ void main() {
     expect(n.due(level: 46), [ChapterRule.mirrors, ChapterRule.locks]);
     expect(n.due(level: 65), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog]);
     expect(n.due(level: 100), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs]);
+    // The Rush has no card: through level 150 nothing more is owed.
+    expect(n.due(level: 150), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs]);
+    // The block's card comes with the block, at 151.
     expect(
-      n.due(level: 150),
+      n.due(level: 151),
       [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
     );
-    // The squeeze has no card: past level 150 nothing more is owed.
     expect(
       n.due(level: 200),
       [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],

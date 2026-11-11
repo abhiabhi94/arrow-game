@@ -1,10 +1,14 @@
 /// A level in progress, kept so the player can pick it up after closing the
 /// app, switching away or backing out. The board itself is not stored: a
 /// level's puzzle is fixed by its seed, so the seed, the arrows out, the
-/// slips, the hints spent and the clock are enough to rebuild the moment.
-/// Pure Dart.
+/// slips, the hints spent and the clock are enough to rebuild the moment —
+/// plus, in the Rush chapters, what has landed on it since ([dropped],
+/// [blocks]), which depends on how it was played. Pure Dart.
 library;
 
+import '../engine/arrow_piece.dart';
+import '../engine/cell.dart';
+import '../engine/puzzle.dart';
 import 'game_state.dart';
 
 class SavedGame {
@@ -18,6 +22,9 @@ class SavedGame {
     this.bumped = const <int>[],
     this.revealed = const <int>[],
     this.continues = 0,
+    this.drops = 0,
+    this.dropped = const <List<Cell>>[],
+    this.blocks = const <Cell>[],
   });
 
   /// A snapshot of [state], which must have its board and be mid-level.
@@ -31,6 +38,11 @@ class SavedGame {
         hintsLeft: state.hintsLeft,
         elapsedMs: state.elapsedMs,
         continues: state.continues,
+        drops: state.drops,
+        dropped: <List<Cell>>[
+          for (final a in state.puzzle?.arrows.skip(state.dealtArrows) ?? const <ArrowPiece>[]) a.cells,
+        ],
+        blocks: state.puzzle?.blocks.toList() ?? const <Cell>[],
       );
 
   /// Rebuilds a snapshot from [toJson]; null when the map is not one.
@@ -57,6 +69,20 @@ class SavedGame {
     // still good: it just forgets which dead ends were already paid for.
     final bumped = json['bumped'];
     final revealed = json['revealed'];
+    // What landed on a Rush board, as flat x, y lists. Anything malformed is
+    // read as nothing having landed — and then the snapshot's arrow ids no
+    // longer fit the board, so it is not resumed.
+    final dropped = <List<Cell>>[];
+    final rawDropped = json['dropped'];
+    if (rawDropped is List) {
+      for (final a in rawDropped) {
+        final cells = _cells(a);
+        if (cells == null || cells.length < 2) return null;
+        dropped.add(cells);
+      }
+    }
+    final blocks = _cells(json['blocks']) ?? const <Cell>[];
+    final drops = json['drops'];
     return SavedGame(
       level: level,
       seed: seed,
@@ -76,7 +102,38 @@ class SavedGame {
         true => 1,
         _ => 0,
       },
+      drops: drops is int && drops >= 0 ? drops : 0,
+      dropped: List<List<Cell>>.unmodifiable(dropped),
+      blocks: List<Cell>.unmodifiable(blocks),
     );
+  }
+
+  static List<Cell>? _cells(Object? raw) {
+    if (raw is! List || raw.length.isOdd || raw.any((e) => e is! int)) return null;
+    final xy = raw.cast<int>();
+    return <Cell>[for (var i = 0; i < xy.length; i += 2) Cell(xy[i], xy[i + 1])];
+  }
+
+  /// The board [dealt] with what this snapshot says landed on it, or null
+  /// when that cannot be on it: a cell off the board, an arrow that is not
+  /// a chain of neighbouring cells, or one landing where another still is.
+  Puzzle? rebuild(Puzzle dealt) {
+    if (dropped.isEmpty && blocks.isEmpty) return dealt;
+    final arrows = <ArrowPiece>[];
+    for (final cells in dropped) {
+      if (cells.any((c) => !c.isInside(dealt.width, dealt.height))) return null;
+      if (cells.toSet().length != cells.length) return null;
+      for (var i = 1; i < cells.length; i++) {
+        if (cells[i - 1].directionTo(cells[i]) == null) return null;
+      }
+      arrows.add(ArrowPiece(
+        id: dealt.arrowCount + arrows.length,
+        cells: cells,
+        heading: cells[cells.length - 2].directionTo(cells.last)!,
+      ));
+    }
+    if (blocks.any((c) => !c.isInside(dealt.width, dealt.height) || dealt.isMirror(c))) return null;
+    return dealt.grownBy(arrows, blocks: blocks.toSet());
   }
 
   final int level;
@@ -100,6 +157,16 @@ class SavedGame {
 
   /// How many times the player spent the allowance and chose to play on.
   final int continues;
+
+  /// How many drops had landed (the Rush chapters).
+  final int drops;
+
+  /// The cells (tail → head) of each arrow that landed during play, in the
+  /// order they landed: their ids run on from the dealt board's.
+  final List<List<Cell>> dropped;
+
+  /// The blocks that landed.
+  final List<Cell> blocks;
   final int mistakes;
   final int hintsLeft;
   final int elapsedMs;
@@ -119,6 +186,11 @@ class SavedGame {
         'hintsLeft': hintsLeft,
         'elapsedMs': elapsedMs,
         'continues': continues,
+        if (drops > 0) 'drops': drops,
+        if (dropped.isNotEmpty) 'dropped': <List<int>>[
+          for (final a in dropped) <int>[for (final c in a) ...<int>[c.x, c.y]],
+        ],
+        if (blocks.isNotEmpty) 'blocks': <int>[for (final c in blocks) ...<int>[c.x, c.y]],
       };
 
   @override
@@ -130,6 +202,9 @@ class SavedGame {
       other.hintsLeft == hintsLeft &&
       other.elapsedMs == elapsedMs &&
       other.continues == continues &&
+      other.drops == drops &&
+      other.dropped.length == dropped.length &&
+      other.blocks.length == blocks.length &&
       other.removed.length == removed.length &&
       other.removed.every(removed.contains) &&
       other.bumped.length == bumped.length &&
@@ -147,6 +222,7 @@ class SavedGame {
         removed.length,
         bumped.length,
         continues,
+        drops,
       );
 
   @override

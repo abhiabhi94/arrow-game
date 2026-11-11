@@ -1,5 +1,6 @@
 // Prints the `LevelSpec` rows for levels 21–250 — the four chapters past the
-// plain rectangle, and the three chapters of fifty on the block after them — so the
+// plain rectangle, the Rush after them, and the two chapters of fifty on the
+// block after that — so the
 // table in lib/data/level_specs.dart is drawn from one set of rules rather
 // than tuned a row at a time:
 //
@@ -27,18 +28,19 @@
 // for every one of them on the board, plus slack, and never over ten
 // minutes. Teaching boards run at 3 s an arrow.
 
-// **Levels 101–150** are the block: six square faces, each a board of its
-// own, played one at a time. They follow level 100, the hardest flat
-// board, so after a short warm-up they do not drop back: a teaching cube
-// (three arrows a face), three levels that bring the twists back one at a
-// time on faces of ten, fifteen and twenty arrows, and from level 105 all
-// four twists on every face and about level 100's count over the block
-// ([cubeFaceStart] a face, 132 in all), then one more arrow every level
-// to 177, the twists thickening each on its own schedule — so every level
-// is a little more than the one before, but never a big board: a face
-// holds a fifth of what level 100 did. The clock runs at [cubePace] an
-// arrow (a small face is quicker to read than one big board) plus the
-// twists' seconds and two seconds a face for turning the block.
+// **Levels 101–150** are the Rush: the plain rectangle of levels 1–100,
+// but the board does not only empty — new arrows land on it while it is
+// played, a few at a time packed into a small shape (`LevelDrops`), and
+// from level 126 blocks land with them and stay. Each half opens on a
+// small teaching board and climbs for twenty-four levels: more arrows at
+// the start ([rushStart] → +2 a level), more drops (one more every two
+// levels) and bigger ones. The board starts about half full (the gaps are
+// where the drops land), sized like a flat board at [cellsPerArrow] free
+// cells an arrow, plus room for the blocks. The clock is [rushPace] a
+// arrow, every arrow the drops bring counted, and the drops are spread
+// over a little more than half of it, never more than twelve seconds
+// apart — and a drop lands at once when the board is nearly empty, so a
+// quick player never waits for the next.
 
 import 'dart:math';
 
@@ -47,9 +49,11 @@ import 'package:arrow_game/data/level_specs.dart' show kClockTrim;
 const int firstLevel = 21;
 const int lastLevel = 100;
 
-/// Arrows on each face of the block once it is warmed up (level 105); from
-/// there the block gains one arrow a level, to 177 (about thirty a face).
-const int cubeFaceStart = 22;
+/// Arrows on the board at the start of the Rush's second level.
+const int rushStart = 24;
+
+/// Seconds an arrow in the Rush, the drops' arrows counted.
+const double rushPace = 3.0;
 
 /// Seconds an arrow on the block, before the twists' own seconds.
 const double cubePace = 2.4;
@@ -144,7 +148,7 @@ void main() {
     );
   }
   for (var level = 101; level <= 150; level++) {
-    _cube(level);
+    _rush(level);
   }
   for (var level = 151; level <= 200; level++) {
     _squeeze(level);
@@ -154,56 +158,31 @@ void main() {
   }
 }
 
-void _cube(int level) {
-  final k = level - 100; // 1..50 on the block
-  final teach = k == 1;
-
-  // Arrows on each face. The first few levels warm up from the teaching
-  // cube; from the fifth on the block holds about what level 100 held
-  // (twenty-two a face, 132 in all) and climbs slowly to twenty-eight a
-  // face — the whole block is more work than level 100, but no one face is
-  // ever a big board.
-  // One more arrow on the block every level from the fifth: the faces
-  // share it out, so they take turns at growing.
-  final arrows = switch (k) {
-    1 => 3 * faces,
-    2 => 10 * faces,
-    3 => 15 * faces,
-    4 => 20 * faces,
-    _ => cubeFaceStart * faces + (k - 5),
-  };
-  final perFace = (arrows / faces).ceil();
-
-  // The twists: the player has met all four on the flat levels, so they
-  // come back one a level through the warm-up (mirrors, then locks, then
-  // hidden heads) and from the fifth level all four are on every face,
-  // thickening slowly to the last.
-  // Each twist thickens on its own schedule, staggered so no two of them
-  // step up on the same level: two mirrors a face to five, one of each
-  // other twist a face to two.
-  final on = max(0, k - 5); // 0..45 past the warm-up
-  final mirrors = k < 2 ? 0 : 2 * faces + on * 3 * faces ~/ 45;
-  final locks = k < 3 ? 0 : faces + (on * faces + 5) ~/ 45;
-  final hidden = k < 4 ? 0 : faces + (on * faces + 20) ~/ 51;
-  final pairs = k < 5 ? 0 : faces + (on * faces + 35) ~/ 57;
-  final mirrorsPerFace = (mirrors / faces).ceil();
-
-  // A face is square, sized like the flat boards but a little tighter:
-  // ~9.5 free cells an arrow beside its share of the mirrors.
-  final side = teach ? 6 : sqrt(perFace * cubeCellsPerArrow + mirrorsPerFace).round();
-  final minLength = side < 10 ? 2 : 3;
-  final maxLength = teach ? 4 : min(14, max(5, side - 1));
-
-  // The clock: a face is a small board, so an arrow on it is found faster
-  // than one among level 100's hundred and fifty — the pace per arrow is
-  // lower than the flat chapters' — plus the twists' seconds and two
-  // seconds a face for turning the block, never over ten minutes.
-  final slack = (teach ? 25.0 : 15.0) + 2.0 * faces;
-  final think = mirrors * 1.0 + locks * 4.0 + hidden * 3.0 + pairs * 3.0;
-  final seconds = arrows * (teach ? 3.0 : cubePace) + slack + think;
+void _rush(int level) {
+  final k = level - 100; // 1..50
+  final withBlocks = k > 25;
+  final i = withBlocks ? k - 25 : k; // 1..25 within the half
+  final teach = i == 1;
+  final arrows = teach ? 8 : rushStart + (i - 2) * 2;
+  final count = teach ? 4 : 5 + (i - 2) ~/ 2;
+  final perDrop = teach ? 2 : 3 + (i >= 14 ? 1 : 0);
+  final blocks = !withBlocks ? 0 : (teach ? 1 : 1 + (i >= 13 ? 1 : 0));
+  final dropLength = teach ? 3 : 4 + (i >= 10 ? 1 : 0);
+  final minLength = teach ? 2 : 3;
+  final maxLength = teach ? 4 : 7 + i ~/ 8;
+  final (width, height) = teach ? (withBlocks ? (9, 12) : (8, 11)) : _sizeFor(arrows, blocks * count);
+  final total = arrows + count * perDrop;
+  final seconds = total * (teach ? 3.5 : rushPace) + (teach ? 30.0 : 20.0);
   final timeLimitMs = (min((seconds * 1000).round(), 599000) * kClockTrim).round();
+  final everyMs = ((timeLimitMs * 0.55 / count / 500).round() * 500).clamp(4000, 12000);
   final openMoves = teach ? 3 : 2;
-  _print(level, side, side, arrows, minLength, maxLength, timeLimitMs, openMoves, mirrors, locks, hidden, pairs, faces);
+  final blockText = blocks > 0 ? ', blocks: $blocks' : '';
+  // ignore: avoid_print
+  print(
+    '  LevelSpec(level: $level, width: $width, height: $height, arrows: $arrows, '
+    'minLength: $minLength, maxLength: $maxLength, timeLimitMs: $timeLimitMs, openMoves: $openMoves, '
+    'drops: LevelDrops(count: $count, everyMs: $everyMs, arrows: $perDrop$blockText, maxLength: $dropLength)),',
+  );
 }
 
 /// Arrows on the block at the end of the squeeze, from level 150's 177.

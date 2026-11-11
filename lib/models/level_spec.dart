@@ -46,6 +46,61 @@ class LevelFeatures {
   String toString() => 'LevelFeatures(mirrors $mirrors, locks $locks, hidden $hidden, pairs $pairs)';
 }
 
+/// Arrows (and blocks) that land on the board while the level is played,
+/// a few at a time: the Rush chapters. Each drop brings up to [arrows] new
+/// arrows packed into a small shape on empty cells, and [blocks] solid
+/// cells that stay for the rest of the level — never on a cell some arrow
+/// still on the board has to cross, and never in a new arrow's way, so the
+/// board can always be cleared. A drop lands every [everyMs] of play, and
+/// at once when the board is nearly empty, so a quick player never waits.
+/// The level is cleared once every drop has landed and every arrow is out.
+class LevelDrops {
+  const LevelDrops({
+    required this.count,
+    required this.everyMs,
+    this.arrows = 3,
+    this.blocks = 0,
+    this.maxLength = 5,
+  })  : assert(count >= 1),
+        assert(everyMs > 0),
+        assert(arrows >= 1),
+        assert(blocks >= 0),
+        assert(maxLength >= 2);
+
+  /// Drops in the level.
+  final int count;
+
+  /// Play time between one drop and the next, in milliseconds.
+  final int everyMs;
+
+  /// Arrows each drop brings, at most (a crowded board may take fewer).
+  final int arrows;
+
+  /// Blocks each drop brings, at most.
+  final int blocks;
+
+  /// The longest arrow a drop brings, in cells.
+  final int maxLength;
+
+  /// Every arrow the drops bring, when each lands in full.
+  int get arrowTotal => count * arrows;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LevelDrops &&
+      other.count == count &&
+      other.everyMs == everyMs &&
+      other.arrows == arrows &&
+      other.blocks == blocks &&
+      other.maxLength == maxLength;
+
+  @override
+  int get hashCode => Object.hash(count, everyMs, arrows, blocks, maxLength);
+
+  @override
+  String toString() => 'LevelDrops($count of $arrows arrows + $blocks blocks every ${everyMs}ms)';
+}
+
 class LevelSpec {
   const LevelSpec({
     required this.level,
@@ -61,8 +116,10 @@ class LevelSpec {
     this.faces = 0,
     this.depth = 0,
     this.timed = true,
+    this.drops,
     this._seed,
   })  : assert(level >= 0),
+        assert(drops == null || faces == 0, 'drops land on a flat board'),
         assert(faces == 0 || (faces == 6 && (depth > 0 || width == height))),
         assert(depth == 0 || faces == 6),
         assert(openMoves >= 1),
@@ -124,6 +181,13 @@ class LevelSpec {
   /// [width]×[height], its sides [depth]×[height] and its top and bottom
   /// [width]×[depth].
   final int depth;
+
+  /// The arrows and blocks that land while the level is played (the Rush
+  /// chapters), or null for a board that only ever empties.
+  final LevelDrops? drops;
+
+  /// Whether arrows land on the board while it is played.
+  bool get isDynamic => drops != null;
 
   bool get isCube => faces > 0;
 
@@ -249,6 +313,7 @@ class LevelSpec {
       faces: faces,
       depth: depth,
       timed: timed,
+      drops: drops,
       seed: _seed,
     );
   }
@@ -271,6 +336,7 @@ class LevelSpec {
       faces: faces,
       depth: depth,
       timed: false,
+      drops: drops,
       seed: _seed,
     );
   }
@@ -290,6 +356,7 @@ class LevelSpec {
         faces: faces,
         depth: depth,
         timed: timed,
+        drops: drops,
         seed: _seed,
       );
 

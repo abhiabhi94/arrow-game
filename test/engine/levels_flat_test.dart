@@ -28,7 +28,7 @@ void main() {
     final first = hunt(chapters[0]);
     var before = hunt(chapters[1]);
     expect(before, greaterThan(first));
-    for (final chapter in chapters.skip(2).where((c) => !c.rule.onBlock)) {
+    for (final chapter in chapters.skip(2).where((c) => !c.rule.onBlock && !c.rule.isRush)) {
       final now = hunt(chapter);
       expect(now, greaterThan(before * 0.9), reason: 'chapter ${chapter.index}');
       before = now;

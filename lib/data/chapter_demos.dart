@@ -14,7 +14,9 @@ import 'chapters.dart';
 
 /// The board that illustrates [rule].
 Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
-      ChapterRule.lines => Puzzle(
+      // The Rush has no card of its own (`ChapterRule.hasCard`): the plain
+      // board stands in.
+      ChapterRule.lines || ChapterRule.rush || ChapterRule.rushBlocks => Puzzle(
           width: 7,
           height: 4,
           arrows: [
@@ -72,8 +74,8 @@ Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
           ],
           pairs: const {0: 1},
         ),
-      // The squeeze and the box have no card of their own (`ChapterRule.hasCard`).
-      ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box => _cubeDemo,
+      // The box has no card of its own (`ChapterRule.hasCard`).
+      ChapterRule.cube || ChapterRule.box => _cubeDemo,
     };
 
 /// The block: one arrow on each face round its middle, each pointing a
@@ -96,12 +98,12 @@ Puzzle _face(List<Cell> cells, Direction heading) =>
 /// pointer to the key (or to the arrow that uncovers the head) before that
 /// one goes.
 List<int> demoScriptFor(ChapterRule rule) => switch (rule) {
-      ChapterRule.lines => const [0, 1],
+      ChapterRule.lines || ChapterRule.rush || ChapterRule.rushBlocks => const [0, 1],
       ChapterRule.mirrors => const [0, 1],
       ChapterRule.locks => const [0, 1, 0],
       ChapterRule.fog => const [1, 0, 2, 1],
       ChapterRule.pairs => const [0, 2],
-      ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box => const [0, 1, 2, 3],
+      ChapterRule.cube || ChapterRule.box => const [0, 1, 2, 3],
     };
 
 /// A spec that fits [demoPuzzleFor]'s boards (nothing on it matters but the
