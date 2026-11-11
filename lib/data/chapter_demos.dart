@@ -14,9 +14,19 @@ import 'chapters.dart';
 
 /// The board that illustrates [rule].
 Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
-      // The Rush has no card of its own (`ChapterRule.hasCard`): the plain
-      // board stands in.
-      ChapterRule.lines || ChapterRule.rush || ChapterRule.rushBlocks => Puzzle(
+      // Three free arrows along the edges, and the middle empty: the board
+      // is running low from the start, so new arrows (and, with blocks, a
+      // block) glow in and drop onto the middle as the first ones go.
+      ChapterRule.rush || ChapterRule.rushBlocks => Puzzle(
+          width: 6,
+          height: 5,
+          arrows: [
+            ArrowPiece(id: 0, cells: const [Cell(0, 0), Cell(1, 0)], heading: Direction.right),
+            ArrowPiece(id: 1, cells: const [Cell(0, 4), Cell(1, 4)], heading: Direction.right),
+            ArrowPiece(id: 2, cells: const [Cell(5, 2), Cell(5, 1)], heading: Direction.up),
+          ],
+        ),
+      ChapterRule.lines => Puzzle(
           width: 7,
           height: 4,
           arrows: [
@@ -98,7 +108,10 @@ Puzzle _face(List<Cell> cells, Direction heading) =>
 /// pointer to the key (or to the arrow that uncovers the head) before that
 /// one goes.
 List<int> demoScriptFor(ChapterRule rule) => switch (rule) {
-      ChapterRule.lines || ChapterRule.rush || ChapterRule.rushBlocks => const [0, 1],
+      ChapterRule.lines => const [0, 1],
+      // The Rush's arrows are not all there at the start: its card taps
+      // whichever arrow can go (`ChapterDemoBoard`).
+      ChapterRule.rush || ChapterRule.rushBlocks => const <int>[],
       ChapterRule.mirrors => const [0, 1],
       ChapterRule.locks => const [0, 1, 0],
       ChapterRule.fog => const [1, 0, 2, 1],
@@ -119,5 +132,11 @@ LevelSpec demoSpecFor(ChapterRule rule) {
     minLength: 2,
     maxLength: 6,
     timeLimitMs: 60000,
+    timed: !rule.isRush,
+    // The Rush's card lands two drops: the board starts low, so each comes
+    // as soon as there is room.
+    drops: rule.isRush
+        ? LevelDrops(count: 2, everyMs: 60000, arrows: 2, blocks: rule == ChapterRule.rushBlocks ? 1 : 0, maxLength: 2)
+        : null,
   );
 }

@@ -68,6 +68,9 @@ void main() {
     final cursor = screen.focusedArrowId;
     container.read(gameProvider(kFirstRushLevel).notifier).tick(1000);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    container.read(gameProvider(kFirstRushLevel).notifier).tick(800);
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
     expect(container.read(gameProvider(kFirstRushLevel)).drops, 1);
     expect(tester.widget<PuzzleBoard>(find.byType(PuzzleBoard)).focusedArrowId, cursor);

@@ -57,4 +57,21 @@ void main() {
     expect(find.byType(PuzzleBoard), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final rule in [ChapterRule.rush, ChapterRule.rushBlocks]) {
+    testWidgets('the ${rule.name} card lands its drops while it plays, and starts over', (tester) async {
+      await pumpApp(tester, Center(child: SizedBox(width: 300, child: ChapterDemoBoard(rule: rule))));
+      var most = 0;
+      var blocks = 0;
+      for (var i = 0; i < 120; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        final state = tester.widget<PuzzleBoard>(find.byType(PuzzleBoard)).state;
+        most = most > state.puzzle!.arrowCount ? most : state.puzzle!.arrowCount;
+        blocks = blocks > state.puzzle!.blocks.length ? blocks : state.puzzle!.blocks.length;
+        expect(tester.takeException(), isNull);
+      }
+      expect(most, greaterThan(demoPuzzleFor(rule).arrowCount), reason: 'arrows landed');
+      expect(blocks > 0, rule == ChapterRule.rushBlocks);
+    });
+  }
 }

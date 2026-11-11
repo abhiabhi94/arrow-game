@@ -24,8 +24,11 @@ not a board that only empties: new arrows land on it while it is played,
 a few at a time packed into a small shape (`LevelSpec.drops`,
 `engine/drops.dart`), every few seconds of play and at once when three
 arrows or fewer are left, so a quick player never waits; in the seventh
-blocks land with them and stay. No card for either: one line under the
-first board ("New arrows appear as time goes by.") — and then **The
+blocks land with them and stay. Nothing appears out of thin air: the cells
+a drop will land on glow first, then its arrows and blocks drop in. Each
+half has its card (a demo board where arrows, and a block, glow and land)
+and a line under its first board ("New arrows appear as time goes by.") —
+and then **The
 Block** (151–200, an eighth chapter): six square faces of arrows on a
 cube, the whole block drawn at once in 3D, a finger turning it (or the
 turn keys, or Shift+arrow keys) and the face square to the player the one
@@ -378,7 +381,14 @@ Key patterns:
   would make anything wait, through a chain, for itself — and **a block
   shuts nobody in** — it lands only on a cell no arrow on the board (or
   landing with it) has to cross, and no later arrow is dealt through one,
-  so a block that stays only takes room. The board grows in place
+  so a block that stays only takes room. **A drop is seen coming:** once
+  due it is planned and its cells glow (`GameState.incoming`, a beating
+  wash in the hint's colour) for `kDropWarnMs` (800) of play, then it lands
+  and its arrows and blocks drop in — drawn big and faint, coming down to
+  size over `kArriveMs` (700) with a ring as they touch down. The first cut
+  popped them in from a third of their size in under half a second with no
+  warning, which read as arrows appearing from nowhere. Nothing that
+  happens during the glow can spoil the plan (arrows only leave). The board grows in place
   (`Puzzle.grownBy`, `Puzzle.grows`): arrows appended with their ids
   running on, so `GameState.removed` stays valid, a cell's occupant the
   latest arrow to land there (the one before has left), `Puzzle.blocks`
@@ -901,8 +911,10 @@ Key patterns:
   and the fog demo taps the hidden arrow first for the same reason; the
   block's demo is a tiny cube with one arrow on each face round its middle,
   and the card turns the block to each arrow's face before playing it; the
-  Rush and the box have no card, `ChapterRule.hasCard`, since what they
-  bring a line under the board says).
+  Rush's card has no script: it starts on three free arrows (already
+  running low), runs its own clock so two drops glow and land, and taps
+  whatever can go; the box has no card, `ChapterRule.hasCard`, since what
+  it brings a line under the board says).
   `widgets/chapter_demo.dart` runs that script on a real `GameNotifier`
   every `kDemoStep`, rests `kDemoRest` on the cleared board and starts over,
   so the card is a title, one line and a loop of the rule being played

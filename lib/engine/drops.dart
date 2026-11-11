@@ -44,6 +44,11 @@ const List<List<String>> kDropShapes = <List<String>>[
   <String>['.##.', '####', '####', '.##.'],
 ];
 
+/// How long the cells a drop will land on glow before it lands, in
+/// milliseconds of play: the arrows (and blocks) are seen coming rather
+/// than appearing out of thin air.
+const int kDropWarnMs = 800;
+
 /// A drop lands at once, without waiting for its time, when this many
 /// arrows or fewer are left on the board: a quick player is never left
 /// looking at an empty board.

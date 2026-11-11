@@ -1032,9 +1032,10 @@ class _IntroCard extends StatelessWidget {
       ChapterRule.locks => ('🔒', l10n.introTitleLocks, l10n.introBodyLocks),
       ChapterRule.fog => ('🌫️', l10n.introTitleFog, l10n.introBodyFog),
       ChapterRule.pairs => ('🔗', l10n.introTitlePairs, l10n.introBodyPairs),
-      // The Rush and the box have no card of their own (`ChapterRule.hasCard`).
-      ChapterRule.cube || ChapterRule.rush || ChapterRule.rushBlocks || ChapterRule.box =>
-        ('🧊', l10n.introTitleCube, l10n.introBodyCube),
+      ChapterRule.rush => ('⚡', l10n.chapterName6, l10n.tutorialRush),
+      ChapterRule.rushBlocks => ('🧱', l10n.chapterName7, l10n.tutorialRushBlocks),
+      // The box has no card of its own (`ChapterRule.hasCard`).
+      ChapterRule.cube || ChapterRule.box => ('🧊', l10n.introTitleCube, l10n.introBodyCube),
     };
     return ResultCard(
       emoji: emoji,

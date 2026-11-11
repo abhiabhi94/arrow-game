@@ -36,7 +36,15 @@ void main() {
     final n = GameNotifier(rushSpec, puzzle: rushPuzzle(), autoTick: false);
     addTearDown(n.dispose);
     final push = await _pumpBoard(tester, n.state);
+    // The glow: the moving layer beats over the cells it will land on.
     n.tick(rushSpec.drops!.everyMs);
+    expect(n.state.incoming, isNotEmpty);
+    push(n.state);
+    await tester.pump();
+    boardPaintCounts.clear();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(boardPaintCounts[BoardLayer.moving] ?? 0, greaterThan(0));
+    n.tick(kDropWarnMs);
     expect(n.state.drops, 1);
     boardPaintCounts.clear();
     push(n.state);
@@ -60,13 +68,17 @@ void main() {
     // The tap that leaves three arrows brings a drop at once: one state
     // that is both a move and a grown board.
     n.tapArrow(0);
-    expect(n.state.drops, 1);
+    expect(n.state.incoming, isNotEmpty);
     expect(n.state.lastOutcome, MoveOutcome.exited);
     push(n.state);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     final board = tester.state<PuzzleBoardState>(find.byType(PuzzleBoard));
     expect(board.mounted, isTrue);
+    // The glow beats until the drop lands; then everything comes to rest.
+    n.tick(kDropWarnMs);
+    expect(n.state.drops, 1);
+    push(n.state);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
@@ -76,6 +88,11 @@ void main() {
     addTearDown(n.dispose);
     final push = await _pumpBoard(tester, n.state, reduceMotion: true);
     n.tick(rushSpec.drops!.everyMs);
+    // The glow holds still with motion reduced.
+    push(n.state);
+    await tester.pump();
+    n.tick(kDropWarnMs);
+    expect(n.state.drops, 1);
     push(n.state);
     await tester.pump();
     boardPaintCounts.clear();

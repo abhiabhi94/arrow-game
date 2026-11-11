@@ -7,17 +7,25 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/sample_puzzle.dart';
 
-/// Taps every arrow that can go, in id order, until none can.
+/// Taps every arrow that can go, in id order, letting each drop that glows
+/// land, until the level ends.
 void _clearAll(GameNotifier n) {
-  var tapped = true;
-  while (tapped && n.state.isPlaying) {
-    tapped = false;
+  for (var guard = 0; guard < 100 && n.state.isPlaying; guard++) {
     final p = n.state.puzzle!;
-    for (final id in p.removable(n.state.removed)) {
-      if (!n.state.isPlaying) break;
-      n.tapArrow(id);
-      tapped = true;
+    final free = p.removable(n.state.removed);
+    if (free.isNotEmpty) {
+      n.tapArrow(free.first);
+    } else {
+      n.tick(kDropWarnMs);
     }
+  }
+}
+
+/// Plays on until the next drop has glowed and landed.
+void _landNext(GameNotifier n) {
+  final before = n.state.drops;
+  for (var guard = 0; guard < 100 && n.state.drops == before; guard++) {
+    n.tick(100);
   }
 }
 
@@ -29,10 +37,24 @@ void main() {
     expect(n.state.dropsLeft, 2);
     n.tick(900);
     expect(n.state.drops, 0);
+    expect(n.state.incoming, isEmpty);
+    // Due: the cells it will land on glow first.
+    n.tick(100);
+    expect(n.state.drops, 0);
+    expect(n.state.incoming, isNotEmpty);
+    final glowing = n.state.incoming;
+    n.tick(kDropWarnMs - 100);
+    expect(n.state.drops, 0);
+    // Then it lands, exactly where it glowed.
     n.tick(100);
     expect(n.state.drops, 1);
+    expect(n.state.incoming, isEmpty);
     expect(n.state.dropsLeft, 1);
     final grown = n.state.puzzle!;
+    expect(
+      <Object>{for (final a in grown.arrows.skip(4)) ...a.cells, ...grown.blocks},
+      glowing,
+    );
     expect(grown.arrowCount, greaterThan(dealt.arrowCount));
     expect(grown.arrowCount, lessThanOrEqualTo(dealt.arrowCount + 2));
     expect(grown.blocks.length, lessThanOrEqualTo(1));
@@ -47,8 +69,12 @@ void main() {
   test('the board running low brings the next drop at once, and the level clears only after the last', () {
     var cleared = 0;
     final n = GameNotifier(rushSpec, puzzle: rushPuzzle(), autoTick: false, onCleared: (_, _, _) => cleared++);
-    // Down to three arrows: the first drop lands with no tick at all.
+    // Down to three arrows: the first drop is on its way at once, glowing,
+    // and lands once the glow is over.
     n.tapArrow(0);
+    expect(n.state.incoming, isNotEmpty);
+    expect(n.state.drops, 0);
+    n.tick(kDropWarnMs);
     expect(n.state.drops, 1);
     _clearAll(n);
     // Every arrow out and every drop landed: cleared, once.
@@ -61,7 +87,7 @@ void main() {
 
   test('a restart puts the dealt board back, and the drops start again', () {
     final n = GameNotifier(rushSpec, puzzle: rushPuzzle(), autoTick: false);
-    n.tick(1000);
+    _landNext(n);
     expect(n.state.drops, 1);
     n.restart();
     expect(n.state.drops, 0);
@@ -69,15 +95,20 @@ void main() {
     expect(n.state.puzzle!.blocks, isEmpty);
     // Its own second again, not what was left of the last one's.
     n.tick(500);
-    expect(n.state.drops, 0);
+    expect(n.state.incoming, isEmpty);
     n.tick(500);
-    expect(n.state.drops, 1);
+    expect(n.state.incoming, isNotEmpty);
+    // A restart in the middle of the glow takes the drop with it.
+    n.restart();
+    expect(n.state.incoming, isEmpty);
+    n.tick(kDropWarnMs);
+    expect(n.state.drops, 0);
     n.dispose();
   });
 
   test('with no time limit the drops still come, and no time is counted', () {
     final n = GameNotifier(rushSpec.untimed(), puzzle: rushPuzzle(), autoTick: false);
-    n.tick(1000);
+    _landNext(n);
     expect(n.state.drops, 1);
     expect(n.state.elapsedMs, 0);
     n.dispose();
@@ -85,6 +116,14 @@ void main() {
 
   test('nothing lands while paused', () {
     final n = GameNotifier(rushSpec, puzzle: rushPuzzle(), autoTick: false)..pause();
+    n.tick(5000);
+    expect(n.state.drops, 0);
+    expect(n.state.incoming, isEmpty);
+    // Nor while paused in the middle of its glow.
+    n.resume();
+    n.tick(1000);
+    expect(n.state.incoming, isNotEmpty);
+    n.pause();
     n.tick(5000);
     expect(n.state.drops, 0);
     n.dispose();
@@ -112,7 +151,7 @@ void main() {
 
   test('a saved Rush game comes back with what had landed on it', () {
     final n = GameNotifier(rushSpec, puzzle: rushPuzzle(), autoTick: false);
-    n.tick(1000);
+    _landNext(n);
     n.tapArrow(1);
     final saved = SavedGame.fromJson(SavedGame.fromState(n.state).toJson())!;
     expect(saved.drops, 1);
@@ -131,7 +170,7 @@ void main() {
     expect([for (final a in p.arrows) a.cells], [for (final a in before.arrows) a.cells]);
     // And the next drop is still to come.
     back.resume();
-    back.tick(1000);
+    _landNext(back);
     expect(back.state.drops, 2);
     back.dispose();
   });
@@ -170,7 +209,7 @@ void main() {
   test('a grown board is the old one grown, not a new one', () {
     final n = GameNotifier(rushSpec, puzzle: rushPuzzle(), autoTick: false);
     final before = n.state;
-    n.tick(1000);
+    _landNext(n);
     expect(n.state.grewFrom(before), isTrue);
     expect(before.grewFrom(n.state), isFalse);
     final grown = n.state;

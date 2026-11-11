@@ -1,6 +1,7 @@
 import 'package:arrow_game/data/chapter_demos.dart';
 import 'package:arrow_game/data/chapters.dart';
 import 'package:arrow_game/data/level_specs.dart';
+import 'package:arrow_game/engine/drops.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -62,10 +63,13 @@ void main() {
     expect(ruleTaughtAt(111), isNull);
     expect(ruleTaughtAt(126), ChapterRule.rushBlocks);
     expect(ruleTaughtAt(151), ChapterRule.cube);
-    // The Rush and the box say what they bring in a line under the board:
-    // no card of their own. The block's card is at 151, where it now starts.
+    // The box is the block again, so a line under the board says what is
+    // new: no card of its own. The block's card is at 151, where it now
+    // starts; the Rush has a card for each half.
     expect(ChapterRule.box.hasCard, isFalse);
-    expect(ChapterRule.values.where((r) => !r.hasCard), [ChapterRule.rush, ChapterRule.rushBlocks, ChapterRule.box]);
+    expect(ChapterRule.rush.hasCard, isTrue);
+    expect(ChapterRule.rushBlocks.hasCard, isTrue);
+    expect(ChapterRule.values.where((r) => !r.hasCard), [ChapterRule.box]);
     expect(ruleTaughtAt(152), isNull);
     expect(ruleTaughtAt(201), ChapterRule.box);
     expect(ruleTaughtAt(202), isNull);
@@ -165,6 +169,17 @@ void main() {
       expect(spec.width, p.faceWidthOf(0));
       expect(spec.isCube, p.isCube);
       expect(spec.arrows, p.arrowCount);
+      if (rule.isRush) {
+        // No script: the card taps whatever can go while two drops land,
+        // the first at once, since the board starts running low.
+        expect(spec.drops!.count, 2);
+        expect(spec.drops!.blocks > 0, rule == ChapterRule.rushBlocks);
+        expect(spec.timed, isFalse);
+        expect(demoScriptFor(rule), isEmpty);
+        expect(p.arrowCount, lessThanOrEqualTo(kDropLowWater));
+        expect(p.removable(const {}), hasLength(p.arrowCount));
+        continue;
+      }
       // The script clears the board in order: every tap but a deliberate
       // first tap on a lock (or on a hidden head) slides something out.
       final removed = <int>{};
@@ -202,7 +217,9 @@ void main() {
           expect(p.isCube, isTrue);
           expect(p.faceCount, 6);
           expect(<int>[for (final id in demoScriptFor(rule)) p.faceOf(id)], [0, 1, 2, 3]);
-        case ChapterRule.rush || ChapterRule.rushBlocks || ChapterRule.box:
+        case ChapterRule.rush || ChapterRule.rushBlocks:
+          fail('the Rush has no script');
+        case ChapterRule.box:
           fail('${rule.name} has no card');
       }
     }

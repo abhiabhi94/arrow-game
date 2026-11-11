@@ -44,6 +44,7 @@ class GameState {
     this.resumeOffered = false,
     this.continues = 0,
     this.drops = 0,
+    this.incoming = const <Cell>{},
     int? dealtArrows,
   }) : dealtArrows = dealtArrows ?? (puzzle?.arrowCount ?? 0);
 
@@ -139,6 +140,11 @@ class GameState {
   /// block.
   final int drops;
 
+  /// The cells the next drop is about to land on (its arrows' and its
+  /// blocks'), glowing on the board for [kDropWarnMs] before it does; empty
+  /// when nothing is on its way.
+  final Set<Cell> incoming;
+
   /// Arrows on the board as it was dealt, before any drop: the ones past
   /// this landed during play.
   final int dealtArrows;
@@ -176,6 +182,7 @@ class GameState {
         resumeOffered,
         continues,
         drops,
+        incoming,
       );
 
   int get level => spec.level;
@@ -208,6 +215,7 @@ class GameState {
   GameState copyWith({
     Puzzle? puzzle,
     int? drops,
+    Set<Cell>? incoming,
     GamePhase? phase,
     Set<int>? removed,
     Set<int>? bumped,
@@ -230,6 +238,7 @@ class GameState {
         spec: spec,
         puzzle: puzzle ?? this.puzzle,
         drops: drops ?? this.drops,
+        incoming: incoming ?? this.incoming,
         dealtArrows: dealtArrows,
         phase: phase ?? this.phase,
         removed: removed ?? this.removed,

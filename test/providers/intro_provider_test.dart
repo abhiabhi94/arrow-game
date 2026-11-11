@@ -36,22 +36,22 @@ void main() {
     expect(n.due(level: 46), [ChapterRule.mirrors, ChapterRule.locks]);
     expect(n.due(level: 65), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog]);
     expect(n.due(level: 100), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs]);
-    // The Rush has no card: through level 150 nothing more is owed.
-    expect(n.due(level: 150), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs]);
+    // Each half of the Rush brings its card.
+    expect(n.due(level: 101), [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.rush]);
+    const throughRush = [
+      ChapterRule.mirrors,
+      ChapterRule.locks,
+      ChapterRule.fog,
+      ChapterRule.pairs,
+      ChapterRule.rush,
+      ChapterRule.rushBlocks,
+    ];
+    expect(n.due(level: 150), throughRush);
     // The block's card comes with the block, at 151.
-    expect(
-      n.due(level: 151),
-      [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
-    );
-    expect(
-      n.due(level: 200),
-      [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
-    );
-    // Nor has the box: at level 250 still nothing more.
-    expect(
-      n.due(level: 250),
-      [ChapterRule.mirrors, ChapterRule.locks, ChapterRule.fog, ChapterRule.pairs, ChapterRule.cube],
-    );
+    expect(n.due(level: 151), [...throughRush, ChapterRule.cube]);
+    expect(n.due(level: 200), [...throughRush, ChapterRule.cube]);
+    // The box has none: at level 250 still nothing more.
+    expect(n.due(level: 250), [...throughRush, ChapterRule.cube]);
     expect(n.due(chapter: chapters[2]), [ChapterRule.mirrors, ChapterRule.locks]);
     expect(n.due(), isEmpty);
     // A player who met Mirrors at 21 is shown only Locks at 41.

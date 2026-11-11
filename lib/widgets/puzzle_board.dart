@@ -55,9 +55,12 @@ const int kRevealMs = 1000;
 /// How long the flash on a mirror lasts as an arrow bounces through it.
 const int kBounceMs = 600;
 
-/// How long an arrow (or block) landing on a Rush board takes to pop into
+/// How long an arrow (or block) landing on a Rush board takes to drop into
 /// place, in milliseconds.
-const int kArriveMs = 450;
+const int kArriveMs = 700;
+
+/// One beat of the glow on the cells a drop is about to land on.
+const Duration kIncomingPulse = Duration(milliseconds: 520);
 
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
 /// on its way out) in a single ink — thin lines with a small head, like a
@@ -142,6 +145,9 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   /// — it finds movement.
   AnimationController? _hintPing;
 
+  /// The glow on the cells a drop is about to land on, while there are any.
+  AnimationController? _incomingPulse;
+
   /// The arrow currently bumping (or rattling at its lock), if any, and
   /// how it moves.
   int? _bumpId;
@@ -195,8 +201,11 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
       _hintPing = null;
       _slump?.dispose();
       _slump = null;
+      _incomingPulse?.dispose();
+      _incomingPulse = null;
     }
     _syncHintPing();
+    _syncIncoming();
     final s = widget.state;
     if (s.puzzle != oldWidget.state.puzzle || s.moveToken < oldWidget.state.moveToken) {
       if (s.grewFrom(oldWidget.state)) {
@@ -413,6 +422,19 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   /// Runs the ping while a hint points somewhere, and stops it otherwise. With
   /// motion reduced the glow is enough: the hinted arrow is the one thing
   /// still bright on a dimmed board.
+  void _syncIncoming() {
+    final showing = widget.state.incoming.isNotEmpty && !widget.reduceMotion;
+    if (showing == (_incomingPulse != null)) return;
+    if (showing) {
+      _incomingPulse = AnimationController(vsync: this, duration: kIncomingPulse)
+        ..addListener(() => setState(() {}))
+        ..repeat(reverse: true);
+    } else {
+      _incomingPulse?.dispose();
+      _incomingPulse = null;
+    }
+  }
+
   void _syncHintPing() {
     final showing = widget.state.hintArrowId != null && !widget.reduceMotion;
     if (showing == (_hintPing != null)) return;
@@ -454,6 +476,8 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     _slump = null;
     _hintPing?.dispose();
     _hintPing = null;
+    _incomingPulse?.dispose();
+    _incomingPulse = null;
     _disposeAll();
     super.dispose();
   }
@@ -574,6 +598,7 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
           pendingReveals: <int>{for (final owed in _pendingReveals.values) ...owed},
           bounces: <int, double>{for (final e in _bounces.entries) e.key: e.value.value},
           arrivals: <int, double>{for (final e in _arrivals.entries) e.key: e.value.value},
+          incomingPulse: _incomingPulse?.value,
           blockArrivals: <int, double>{for (final e in _blockArrivals.entries) e.key: e.value.value},
           travel: widget.reduceMotion ? 0 : 1,
           focusedId: widget.focusedArrowId,
@@ -701,6 +726,7 @@ class _BoardPainter extends CustomPainter {
     required this.bounces,
     this.arrivals = const <int, double>{},
     this.blockArrivals = const <int, double>{},
+    this.incomingPulse,
     required this.travel,
     required this.focusedId,
     required this.l10n,
@@ -782,6 +808,10 @@ class _BoardPainter extends CustomPainter {
   /// how far each is into popping into place, 0..1.
   final Map<int, double> arrivals;
   final Map<int, double> blockArrivals;
+
+  /// The beat of the glow on [GameState.incoming] (0..1), or null with
+  /// motion reduced (the glow then holds still).
+  final double? incomingPulse;
 
   Puzzle get puzzle => state.puzzle!;
 
@@ -896,7 +926,24 @@ class _BoardPainter extends CustomPainter {
     for (final c in puzzle.blocks) {
       final arriving = blockArrivals[c.y * puzzle.width + c.x];
       if ((arriving != null) == _still) continue;
-      _paintBlock(canvas, c, cs, arriving == null ? 1 : _popScale(arriving));
+      _paintBlock(canvas, c, cs, arriving);
+    }
+    // Where the next drop will land: its cells glow, beating, until it does.
+    if (!_still && state.incoming.isNotEmpty) {
+      final beat = incomingPulse ?? 0.5;
+      final wash = Paint()..color = palette.hintGlow.withValues(alpha: 0.18 + 0.32 * beat);
+      final rim = Paint()
+        ..color = palette.hintGlow.withValues(alpha: 0.5 + 0.5 * beat)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1.5, cs * 0.06);
+      for (final c in state.incoming) {
+        final r = RRect.fromRectAndRadius(
+          Rect.fromLTWH(c.x * cs, c.y * cs, cs, cs).deflate(cs * 0.08),
+          Radius.circular(cs * 0.2),
+        );
+        canvas.drawRRect(r, wash);
+        canvas.drawRRect(r, rim);
+      }
     }
 
     // The bump: the tapped arrow runs into the arrow in its way, which takes
@@ -972,18 +1019,20 @@ class _BoardPainter extends CustomPainter {
         canvas.rotate(slumpTiltFor(arrow.id, slump!));
         canvas.translate(-pivot.dx, -pivot.dy);
       }
-      // Just landed on a Rush board: it pops into place about its middle.
+      // Just landed on a Rush board: it drops in from above onto the cells
+      // that glowed for it, fading in as it comes down, with a ring as it
+      // lands.
       final arriving = arrivals[arrow.id];
       if (arriving != null) {
         final pivot = _center(arrow.cells[arrow.length ~/ 2], cs);
-        final k = _popScale(arriving);
-        canvas.save();
-        canvas.translate(pivot.dx, pivot.dy);
-        canvas.scale(k, k);
-        canvas.translate(-pivot.dx, -pivot.dy);
+        _beginDrop(canvas, pivot, arriving);
       }
       _paintArrow(canvas, arrow, cs, offset, false, glyphs);
-      if (arriving != null) canvas.restore();
+      if (arriving != null) {
+        canvas.restore();
+        canvas.restore();
+        _paintLandingRing(canvas, _center(arrow.cells[arrow.length ~/ 2], cs), cs, arriving);
+      }
       if (slumping) canvas.restore();
       if (shoved) canvas.restore();
     }
@@ -1000,14 +1049,49 @@ class _BoardPainter extends CustomPainter {
     canvas.restore();
   }
 
-  /// How big something landing is drawn [t] (0..1) into its arrival: from
-  /// small, a little past full size, then settled.
-  static double _popScale(double t) => 0.3 + 0.7 * Curves.easeOutBack.transform(t);
+  /// Opens a drop: [t] (0..1) into its arrival something landing is drawn
+  /// bigger (nearer, falling) and faint, coming down to its own size and
+  /// full ink. Two saves, closed by the caller with two restores.
+  static void _beginDrop(Canvas canvas, Offset pivot, double t) {
+    final fall = Curves.easeOutQuad.transform(t);
+    final k = 1 + 1.1 * (1 - fall);
+    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, min(1.0, t * 2.2)));
+    canvas.save();
+    canvas.translate(pivot.dx, pivot.dy);
+    canvas.scale(k, k);
+    canvas.translate(-pivot.dx, -pivot.dy);
+  }
 
-  /// A block on [c], [scale] of its full size: a rounded square of ink with
-  /// a hairline of paper inside, so it reads as a solid thing and not as an
-  /// arrow's body.
-  void _paintBlock(Canvas canvas, Cell c, double cs, double scale) {
+  /// The ring something landing makes as it touches down, over the second
+  /// half of its arrival.
+  void _paintLandingRing(Canvas canvas, Offset at, double cs, double t) {
+    if (t < 0.5) return;
+    final u = (t - 0.5) / 0.5;
+    canvas.drawCircle(
+      at,
+      cs * (0.4 + 0.9 * Curves.easeOutCubic.transform(u)),
+      Paint()
+        ..color = palette.hintGlow.withValues(alpha: 0.9 * (1 - u))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2.0, cs * 0.12),
+    );
+  }
+
+  /// A block on [c], dropping in when [arriving] (0..1) is given: a rounded
+  /// square of ink with a hairline of paper inside, so it reads as a solid
+  /// thing and not as an arrow's body.
+  void _paintBlock(Canvas canvas, Cell c, double cs, double? arriving) {
+    if (arriving != null) _beginDrop(canvas, _center(c, cs), arriving);
+    _paintBlockShape(canvas, c, cs);
+    if (arriving != null) {
+      canvas.restore();
+      canvas.restore();
+      _paintLandingRing(canvas, _center(c, cs), cs, arriving);
+    }
+  }
+
+  void _paintBlockShape(Canvas canvas, Cell c, double cs) {
+    const scale = 1.0;
     final rect = Rect.fromCenter(
       center: _center(c, cs),
       width: cs * 0.84 * scale,
@@ -1566,6 +1650,8 @@ class _BoardPainter extends CustomPainter {
       !setEquals(old.pendingReveals, pendingReveals) ||
       !_sameMap(old.bounces, bounces) ||
       !_sameMap(old.arrivals, arrivals) ||
+      old.incomingPulse != incomingPulse ||
+      old.state.incoming != state.incoming ||
       !_sameMap(old.blockArrivals, blockArrivals) ||
       old.travel != travel ||
       old.face != face ||

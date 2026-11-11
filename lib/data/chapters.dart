@@ -9,8 +9,8 @@
 /// on a block that is no longer a cube, its faces of three sizes and
 /// bigger than the cube's. Every chapter opens on a small teaching board
 /// that carries the new thing alone; the game screen puts an illustrated
-/// card over that board the first time it is played, or — for the Rush,
-/// which needs no picture — a line under it.
+/// card over that board the first time it is played (the box, the block
+/// again, has only a line under it).
 /// Pure Dart.
 library;
 
@@ -52,9 +52,9 @@ enum ChapterRule {
   /// Whether arrows land on the chapter's boards while they are played.
   bool get isRush => this == rush || this == rushBlocks;
 
-  /// Whether the chapter opens on an illustrated card. The Rush and the box
-  /// do not: what they bring is said in a line under the board.
-  bool get hasCard => !isRush && this != box;
+  /// Whether the chapter opens on an illustrated card. The box does not:
+  /// it is the block again, and a line under the board says what is new.
+  bool get hasCard => this != box;
 }
 
 class Chapter {

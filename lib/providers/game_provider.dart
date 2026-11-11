@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show compute, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/level_specs.dart';
+import '../engine/cell.dart';
 import '../engine/drops.dart';
 import '../engine/puzzle.dart';
 import '../engine/puzzle_generator.dart';
@@ -94,6 +95,11 @@ class GameNotifier extends StateNotifier<GameState> {
   /// Play time since the last drop landed (or the level began), counted
   /// whether or not the level is timed.
   int _sinceDropMs = 0;
+
+  /// The drop on its way, glowing on its cells ([GameState.incoming]) for
+  /// [kDropWarnMs] of play before it lands, and how long it has glowed.
+  Drop? _pending;
+  int _pendingMs = 0;
   Timer? _sting;
   final Completer<void> _ready = Completer<void>();
 
@@ -342,22 +348,34 @@ class GameNotifier extends StateNotifier<GameState> {
     _snapshot();
   }
 
-  /// Lands the next drop of a Rush board ([LevelSpec.drops]) when it is
-  /// due — its time has come, or the board is down to [kDropLowWater]
-  /// arrows. No room on the board yet: it waits, and is tried again on the
-  /// next tick.
+  /// Moves the next drop of a Rush board ([LevelSpec.drops]) along. When
+  /// it is due — its time has come, or the board is down to
+  /// [kDropLowWater] arrows — it is planned and its cells glow
+  /// ([GameState.incoming]); [kDropWarnMs] of play later it lands. No room
+  /// on the board yet: it waits, and is tried again on the next tick.
+  /// Arrows leaving meanwhile cannot spoil the plan: its cells stay empty,
+  /// and nothing leaving makes anything wait for itself.
   void _dropIfDue() {
     final drops = spec.drops;
     final puzzle = state.puzzle;
     if (drops == null || puzzle == null || !state.isPlaying || state.dropsLeft <= 0) return;
+    final pending = _pending;
+    if (pending != null) {
+      if (_pendingMs < kDropWarnMs) return;
+      _pending = null;
+      _sinceDropMs = 0;
+      state = state.copyWith(puzzle: pending.landOn(puzzle), drops: state.drops + 1, incoming: const <Cell>{});
+      haptics?.tap();
+      _snapshot();
+      return;
+    }
     final left = puzzle.arrowCount - state.removed.length;
     if (left > kDropLowWater && _sinceDropMs < drops.everyMs) return;
     final drop = planDrop(puzzle, state.removed, drops, dropRandom(spec, state.drops));
     if (drop == null) return;
-    _sinceDropMs = 0;
-    state = state.copyWith(puzzle: drop.landOn(puzzle), drops: state.drops + 1);
-    haptics?.tap();
-    _snapshot();
+    _pending = drop;
+    _pendingMs = 0;
+    state = state.copyWith(incoming: <Cell>{for (final a in drop.arrows) ...a.cells, ...drop.blocks});
   }
 
   /// Throws the attempt away and starts the same puzzle again.
@@ -365,6 +383,7 @@ class GameNotifier extends StateNotifier<GameState> {
     final puzzle = _dealt ?? state.puzzle;
     if (puzzle == null) return;
     _sinceDropMs = 0;
+    _pending = null;
     _impact?.cancel();
     _impact = null;
     _sting?.cancel();
@@ -410,6 +429,7 @@ class GameNotifier extends StateNotifier<GameState> {
     // The drops keep their own time, which runs even with no clock.
     if (spec.isDynamic) {
       _sinceDropMs += ms;
+      if (_pending != null) _pendingMs += ms;
       _dropIfDue();
     }
     if (!spec.timed) return;
