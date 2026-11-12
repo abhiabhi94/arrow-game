@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,8 +108,8 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
         home: switch (startLevelFrom(Uri.base, allowed: perfHooksOn)) {
           // The profiler (tool/perf.mjs) opens a level straight away.
           final int level => GameScreen(level: level),
-          null => switch (kIsWeb ? levelFromLink(Uri.base) : null) {
-              // A link to a level (`?level=N`) opens it over home.
+          null => switch (levelLinksOn ? levelFromLink(Uri.base) : null) {
+              // A link to a level (`?level=N`, PR previews only) opens it over home.
               final int level => LevelLinkLauncher(
                   level: level,
                   child: settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),

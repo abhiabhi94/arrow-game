@@ -156,17 +156,16 @@ OFL, static weights 400–800) is bundled in `assets/fonts/` and declared
 under `flutter: fonts:` as `GoogleSansFlex` — no `google_fonts`, no runtime
 fetch.
 
-**A link to a level** (`utils/level_link.dart`): `?level=N` on the web
-build (`https://abhiabhi94.github.io/arrow-game/?level=42`, also read after
-a `#`) opens level N over home (`screens/level_link_launcher.dart`), so the
-board is the first thing seen and Back goes home — whether or not the
-player has reached it: a link is an invitation. The game screen's link
-button (not on the daily board, which is dealt per install) copies it —
-the page it was copied from in a browser (a PR preview links to itself),
-the public site from the phone app. The phone app does not open these
-links itself: that needs Android App Links verified on the domain's root,
-which a project page on github.io does not have. `?perf&level=N` is still
-the profiler's own way in (`perf_hooks.dart`), straight onto the board.
+**A link to a level** (`utils/level_link.dart`) is a reviewer's tool, so
+it lives only in a browser build with every level open (`levelLinksOn`:
+the PR previews, built with `UNLOCK_ALL=true`, and a debug web build):
+`?level=N` (also read after a `#`) opens level N over home
+(`screens/level_link_launcher.dart`), Back goes home, and the game screen's
+link button (not on the daily board) copies the link to the preview it is
+on. The public site and the store app have neither — a player there earns
+their way along the trail — and a widget test sees the button only with
+`debugLevelLinksAnywhere`. `?perf&level=N` is still the profiler's own way
+in (`perf_hooks.dart`), straight onto the board.
 
 **Desktop browser (`lib/ui/layout.dart`):** the design is phone-first, so
 every screen keeps its content in a centred column no wider than

@@ -6,6 +6,7 @@ import 'package:arrow_game/providers/progress_provider.dart';
 import 'package:arrow_game/providers/saved_game_provider.dart';
 import 'package:arrow_game/screens/game_screen.dart';
 import 'package:arrow_game/screens/level_link_launcher.dart';
+import 'package:arrow_game/utils/level_link.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +71,9 @@ void main() {
       return null;
     });
     addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    // A test is not a browser; a PR preview is.
+    debugLevelLinksAnywhere = true;
+    addTearDown(() => debugLevelLinksAnywhere = false);
     await usePhoneSurface(tester);
     await pumpApp(tester, const GameScreen(level: 7), seed: _introsSeen, extraOverrides: _overrides());
     await _settle(tester);
@@ -80,7 +84,17 @@ void main() {
     expect(find.text('Link to level 7 copied. Send it to a friend!'), findsOneWidget);
   });
 
+  testWidgets('outside a preview build there is no link button', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(tester, const GameScreen(level: 7), seed: _introsSeen, extraOverrides: _overrides());
+    await _settle(tester);
+    expect(levelLinksOn, isFalse);
+    expect(find.byTooltip('Copy a link to this level'), findsNothing);
+  });
+
   testWidgets('the daily board has no link: it is dealt per install', (tester) async {
+    debugLevelLinksAnywhere = true;
+    addTearDown(() => debugLevelLinksAnywhere = false);
     await usePhoneSurface(tester);
     await pumpApp(
       tester,

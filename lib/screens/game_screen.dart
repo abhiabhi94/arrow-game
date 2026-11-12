@@ -631,9 +631,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
             ],
           ),
           actions: [
-            // A link straight to this level, to send to someone. The daily
-            // board is dealt per install, so it has none.
-            if (!widget.isDaily)
+            // A link straight to this level, for a reviewer on a PR preview
+            // (`levelLinksOn`). The daily board is dealt per install, so it
+            // has none.
+            if (levelLinksOn && !widget.isDaily)
               IconButton(
                 tooltip: l10n.gameShareLevel,
                 onPressed: _copyLevelLink,
