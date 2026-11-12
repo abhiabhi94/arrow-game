@@ -61,7 +61,7 @@ const double rushPace = 1.4;
 /// From this level the Rush's clock is [rushLongClock] times its rule's:
 /// the late levels, with mirrors landing on boards full of twists, were too
 /// tight at the base pace.
-const int rushLongClockFrom = 125;
+const int rushLongClockFrom = 126;
 const double rushLongClock = 1.5;
 
 /// Seconds an arrow on the block, before the twists' own seconds.
@@ -196,7 +196,7 @@ void _rush(int level) {
   final think = mirrors * 0.5 + locks * 2.0 + hidden * 1.5 + pairs * 1.5 + dropMirrors * count * 0.5;
   final seconds = total * (teach ? 2.5 : rushPace) + (teach ? 30.0 : 20.0) + think;
   final baseMs = (min((seconds * 1000).round(), 599000) * kClockTrim).round();
-  // The drops keep the pace of the base clock; levels 125–150 get half as
+  // The drops keep the pace of the base clock; levels 126–150 get half as
   // long again on the clock itself, as play asked — the drops still come as
   // fast, so the board keeps filling, only the player has longer to clear it.
   final everyMs = ((baseMs * 0.55 / count / 500).round() * 500).clamp(4000, 12000);
