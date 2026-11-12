@@ -47,8 +47,8 @@
 /// the twelfth. The board is sized like a flat one (~11.3 free cells an
 /// arrow) but dealt without the gap pass, so it starts about half full; the
 /// clock is 1.4 s for every arrow there will be, half the flat chapters'
-/// seconds a twist and 20 s, trimmed (level 125: 3:20), and half as long
-/// again from 126, where mirrors land too (level 150: 5:20); the drops come
+/// seconds a twist and 20 s, trimmed, and half as long again from
+/// level 125 (125: 5:00, 150: 5:20); the drops come
 /// every 4–12 s of play — and at once when three arrows or fewer are left,
 /// so a quick player never waits. `tool/rush_report.dart` plays them
 /// through.
@@ -203,7 +203,7 @@ const List<LevelSpec> levelSpecs = <LevelSpec>[
   LevelSpec(level: 122, width: 22, height: 34, arrows: 64, minLength: 3, maxLength: 9, timeLimitMs: 183483, openMoves: 2, features: LevelFeatures(mirrors: 5, locks: 4, hidden: 4, pairs: 3), drops: LevelDrops(count: 15, everyMs: 6500, arrows: 4, maxLength: 8)),
   LevelSpec(level: 123, width: 23, height: 35, arrows: 66, minLength: 3, maxLength: 9, timeLimitMs: 185877, openMoves: 2, features: LevelFeatures(mirrors: 5, locks: 4, hidden: 4, pairs: 3), drops: LevelDrops(count: 15, everyMs: 7000, arrows: 4, maxLength: 8)),
   LevelSpec(level: 124, width: 23, height: 35, arrows: 68, minLength: 3, maxLength: 10, timeLimitMs: 197334, openMoves: 2, features: LevelFeatures(mirrors: 5, locks: 5, hidden: 5, pairs: 4), drops: LevelDrops(count: 16, everyMs: 7000, arrows: 4, maxLength: 8)),
-  LevelSpec(level: 125, width: 23, height: 35, arrows: 70, minLength: 3, maxLength: 10, timeLimitMs: 199728, openMoves: 2, features: LevelFeatures(mirrors: 5, locks: 5, hidden: 5, pairs: 4), drops: LevelDrops(count: 16, everyMs: 7000, arrows: 4, maxLength: 8)),
+  LevelSpec(level: 125, width: 23, height: 35, arrows: 70, minLength: 3, maxLength: 10, timeLimitMs: 299592, openMoves: 2, features: LevelFeatures(mirrors: 5, locks: 5, hidden: 5, pairs: 4), drops: LevelDrops(count: 16, everyMs: 7000, arrows: 4, maxLength: 8)),
   LevelSpec(level: 126, width: 9, height: 12, arrows: 8, minLength: 2, maxLength: 4, timeLimitMs: 92340, openMoves: 3, drops: LevelDrops(count: 4, everyMs: 8500, arrows: 2, mirrors: 1, maxLength: 3)),
   LevelSpec(level: 127, width: 14, height: 21, arrows: 24, minLength: 3, maxLength: 7, timeLimitMs: 111065, openMoves: 2, features: LevelFeatures(mirrors: 2, locks: 2, hidden: 2, pairs: 1), drops: LevelDrops(count: 5, everyMs: 8000, arrows: 3, mirrors: 1, maxLength: 4), variant: 1),
   LevelSpec(level: 128, width: 14, height: 22, arrows: 26, minLength: 3, maxLength: 7, timeLimitMs: 114656, openMoves: 2, features: LevelFeatures(mirrors: 2, locks: 2, hidden: 2, pairs: 1), drops: LevelDrops(count: 5, everyMs: 8500, arrows: 3, mirrors: 1, maxLength: 4)),
