@@ -7,6 +7,12 @@ library;
 /// stays pure; mapped to Flutter's ThemeMode in main.dart.
 enum ThemeChoice { system, light, dark }
 
+/// The level clock, as Settings offers it: one choice of three rather than
+/// two switches, since "Extra time" means nothing once the clock is off.
+/// It is a view of [Settings.noTimeLimit] and [Settings.extraTime], which
+/// stay the stored keys so nobody's choice is lost.
+enum ClockChoice { standard, extra, off }
+
 /// The language the app speaks. [system] (default) follows the device
 /// locale — a phone set to Hindi opens in Hindi — and the other values pin
 /// one language regardless. A plain Dart enum, mapped to a Flutter Locale in
@@ -74,6 +80,13 @@ class Settings {
   /// Off by default, so every level keeps the clock that counts down to zero
   /// (and [extraTime] applies).
   final bool noTimeLimit;
+
+  /// The clock choice these two flags make.
+  ClockChoice get clock => noTimeLimit
+      ? ClockChoice.off
+      : extraTime
+          ? ClockChoice.extra
+          : ClockChoice.standard;
 
   static const Settings defaults = Settings(
     musicOn: true,

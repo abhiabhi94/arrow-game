@@ -100,6 +100,16 @@ class SettingsNotifier extends StateNotifier<Settings> {
 
   void setNoTimeLimit(bool on) => _update(state.copyWith(noTimeLimit: on));
 
+  /// Sets the clock flags from Settings' one choice, the way the two old
+  /// switches did: "No limit" only turns the clock off and leaves
+  /// [Settings.extraTime] as it was (as "Remove time limits" did), so the
+  /// stored pair means what it always meant.
+  void setClock(ClockChoice choice) => _update(switch (choice) {
+        ClockChoice.off => state.copyWith(noTimeLimit: true),
+        ClockChoice.extra => state.copyWith(noTimeLimit: false, extraTime: true),
+        ClockChoice.standard => state.copyWith(noTimeLimit: false, extraTime: false),
+      });
+
   void completeOnboarding() => _update(state.copyWith(onboardingDone: true));
 
   void _update(Settings next) {

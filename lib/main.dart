@@ -9,11 +9,13 @@ import 'providers/app_providers.dart';
 import 'providers/settings_provider.dart';
 import 'screens/game_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/level_link_launcher.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/audio_service.dart';
 import 'services/sfx_service.dart';
 import 'ui/layout.dart';
 import 'ui/theme.dart';
+import 'utils/level_link.dart';
 import 'utils/perf_hooks.dart';
 
 Future<void> main() async {
@@ -106,7 +108,14 @@ class _ArrowAppState extends ConsumerState<ArrowApp> with WidgetsBindingObserver
         home: switch (startLevelFrom(Uri.base, allowed: perfHooksOn)) {
           // The profiler (tool/perf.mjs) opens a level straight away.
           final int level => GameScreen(level: level),
-          null => settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
+          null => switch (levelLinksOn ? levelFromLink(Uri.base) : null) {
+              // A link to a level (`?level=N`, PR previews only) opens it over home.
+              final int level => LevelLinkLauncher(
+                  level: level,
+                  child: settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
+                ),
+              null => settings.onboardingDone ? const HomeScreen() : const OnboardingScreen(),
+            },
         },
       ),
     );

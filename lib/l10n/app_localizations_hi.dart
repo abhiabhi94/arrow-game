@@ -1670,4 +1670,33 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get gamePausedBodyUntimed => 'साँस ले लीजिए। बोर्ड इंतज़ार करेगा।';
+
+  @override
+  String get settingsClock => 'लेवल की घड़ी';
+
+  @override
+  String get clockStandard => 'सामान्य';
+
+  @override
+  String get clockExtra => 'दुगना समय';
+
+  @override
+  String get clockOff => 'बिना घड़ी';
+
+  @override
+  String get clockStandardBody => 'हर लेवल की अपनी घड़ी';
+
+  @override
+  String get settingsSoundAndTouch => 'आवाज़ और कंपन';
+
+  @override
+  String get settingsMore => 'और';
+
+  @override
+  String get gameShareLevel => 'इस लेवल का लिंक कॉपी करें';
+
+  @override
+  String gameShareCopied(int level) {
+    return 'लेवल $level का लिंक कॉपी हो गया। किसी दोस्त को भेजिए!';
+  }
 }

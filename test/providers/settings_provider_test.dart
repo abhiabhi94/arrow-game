@@ -53,6 +53,42 @@ void main() {
     });
   });
 
+  group('the clock choice, on the keys the two switches stored', () {
+    // Every pair an older build could have saved reads back as one choice.
+    for (final (extra, none, clock) in <(bool, bool, ClockChoice)>[
+      (false, false, ClockChoice.standard),
+      (true, false, ClockChoice.extra),
+      (false, true, ClockChoice.off),
+      (true, true, ClockChoice.off),
+    ]) {
+      test('arrow_extra_time $extra, arrow_no_time_limit $none -> $clock', () async {
+        final settings = SettingsRepository(await _prefs(<String, Object>{
+          'arrow_extra_time': extra,
+          'arrow_no_time_limit': none,
+        })).load();
+        expect(settings.clock, clock);
+      });
+    }
+
+    test('choosing writes the same keys, so an older build reads it too', () async {
+      final prefs = await _prefs();
+      final container = ProviderContainer(overrides: [sharedPreferencesProvider.overrideWithValue(prefs)]);
+      addTearDown(container.dispose);
+      final notifier = container.read(settingsProvider.notifier);
+
+      notifier.setClock(ClockChoice.extra);
+      await Future<void>.delayed(Duration.zero);
+      expect((prefs.getBool('arrow_extra_time'), prefs.getBool('arrow_no_time_limit')), (true, false));
+      // No limit leaves extra time be, as Remove time limits did...
+      notifier.setClock(ClockChoice.off);
+      await Future<void>.delayed(Duration.zero);
+      expect((prefs.getBool('arrow_extra_time'), prefs.getBool('arrow_no_time_limit')), (true, true));
+      notifier.setClock(ClockChoice.standard);
+      await Future<void>.delayed(Duration.zero);
+      expect((prefs.getBool('arrow_extra_time'), prefs.getBool('arrow_no_time_limit')), (false, false));
+    });
+  });
+
   group('SettingsNotifier', () {
     test('setters update state and persist', () async {
       final prefs = await _prefs();

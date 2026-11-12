@@ -1673,4 +1673,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gamePausedBodyUntimed => 'Take a breath. The board will wait.';
+
+  @override
+  String get settingsClock => 'Level clock';
+
+  @override
+  String get clockStandard => 'Standard';
+
+  @override
+  String get clockExtra => 'Extra time';
+
+  @override
+  String get clockOff => 'No limit';
+
+  @override
+  String get clockStandardBody => 'Every level has its own clock';
+
+  @override
+  String get settingsSoundAndTouch => 'Sound & touch';
+
+  @override
+  String get settingsMore => 'More';
+
+  @override
+  String get gameShareLevel => 'Copy a link to this level';
+
+  @override
+  String gameShareCopied(int level) {
+    return 'Link to level $level copied. Send it to a friend!';
+  }
 }
