@@ -200,7 +200,9 @@ notes", each language **under 500 characters** (Play's limit per language):
 - The Hindi is written in Hindi, not translated word for word — a clear
   path is "खुला", not "साफ़" — and names chapters by their in-game Hindi
   names (`chapterName*` in `lib/l10n/app_hi.arb`: रेखाएँ, आईने, ताले,
-  धुंध, जोड़ियाँ, क्यूब, शिकंजा, बक्सा).
+  धुंध, जोड़ियाँ, भागदौड़, भागदौड़ और आईने, क्यूब, बक्सा).
+- The notes for the next release are kept in `docs/release-notes.md` as the
+  work lands, so they are ready when the release is cut.
 
 The v2.2.0 note, as the example:
 

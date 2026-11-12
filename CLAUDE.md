@@ -248,7 +248,8 @@ Identity is tied to the **build type**, not a product flavor:
   Dart symbols) as an artifact and a GitHub Release. **Release notes**
   (asked for since the last tag) go in the Play Console's `<en-US>` /
   `<hi-IN>` form, each under 500 characters: `docs/release.md` → "Release
-  notes (Play Console)". Cloud sessions
+  notes (Play Console)"; the next release's are kept in
+  `docs/release-notes.md` as the work lands. Cloud sessions
   have no key, so a bundle built here is debug-signed and only proves the
   build compiles. Guide: `docs/release.md`.
 - **Cutting a release** is `tool/bump_version.sh` from an up-to-date `main`:
@@ -1218,7 +1219,12 @@ reported for reading. The hooks live only in a build with every level open
 and only on a page opened with `?perf`: `?level=N` opens a level straight
 onto its board (no semantics tree — the screenshot harness has to switch it
 on to find buttons, and it is real work on a big board) and `perfMark`
-prints when a deal starts and ends, and each tap.
+prints when a deal starts and ends, and each tap. Idle is measured only
+once the board has **settled** (`settle`: 600 ms in which every reported
+frame is light, after the 1.5 s entrance): with a fixed wait, a slow
+runner's first full render of a big box (230, 250) — reported late, since
+frame timings come in batches — landed in the idle window as one ~130 ms
+frame and failed the job with nothing wrong in the game.
 
 What the profiler found, and what keeps a frame cheap — keep these:
 - **The clock rebuilt the whole screen ten times a second.** The game

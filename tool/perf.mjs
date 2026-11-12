@@ -210,6 +210,11 @@ async function profile(level) {
   const dealing = await marks.dealing;
   const dealt = await marks.dealt;
   await page.waitForTimeout(1500); // the board's entrance
+  // ...and then until it has settled: on a slow runner the first full
+  // render of a big box (230, 250) ran past the fixed wait and its frame —
+  // reported late, since frame timings arrive in batches — was counted as
+  // idle, failing the idle budget with nothing wrong in the game.
+  await settle(page, frameTimings);
   const dealGaps = await gaps(page, dealing, dealt);
   result.deal = { ms: Math.round(dealt - dealing), freeze: dealGaps.max };
 
@@ -299,6 +304,20 @@ async function phase(page, frameTimings, act) {
     gap: await gaps(page, from, to),
     frames: timings.length,
   };
+}
+
+/// Waits until the board has settled: a [quietMs] stretch in which every
+/// frame reported was light (under [lightMs] of Dart work), at most
+/// [capMs]. Frame timings are reported in batches, so a heavy frame from
+/// the board's entrance can arrive after the entrance seems over.
+async function settle(page, frameTimings, { quietMs = 600, lightMs = 25, capMs = 10_000 } = {}) {
+  const until = Date.now() + capMs;
+  while (Date.now() < until) {
+    const before = frameTimings.length;
+    await page.waitForTimeout(quietMs);
+    const fresh = frameTimings.slice(before).flat();
+    if (fresh.every((t) => t.build < lightMs)) return;
+  }
 }
 
 /// The 95th percentile and maximum of [values] (ms), or undefined for none.
