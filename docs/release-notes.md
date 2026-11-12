@@ -10,12 +10,14 @@ Since v2.2.3:
 <en-US>
 ⚡ Levels 101–150, revamped
 • New arrows land on the board while you play, and later mirrors that turn their paths.
+• ✨ You see every drop coming: where it lands glows first.
 • ⚙️ Cleaner settings
 </en-US>
 
 <hi-IN>
 ⚡ लेवल 101–150, नए अंदाज़ में
 • खेलते-खेलते बोर्ड पर नए तीर गिरते हैं, और आगे चलकर आईने भी, जो उनका रास्ता मोड़ देते हैं।
+• ✨ जहाँ कुछ गिरने वाला है, वह जगह पहले चमकती है।
 • ⚙️ सेटिंग्स अब और सुथरी
 </hi-IN>
 ```
