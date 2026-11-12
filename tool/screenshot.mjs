@@ -378,7 +378,12 @@ try {
       shotScrolledHome = true;
       await shoot(page, `home-scrolled-${tag}`);
     }
-    await tile.click();
+    // On a crash run the page is on a fake clock, and Playwright's
+    // actionability check (the box held still across animation frames)
+    // could sit out its 30 s on a slow runner while the next level's node
+    // glows: twice in CI the trail's level 1 was on screen and the click
+    // timed out. The node is in view by now, so click it as it stands.
+    await tile.click({ force: !!crash });
     await settle(page, 1200);
     // A big level takes seconds to deal on the web: wait for the board, or
     // for a card standing in front of it — a chapter card, or the welcome

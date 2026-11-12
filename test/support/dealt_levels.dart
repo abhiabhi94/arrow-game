@@ -115,7 +115,14 @@ void levelChecks({required int from, required int to}) {
       expect(p.locks, hasLength(f.locks), reason: 'level ${spec.level} locks');
       expect(p.hidden, hasLength(f.hidden), reason: 'level ${spec.level} hidden');
       expect(p.pairs, hasLength(f.pairs * 2), reason: 'level ${spec.level} pairs');
-      expect(sw.elapsedMilliseconds, lessThan(6000), reason: 'level ${spec.level} too slow');
+      // Only a gross bound — a deal gone pathological (a retry loop that no
+      // longer ends), not a speed check. The suite runs a file per core, so a
+      // deal's wall time here depends on what the other cores are doing:
+      // level 181 deals in ~2.7 s alone and took 6.1 s on a busy release
+      // runner, which failed a 6 s bound with nothing wrong. Deal speed is
+      // the Performance job's (`tool/perf.mjs`, its own budget at 4x
+      // throttle, one level at a time).
+      expect(sw.elapsedMilliseconds, lessThan(30_000), reason: 'level ${spec.level} too slow');
     }
   });
 
