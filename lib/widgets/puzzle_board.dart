@@ -209,7 +209,7 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     final s = widget.state;
     if (s.puzzle != oldWidget.state.puzzle || s.moveToken < oldWidget.state.moveToken) {
       if (s.grewFrom(oldWidget.state)) {
-        // A drop landed: the new arrows and blocks pop in, and whatever was
+        // A drop landed: the new arrows and mirrors drop in, and whatever was
         // already moving carries on.
         _startArrivals(oldWidget.state.puzzle!, s.puzzle!);
       } else {
@@ -314,7 +314,7 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
 
   void _startReveal(int id) => _startOneShot(_reveals, id, kRevealMs);
 
-  /// The arrows and blocks [now] has that [before] did not, popping in
+  /// The arrows and mirrors [now] has that [before] did not, dropping in
   /// (at once, with motion reduced).
   void _startArrivals(Puzzle before, Puzzle now) {
     if (widget.reduceMotion) return;

@@ -37,17 +37,20 @@
 /// its widest — found by `tool/pick_variants.dart`; re-run it after
 /// touching the table or the generator, and write its picks in here.
 /// **Levels 101–150** are the Rush (`LevelSpec.drops`), also printed by
-/// `tool/make_levels.dart`: the plain rectangle of levels 1–100 again, but
-/// new arrows land on it while it is played, a few at a time packed into a
-/// small shape, and from level 126 blocks land with them and stay. Each
-/// half opens on a small teaching board and climbs for twenty-four levels:
-/// 24 arrows at the start rising by two a level, five drops rising by one
-/// every two levels, three arrows a drop and four from the fourteenth. The
-/// board is sized like a flat one (~11.3 free cells an arrow) but dealt
-/// without the gap pass, so it starts about half full; the clock is 3 s for
-/// every arrow there will be plus 20 s; the drops come every 4–12 s of play
-/// — and at once when three arrows or fewer are left, so a quick player
-/// never waits. `tool/rush_report.dart` plays them through.
+/// `tool/make_levels.dart`: the rectangle of levels 1–100 with every twist
+/// of theirs on it, but new arrows land on it while it is played, packed
+/// into a shape — short ones early, long ones (up to eight cells) late —
+/// and from level 126 mirrors land with them, turning the ways out they
+/// stand on. Each half opens on a small plain teaching board and climbs for
+/// twenty-four levels: 24 arrows at the start rising by two a level, five
+/// drops rising by one every two levels, three arrows a drop and four from
+/// the twelfth. The board is sized like a flat one (~11.3 free cells an
+/// arrow) but dealt without the gap pass, so it starts about half full; the
+/// clock is 1.4 s for every arrow there will be, half the flat chapters'
+/// seconds a twist and 20 s, trimmed (level 125: 3:20); the drops come
+/// every 4–12 s of play — and at once when three arrows or fewer are left,
+/// so a quick player never waits. `tool/rush_report.dart` plays them
+/// through.
 ///
 /// **Levels 151–200** are the block (`LevelSpec.faces`): six square faces,
 /// each a board of its own that the arrows leave by its own edges, played

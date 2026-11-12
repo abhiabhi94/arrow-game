@@ -143,7 +143,7 @@ class GameState {
   final int drops;
 
   /// The cells the next drop is about to land on (its arrows' and its
-  /// blocks'), glowing on the board for [kDropWarnMs] before it does; empty
+  /// mirrors'), glowing on the board for [kDropWarnMs] before it does; empty
   /// when nothing is on its way.
   final Set<Cell> incoming;
 
