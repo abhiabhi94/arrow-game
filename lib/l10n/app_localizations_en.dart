@@ -1560,10 +1560,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsExtraTimeSubtitle => 'Twice the clock on every level';
 
   @override
-  String get chapterName6 => 'The Block';
+  String get chapterName6 => 'Rush';
 
   @override
-  String get chapterBlurb6 =>
+  String get chapterBlurb6 => 'New arrows land on the board as you play.';
+
+  @override
+  String get tutorialRush => 'New arrows appear as time goes by.';
+
+  @override
+  String get chapterName7 => 'Rush and Mirrors';
+
+  @override
+  String get chapterBlurb7 =>
+      'New arrows land, and mirrors with them that turn the way out.';
+
+  @override
+  String get tutorialRushMirrors =>
+      'New arrows appear as time goes by, and mirrors that turn their paths.';
+
+  @override
+  String get chapterName8 => 'The Block';
+
+  @override
+  String get chapterBlurb8 =>
       'Six faces of arrows on a block. Turn it to reach each face.';
 
   @override
@@ -1578,21 +1598,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Drag the block to turn it. Play the face in front; tap a side to bring it round.';
 
   @override
-  String get chapterName7 => 'The Squeeze';
+  String get chapterName9 => 'The Box';
 
   @override
-  String get chapterBlurb7 =>
-      'The block packed tight: fewer ways out of each face at once.';
-
-  @override
-  String get tutorialSqueeze =>
-      'Few arrows can leave a face at once. Find the one that can, and the next opens up.';
-
-  @override
-  String get chapterName8 => 'The Box';
-
-  @override
-  String get chapterBlurb8 =>
+  String get chapterBlurb9 =>
       'Not a cube now: a box with faces of three sizes, bigger than before.';
 
   @override

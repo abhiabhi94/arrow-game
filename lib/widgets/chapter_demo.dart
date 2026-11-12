@@ -41,6 +41,9 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
   late GameState _state;
   late final void Function() _unsubscribe;
   Timer? _timer;
+
+  /// The Rush's card runs its clock, so its drops glow and land.
+  Timer? _clock;
   int _step = 0;
   int _face = 0;
 
@@ -53,7 +56,12 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_timer == null && !reduceMotionOf(context)) _schedule(kDemoStep);
+    if (_timer == null && !reduceMotionOf(context)) {
+      _schedule(kDemoStep);
+      if (widget.rule.isRush) {
+        _clock = Timer.periodic(const Duration(milliseconds: 100), (_) => _game.tick(100));
+      }
+    }
   }
 
   void _schedule(Duration after) {
@@ -64,6 +72,7 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
   /// Plays the next tap of the script, or rests and starts over.
   void _advance() {
     if (!mounted) return;
+    if (widget.rule.isRush) return _advanceRush();
     final script = demoScriptFor(widget.rule);
     if (_step >= script.length) {
       _step = 0;
@@ -84,9 +93,23 @@ class _ChapterDemoBoardState extends State<ChapterDemoBoard> {
     _schedule(_step >= script.length ? kDemoRest : kDemoStep);
   }
 
+  /// The Rush's card: taps whichever arrow can go, while the drops come
+  /// in, and starts over once the board is cleared.
+  void _advanceRush() {
+    if (_state.phase == GamePhase.cleared) {
+      _game.restart();
+      _schedule(kDemoStep);
+      return;
+    }
+    final free = _state.puzzle!.removable(_state.removed);
+    if (free.isNotEmpty) _game.tapArrow(free.first);
+    _schedule(_state.phase == GamePhase.cleared ? kDemoRest : kDemoStep);
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
+    _clock?.cancel();
     _unsubscribe();
     _game.dispose();
     super.dispose();

@@ -9,6 +9,8 @@ import 'package:flutter/foundation.dart' show compute, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/level_specs.dart';
+import '../engine/cell.dart';
+import '../engine/drops.dart';
 import '../engine/puzzle.dart';
 import '../engine/puzzle_generator.dart';
 import '../models/bump_motion.dart';
@@ -86,6 +88,32 @@ class GameNotifier extends StateNotifier<GameState> {
   final SavedGame? savedGame;
   Timer? _timer;
   Timer? _impact;
+
+  /// The board as it was dealt, before any drop: what a restart goes back to.
+  Puzzle? _dealt;
+
+  /// Play time since the last drop landed (or the level began), counted
+  /// whether or not the level is timed.
+  int _sinceDropMs = 0;
+
+  /// The drop on its way, glowing on its cells ([GameState.incoming]) for
+  /// [kDropWarnMs] of play before it lands, and how long it has glowed.
+  Drop? _pending;
+  int _pendingMs = 0;
+
+  /// Play time on the drop clock, and when (on it) each arrow left: an
+  /// arrow still sliding off the board must not have a mirror land on its
+  /// way out, or its slide would swerve in mid-air.
+  int _playMs = 0;
+  final Map<int, int> _leftAt = <int, int>{};
+
+  /// How long after it leaves an arrow is counted as still sliding.
+  static const int kSlidingMs = 1500;
+
+  Set<int> get _sliding => <int>{
+        for (final e in _leftAt.entries)
+          if (_playMs - e.value < kSlidingMs) e.key,
+      };
   Timer? _sting;
   final Completer<void> _ready = Completer<void>();
 
@@ -105,15 +133,35 @@ class GameNotifier extends StateNotifier<GameState> {
   /// A game saved with its allowance spent comes back out of lives, so the
   /// riddle is still the way on rather than a free life for reopening.
   void _begin(Puzzle puzzle) {
+    _dealt = puzzle;
     final saved = savedGame;
-    if (saved != null && _fits(saved, puzzle)) {
+    // What had landed on a Rush board is put back on it first.
+    final grown = saved?.rebuild(puzzle);
+    if (saved != null && grown != null && _fits(saved, grown)) {
       final spent = saved.mistakes >= maxLives + saved.continues;
       final removed = saved.removed.toSet();
-      state = GameState.fresh(spec, puzzle).copyWith(
+      state = GameState(
+        spec: spec,
+        puzzle: grown,
+        dealtArrows: puzzle.arrowCount,
+        dealtMirrors: puzzle.mirrors.keys.toSet(),
+        drops: saved.drops,
+        phase: GamePhase.playing,
+        removed: const <int>{},
+        bumped: const <int>{},
+        mistakes: 0,
+        hintsLeft: maxHints,
+        hintArrowId: null,
+        elapsedMs: 0,
+        lastMoveId: null,
+        lastOutcome: MoveOutcome.none,
+        blockedCell: null,
+        moveToken: 0,
+      ).copyWith(
         phase: spent ? GamePhase.outOfLives : GamePhase.paused,
         removed: removed,
         bumped: saved.bumped.toSet(),
-        revealed: <int>{...saved.revealed, ...puzzle.revealedBy(removed)},
+        revealed: <int>{...saved.revealed, ...grown.revealedBy(removed)},
         mistakes: saved.mistakes,
         hintsLeft: saved.hintsLeft,
         elapsedMs: saved.elapsedMs,
@@ -134,7 +182,8 @@ class GameNotifier extends StateNotifier<GameState> {
       // arrows are not the ones the snapshot took out.
       saved.seed == spec.seed &&
       saved.hasProgress &&
-      saved.removed.length < puzzle.arrowCount &&
+      saved.drops <= (spec.drops?.count ?? 0) &&
+      (saved.removed.length < puzzle.arrowCount || saved.drops < (spec.drops?.count ?? 0)) &&
       saved.removed.every((id) => id >= 0 && id < puzzle.arrowCount) &&
       // Every continue buys exactly one more mistake, so this is as far as
       // the count can go (at the limit, the level is waiting on a riddle).
@@ -159,7 +208,11 @@ class GameNotifier extends StateNotifier<GameState> {
     final token = state.moveToken + 1;
     if (puzzle.canExit(id, state.removed)) {
       final removed = <int>{...state.removed, ...puzzle.exitGroup(id)};
-      final cleared = removed.length == puzzle.arrowCount;
+      for (final member in puzzle.exitGroup(id)) {
+        _leftAt[member] = _playMs;
+      }
+      // On a Rush board the level is not over while drops are still to come.
+      final cleared = removed.length == puzzle.arrowCount && state.dropsLeft == 0;
       if (cleared) _stopTimer();
       state = state.copyWith(
         removed: removed,
@@ -188,6 +241,8 @@ class GameNotifier extends StateNotifier<GameState> {
         haptics?.hit();
       }
       _snapshot();
+      // A board left nearly empty gets its next drop now, not when it is due.
+      if (!cleared) _dropIfDue();
       return;
     }
     // A hidden head is a guess, not a slip: the player cannot see which
@@ -311,10 +366,49 @@ class GameNotifier extends StateNotifier<GameState> {
     _snapshot();
   }
 
+  /// Moves the next drop of a Rush board ([LevelSpec.drops]) along. When
+  /// it is due — its time has come, or the board is down to
+  /// [kDropLowWater] arrows — it is planned and its cells glow
+  /// ([GameState.incoming]); [kDropWarnMs] of play later it lands. No room
+  /// on the board yet: it waits, and is tried again on the next tick.
+  /// Arrows leaving meanwhile cannot spoil the plan: its cells stay empty,
+  /// and nothing leaving makes anything wait for itself.
+  void _dropIfDue() {
+    final drops = spec.drops;
+    final puzzle = state.puzzle;
+    if (drops == null || puzzle == null || !state.isPlaying || state.dropsLeft <= 0) return;
+    final pending = _pending;
+    if (pending != null) {
+      if (_pendingMs < kDropWarnMs) return;
+      // A mirror waits, still glowing, for any arrow sliding over its cell
+      // to be gone.
+      if (pending.mirrors.isNotEmpty &&
+          _sliding.any((id) => puzzle.rayOf(id).any(pending.mirrors.containsKey))) {
+        return;
+      }
+      _pending = null;
+      _sinceDropMs = 0;
+      state = state.copyWith(puzzle: pending.landOn(puzzle), drops: state.drops + 1, incoming: const <Cell>{});
+      haptics?.tap();
+      _snapshot();
+      return;
+    }
+    final left = puzzle.arrowCount - state.removed.length;
+    if (left > kDropLowWater && _sinceDropMs < drops.everyMs) return;
+    final drop = planDrop(puzzle, state.removed, drops, dropRandom(spec, state.drops), avoid: _sliding);
+    if (drop == null) return;
+    _pending = drop;
+    _pendingMs = 0;
+    state = state.copyWith(incoming: drop.cells);
+  }
+
   /// Throws the attempt away and starts the same puzzle again.
   void restart() {
-    final puzzle = state.puzzle;
+    final puzzle = _dealt ?? state.puzzle;
     if (puzzle == null) return;
+    _sinceDropMs = 0;
+    _pending = null;
+    _leftAt.clear();
     _impact?.cancel();
     _impact = null;
     _sting?.cancel();
@@ -356,7 +450,15 @@ class GameNotifier extends StateNotifier<GameState> {
   /// drive it. Only the playing phase consumes time, and an untimed level
   /// counts none at all.
   void tick(int ms) {
-    if (!state.isPlaying || !spec.timed) return;
+    if (!state.isPlaying) return;
+    // The drops keep their own time, which runs even with no clock.
+    if (spec.isDynamic) {
+      _sinceDropMs += ms;
+      _playMs += ms;
+      if (_pending != null) _pendingMs += ms;
+      _dropIfDue();
+    }
+    if (!spec.timed) return;
     final elapsed = state.elapsedMs + ms;
     if (elapsed >= spec.timeLimitMs) {
       _stopTimer();

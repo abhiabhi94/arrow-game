@@ -25,7 +25,7 @@ enum GamePhase { loading, playing, paused, cleared, outOfLives, timeUp }
 enum MoveOutcome { none, exited, blocked, locked, hidden }
 
 class GameState {
-  const GameState({
+  GameState({
     required this.spec,
     required this.puzzle,
     required this.phase,
@@ -43,7 +43,12 @@ class GameState {
     this.revealed = const <int>{},
     this.resumeOffered = false,
     this.continues = 0,
-  });
+    this.drops = 0,
+    this.incoming = const <Cell>{},
+    int? dealtArrows,
+    Set<Cell>? dealtMirrors,
+  })  : dealtArrows = dealtArrows ?? (puzzle?.arrowCount ?? 0),
+        dealtMirrors = dealtMirrors ?? (puzzle?.mirrors.keys.toSet() ?? const <Cell>{});
 
   /// The board is still being generated.
   factory GameState.loading(LevelSpec spec) => GameState(
@@ -132,6 +137,33 @@ class GameState {
   /// exactly one more mistake, and the next one asks again.
   final int continues;
 
+  /// How many of the level's drops have landed (the Rush chapters,
+  /// `LevelSpec.drops`): each grew [puzzle] by a few arrows and maybe a
+  /// block.
+  final int drops;
+
+  /// The cells the next drop is about to land on (its arrows' and its
+  /// mirrors'), glowing on the board for [kDropWarnMs] before it does; empty
+  /// when nothing is on its way.
+  final Set<Cell> incoming;
+
+  /// Arrows on the board as it was dealt, before any drop: the ones past
+  /// this landed during play.
+  final int dealtArrows;
+
+  /// The mirrors on the board as it was dealt: the ones past these landed
+  /// during play.
+  final Set<Cell> dealtMirrors;
+
+  /// Drops still to land; the level is not cleared while any are left.
+  int get dropsLeft => (spec.drops?.count ?? 0) - drops;
+
+  /// Whether this state is [old]'s board with a drop landed on it, rather
+  /// than a new board or a restart: the board animates the arrivals and
+  /// keeps everything else that is moving.
+  bool grewFrom(GameState old) =>
+      old.puzzle != null && puzzle != null && drops > old.drops && moveToken >= old.moveToken;
+
   /// Everything about the game but its clock, as one value that is equal
   /// when nothing but the clock has changed: what the game screen watches
   /// (`select`), so the ten ticks a second redraw the clock and nothing
@@ -155,6 +187,8 @@ class GameState {
         revealed,
         resumeOffered,
         continues,
+        drops,
+        incoming,
       );
 
   int get level => spec.level;
@@ -185,6 +219,9 @@ class GameState {
       : 0;
 
   GameState copyWith({
+    Puzzle? puzzle,
+    int? drops,
+    Set<Cell>? incoming,
     GamePhase? phase,
     Set<int>? removed,
     Set<int>? bumped,
@@ -205,7 +242,11 @@ class GameState {
   }) =>
       GameState(
         spec: spec,
-        puzzle: puzzle,
+        puzzle: puzzle ?? this.puzzle,
+        drops: drops ?? this.drops,
+        incoming: incoming ?? this.incoming,
+        dealtArrows: dealtArrows,
+        dealtMirrors: dealtMirrors,
         phase: phase ?? this.phase,
         removed: removed ?? this.removed,
         bumped: bumped ?? this.bumped,

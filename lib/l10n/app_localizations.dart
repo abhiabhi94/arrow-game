@@ -2915,14 +2915,50 @@ abstract class AppLocalizations {
   /// No description provided for @chapterName6.
   ///
   /// In en, this message translates to:
-  /// **'The Block'**
+  /// **'Rush'**
   String get chapterName6;
 
   /// No description provided for @chapterBlurb6.
   ///
   /// In en, this message translates to:
-  /// **'Six faces of arrows on a block. Turn it to reach each face.'**
+  /// **'New arrows land on the board as you play.'**
   String get chapterBlurb6;
+
+  /// No description provided for @tutorialRush.
+  ///
+  /// In en, this message translates to:
+  /// **'New arrows appear as time goes by.'**
+  String get tutorialRush;
+
+  /// No description provided for @chapterName7.
+  ///
+  /// In en, this message translates to:
+  /// **'Rush and Mirrors'**
+  String get chapterName7;
+
+  /// No description provided for @chapterBlurb7.
+  ///
+  /// In en, this message translates to:
+  /// **'New arrows land, and mirrors with them that turn the way out.'**
+  String get chapterBlurb7;
+
+  /// No description provided for @tutorialRushMirrors.
+  ///
+  /// In en, this message translates to:
+  /// **'New arrows appear as time goes by, and mirrors that turn their paths.'**
+  String get tutorialRushMirrors;
+
+  /// No description provided for @chapterName8.
+  ///
+  /// In en, this message translates to:
+  /// **'The Block'**
+  String get chapterName8;
+
+  /// No description provided for @chapterBlurb8.
+  ///
+  /// In en, this message translates to:
+  /// **'Six faces of arrows on a block. Turn it to reach each face.'**
+  String get chapterBlurb8;
 
   /// No description provided for @introTitleCube.
   ///
@@ -2942,35 +2978,17 @@ abstract class AppLocalizations {
   /// **'Drag the block to turn it. Play the face in front; tap a side to bring it round.'**
   String get tutorialCube;
 
-  /// No description provided for @chapterName7.
-  ///
-  /// In en, this message translates to:
-  /// **'The Squeeze'**
-  String get chapterName7;
-
-  /// No description provided for @chapterBlurb7.
-  ///
-  /// In en, this message translates to:
-  /// **'The block packed tight: fewer ways out of each face at once.'**
-  String get chapterBlurb7;
-
-  /// No description provided for @tutorialSqueeze.
-  ///
-  /// In en, this message translates to:
-  /// **'Few arrows can leave a face at once. Find the one that can, and the next opens up.'**
-  String get tutorialSqueeze;
-
-  /// No description provided for @chapterName8.
+  /// No description provided for @chapterName9.
   ///
   /// In en, this message translates to:
   /// **'The Box'**
-  String get chapterName8;
+  String get chapterName9;
 
-  /// No description provided for @chapterBlurb8.
+  /// No description provided for @chapterBlurb9.
   ///
   /// In en, this message translates to:
   /// **'Not a cube now: a box with faces of three sizes, bigger than before.'**
-  String get chapterBlurb8;
+  String get chapterBlurb9;
 
   /// No description provided for @tutorialBox.
   ///

@@ -13,7 +13,8 @@ String chapterName(AppLocalizations l10n, int index) => switch (index) {
       5 => l10n.chapterName5,
       6 => l10n.chapterName6,
       7 => l10n.chapterName7,
-      _ => l10n.chapterName8,
+      8 => l10n.chapterName8,
+      _ => l10n.chapterName9,
     };
 
 /// The one-line description of chapter [index]'s twist.
@@ -25,7 +26,8 @@ String chapterBlurb(AppLocalizations l10n, int index) => switch (index) {
       5 => l10n.chapterBlurb5,
       6 => l10n.chapterBlurb6,
       7 => l10n.chapterBlurb7,
-      _ => l10n.chapterBlurb8,
+      8 => l10n.chapterBlurb8,
+      _ => l10n.chapterBlurb9,
     };
 
 /// The playful title of 1-based [level] (1..250).

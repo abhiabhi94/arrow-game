@@ -55,6 +55,13 @@ const int kRevealMs = 1000;
 /// How long the flash on a mirror lasts as an arrow bounces through it.
 const int kBounceMs = 600;
 
+/// How long an arrow (or block) landing on a Rush board takes to drop into
+/// place, in milliseconds.
+const int kArriveMs = 700;
+
+/// One beat of the glow on the cells a drop is about to land on.
+const Duration kIncomingPulse = Duration(milliseconds: 520);
+
 /// The board: draws every arrow still on the board (plus any arrow mid-slide
 /// on its way out) in a single ink — thin lines with a small head, like a
 /// printed puzzle, straight on the page with no frame — plus optional grid
@@ -138,6 +145,9 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   /// — it finds movement.
   AnimationController? _hintPing;
 
+  /// The glow on the cells a drop is about to land on, while there are any.
+  AnimationController? _incomingPulse;
+
   /// The arrow currently bumping (or rattling at its lock), if any, and
   /// how it moves.
   int? _bumpId;
@@ -171,6 +181,11 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   /// bounce is seen as well as implied by the path.
   final Map<int, AnimationController> _bounces = <int, AnimationController>{};
 
+  /// Arrows that have just landed on a Rush board, dropping into place, and
+  /// mirrors the same (keyed by cell, `y * width + x`).
+  final Map<int, AnimationController> _arrivals = <int, AnimationController>{};
+  final Map<int, AnimationController> _mirrorArrivals = <int, AnimationController>{};
+
   @override
   void initState() {
     super.initState();
@@ -186,14 +201,23 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
       _hintPing = null;
       _slump?.dispose();
       _slump = null;
+      _incomingPulse?.dispose();
+      _incomingPulse = null;
     }
     _syncHintPing();
+    _syncIncoming();
     final s = widget.state;
     if (s.puzzle != oldWidget.state.puzzle || s.moveToken < oldWidget.state.moveToken) {
-      // A restart: forget every animation.
-      _disposeAll();
-      _syncSlump();
-      return;
+      if (s.grewFrom(oldWidget.state)) {
+        // A drop landed: the new arrows and mirrors drop in, and whatever was
+        // already moving carries on.
+        _startArrivals(oldWidget.state.puzzle!, s.puzzle!);
+      } else {
+        // A restart: forget every animation.
+        _disposeAll();
+        _syncSlump();
+        return;
+      }
     }
     final moved = s.moveToken != oldWidget.state.moveToken && s.lastMoveId != null;
     final uncovered = s.revealed.difference(oldWidget.state.revealed);
@@ -289,6 +313,18 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   }
 
   void _startReveal(int id) => _startOneShot(_reveals, id, kRevealMs);
+
+  /// The arrows and mirrors [now] has that [before] did not, dropping in
+  /// (at once, with motion reduced).
+  void _startArrivals(Puzzle before, Puzzle now) {
+    if (widget.reduceMotion) return;
+    for (var id = before.arrowCount; id < now.arrowCount; id++) {
+      _startOneShot(_arrivals, id, kArriveMs);
+    }
+    for (final c in now.mirrors.keys) {
+      if (!before.mirrors.containsKey(c)) _startOneShot(_mirrorArrivals, c.y * now.width + c.x, kArriveMs);
+    }
+  }
 
   /// Starts (or restarts) a one-shot [ms] animation for [id] in [slot].
   void _startOneShot(Map<int, AnimationController> slot, int id, int ms) {
@@ -386,6 +422,19 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   /// Runs the ping while a hint points somewhere, and stops it otherwise. With
   /// motion reduced the glow is enough: the hinted arrow is the one thing
   /// still bright on a dimmed board.
+  void _syncIncoming() {
+    final showing = widget.state.incoming.isNotEmpty && !widget.reduceMotion;
+    if (showing == (_incomingPulse != null)) return;
+    if (showing) {
+      _incomingPulse = AnimationController(vsync: this, duration: kIncomingPulse)
+        ..addListener(() => setState(() {}))
+        ..repeat(reverse: true);
+    } else {
+      _incomingPulse?.dispose();
+      _incomingPulse = null;
+    }
+  }
+
   void _syncHintPing() {
     final showing = widget.state.hintArrowId != null && !widget.reduceMotion;
     if (showing == (_hintPing != null)) return;
@@ -404,7 +453,7 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
       c.dispose();
     }
     _exits.clear();
-    for (final slot in <Map<int, AnimationController>>[_unlocks, _reveals, _bounces]) {
+    for (final slot in <Map<int, AnimationController>>[_unlocks, _reveals, _bounces, _arrivals, _mirrorArrivals]) {
       for (final c in slot.values) {
         c.dispose();
       }
@@ -427,6 +476,8 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     _slump = null;
     _hintPing?.dispose();
     _hintPing = null;
+    _incomingPulse?.dispose();
+    _incomingPulse = null;
     _disposeAll();
     super.dispose();
   }
@@ -546,6 +597,9 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
           pendingUnlocks: Set<int>.of(_pendingUnlocks),
           pendingReveals: <int>{for (final owed in _pendingReveals.values) ...owed},
           bounces: <int, double>{for (final e in _bounces.entries) e.key: e.value.value},
+          arrivals: <int, double>{for (final e in _arrivals.entries) e.key: e.value.value},
+          incomingPulse: _incomingPulse?.value,
+          mirrorArrivals: <int, double>{for (final e in _mirrorArrivals.entries) e.key: e.value.value},
           travel: widget.reduceMotion ? 0 : 1,
           focusedId: widget.focusedArrowId,
           l10n: l10n,
@@ -670,6 +724,9 @@ class _BoardPainter extends CustomPainter {
     required this.pendingUnlocks,
     required this.pendingReveals,
     required this.bounces,
+    this.arrivals = const <int, double>{},
+    this.mirrorArrivals = const <int, double>{},
+    this.incomingPulse,
     required this.travel,
     required this.focusedId,
     required this.l10n,
@@ -747,6 +804,15 @@ class _BoardPainter extends CustomPainter {
   /// Mirrors mid-flash, by packed cell: an arrow has just turned there.
   final Map<int, double> bounces;
 
+  /// Arrows landing on a Rush board, and mirrors (by cell, `y * width + x`):
+  /// how far each is into popping into place, 0..1.
+  final Map<int, double> arrivals;
+  final Map<int, double> mirrorArrivals;
+
+  /// The beat of the glow on [GameState.incoming] (0..1), or null with
+  /// motion reduced (the glow then holds still).
+  final double? incomingPulse;
+
   Puzzle get puzzle => state.puzzle!;
 
   /// Whether a bump is being drawn now: the last tap ran into a cell, a
@@ -772,6 +838,7 @@ class _BoardPainter extends CustomPainter {
     ?_hitId,
     ...unlocks.keys,
     ...reveals.keys,
+    ...arrivals.keys,
     if (slump != null)
       for (final a in puzzle.arrows) a.id,
   };
@@ -850,9 +917,38 @@ class _BoardPainter extends CustomPainter {
     }
     // Mirrors: drawn under everything, so an arrow slides over the glass as
     // it turns.
+    // One that has just landed on a Rush board drops in on the moving layer.
     for (final e in puzzle.mirrors.entries) {
-      if (!_still || (face != null && puzzle.faceOfCell(e.key) != face)) continue;
-      glyphs.mirror(canvas, Rect.fromLTWH(e.key.x * cs, e.key.y * cs, cs, cs), e.value);
+      if (face != null && puzzle.faceOfCell(e.key) != face) continue;
+      final arriving = mirrorArrivals[e.key.y * puzzle.width + e.key.x];
+      if ((arriving != null) == _still) continue;
+      final rect = Rect.fromLTWH(e.key.x * cs, e.key.y * cs, cs, cs);
+      if (arriving == null) {
+        glyphs.mirror(canvas, rect, e.value);
+        continue;
+      }
+      _beginDrop(canvas, rect.center, arriving);
+      glyphs.mirror(canvas, rect, e.value);
+      canvas.restore();
+      canvas.restore();
+      _paintLandingRing(canvas, rect.center, cs, arriving);
+    }
+    // Where the next drop will land: its cells glow, beating, until it does.
+    if (!_still && state.incoming.isNotEmpty) {
+      final beat = incomingPulse ?? 0.5;
+      final wash = Paint()..color = palette.hintGlow.withValues(alpha: 0.18 + 0.32 * beat);
+      final rim = Paint()
+        ..color = palette.hintGlow.withValues(alpha: 0.5 + 0.5 * beat)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1.5, cs * 0.06);
+      for (final c in state.incoming) {
+        final r = RRect.fromRectAndRadius(
+          Rect.fromLTWH(c.x * cs, c.y * cs, cs, cs).deflate(cs * 0.08),
+          Radius.circular(cs * 0.2),
+        );
+        canvas.drawRRect(r, wash);
+        canvas.drawRRect(r, rim);
+      }
     }
 
     // The bump: the tapped arrow runs into the arrow in its way, which takes
@@ -928,7 +1024,20 @@ class _BoardPainter extends CustomPainter {
         canvas.rotate(slumpTiltFor(arrow.id, slump!));
         canvas.translate(-pivot.dx, -pivot.dy);
       }
+      // Just landed on a Rush board: it drops in from above onto the cells
+      // that glowed for it, fading in as it comes down, with a ring as it
+      // lands.
+      final arriving = arrivals[arrow.id];
+      if (arriving != null) {
+        final pivot = _center(arrow.cells[arrow.length ~/ 2], cs);
+        _beginDrop(canvas, pivot, arriving);
+      }
       _paintArrow(canvas, arrow, cs, offset, false, glyphs);
+      if (arriving != null) {
+        canvas.restore();
+        canvas.restore();
+        _paintLandingRing(canvas, _center(arrow.cells[arrow.length ~/ 2], cs), cs, arriving);
+      }
       if (slumping) canvas.restore();
       if (shoved) canvas.restore();
     }
@@ -943,6 +1052,34 @@ class _BoardPainter extends CustomPainter {
     // arrow on the board's edge would otherwise lose that side of it.
     if (!_still) _paintCursor(canvas, cs);
     canvas.restore();
+  }
+
+  /// Opens a drop: [t] (0..1) into its arrival something landing is drawn
+  /// bigger (nearer, falling) and faint, coming down to its own size and
+  /// full ink. Two saves, closed by the caller with two restores.
+  static void _beginDrop(Canvas canvas, Offset pivot, double t) {
+    final fall = Curves.easeOutQuad.transform(t);
+    final k = 1 + 1.1 * (1 - fall);
+    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, min(1.0, t * 2.2)));
+    canvas.save();
+    canvas.translate(pivot.dx, pivot.dy);
+    canvas.scale(k, k);
+    canvas.translate(-pivot.dx, -pivot.dy);
+  }
+
+  /// The ring something landing makes as it touches down, over the second
+  /// half of its arrival.
+  void _paintLandingRing(Canvas canvas, Offset at, double cs, double t) {
+    if (t < 0.5) return;
+    final u = (t - 0.5) / 0.5;
+    canvas.drawCircle(
+      at,
+      cs * (0.4 + 0.9 * Curves.easeOutCubic.transform(u)),
+      Paint()
+        ..color = palette.hintGlow.withValues(alpha: 0.9 * (1 - u))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2.0, cs * 0.12),
+    );
   }
 
   /// A mirror an arrow has just turned at: its diagonal lights up in the
@@ -1459,7 +1596,8 @@ class _BoardPainter extends CustomPainter {
       old.layer != layer ||
       !setEquals(old.pendingUnlocks, pendingUnlocks) ||
       !setEquals(old.pendingReveals, pendingReveals) ||
-      !setEquals(old._live, _live);
+      !setEquals(old._live, _live) ||
+      !setEquals(old.mirrorArrivals.keys.toSet(), mirrorArrivals.keys.toSet());
 
   bool _movingChanged(_BoardPainter old) =>
       // The clock ticks ten times a second; only board-relevant state counts.
@@ -1485,6 +1623,10 @@ class _BoardPainter extends CustomPainter {
       !setEquals(old.pendingUnlocks, pendingUnlocks) ||
       !setEquals(old.pendingReveals, pendingReveals) ||
       !_sameMap(old.bounces, bounces) ||
+      !_sameMap(old.arrivals, arrivals) ||
+      old.incomingPulse != incomingPulse ||
+      old.state.incoming != state.incoming ||
+      !_sameMap(old.mirrorArrivals, mirrorArrivals) ||
       old.travel != travel ||
       old.face != face ||
       old.focusedId != focusedId;

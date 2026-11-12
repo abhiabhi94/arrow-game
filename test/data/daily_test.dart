@@ -51,7 +51,12 @@ void main() {
           expect(spec.isCube, isFalse);
           expect(f.pairs, inInclusiveRange(3, 5));
           expect(f.hidden, 2);
-        case ChapterRule.cube || ChapterRule.squeeze || ChapterRule.box:
+        case ChapterRule.rush || ChapterRule.rushMirrors:
+          // Never dealt (a player past level 100 gets the block), but flat
+          // with every twist if it were.
+          expect(spec.isCube, isFalse);
+          expect(f.pairs, inInclusiveRange(3, 5));
+        case ChapterRule.cube || ChapterRule.box:
           // On the block, the daily board is a block too: six faces of
           // fifteen, every twist on every face.
           expect(spec.isCube, isTrue);
@@ -89,7 +94,7 @@ void main() {
 
   test('the daily block\'s faces each keep the rules', () {
     for (var d = 0; d < 3; d++) {
-      final spec = dailySpec(day: 20748 + d, chapter: chapters[5], salt: 5);
+      final spec = dailySpec(day: 20748 + d, chapter: cubeChapter, salt: 5);
       for (final face in spec.faceSpecs) {
         expect(PuzzleGenerator.keepsRules(face, PuzzleGenerator.dealFace(face)), isTrue, reason: 'day $d ${face.seed}');
       }

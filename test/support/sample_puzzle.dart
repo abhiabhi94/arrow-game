@@ -169,3 +169,40 @@ LevelSpec sampleBoxSpecFor(int level) => LevelSpec(
   timeLimitMs: 60000,
   faces: 6,
 );
+
+/// A Rush board for the drops' tests: an 8×8 with four arrows down its
+/// left side, all free (each leaves by the left edge), and room on the
+/// right for what lands.
+Puzzle rushPuzzle() => Puzzle(
+  width: 8,
+  height: 8,
+  arrows: [
+    for (var i = 0; i < 4; i++)
+      ArrowPiece(id: i, cells: [Cell(2, i * 2), Cell(1, i * 2), Cell(0, i * 2)], heading: Direction.left),
+  ],
+);
+
+/// A spec matching [rushPuzzle]: two drops of two arrows and a mirror, a
+/// second apart.
+const LevelSpec rushSpec = LevelSpec(
+  level: 130,
+  width: 8,
+  height: 8,
+  arrows: 4,
+  minLength: 2,
+  maxLength: 3,
+  timeLimitMs: 60000,
+  drops: LevelDrops(count: 2, everyMs: 1000, arrows: 2, mirrors: 1, maxLength: 3),
+);
+
+/// A 3×3 with every cell taken by four arrows (none of them free to run low).
+Puzzle fullPuzzle() => Puzzle(
+  width: 3,
+  height: 3,
+  arrows: [
+    ArrowPiece(id: 0, cells: const [Cell(0, 2), Cell(0, 1), Cell(0, 0)], heading: Direction.up),
+    ArrowPiece(id: 1, cells: const [Cell(1, 0), Cell(1, 1)], heading: Direction.down),
+    ArrowPiece(id: 2, cells: const [Cell(1, 2), Cell(2, 2)], heading: Direction.right),
+    ArrowPiece(id: 3, cells: const [Cell(2, 1), Cell(2, 0)], heading: Direction.up),
+  ],
+);
