@@ -40,11 +40,11 @@ void main() {
     expect(a.hashCode, const LevelFeatures(mirrors: 2, locks: 1).hashCode);
     expect(a, isNot(const LevelFeatures(mirrors: 2)));
     expect(a.toString(), 'LevelFeatures(mirrors 2, locks 1, hidden 0, pairs 0)');
-    const d = LevelDrops(count: 3, everyMs: 5000, arrows: 2, blocks: 1);
-    expect(d, const LevelDrops(count: 3, everyMs: 5000, arrows: 2, blocks: 1));
-    expect(d.hashCode, const LevelDrops(count: 3, everyMs: 5000, arrows: 2, blocks: 1).hashCode);
+    const d = LevelDrops(count: 3, everyMs: 5000, arrows: 2, mirrors: 1);
+    expect(d, const LevelDrops(count: 3, everyMs: 5000, arrows: 2, mirrors: 1));
+    expect(d.hashCode, const LevelDrops(count: 3, everyMs: 5000, arrows: 2, mirrors: 1).hashCode);
     expect(d, isNot(const LevelDrops(count: 3, everyMs: 5000, arrows: 2)));
     expect(d.arrowTotal, 6);
-    expect(d.toString(), 'LevelDrops(3 of 2 arrows + 1 blocks every 5000ms)');
+    expect(d.toString(), 'LevelDrops(3 of 2 arrows + 1 mirrors every 5000ms)');
   });
 }

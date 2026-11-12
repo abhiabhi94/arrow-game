@@ -19,15 +19,19 @@ its head until a neighbour leaves; tapping it while hidden costs nothing
 and points at the neighbour that would uncover it), **Pairs** (81–100: two
 tethered arrows, washed in one tint, leave on one tap, so both paths must
 be clear) — and then **the Rush** (101–125, a sixth chapter, and
-**Rush and Blocks**, 126–150, a seventh), the plain rectangle again but
-not a board that only empties: new arrows land on it while it is played,
-a few at a time packed into a small shape (`LevelSpec.drops`,
-`engine/drops.dart`), every few seconds of play and at once when three
-arrows or fewer are left, so a quick player never waits; in the seventh
-blocks land with them and stay. Nothing appears out of thin air: the cells
-a drop will land on glow first, then its arrows and blocks drop in. Each
-half has its card (a demo board where arrows, and a block, glow and land)
-and a line under its first board ("New arrows appear as time goes by.") —
+**Rush and Mirrors**, 126–150, a seventh), the rectangle again with every
+twist of the first hundred on it, but not a board that only empties: new
+arrows land on it while it is played, packed into a shape — small and
+short early, big shapes of arrows up to eight cells late
+(`LevelSpec.drops`, `engine/drops.dart`) — every few seconds of play and
+at once when three arrows or fewer are left, so a quick player never
+waits; in the seventh, mirrors land with them, each on some arrow's way
+out, turning it. Nothing appears out of thin air: the cells a drop will
+land on glow first, then its arrows and mirrors drop in. The clocks are
+brisk (level 125 was cleared in 2:27 on a laptop; its clock is 3:20).
+Each half has its card (a demo board where arrows, and a mirror, glow and
+land) and a line under its first board ("New arrows appear as time goes
+by.") —
 and then **The
 Block** (151–200, an eighth chapter): six square faces of arrows on a
 cube, the whole block drawn at once in 3D, a finger turning it (or the
@@ -276,7 +280,7 @@ lib/
     cube.dart            the block in space: face frames, cubeNeighbour, Quat, CubeCamera (projection, hit)
     puzzle_generator.dart DAG-checked generator (solvable by construction), tight, best-of-N;
                          dealFace re-deals a cube face on its own until it keepsRules
-    drops.dart           the Rush: planDrop — a few arrows packed in a shape, and blocks, landing
+    drops.dart           the Rush: planDrop — a few arrows packed in a shape, and mirrors, landing
                          on a board in play without making it unclearable
     answer_match.dart    judging a typed riddle answer (exact / close / wrong)
   data/level_specs.dart  the 250 levels (board size, arrow count, length range, clock, drops, faces, depth)
@@ -367,42 +371,58 @@ Key patterns:
   between them, so the second arrow is seen to be tied to the first
   rather than appearing to bump on its own.
 - **The Rush** (levels 101–150, `LevelSpec.drops`, `engine/drops.dart`):
-  the flat rectangle, dealt about half full (the generator skips its gap
-  pass for a board with drops, so the leftover cells are where things
-  land), and a drop lands every `LevelDrops.everyMs` of play — or at once
-  when `kDropLowWater` (3) arrows or fewer are left, so a quick player
-  never stares at an empty board. A drop (`planDrop`) picks one of
-  `kDropShapes` (a 2×2 up to a 12-cell plus, turned any way) on empty
-  cells, fills it with up to `LevelDrops.arrows` arrows of 2 to
-  `maxLength` cells (straight ways out only, never through a block or a
-  mirror), and from level 126 adds `LevelDrops.blocks` blocks. Two
-  promises: **the board stays clearable** — a new arrow may land across an
-  old one's way out (that is the point), but `_accept` refuses one that
-  would make anything wait, through a chain, for itself — and **a block
-  shuts nobody in** — it lands only on a cell no arrow on the board (or
-  landing with it) has to cross, and no later arrow is dealt through one,
-  so a block that stays only takes room. **A drop is seen coming:** once
+  the flat rectangle with every twist (mirrors, locks, hidden heads,
+  pairs) dealt on it, about half full (the generator skips its gap pass
+  for a board with drops, so the leftover cells are where things land),
+  and a drop lands every `LevelDrops.everyMs` of play — or at once when
+  `kDropLowWater` (3) arrows or fewer are left, so a quick player never
+  stares at an empty board. A drop (`planDrop`) picks a shape on empty
+  cells — those of `kDropShapes` sized to `dropCellsFor` (its arrows at
+  full `maxLength`), biggest first, falling back to smaller ones on a
+  crowded board — and fills it with up to `LevelDrops.arrows` arrows,
+  long ones first (within three cells of `maxLength`), their ways out
+  traced through the board's mirrors. The first cut drew short arrows
+  from a 2..max range in small shapes: late drops averaged 4.5 cells and
+  added little; now they run about 6.5. From level 126 it also lands up
+  to `LevelDrops.mirrors` mirrors, each on a cell some arrow's way out
+  crosses (so it turns it), never where any arrow has ever sat, clear of
+  the edge and of other mirrors, and never on the way out of an arrow
+  still sliding off (`avoid`: the game passes the ones that left in the
+  last `kSlidingMs`, and holds a landing back while one slides over a
+  mirror's cell). Blocks came first, solid cells that stayed — but a
+  block could stand in nobody's way (an arrow aimed at one could never
+  leave), so they only took room; a mirror changes paths. **The board
+  stays clearable:** a new arrow may land across an old one's way out and
+  a mirror may send one somewhere else entirely, but `_accept` refuses an
+  arrow that would make anything wait, through a chain, for itself (locks
+  and tethered partners counted, through `dependenciesOf`), a mirror is
+  kept only if every arrow on the board still has a way out that leaves
+  clear of its own body (`_waysOutHold`), and the whole drop is checked
+  with `clearableFrom` on the board it would make. **A drop is seen coming:** once
   due it is planned and its cells glow (`GameState.incoming`, a beating
   wash in the hint's colour) for `kDropWarnMs` (800) of play, then it lands
-  and its arrows and blocks drop in — drawn big and faint, coming down to
+  and its arrows and mirrors drop in — drawn big and faint, coming down to
   size over `kArriveMs` (700) with a ring as they touch down. The first cut
   popped them in from a third of their size in under half a second with no
   warning, which read as arrows appearing from nowhere. Nothing that
   happens during the glow can spoil the plan (arrows only leave). The board grows in place
   (`Puzzle.grownBy`, `Puzzle.grows`): arrows appended with their ids
   running on, so `GameState.removed` stays valid, a cell's occupant the
-  latest arrow to land there (the one before has left), `Puzzle.blocks`
-  drawn as solid squares of ink. `GameNotifier` keeps the dealt board
+  latest arrow to land there (the one before has left), mirrors added to
+  `Puzzle.mirrors` (a growing board tolerates an arrow that has *left*
+  being turned round in a ring or back through itself by a new mirror —
+  nothing to anyone). `GameNotifier` keeps the dealt board
   (`_dealt`, what a restart goes back to) and its own drop clock
   (`_sinceDropMs`, which runs untimed too); `GameState.drops` counts what
   has landed, `dropsLeft` what is to come, and a level is cleared only when
   every drop has landed and every arrow is out. Drops are seeded from the
   level and the drop's number (`dropRandom`), but where they land depends
   on the play, so the saved game stores them (`SavedGame.dropped` /
-  `blocks` / `drops`, rebuilt with `SavedGame.rebuild`, refused when they
-  cannot be on the board). `GameState.grewFrom` tells a grown board from a
+  `mirrors` / `drops`, the mirrors as the board's less `GameState.dealtMirrors`,
+  rebuilt with `SavedGame.rebuild`, refused when they cannot be on the
+  board). `GameState.grewFrom` tells a grown board from a
   new one: the board (`_startArrivals`, `kArriveMs`) pops the new arrows
-  and blocks in and keeps whatever else was moving, and the game screen
+  and mirrors in and keeps whatever else was moving, and the game screen
   keeps the keyboard cursor. `tool/rush_report.dart` plays every Rush level
   through at a quick, careless pace; `test/engine/levels_rush_test.dart`
   (`rushChecks` in `test/support/dealt_levels.dart`) pins that every level
@@ -845,18 +865,25 @@ Key patterns:
   tests green — it is what guarantees a level is playable. The board is
   sized to ~11.3 free cells an arrow (`freeCellCount`: the rectangle less
   the mirrors), which fills to ~0.88. **The Rush (101–150)**, `tool/make_levels.dart`
-  `_rush()`: each half (101–125 arrows only, 126–150 with blocks) opens on
-  a teaching board of 8 arrows (four drops of two, every 10 s), then 24
-  arrows at its second level rising by two a level, five drops rising by
-  one every two levels, three arrows a drop (four from the fourteenth),
-  drop arrows up to four cells (five from the tenth), one block a drop
-  (two from the thirteenth) in the second half. Boards are sized like a
-  flat one at ~11.3 free cells an arrow (plus the blocks' room), dealt
-  without the gap pass, so they start 40–60% full; the clock is 3 s for
-  every arrow the level will hold plus 20 s (trimmed), the drops every
-  55% of the clock over their count, 4–12 s. `level_specs_test` pins the
-  curve (plain boards, blocks only in the second half, a strict climb in
-  everything to clear, the drops well inside the clock).
+  `_rush()`: each half (101–125 arrows only, 126–150 with mirrors landing)
+  opens on a plain teaching board of 8 arrows (four drops of two), then 24
+  arrows at its second level rising by two a level, with every twist on
+  the board (mirrors one per fourteen arrows, at least two; locks and
+  hidden heads 2–5, pairs 1–4), five drops rising by one every two levels,
+  three arrows a drop (four from the twelfth), drop arrows up to
+  `min(8, 4 + i ~/ 5)` cells, and one mirror a drop (two from the
+  thirteenth) in the second half. Boards are sized like a flat one at
+  ~11.3 free cells an arrow, dealt without the gap pass, so they start
+  40–60% full; the clock is `rushPace` (1.4 s) for every arrow the level
+  will hold, half the flat chapters' seconds for each twist and 20 s over
+  (trimmed) — the first cut gave 3 s an arrow and level 125 was cleared
+  in 2:27 of its six minutes — and the drops every 55% of the clock over
+  their count, 4–12 s. Levels 107, 127, 129 and 130 are dealt from
+  variant 1, the first board on which every twist found a place.
+  `level_specs_test` pins the curve (every twist past the teaching board,
+  mirrors landing only in the second half, a strict climb in everything
+  to clear, the last level of each half about three minutes, the drops
+  well inside the clock); `rushChecks` plays every level at 1.2 s a tap.
   **The block (151–200)** has `openMoves` 1: a
   teaching cube of six arrows a face and no twists (8×8), warm-up faces of
   20, 25 and 28 arrows with one of each twist (two mirrors) a face, then
@@ -895,8 +922,8 @@ Key patterns:
   block.
 - **Chapters and the daily board:** `data/chapters.dart` is the map (five
   flat chapters of `kChapterLength` = 20 (`kFlatChapterCount`), then the
-  Rush from `kFirstRushLevel` = 101 to 125 and with blocks from
-  `kFirstBlocksLevel` = 126 to 150 (`ChapterRule.isRush`), the block from
+  Rush from `kFirstRushLevel` = 101 to 125 and with mirrors from
+  `kFirstMirrorsLevel` = 126 to 150 (`ChapterRule.isRush`), the block from
   `kFirstCubeLevel` = 151 to 200 and the box from `kFirstBoxLevel` = 201
   to 250 (`ChapterRule.onBlock` for both); each `Chapter` carries its own
   `firstLevel`/`lastLevel`; `chapterOf`, `ruleTaughtAt`,
@@ -912,8 +939,8 @@ Key patterns:
   block's demo is a tiny cube with one arrow on each face round its middle,
   and the card turns the block to each arrow's face before playing it; the
   Rush's card has no script: it starts on three free arrows (already
-  running low), runs its own clock so two drops glow and land, and taps
-  whatever can go; the box has no card, `ChapterRule.hasCard`, since what
+  running low), runs its own clock so two drops (with a mirror, on the
+  second half's card) glow and land, and taps whatever can go; the box has no card, `ChapterRule.hasCard`, since what
   it brings a line under the board says).
   `widgets/chapter_demo.dart` runs that script on a real `GameNotifier`
   every `kDemoStep`, rests `kDemoRest` on the cleared board and starts over,
@@ -1360,10 +1387,10 @@ composite action check the `uses:` inside it too.
 
 ## Pending follow-ups
 
-- **The Rush's pace on a phone:** the drop interval, the drop size and the
-  clock (`tool/make_levels.dart` `_rush()`) were tuned against
-  `tool/rush_report.dart`'s careless player at 2.5 s a tap; a round of real
-  play may want the drops closer together or bigger late in each half.
+- **The Rush's pace on a phone:** the clock was cut to fit a 2:27 clear of
+  level 125 on a laptop (`rushPace` 1.4 s an arrow); the drop interval and
+  size (`_rush()`) were tuned against `tool/rush_report.dart` at 1.2 s a
+  tap. A round on a phone may want them moved again.
 
 - **Visual tuning of the twists on real phones:** the glyph sizes, the
   tether's dots and the padlock's open pose were drawn to read at the

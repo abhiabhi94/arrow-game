@@ -1007,7 +1007,7 @@ extension on _GameScreenState {
       ChapterRule.fog => l10n.tutorialFog,
       ChapterRule.pairs => l10n.tutorialPairs,
       ChapterRule.rush => l10n.tutorialRush,
-      ChapterRule.rushBlocks => l10n.tutorialRushBlocks,
+      ChapterRule.rushMirrors => l10n.tutorialRushMirrors,
       ChapterRule.cube => l10n.tutorialCube,
       ChapterRule.box => l10n.tutorialBox,
     };
@@ -1033,7 +1033,7 @@ class _IntroCard extends StatelessWidget {
       ChapterRule.fog => ('🌫️', l10n.introTitleFog, l10n.introBodyFog),
       ChapterRule.pairs => ('🔗', l10n.introTitlePairs, l10n.introBodyPairs),
       ChapterRule.rush => ('⚡', l10n.chapterName6, l10n.tutorialRush),
-      ChapterRule.rushBlocks => ('🧱', l10n.chapterName7, l10n.tutorialRushBlocks),
+      ChapterRule.rushMirrors => ('🪞', l10n.chapterName7, l10n.tutorialRushMirrors),
       // The box has no card of its own (`ChapterRule.hasCard`).
       ChapterRule.cube || ChapterRule.box => ('🧊', l10n.introTitleCube, l10n.introBodyCube),
     };

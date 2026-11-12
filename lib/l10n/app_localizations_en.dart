@@ -1569,15 +1569,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialRush => 'New arrows appear as time goes by.';
 
   @override
-  String get chapterName7 => 'Rush and Blocks';
+  String get chapterName7 => 'Rush and Mirrors';
 
   @override
   String get chapterBlurb7 =>
-      'New arrows land, and blocks with them that stay.';
+      'New arrows land, and mirrors with them that turn the way out.';
 
   @override
-  String get tutorialRushBlocks =>
-      'New arrows appear as time goes by, and blocks too.';
+  String get tutorialRushMirrors =>
+      'New arrows appear as time goes by, and mirrors that turn their paths.';
 
   @override
   String get chapterName8 => 'The Block';

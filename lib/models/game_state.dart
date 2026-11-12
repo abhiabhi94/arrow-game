@@ -46,7 +46,9 @@ class GameState {
     this.drops = 0,
     this.incoming = const <Cell>{},
     int? dealtArrows,
-  }) : dealtArrows = dealtArrows ?? (puzzle?.arrowCount ?? 0);
+    Set<Cell>? dealtMirrors,
+  })  : dealtArrows = dealtArrows ?? (puzzle?.arrowCount ?? 0),
+        dealtMirrors = dealtMirrors ?? (puzzle?.mirrors.keys.toSet() ?? const <Cell>{});
 
   /// The board is still being generated.
   factory GameState.loading(LevelSpec spec) => GameState(
@@ -149,6 +151,10 @@ class GameState {
   /// this landed during play.
   final int dealtArrows;
 
+  /// The mirrors on the board as it was dealt: the ones past these landed
+  /// during play.
+  final Set<Cell> dealtMirrors;
+
   /// Drops still to land; the level is not cleared while any are left.
   int get dropsLeft => (spec.drops?.count ?? 0) - drops;
 
@@ -240,6 +246,7 @@ class GameState {
         drops: drops ?? this.drops,
         incoming: incoming ?? this.incoming,
         dealtArrows: dealtArrows,
+        dealtMirrors: dealtMirrors,
         phase: phase ?? this.phase,
         removed: removed ?? this.removed,
         bumped: bumped ?? this.bumped,

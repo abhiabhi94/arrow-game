@@ -44,7 +44,7 @@ Future<ProviderContainer> _pump(WidgetTester tester) async {
     tester,
     const GameScreen(level: _level),
     seed: const {
-      IntroRepository.key: ['mirrors', 'locks', 'fog', 'pairs', 'rush', 'rushBlocks', 'cube'],
+      IntroRepository.key: ['mirrors', 'locks', 'fog', 'pairs', 'rush', 'rushMirrors', 'cube'],
     },
     extraOverrides: _overrides(),
   );
@@ -246,7 +246,7 @@ void main() {
         tester,
         const GameScreen(level: level),
         seed: const {
-          IntroRepository.key: ['mirrors', 'locks', 'fog', 'pairs', 'rush', 'rushBlocks', 'cube'],
+          IntroRepository.key: ['mirrors', 'locks', 'fog', 'pairs', 'rush', 'rushMirrors', 'cube'],
         },
         extraOverrides: [
           gameProvider.overrideWith(

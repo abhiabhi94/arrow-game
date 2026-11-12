@@ -1136,7 +1136,7 @@ class _ChapterBand extends StatelessWidget {
       ChapterRule.fog => Icons.blur_on_rounded,
       ChapterRule.pairs => Icons.link_rounded,
       ChapterRule.rush => Icons.bolt_rounded,
-      ChapterRule.rushBlocks => Icons.grid_view_rounded,
+      ChapterRule.rushMirrors => Icons.flare_rounded,
       ChapterRule.cube => Icons.view_in_ar_rounded,
       ChapterRule.box => Icons.inventory_2_rounded,
     };

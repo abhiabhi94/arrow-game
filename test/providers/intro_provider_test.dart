@@ -44,7 +44,7 @@ void main() {
       ChapterRule.fog,
       ChapterRule.pairs,
       ChapterRule.rush,
-      ChapterRule.rushBlocks,
+      ChapterRule.rushMirrors,
     ];
     expect(n.due(level: 150), throughRush);
     // The block's card comes with the block, at 151.

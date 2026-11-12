@@ -10,32 +10,40 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/dealt_levels.dart';
 
 // The Rush, 101-150: new arrows land while the board is played, and from
-// 126 blocks with them.
+// 126 mirrors with them.
 void main() {
   rushChecks(from: kFirstRushLevel, to: kFirstCubeLevel - 1);
 
-  test('blocks land only in the second half of the Rush', () {
+  test('mirrors land only in the second half of the Rush', () {
     for (var level = kFirstRushLevel; level < kFirstCubeLevel; level++) {
       final drops = specForLevel(level).drops!;
-      expect(drops.blocks > 0, level >= kFirstBlocksLevel, reason: 'level $level');
+      expect(drops.mirrors > 0, level >= kFirstMirrorsLevel, reason: 'level $level');
     }
   });
 
-  test('a drop plans the same on the same board, and blocks shut nobody in', () {
+  test('a drop plans the same on the same board, and its mirrors turn ways out', () {
     final spec = specForLevel(140);
     final dealt = dealtLevel(140);
     final a = planDrop(dealt, const <int>{}, spec.drops!, dropRandom(spec, 0))!;
     final b = planDrop(dealt, const <int>{}, spec.drops!, dropRandom(spec, 0))!;
     expect([for (final x in a.arrows) x.cells], [for (final x in b.arrows) x.cells]);
-    expect(a.blocks, b.blocks);
-    expect(a.blocks, isNotEmpty);
+    expect(a.mirrors, b.mirrors);
+    expect(a.mirrors, isNotEmpty);
+    expect(a.cells, containsAll(a.mirrors.keys));
     final grown = a.landOn(dealt);
     expect(grown.grows, isTrue);
     expect(grown.arrowCount, dealt.arrowCount + a.arrows.length);
-    for (final x in grown.arrows) {
-      expect(grown.rayOf(x.id).any(grown.isBlock), isFalse, reason: '$x');
+    // Each new mirror stands on some arrow's way out: it turns it.
+    for (final m in a.mirrors.keys) {
+      expect(grown.arrows.any((x) => grown.rayOf(x.id).contains(m)), isTrue, reason: '$m');
     }
-    expect(grown.isSolvable, isTrue);
+    expect(clearableFrom(grown, const <int>{}), isTrue);
+    // Never on the way out of an arrow still sliding off the board.
+    final sliding = <int>{for (final x in dealt.arrows) if (dealt.rayOf(x.id).any(a.mirrors.containsKey)) x.id};
+    final careful = planDrop(dealt, const <int>{}, spec.drops!, dropRandom(spec, 0), avoid: sliding)!;
+    for (final id in sliding) {
+      expect(dealt.rayOf(id).any(careful.mirrors.containsKey), isFalse);
+    }
   });
 
   test('a full board takes no drop', () {

@@ -2933,20 +2933,20 @@ abstract class AppLocalizations {
   /// No description provided for @chapterName7.
   ///
   /// In en, this message translates to:
-  /// **'Rush and Blocks'**
+  /// **'Rush and Mirrors'**
   String get chapterName7;
 
   /// No description provided for @chapterBlurb7.
   ///
   /// In en, this message translates to:
-  /// **'New arrows land, and blocks with them that stay.'**
+  /// **'New arrows land, and mirrors with them that turn the way out.'**
   String get chapterBlurb7;
 
-  /// No description provided for @tutorialRushBlocks.
+  /// No description provided for @tutorialRushMirrors.
   ///
   /// In en, this message translates to:
-  /// **'New arrows appear as time goes by, and blocks too.'**
-  String get tutorialRushBlocks;
+  /// **'New arrows appear as time goes by, and mirrors that turn their paths.'**
+  String get tutorialRushMirrors;
 
   /// No description provided for @chapterName8.
   ///

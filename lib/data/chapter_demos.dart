@@ -15,9 +15,9 @@ import 'chapters.dart';
 /// The board that illustrates [rule].
 Puzzle demoPuzzleFor(ChapterRule rule) => switch (rule) {
       // Three free arrows along the edges, and the middle empty: the board
-      // is running low from the start, so new arrows (and, with blocks, a
-      // block) glow in and drop onto the middle as the first ones go.
-      ChapterRule.rush || ChapterRule.rushBlocks => Puzzle(
+      // is running low from the start, so new arrows (and, in the second
+      // half, a mirror) glow in and drop onto the middle as the first go.
+      ChapterRule.rush || ChapterRule.rushMirrors => Puzzle(
           width: 6,
           height: 5,
           arrows: [
@@ -111,7 +111,7 @@ List<int> demoScriptFor(ChapterRule rule) => switch (rule) {
       ChapterRule.lines => const [0, 1],
       // The Rush's arrows are not all there at the start: its card taps
       // whichever arrow can go (`ChapterDemoBoard`).
-      ChapterRule.rush || ChapterRule.rushBlocks => const <int>[],
+      ChapterRule.rush || ChapterRule.rushMirrors => const <int>[],
       ChapterRule.mirrors => const [0, 1],
       ChapterRule.locks => const [0, 1, 0],
       ChapterRule.fog => const [1, 0, 2, 1],
@@ -136,7 +136,7 @@ LevelSpec demoSpecFor(ChapterRule rule) {
     // The Rush's card lands two drops: the board starts low, so each comes
     // as soon as there is room.
     drops: rule.isRush
-        ? LevelDrops(count: 2, everyMs: 60000, arrows: 2, blocks: rule == ChapterRule.rushBlocks ? 1 : 0, maxLength: 2)
+        ? LevelDrops(count: 2, everyMs: 60000, arrows: 2, mirrors: rule == ChapterRule.rushMirrors ? 1 : 0, maxLength: 2)
         : null,
   );
 }

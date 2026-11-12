@@ -51,7 +51,7 @@ void main() {
           expect(spec.isCube, isFalse);
           expect(f.pairs, inInclusiveRange(3, 5));
           expect(f.hidden, 2);
-        case ChapterRule.rush || ChapterRule.rushBlocks:
+        case ChapterRule.rush || ChapterRule.rushMirrors:
           // Never dealt (a player past level 100 gets the block), but flat
           // with every twist if it were.
           expect(spec.isCube, isFalse);

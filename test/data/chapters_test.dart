@@ -17,7 +17,7 @@ void main() {
     }
     expect(chapters[5].firstLevel, kFirstRushLevel);
     expect(chapters[5].length, 25);
-    expect(chapters[6].firstLevel, kFirstBlocksLevel);
+    expect(chapters[6].firstLevel, kFirstMirrorsLevel);
     expect(chapters[6].length, 25);
     expect(chapters[7].firstLevel, kFirstCubeLevel);
     expect(chapters[7].length, 50);
@@ -38,8 +38,8 @@ void main() {
     expect(chapterOf(100).contains(80), isFalse);
     expect(chapterOf(101).rule, ChapterRule.rush);
     expect(chapterOf(125).rule, ChapterRule.rush);
-    expect(chapterOf(126).rule, ChapterRule.rushBlocks);
-    expect(chapterOf(150).rule, ChapterRule.rushBlocks);
+    expect(chapterOf(126).rule, ChapterRule.rushMirrors);
+    expect(chapterOf(150).rule, ChapterRule.rushMirrors);
     expect(chapterOf(150).rule.onBlock, isFalse);
     expect(chapterOf(151).rule, ChapterRule.cube);
     expect(chapterOf(200).rule, ChapterRule.cube);
@@ -61,14 +61,14 @@ void main() {
     expect(ruleTaughtAt(100), isNull);
     expect(ruleTaughtAt(101), ChapterRule.rush);
     expect(ruleTaughtAt(111), isNull);
-    expect(ruleTaughtAt(126), ChapterRule.rushBlocks);
+    expect(ruleTaughtAt(126), ChapterRule.rushMirrors);
     expect(ruleTaughtAt(151), ChapterRule.cube);
     // The box is the block again, so a line under the board says what is
     // new: no card of its own. The block's card is at 151, where it now
     // starts; the Rush has a card for each half.
     expect(ChapterRule.box.hasCard, isFalse);
     expect(ChapterRule.rush.hasCard, isTrue);
-    expect(ChapterRule.rushBlocks.hasCard, isTrue);
+    expect(ChapterRule.rushMirrors.hasCard, isTrue);
     expect(ChapterRule.values.where((r) => !r.hasCard), [ChapterRule.box]);
     expect(ruleTaughtAt(152), isNull);
     expect(ruleTaughtAt(201), ChapterRule.box);
@@ -97,10 +97,15 @@ void main() {
           expect(f.hidden, greaterThan(0), reason: 'level ${s.level}');
         case ChapterRule.pairs:
           expect(f.pairs, greaterThan(0), reason: 'level ${s.level}');
-        case ChapterRule.rush || ChapterRule.rushBlocks:
-          // The plain rectangle again, with arrows landing on it.
-          expect(f.isPlain, isTrue, reason: 'level ${s.level}');
+        case ChapterRule.rush || ChapterRule.rushMirrors:
+          // The rectangle again with arrows landing on it, and every twist
+          // of the first hundred on it past the teaching board.
           expect(s.isDynamic, isTrue, reason: 'level ${s.level}');
+          if (!teaching) {
+            for (final n in <int>[f.mirrors, f.locks, f.hidden, f.pairs]) {
+              expect(n, greaterThan(0), reason: 'level ${s.level}');
+            }
+          }
         case ChapterRule.cube || ChapterRule.box:
           fail('level ${s.level} is flat');
       }
@@ -173,7 +178,7 @@ void main() {
         // No script: the card taps whatever can go while two drops land,
         // the first at once, since the board starts running low.
         expect(spec.drops!.count, 2);
-        expect(spec.drops!.blocks > 0, rule == ChapterRule.rushBlocks);
+        expect(spec.drops!.mirrors > 0, rule == ChapterRule.rushMirrors);
         expect(spec.timed, isFalse);
         expect(demoScriptFor(rule), isEmpty);
         expect(p.arrowCount, lessThanOrEqualTo(kDropLowWater));
@@ -217,7 +222,7 @@ void main() {
           expect(p.isCube, isTrue);
           expect(p.faceCount, 6);
           expect(<int>[for (final id in demoScriptFor(rule)) p.faceOf(id)], [0, 1, 2, 3]);
-        case ChapterRule.rush || ChapterRule.rushBlocks:
+        case ChapterRule.rush || ChapterRule.rushMirrors:
           fail('the Rush has no script');
         case ChapterRule.box:
           fail('${rule.name} has no card');

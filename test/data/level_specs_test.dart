@@ -222,21 +222,29 @@ void main() {
     expect(s.untimed().seed, s.seed);
   });
 
-  test('the Rush: the plain rectangle half empty, more landing on it level by level', () {
+  test('the Rush: the rectangle with every twist, half empty, more landing on it level by level', () {
     for (final chapter in chapters.where((c) => c.rule.isRush)) {
-      final blocks = chapter.rule == ChapterRule.rushBlocks;
-      // Every arrow it will hold: the board's own and the drops'.
-      int total(LevelSpec s) => s.arrows + s.drops!.arrowTotal + 2 * s.drops!.count * s.drops!.blocks;
+      final mirrorsLand = chapter.rule == ChapterRule.rushMirrors;
+      // Everything there will be to clear: the board's arrows and the drops',
+      // and the twists, each weighed like the seconds the clock gives it.
+      double total(LevelSpec s) {
+        final f = s.features;
+        final d = s.drops!;
+        return s.arrows + d.arrowTotal + f.mirrors * 0.5 + f.locks * 2 + f.hidden * 1.5 + f.pairs * 1.5 +
+            d.count * d.mirrors * 0.5;
+      }
+
       final teach = specForLevel(chapter.firstLevel);
       expect(teach.arrows, lessThanOrEqualTo(12));
       expect(teach.openMoves, 3);
-      expect(teach.drops!.blocks > 0, blocks);
+      expect(teach.features.isPlain, isTrue);
+      expect(teach.drops!.mirrors > 0, mirrorsLand);
       for (var level = chapter.firstLevel; level <= chapter.lastLevel; level++) {
         final s = specForLevel(level);
         final drops = s.drops!;
+        final f = s.features;
         expect(s.isCube, isFalse, reason: 'level $level');
-        expect(s.features.isPlain, isTrue, reason: 'level $level');
-        expect(drops.blocks > 0, blocks, reason: 'level $level');
+        expect(drops.mirrors > 0, mirrorsLand, reason: 'level $level');
         expect(drops.arrows, inInclusiveRange(2, 4), reason: 'level $level');
         expect(drops.maxLength, lessThan(s.width), reason: 'level $level');
         // The drops come through most of the level, never far apart, and
@@ -244,12 +252,23 @@ void main() {
         expect(drops.everyMs, inInclusiveRange(4000, 12000), reason: 'level $level');
         expect(drops.everyMs * drops.count, lessThan(s.timeLimitMs * 0.7), reason: 'level $level');
         expect(s.timeLimitMs, lessThan(600000), reason: 'level $level');
-        // The clock: 3 s for every arrow there will be and 20 s over,
-        // before the trim.
         if (level > chapter.firstLevel) {
-          expect((untrimmed(s) - 20000) / (s.arrows + drops.arrowTotal), inInclusiveRange(2990, 3010), reason: 'level $level');
+          // Every twist of the first hundred is on the board.
+          for (final n in <int>[f.mirrors, f.locks, f.hidden, f.pairs]) {
+            expect(n, greaterThan(0), reason: 'level $level');
+          }
+          // The clock: 1.4 s for every arrow there will be, the twists'
+          // seconds and 20 s over, before the trim — level 125 was
+          // cleared in two and a half minutes on a laptop.
+          final think = f.mirrors * 0.5 + f.locks * 2 + f.hidden * 1.5 + f.pairs * 1.5 + drops.count * drops.mirrors * 0.5;
+          expect((untrimmed(s) - 20000 - think * 1000) / (s.arrows + drops.arrowTotal), inInclusiveRange(1390, 1410),
+              reason: 'level $level');
         }
       }
+      // The last level of each half: about three minutes.
+      expect(specForLevel(chapter.lastLevel).timeLimitMs, inInclusiveRange(180000, 220000));
+      // Late drops bring long arrows.
+      expect(specForLevel(chapter.lastLevel).drops!.maxLength, greaterThanOrEqualTo(8));
       // Past the teaching board: more to clear every level.
       for (var level = chapter.firstLevel + 2; level <= chapter.lastLevel; level++) {
         final prev = specForLevel(level - 1);
@@ -264,7 +283,7 @@ void main() {
     // as the level in the same place before it.
     for (var i = 1; i < 25; i++) {
       final a = specForLevel(kFirstRushLevel + i);
-      final b = specForLevel(kFirstBlocksLevel + i);
+      final b = specForLevel(kFirstMirrorsLevel + i);
       expect(b.arrows + b.drops!.arrowTotal, greaterThanOrEqualTo(a.arrows + a.drops!.arrowTotal), reason: 'level ${b.level}');
     }
     final s = specForLevel(140);

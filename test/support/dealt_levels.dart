@@ -180,12 +180,14 @@ void levelChecks({required int from, required int to}) {
   });
 }
 
-/// A Rush level from deal to clear, played by a quick, careless player: every
-/// tap an arrow that can go, picked at random, [tapMs] apart, the drops
-/// landing on their time or at once when the board runs low. Asserts what
-/// must hold at every moment — no block on the way out of an arrow on the
-/// board, and the board still clearable — and returns how it went.
-({int drops, int arrows, int playedMs, double startFill}) playRush(int level, {int tapMs = 2500}) {
+/// A Rush level from deal to clear, played by a quick player: every tap an
+/// arrow that can go, picked at random, [tapMs] apart (level 125 was
+/// cleared at about 1.1 s a tap on a laptop), the drops landing on their
+/// time or at once when the board runs low. Asserts what must hold at every
+/// moment — every arrow on the board has a way out that leaves, and the
+/// board is still clearable — and returns how it went.
+({int drops, int arrows, int mirrors, double dropLength, int playedMs, double startFill}) playRush(int level,
+    {int tapMs = 1200}) {
   final spec = specForLevel(level);
   final drops = spec.drops!;
   var puzzle = dealtLevel(level);
@@ -195,6 +197,9 @@ void levelChecks({required int from, required int to}) {
   var t = 0;
   var nextDrop = drops.everyMs;
   var landed = 0;
+  var mirrors = 0;
+  var dropCells = 0;
+  var dropArrows = 0;
   bool clearable() {
     final gone = <int>{...removed};
     while (true) {
@@ -210,15 +215,21 @@ void levelChecks({required int from, required int to}) {
       final drop = planDrop(puzzle, removed, drops, dropRandom(spec, landed));
       if (drop != null) {
         expect(drop.arrows.length, inInclusiveRange(1, drops.arrows), reason: 'level $level drop $landed');
-        expect(drop.blocks.length, lessThanOrEqualTo(drops.blocks), reason: 'level $level drop $landed');
+        expect(drop.mirrors.length, lessThanOrEqualTo(drops.mirrors), reason: 'level $level drop $landed');
         for (final a in drop.arrows) {
           expect(a.length, inInclusiveRange(2, drops.maxLength), reason: 'level $level $a');
+          dropCells += a.length;
+          dropArrows++;
         }
+        mirrors += drop.mirrors.length;
         puzzle = drop.landOn(puzzle);
         landed++;
         nextDrop = t + drops.everyMs;
         for (final a in puzzle.arrows.where((a) => !removed.contains(a.id))) {
-          expect(puzzle.rayOf(a.id).any(puzzle.isBlock), isFalse, reason: 'level $level: a block shuts $a in');
+          final ray = puzzle.rayOf(a.id);
+          final out = ray.isEmpty ? a.head.step(a.heading) : ray.last.step(puzzle.exitHeadingOf(a.id));
+          expect(out.isInside(puzzle.width, puzzle.height), isFalse, reason: 'level $level: $a has no way out');
+          expect(ray.any(a.cells.contains), isFalse, reason: 'level $level: $a is in its own way');
         }
         expect(clearable(), isTrue, reason: 'level $level drop $landed');
       }
@@ -233,13 +244,21 @@ void levelChecks({required int from, required int to}) {
     removed.addAll(puzzle.exitGroup(open[random.nextInt(open.length)]));
     t += tapMs;
   }
-  return (drops: landed, arrows: puzzle.arrowCount, playedMs: t, startFill: startFill);
+  return (
+    drops: landed,
+    arrows: puzzle.arrowCount,
+    mirrors: mirrors,
+    dropLength: dropArrows == 0 ? 0 : dropCells / dropArrows,
+    playedMs: t,
+    startFill: startFill,
+  );
 }
 
 /// Every Rush level from [from] to [to] deals in full and plays through:
-/// its starting arrows, solvable, half empty for the drops to land in, and
-/// every drop landing, the board clearable after each and done inside the
-/// clock at a quick, careless pace.
+/// its starting arrows and every twist it asks for, solvable, half empty
+/// for the drops to land in, and every drop landing, the board clearable
+/// after each, the late drops bringing long arrows, and the level done
+/// inside the clock at a quick pace.
 void rushChecks({required int from, required int to}) {
   final specs = levelSpecs.where((s) => s.level >= from && s.level <= to && s.isDynamic).toList();
 
@@ -251,7 +270,11 @@ void rushChecks({required int from, required int to}) {
       expect(p.height, spec.height);
       expect(p.arrowCount, spec.arrows, reason: 'level ${spec.level} arrow count');
       expect(p.isSolvable, isTrue, reason: 'level ${spec.level} solvable');
-      expect(p.blocks, isEmpty);
+      final f = spec.features;
+      expect(p.mirrors, hasLength(f.mirrors), reason: 'level ${spec.level} mirrors');
+      expect(p.locks, hasLength(f.locks), reason: 'level ${spec.level} locks');
+      expect(p.hidden, hasLength(f.hidden), reason: 'level ${spec.level} hidden');
+      expect(p.pairs, hasLength(f.pairs * 2), reason: 'level ${spec.level} pairs');
       for (final a in p.arrows) {
         // No gap pass on a Rush board: its leftover cells are the drops'.
         expect(a.length, inInclusiveRange(spec.minLength, spec.maxLength), reason: 'level ${spec.level} $a');
@@ -265,6 +288,13 @@ void rushChecks({required int from, required int to}) {
     for (final spec in specs) {
       final run = playRush(spec.level);
       expect(run.drops, spec.drops!.count, reason: 'level ${spec.level} drops');
+      // The mirrors that are meant to land (nearly) all find a place.
+      expect(run.mirrors, greaterThanOrEqualTo((spec.drops!.count * spec.drops!.mirrors * 0.8).floor()),
+          reason: 'level ${spec.level} mirrors landed');
+      // Late in each half the drops bring long arrows.
+      if (spec.drops!.maxLength >= 7) {
+        expect(run.dropLength, greaterThanOrEqualTo(spec.drops!.maxLength - 2.5), reason: 'level ${spec.level} drop length');
+      }
       expect(run.arrows, greaterThan(spec.arrows + spec.drops!.count), reason: 'level ${spec.level} arrows in all');
       expect(run.playedMs, lessThan(spec.timeLimitMs), reason: 'level ${spec.level} clock');
     }

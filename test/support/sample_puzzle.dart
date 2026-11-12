@@ -182,7 +182,7 @@ Puzzle rushPuzzle() => Puzzle(
   ],
 );
 
-/// A spec matching [rushPuzzle]: two drops of two arrows and a block, a
+/// A spec matching [rushPuzzle]: two drops of two arrows and a mirror, a
 /// second apart.
 const LevelSpec rushSpec = LevelSpec(
   level: 130,
@@ -192,7 +192,7 @@ const LevelSpec rushSpec = LevelSpec(
   minLength: 2,
   maxLength: 3,
   timeLimitMs: 60000,
-  drops: LevelDrops(count: 2, everyMs: 1000, arrows: 2, blocks: 1, maxLength: 3),
+  drops: LevelDrops(count: 2, everyMs: 1000, arrows: 2, mirrors: 1, maxLength: 3),
 );
 
 /// A 3×3 with every cell taken by four arrows (none of them free to run low).

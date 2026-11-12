@@ -77,9 +77,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the Rush with blocks says so', (tester) async {
-    await _pump(tester, kFirstBlocksLevel);
-    expect(find.text('New arrows appear as time goes by, and blocks too.'), findsOneWidget);
+  testWidgets('the Rush with mirrors says so', (tester) async {
+    await _pump(tester, kFirstMirrorsLevel);
+    expect(find.text('New arrows appear as time goes by, and mirrors that turn their paths.'), findsOneWidget);
   });
 
   for (final (level, line) in <(int, String)>[

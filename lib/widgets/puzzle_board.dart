@@ -181,10 +181,10 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
   /// bounce is seen as well as implied by the path.
   final Map<int, AnimationController> _bounces = <int, AnimationController>{};
 
-  /// Arrows that have just landed on a Rush board, popping into place, and
-  /// blocks the same (keyed by cell, `y * width + x`).
+  /// Arrows that have just landed on a Rush board, dropping into place, and
+  /// mirrors the same (keyed by cell, `y * width + x`).
   final Map<int, AnimationController> _arrivals = <int, AnimationController>{};
-  final Map<int, AnimationController> _blockArrivals = <int, AnimationController>{};
+  final Map<int, AnimationController> _mirrorArrivals = <int, AnimationController>{};
 
   @override
   void initState() {
@@ -321,8 +321,8 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
     for (var id = before.arrowCount; id < now.arrowCount; id++) {
       _startOneShot(_arrivals, id, kArriveMs);
     }
-    for (final c in now.blocks.difference(before.blocks)) {
-      _startOneShot(_blockArrivals, c.y * now.width + c.x, kArriveMs);
+    for (final c in now.mirrors.keys) {
+      if (!before.mirrors.containsKey(c)) _startOneShot(_mirrorArrivals, c.y * now.width + c.x, kArriveMs);
     }
   }
 
@@ -453,7 +453,7 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
       c.dispose();
     }
     _exits.clear();
-    for (final slot in <Map<int, AnimationController>>[_unlocks, _reveals, _bounces, _arrivals, _blockArrivals]) {
+    for (final slot in <Map<int, AnimationController>>[_unlocks, _reveals, _bounces, _arrivals, _mirrorArrivals]) {
       for (final c in slot.values) {
         c.dispose();
       }
@@ -599,7 +599,7 @@ class PuzzleBoardState extends State<PuzzleBoard> with TickerProviderStateMixin 
           bounces: <int, double>{for (final e in _bounces.entries) e.key: e.value.value},
           arrivals: <int, double>{for (final e in _arrivals.entries) e.key: e.value.value},
           incomingPulse: _incomingPulse?.value,
-          blockArrivals: <int, double>{for (final e in _blockArrivals.entries) e.key: e.value.value},
+          mirrorArrivals: <int, double>{for (final e in _mirrorArrivals.entries) e.key: e.value.value},
           travel: widget.reduceMotion ? 0 : 1,
           focusedId: widget.focusedArrowId,
           l10n: l10n,
@@ -725,7 +725,7 @@ class _BoardPainter extends CustomPainter {
     required this.pendingReveals,
     required this.bounces,
     this.arrivals = const <int, double>{},
-    this.blockArrivals = const <int, double>{},
+    this.mirrorArrivals = const <int, double>{},
     this.incomingPulse,
     required this.travel,
     required this.focusedId,
@@ -804,10 +804,10 @@ class _BoardPainter extends CustomPainter {
   /// Mirrors mid-flash, by packed cell: an arrow has just turned there.
   final Map<int, double> bounces;
 
-  /// Arrows landing on a Rush board, and blocks (by cell, `y * width + x`):
+  /// Arrows landing on a Rush board, and mirrors (by cell, `y * width + x`):
   /// how far each is into popping into place, 0..1.
   final Map<int, double> arrivals;
-  final Map<int, double> blockArrivals;
+  final Map<int, double> mirrorArrivals;
 
   /// The beat of the glow on [GameState.incoming] (0..1), or null with
   /// motion reduced (the glow then holds still).
@@ -917,16 +917,21 @@ class _BoardPainter extends CustomPainter {
     }
     // Mirrors: drawn under everything, so an arrow slides over the glass as
     // it turns.
+    // One that has just landed on a Rush board drops in on the moving layer.
     for (final e in puzzle.mirrors.entries) {
-      if (!_still || (face != null && puzzle.faceOfCell(e.key) != face)) continue;
-      glyphs.mirror(canvas, Rect.fromLTWH(e.key.x * cs, e.key.y * cs, cs, cs), e.value);
-    }
-    // Blocks: solid squares of ink, under the arrows; one that has just
-    // landed pops in on the moving layer.
-    for (final c in puzzle.blocks) {
-      final arriving = blockArrivals[c.y * puzzle.width + c.x];
+      if (face != null && puzzle.faceOfCell(e.key) != face) continue;
+      final arriving = mirrorArrivals[e.key.y * puzzle.width + e.key.x];
       if ((arriving != null) == _still) continue;
-      _paintBlock(canvas, c, cs, arriving);
+      final rect = Rect.fromLTWH(e.key.x * cs, e.key.y * cs, cs, cs);
+      if (arriving == null) {
+        glyphs.mirror(canvas, rect, e.value);
+        continue;
+      }
+      _beginDrop(canvas, rect.center, arriving);
+      glyphs.mirror(canvas, rect, e.value);
+      canvas.restore();
+      canvas.restore();
+      _paintLandingRing(canvas, rect.center, cs, arriving);
     }
     // Where the next drop will land: its cells glow, beating, until it does.
     if (!_still && state.incoming.isNotEmpty) {
@@ -1074,37 +1079,6 @@ class _BoardPainter extends CustomPainter {
         ..color = palette.hintGlow.withValues(alpha: 0.9 * (1 - u))
         ..style = PaintingStyle.stroke
         ..strokeWidth = max(2.0, cs * 0.12),
-    );
-  }
-
-  /// A block on [c], dropping in when [arriving] (0..1) is given: a rounded
-  /// square of ink with a hairline of paper inside, so it reads as a solid
-  /// thing and not as an arrow's body.
-  void _paintBlock(Canvas canvas, Cell c, double cs, double? arriving) {
-    if (arriving != null) _beginDrop(canvas, _center(c, cs), arriving);
-    _paintBlockShape(canvas, c, cs);
-    if (arriving != null) {
-      canvas.restore();
-      canvas.restore();
-      _paintLandingRing(canvas, _center(c, cs), cs, arriving);
-    }
-  }
-
-  void _paintBlockShape(Canvas canvas, Cell c, double cs) {
-    const scale = 1.0;
-    final rect = Rect.fromCenter(
-      center: _center(c, cs),
-      width: cs * 0.84 * scale,
-      height: cs * 0.84 * scale,
-    );
-    final r = Radius.circular(cs * 0.16 * scale);
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, r), Paint()..color = palette.arrowInk.withValues(alpha: 0.82));
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect.deflate(cs * 0.14 * scale), r * 0.6),
-      Paint()
-        ..color = palette.backgroundSoft.withValues(alpha: 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = max(1.0, cs * 0.05),
     );
   }
 
@@ -1623,7 +1597,7 @@ class _BoardPainter extends CustomPainter {
       !setEquals(old.pendingUnlocks, pendingUnlocks) ||
       !setEquals(old.pendingReveals, pendingReveals) ||
       !setEquals(old._live, _live) ||
-      !setEquals(old.blockArrivals.keys.toSet(), blockArrivals.keys.toSet());
+      !setEquals(old.mirrorArrivals.keys.toSet(), mirrorArrivals.keys.toSet());
 
   bool _movingChanged(_BoardPainter old) =>
       // The clock ticks ten times a second; only board-relevant state counts.
@@ -1652,7 +1626,7 @@ class _BoardPainter extends CustomPainter {
       !_sameMap(old.arrivals, arrivals) ||
       old.incomingPulse != incomingPulse ||
       old.state.incoming != state.incoming ||
-      !_sameMap(old.blockArrivals, blockArrivals) ||
+      !_sameMap(old.mirrorArrivals, mirrorArrivals) ||
       old.travel != travel ||
       old.face != face ||
       old.focusedId != focusedId;

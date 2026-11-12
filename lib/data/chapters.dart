@@ -2,8 +2,8 @@
 /// levels each, each built on one twist: plain lines, then mirrors, then
 /// locks, then hidden heads, then tethered pairs. The sixth and seventh are
 /// the Rush, twenty-five levels each on the plain rectangle again: new
-/// arrows land on the board while it is played, and in the seventh, blocks
-/// land with them and stay. The eighth is the block: fifty levels on a
+/// arrows land on the board while it is played, and in the seventh,
+/// mirrors land with them, turning the ways out that run through them. The eighth is the block: fifty levels on a
 /// cube, six faces of arrows played one at a time, each face packed so
 /// that few of its arrows can leave at once. The ninth is the box: fifty
 /// on a block that is no longer a cube, its faces of three sizes and
@@ -36,8 +36,8 @@ enum ChapterRule {
   /// New arrows land on the board while it is played.
   rush,
 
-  /// New arrows land, and blocks with them that stay.
-  rushBlocks,
+  /// New arrows land, and mirrors with them that turn the ways out.
+  rushMirrors,
 
   /// Six faces on a block, played one at a time: the block turns to bring
   /// the next face round.
@@ -50,7 +50,7 @@ enum ChapterRule {
   bool get onBlock => this == cube || this == box;
 
   /// Whether arrows land on the chapter's boards while they are played.
-  bool get isRush => this == rush || this == rushBlocks;
+  bool get isRush => this == rush || this == rushMirrors;
 
   /// Whether the chapter opens on an illustrated card. The box does not:
   /// it is the block again, and a line under the board says what is new.
@@ -87,8 +87,8 @@ const int kChapterLength = 20;
 /// as they always were.
 const int kFirstRushLevel = 101;
 
-/// The first level of the Rush with blocks.
-const int kFirstBlocksLevel = 126;
+/// The first level of the Rush with mirrors landing.
+const int kFirstMirrorsLevel = 126;
 
 /// The first level on the block.
 const int kFirstCubeLevel = 151;
@@ -105,8 +105,8 @@ const List<Chapter> chapters = <Chapter>[
   Chapter(index: 3, rule: ChapterRule.locks, firstLevel: 41, lastLevel: 60),
   Chapter(index: 4, rule: ChapterRule.fog, firstLevel: 61, lastLevel: 80),
   Chapter(index: 5, rule: ChapterRule.pairs, firstLevel: 81, lastLevel: 100),
-  Chapter(index: 6, rule: ChapterRule.rush, firstLevel: kFirstRushLevel, lastLevel: kFirstBlocksLevel - 1),
-  Chapter(index: 7, rule: ChapterRule.rushBlocks, firstLevel: kFirstBlocksLevel, lastLevel: kFirstCubeLevel - 1),
+  Chapter(index: 6, rule: ChapterRule.rush, firstLevel: kFirstRushLevel, lastLevel: kFirstMirrorsLevel - 1),
+  Chapter(index: 7, rule: ChapterRule.rushMirrors, firstLevel: kFirstMirrorsLevel, lastLevel: kFirstCubeLevel - 1),
   Chapter(index: 8, rule: ChapterRule.cube, firstLevel: kFirstCubeLevel, lastLevel: kFirstBoxLevel - 1),
   Chapter(index: 9, rule: ChapterRule.box, firstLevel: kFirstBoxLevel, lastLevel: totalLevels),
 ];

@@ -24,10 +24,14 @@
 ///
 /// A **growing** board ([grows], see [grownBy]) is one the Rush chapters
 /// add to while it is played: new arrows land on cells that are empty at
-/// that moment — maybe ones an arrow has already left — and solid
-/// [blocks] land too. Arrow ids still run on from the ones before, so the
-/// set of arrows out stays valid; a cell's occupant is the latest arrow
-/// to land there (whoever sat there before has left).
+/// that moment — maybe ones an arrow has already left — and new mirrors
+/// land too, turning the ways out that run through them. Arrow ids still
+/// run on from the ones before, so the set of arrows out stays valid; a
+/// cell's occupant is the latest arrow to land there (whoever sat there
+/// before has left). What lands is planned (`engine/drops.dart`) so every
+/// arrow still on the board keeps a way out that leaves; an arrow that has
+/// already left may be turned round in a ring by a mirror landing on its
+/// old path, which is nothing to anyone, so a growing board lets it.
 ///
 /// A **cube** level ([faceSizes] set, see [Puzzle.cube]) is six faces laid
 /// side by side in one strip, each a rectangle of its own size — six equal
@@ -52,7 +56,6 @@ class Puzzle {
     Map<int, int> locks = const <int, int>{},
     Set<int> hidden = const <int>{},
     Map<int, int> pairs = const <int, int>{},
-    Set<Cell> blocks = const <Cell>{},
     this.grows = false,
     List<(int, int)>? faceSizes,
   })  : arrows = List<ArrowPiece>.unmodifiable(arrows),
@@ -61,9 +64,8 @@ class Puzzle {
         locks = Map<int, int>.unmodifiable(locks),
         hidden = Set<int>.unmodifiable(hidden),
         pairs = Map<int, int>.unmodifiable(_symmetric(pairs)),
-        blocks = Set<Cell>.unmodifiable(blocks),
         assert(width > 0 && height > 0),
-        assert(faceSizes == null || (!grows && blocks.isEmpty), 'a block of faces does not grow'),
+        assert(faceSizes == null || !grows, 'a block of faces does not grow'),
         assert(faceSizes == null ||
             (faceSizes.fold<int>(0, (w, f) => w + f.$1) == width &&
                 faceSizes.fold<int>(0, (h, f) => f.$2 > h ? f.$2 : h) == height)) {
@@ -85,7 +87,6 @@ class Puzzle {
         // On a growing board a later arrow lands where an earlier one has
         // already left; it is the cell's occupant from then on.
         assert(grows ? _occupancy[c] != kMirror : !_occupancy.containsKey(c), '$c is used twice (an arrow or a mirror)');
-        assert(!this.blocks.contains(c) || grows, '$c is a block');
         _occupancy[c] = i;
       }
     }
@@ -101,10 +102,12 @@ class Puzzle {
         originX: faceOriginOf(face),
         mirrorAt: (c) => this.mirrors[c],
       );
-      assert(trace != null, 'arrow ${a.id} is sent round in a ring');
-      assert(trace!.cells.every((c) => _occupancy[c] != a.id), 'arrow ${a.id} is in its own way');
-      _rays.add(List<Cell>.unmodifiable(trace!.cells));
-      _exitHeadings.add(trace.exitHeading);
+      // On a growing board only an arrow that has already left can be
+      // turned round in a ring (see the class's note): it keeps no way out.
+      assert(trace != null || grows, 'arrow ${a.id} is sent round in a ring');
+      assert(grows || trace!.cells.every((c) => _occupancy[c] != a.id), 'arrow ${a.id} is in its own way');
+      _rays.add(List<Cell>.unmodifiable(trace?.cells ?? const <Cell>[]));
+      _exitHeadings.add(trace?.exitHeading ?? a.heading);
     }
     final lockIds = this.locks.keys.toList()..sort();
     for (var n = 0; n < lockIds.length; n++) {
@@ -172,21 +175,21 @@ class Puzzle {
   }
 
   /// [arrows] added to this board, after the ones on it (their ids run on
-  /// from [arrowCount]), with [blocks] landed too: what a drop does in the
+  /// from [arrowCount]), with [mirrors] landed too: what a drop does in the
   /// Rush chapters. The new arrows sit on cells no arrow still on the board
-  /// covers; the caller (`engine/drops.dart`) sees to that, and to the
-  /// board staying clearable.
-  Puzzle grownBy(List<ArrowPiece> arrows, {Set<Cell> blocks = const <Cell>{}}) {
+  /// covers, and a new mirror on a cell no arrow has ever covered; the
+  /// caller (`engine/drops.dart`) sees to that, and to the board staying
+  /// clearable.
+  Puzzle grownBy(List<ArrowPiece> arrows, {Map<Cell, Mirror> mirrors = const <Cell, Mirror>{}}) {
     assert(!isCube);
     return Puzzle(
       width: width,
       height: height,
       arrows: <ArrowPiece>[...this.arrows, ...arrows],
-      mirrors: mirrors,
+      mirrors: <Cell, Mirror>{...this.mirrors, ...mirrors},
       locks: locks,
       hidden: hidden,
       pairs: pairs,
-      blocks: <Cell>{...this.blocks, ...blocks},
       grows: true,
     );
   }
@@ -213,10 +216,6 @@ class Puzzle {
 
   /// Tethered arrows, both ways: `pairs[a] == b` and `pairs[b] == a`.
   final Map<int, int> pairs;
-
-  /// Solid cells that have landed on a growing board. No arrow sits on one,
-  /// and none still on the board has its way out through one.
-  final Set<Cell> blocks;
 
   /// Whether arrows have landed on this board after it was dealt
   /// ([grownBy]), so a cell may have held an arrow that has since left.
@@ -287,12 +286,9 @@ class Puzzle {
           if (_faces[id] == face) id,
       ];
 
-  /// Cells an arrow may use: the board less its mirrors and blocks.
+  /// Cells an arrow may use: the board less its mirrors.
   int get freeCellCount =>
-      (faceSizes?.fold<int>(0, (n, f) => n + f.$1 * f.$2) ?? width * height) - mirrors.length - blocks.length;
-
-  /// Whether [c] is a block.
-  bool isBlock(Cell c) => blocks.contains(c);
+      (faceSizes?.fold<int>(0, (n, f) => n + f.$1 * f.$2) ?? width * height) - mirrors.length;
 
   /// Whether the board has any of the chapter twists on it.
   bool get hasFeatures =>

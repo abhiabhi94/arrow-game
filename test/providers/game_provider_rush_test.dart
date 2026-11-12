@@ -52,12 +52,12 @@ void main() {
     expect(n.state.dropsLeft, 1);
     final grown = n.state.puzzle!;
     expect(
-      <Object>{for (final a in grown.arrows.skip(4)) ...a.cells, ...grown.blocks},
+      <Object>{for (final a in grown.arrows.skip(4)) ...a.cells, ...grown.mirrors.keys},
       glowing,
     );
     expect(grown.arrowCount, greaterThan(dealt.arrowCount));
     expect(grown.arrowCount, lessThanOrEqualTo(dealt.arrowCount + 2));
-    expect(grown.blocks.length, lessThanOrEqualTo(1));
+    expect(grown.mirrors.length, lessThanOrEqualTo(1));
     expect(n.state.dealtArrows, dealt.arrowCount);
     expect(snaps.last.drops, 1);
     // The same drop the engine plans for this board.
@@ -92,7 +92,7 @@ void main() {
     n.restart();
     expect(n.state.drops, 0);
     expect(n.state.puzzle!.arrowCount, 4);
-    expect(n.state.puzzle!.blocks, isEmpty);
+    expect(n.state.puzzle!.mirrors, isEmpty);
     // Its own second again, not what was left of the last one's.
     n.tick(500);
     expect(n.state.incoming, isEmpty);
@@ -166,7 +166,7 @@ void main() {
     expect(back.state.removed, {1});
     final p = back.state.puzzle!;
     expect(p.arrowCount, before.arrowCount);
-    expect(p.blocks, before.blocks);
+    expect(p.mirrors, before.mirrors);
     expect([for (final a in p.arrows) a.cells], [for (final a in before.arrows) a.cells]);
     // And the next drop is still to come.
     back.resume();
@@ -185,7 +185,6 @@ void main() {
       elapsedMs: 100,
       drops: 1,
       dropped: const [],
-      blocks: const [],
     );
     // More drops than the level has.
     final tooMany = SavedGame(

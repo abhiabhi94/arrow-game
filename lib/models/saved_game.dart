@@ -3,11 +3,12 @@
 /// level's puzzle is fixed by its seed, so the seed, the arrows out, the
 /// slips, the hints spent and the clock are enough to rebuild the moment —
 /// plus, in the Rush chapters, what has landed on it since ([dropped],
-/// [blocks]), which depends on how it was played. Pure Dart.
+/// [mirrors]), which depends on how it was played. Pure Dart.
 library;
 
 import '../engine/arrow_piece.dart';
 import '../engine/cell.dart';
+import '../engine/mirror.dart';
 import '../engine/puzzle.dart';
 import 'game_state.dart';
 
@@ -24,7 +25,7 @@ class SavedGame {
     this.continues = 0,
     this.drops = 0,
     this.dropped = const <List<Cell>>[],
-    this.blocks = const <Cell>[],
+    this.mirrors = const <Cell, Mirror>{},
   });
 
   /// A snapshot of [state], which must have its board and be mid-level.
@@ -42,7 +43,14 @@ class SavedGame {
         dropped: <List<Cell>>[
           for (final a in state.puzzle?.arrows.skip(state.dealtArrows) ?? const <ArrowPiece>[]) a.cells,
         ],
-        blocks: state.puzzle?.blocks.toList() ?? const <Cell>[],
+        // The mirrors that landed: the board's less the dealt board's, which
+        // the seed brings back on its own.
+        mirrors: state.puzzle == null || !state.puzzle!.grows
+            ? const <Cell, Mirror>{}
+            : <Cell, Mirror>{
+                for (final e in state.puzzle!.mirrors.entries)
+                  if (!state.dealtMirrors.contains(e.key)) e.key: e.value,
+              },
       );
 
   /// Rebuilds a snapshot from [toJson]; null when the map is not one.
@@ -81,7 +89,15 @@ class SavedGame {
         dropped.add(cells);
       }
     }
-    final blocks = _cells(json['blocks']) ?? const <Cell>[];
+    final mirrors = <Cell, Mirror>{};
+    final rawMirrors = json['mirrors'];
+    if (rawMirrors is List && rawMirrors.length % 3 == 0 && rawMirrors.every((e) => e is int)) {
+      final v = rawMirrors.cast<int>();
+      for (var i = 0; i < v.length; i += 3) {
+        if (v[i + 2] < 0 || v[i + 2] >= Mirror.values.length) return null;
+        mirrors[Cell(v[i], v[i + 1])] = Mirror.values[v[i + 2]];
+      }
+    }
     final drops = json['drops'];
     return SavedGame(
       level: level,
@@ -104,7 +120,7 @@ class SavedGame {
       },
       drops: drops is int && drops >= 0 ? drops : 0,
       dropped: List<List<Cell>>.unmodifiable(dropped),
-      blocks: List<Cell>.unmodifiable(blocks),
+      mirrors: Map<Cell, Mirror>.unmodifiable(mirrors),
     );
   }
 
@@ -116,9 +132,10 @@ class SavedGame {
 
   /// The board [dealt] with what this snapshot says landed on it, or null
   /// when that cannot be on it: a cell off the board, an arrow that is not
-  /// a chain of neighbouring cells, or one landing where another still is.
+  /// a chain of neighbouring cells, or a mirror where an arrow has sat or
+  /// a mirror already stands.
   Puzzle? rebuild(Puzzle dealt) {
-    if (dropped.isEmpty && blocks.isEmpty) return dealt;
+    if (dropped.isEmpty && mirrors.isEmpty) return dealt;
     final arrows = <ArrowPiece>[];
     for (final cells in dropped) {
       if (cells.any((c) => !c.isInside(dealt.width, dealt.height))) return null;
@@ -132,8 +149,11 @@ class SavedGame {
         heading: cells[cells.length - 2].directionTo(cells.last)!,
       ));
     }
-    if (blocks.any((c) => !c.isInside(dealt.width, dealt.height) || dealt.isMirror(c))) return null;
-    return dealt.grownBy(arrows, blocks: blocks.toSet());
+    final sat = <Cell>{for (final a in dealt.arrows) ...a.cells, for (final a in arrows) ...a.cells};
+    if (mirrors.keys.any((c) => !c.isInside(dealt.width, dealt.height) || dealt.isMirror(c) || sat.contains(c))) {
+      return null;
+    }
+    return dealt.grownBy(arrows, mirrors: mirrors);
   }
 
   final int level;
@@ -165,8 +185,8 @@ class SavedGame {
   /// order they landed: their ids run on from the dealt board's.
   final List<List<Cell>> dropped;
 
-  /// The blocks that landed.
-  final List<Cell> blocks;
+  /// The mirrors that landed.
+  final Map<Cell, Mirror> mirrors;
   final int mistakes;
   final int hintsLeft;
   final int elapsedMs;
@@ -190,7 +210,8 @@ class SavedGame {
         if (dropped.isNotEmpty) 'dropped': <List<int>>[
           for (final a in dropped) <int>[for (final c in a) ...<int>[c.x, c.y]],
         ],
-        if (blocks.isNotEmpty) 'blocks': <int>[for (final c in blocks) ...<int>[c.x, c.y]],
+        if (mirrors.isNotEmpty)
+          'mirrors': <int>[for (final e in mirrors.entries) ...<int>[e.key.x, e.key.y, e.value.index]],
       };
 
   @override
@@ -204,7 +225,7 @@ class SavedGame {
       other.continues == continues &&
       other.drops == drops &&
       other.dropped.length == dropped.length &&
-      other.blocks.length == blocks.length &&
+      other.mirrors.length == mirrors.length &&
       other.removed.length == removed.length &&
       other.removed.every(removed.contains) &&
       other.bumped.length == bumped.length &&

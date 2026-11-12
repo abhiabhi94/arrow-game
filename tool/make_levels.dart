@@ -28,19 +28,21 @@
 // for every one of them on the board, plus slack, and never over ten
 // minutes. Teaching boards run at 3 s an arrow.
 
-// **Levels 101–150** are the Rush: the plain rectangle of levels 1–100,
-// but the board does not only empty — new arrows land on it while it is
-// played, a few at a time packed into a small shape (`LevelDrops`), and
-// from level 126 blocks land with them and stay. Each half opens on a
-// small teaching board and climbs for twenty-four levels: more arrows at
-// the start ([rushStart] → +2 a level), more drops (one more every two
-// levels) and bigger ones. The board starts about half full (the gaps are
-// where the drops land), sized like a flat board at [cellsPerArrow] free
-// cells an arrow, plus room for the blocks. The clock is [rushPace] a
-// arrow, every arrow the drops bring counted, and the drops are spread
-// over a little more than half of it, never more than twelve seconds
-// apart — and a drop lands at once when the board is nearly empty, so a
-// quick player never waits for the next.
+// **Levels 101–150** are the Rush: the rectangle of levels 1–100 with every
+// twist of theirs on it, but the board does not only empty — new arrows
+// land on it while it is played, packed into a shape (`LevelDrops`), and
+// from level 126 mirrors land with them, turning the ways out that run
+// through them. Each half opens on a small plain teaching board and climbs
+// for twenty-four levels: more arrows at the start ([rushStart] → +2 a
+// level), more drops (one more every two levels), bigger drops of longer
+// arrows (up to eight cells by the end), and the twists thickening. The
+// board starts about half full (the gaps are where the drops land), sized
+// like a flat board at [cellsPerArrow] free cells an arrow. The clock is
+// [rushPace] an arrow, every arrow the drops bring counted, plus half the
+// flat chapters' seconds for each twist — level 125 was cleared in two and
+// a half minutes on a laptop, so its clock is about three — and the drops
+// come over a little more than half of it, never more than twelve seconds
+// apart, and at once when the board is nearly empty.
 
 import 'dart:math';
 
@@ -52,8 +54,9 @@ const int lastLevel = 100;
 /// Arrows on the board at the start of the Rush's second level.
 const int rushStart = 24;
 
-/// Seconds an arrow in the Rush, the drops' arrows counted.
-const double rushPace = 3.0;
+/// Seconds an arrow in the Rush, the drops' arrows counted, before the
+/// twists' own seconds.
+const double rushPace = 1.4;
 
 /// Seconds an arrow on the block, before the twists' own seconds.
 const double cubePace = 2.4;
@@ -160,28 +163,48 @@ void main() {
 
 void _rush(int level) {
   final k = level - 100; // 1..50
-  final withBlocks = k > 25;
-  final i = withBlocks ? k - 25 : k; // 1..25 within the half
+  final withMirrors = k > 25;
+  final i = withMirrors ? k - 25 : k; // 1..25 within the half
   final teach = i == 1;
   final arrows = teach ? 8 : rushStart + (i - 2) * 2;
   final count = teach ? 4 : 5 + (i - 2) ~/ 2;
-  final perDrop = teach ? 2 : 3 + (i >= 14 ? 1 : 0);
-  final blocks = !withBlocks ? 0 : (teach ? 1 : 1 + (i >= 13 ? 1 : 0));
-  final dropLength = teach ? 3 : 4 + (i >= 10 ? 1 : 0);
+  final perDrop = teach ? 2 : 3 + (i >= 12 ? 1 : 0);
+  // Late drops bring long arrows: that is where the work grows.
+  final dropLength = teach ? 3 : min(8, 4 + i ~/ 5);
+  final dropMirrors = !withMirrors ? 0 : (teach ? 1 : 1 + (i >= 13 ? 1 : 0));
+  // Every twist of the first hundred levels is on the board from the
+  // second level of each half: the Rush adds to the game, it does not
+  // start it over.
+  final mirrors = teach ? 0 : max(2, (arrows / 14).round());
+  final locks = teach ? 0 : 2 + i ~/ 8;
+  final hidden = teach ? 0 : 2 + i ~/ 8;
+  final pairs = teach ? 0 : 1 + i ~/ 8;
   final minLength = teach ? 2 : 3;
   final maxLength = teach ? 4 : 7 + i ~/ 8;
-  final (width, height) = teach ? (withBlocks ? (9, 12) : (8, 11)) : _sizeFor(arrows, blocks * count);
+  final (width, height) = teach ? (withMirrors ? (9, 12) : (8, 11)) : _sizeFor(arrows, mirrors + dropMirrors * count);
+  // The clock: about one and a half seconds for every arrow the level will
+  // hold — level 125 was cleared in under two and a half minutes on a
+  // laptop, so about three on a phone — plus half the flat chapters'
+  // seconds for every twist, then trimmed like every clock.
   final total = arrows + count * perDrop;
-  final seconds = total * (teach ? 3.5 : rushPace) + (teach ? 30.0 : 20.0);
+  final think = mirrors * 0.5 + locks * 2.0 + hidden * 1.5 + pairs * 1.5 + dropMirrors * count * 0.5;
+  final seconds = total * (teach ? 2.5 : rushPace) + (teach ? 30.0 : 20.0) + think;
   final timeLimitMs = (min((seconds * 1000).round(), 599000) * kClockTrim).round();
   final everyMs = ((timeLimitMs * 0.55 / count / 500).round() * 500).clamp(4000, 12000);
   final openMoves = teach ? 3 : 2;
-  final blockText = blocks > 0 ? ', blocks: $blocks' : '';
+  final features = <String>[
+    if (mirrors > 0) 'mirrors: $mirrors',
+    if (locks > 0) 'locks: $locks',
+    if (hidden > 0) 'hidden: $hidden',
+    if (pairs > 0) 'pairs: $pairs',
+  ];
+  final featureText = features.isEmpty ? '' : ', features: LevelFeatures(${features.join(', ')})';
+  final mirrorText = dropMirrors > 0 ? ', mirrors: $dropMirrors' : '';
   // ignore: avoid_print
   print(
     '  LevelSpec(level: $level, width: $width, height: $height, arrows: $arrows, '
-    'minLength: $minLength, maxLength: $maxLength, timeLimitMs: $timeLimitMs, openMoves: $openMoves, '
-    'drops: LevelDrops(count: $count, everyMs: $everyMs, arrows: $perDrop$blockText, maxLength: $dropLength)),',
+    'minLength: $minLength, maxLength: $maxLength, timeLimitMs: $timeLimitMs, openMoves: $openMoves$featureText, '
+    'drops: LevelDrops(count: $count, everyMs: $everyMs, arrows: $perDrop$mirrorText, maxLength: $dropLength)),',
   );
 }
 

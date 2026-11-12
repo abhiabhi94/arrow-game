@@ -46,25 +46,25 @@ class LevelFeatures {
   String toString() => 'LevelFeatures(mirrors $mirrors, locks $locks, hidden $hidden, pairs $pairs)';
 }
 
-/// Arrows (and blocks) that land on the board while the level is played,
+/// Arrows (and mirrors) that land on the board while the level is played,
 /// a few at a time: the Rush chapters. Each drop brings up to [arrows] new
-/// arrows packed into a small shape on empty cells, and [blocks] solid
-/// cells that stay for the rest of the level — never on a cell some arrow
-/// still on the board has to cross, and never in a new arrow's way, so the
-/// board can always be cleared. A drop lands every [everyMs] of play, and
-/// at once when the board is nearly empty, so a quick player never waits.
-/// The level is cleared once every drop has landed and every arrow is out.
+/// arrows packed into a shape on empty cells, and up to [mirrors] mirrors,
+/// each landing where it turns some arrow's way out — never so that the
+/// board can no longer be cleared. A drop lands every [everyMs] of play,
+/// and at once when the board is nearly empty, so a quick player never
+/// waits. The level is cleared once every drop has landed and every arrow
+/// is out.
 class LevelDrops {
   const LevelDrops({
     required this.count,
     required this.everyMs,
     this.arrows = 3,
-    this.blocks = 0,
+    this.mirrors = 0,
     this.maxLength = 5,
   })  : assert(count >= 1),
         assert(everyMs > 0),
         assert(arrows >= 1),
-        assert(blocks >= 0),
+        assert(mirrors >= 0),
         assert(maxLength >= 2);
 
   /// Drops in the level.
@@ -76,10 +76,10 @@ class LevelDrops {
   /// Arrows each drop brings, at most (a crowded board may take fewer).
   final int arrows;
 
-  /// Blocks each drop brings, at most.
-  final int blocks;
+  /// Mirrors each drop brings, at most.
+  final int mirrors;
 
-  /// The longest arrow a drop brings, in cells.
+  /// The longest arrow a drop brings, in cells: its arrows run close to it.
   final int maxLength;
 
   /// Every arrow the drops bring, when each lands in full.
@@ -91,14 +91,14 @@ class LevelDrops {
       other.count == count &&
       other.everyMs == everyMs &&
       other.arrows == arrows &&
-      other.blocks == blocks &&
+      other.mirrors == mirrors &&
       other.maxLength == maxLength;
 
   @override
-  int get hashCode => Object.hash(count, everyMs, arrows, blocks, maxLength);
+  int get hashCode => Object.hash(count, everyMs, arrows, mirrors, maxLength);
 
   @override
-  String toString() => 'LevelDrops($count of $arrows arrows + $blocks blocks every ${everyMs}ms)';
+  String toString() => 'LevelDrops($count of $arrows arrows + $mirrors mirrors every ${everyMs}ms)';
 }
 
 class LevelSpec {
@@ -182,7 +182,7 @@ class LevelSpec {
   /// [width]×[depth].
   final int depth;
 
-  /// The arrows and blocks that land while the level is played (the Rush
+  /// The arrows and mirrors that land while the level is played (the Rush
   /// chapters), or null for a board that only ever empties.
   final LevelDrops? drops;
 

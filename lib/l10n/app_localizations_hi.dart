@@ -1567,14 +1567,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get tutorialRush => 'समय के साथ नए तीर आते रहेंगे।';
 
   @override
-  String get chapterName7 => 'भागदौड़ और ब्लॉक';
+  String get chapterName7 => 'भागदौड़ और आईने';
 
   @override
   String get chapterBlurb7 =>
-      'नए तीर आते हैं, और साथ में ब्लॉक भी, जो टिके रहते हैं।';
+      'नए तीर आते हैं, और साथ में आईने भी, जो रास्ता मोड़ देते हैं।';
 
   @override
-  String get tutorialRushBlocks => 'समय के साथ नए तीर आते रहेंगे, और ब्लॉक भी।';
+  String get tutorialRushMirrors =>
+      'समय के साथ नए तीर आते रहेंगे, और आईने भी, जो रास्ता मोड़ देते हैं।';
 
   @override
   String get chapterName8 => 'क्यूब';
