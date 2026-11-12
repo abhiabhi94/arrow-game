@@ -67,7 +67,8 @@ void main() {
     await tester.tap(find.text('No limit'));
     await tester.pump();
     expect(settings().noTimeLimit, isTrue);
-    expect(settings().extraTime, isFalse);
+    // As "Remove time limits" did: extra time is left as it was.
+    expect(settings().extraTime, isTrue);
     expect(settings().clock, ClockChoice.off);
 
     await tester.tap(find.text('Standard'));

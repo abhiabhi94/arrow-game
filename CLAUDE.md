@@ -1168,7 +1168,9 @@ Key patterns:
   - *Time.* Settings opens on the **Level clock** card: one choice of
     three (`ClockChoice`: Standard, Extra time, No limit — radio rows, since
     a row of segments overflowed at 2× text), a view of the two stored
-    flags through `Settings.clock` / `SettingsNotifier.setClock`. It was two
+    flags through `Settings.clock` / `SettingsNotifier.setClock` — the keys
+    are unchanged and No limit leaves `extraTime` as it was, as Remove time
+    limits did, so a stored pair means what it always meant. It was two
     switches, "Remove time limits" and "Extra time", and the second meant
     nothing while the first was on. The rest of Settings is four more
     cards: **Sound & touch** (music and its volume, sound effects,
