@@ -3085,6 +3085,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Take a breath. The board will wait.'**
   String get gamePausedBodyUntimed;
+
+  /// No description provided for @settingsClock.
+  ///
+  /// In en, this message translates to:
+  /// **'Level clock'**
+  String get settingsClock;
+
+  /// No description provided for @clockStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard'**
+  String get clockStandard;
+
+  /// No description provided for @clockExtra.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra time'**
+  String get clockExtra;
+
+  /// No description provided for @clockOff.
+  ///
+  /// In en, this message translates to:
+  /// **'No limit'**
+  String get clockOff;
+
+  /// No description provided for @clockStandardBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every level has its own clock'**
+  String get clockStandardBody;
+
+  /// No description provided for @settingsSoundAndTouch.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound & touch'**
+  String get settingsSoundAndTouch;
+
+  /// No description provided for @settingsMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get settingsMore;
+
+  /// No description provided for @gameShareLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy a link to this level'**
+  String get gameShareLevel;
+
+  /// No description provided for @gameShareCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link to level {level} copied. Send it to a friend!'**
+  String gameShareCopied(int level);
 }
 
 class _AppLocalizationsDelegate

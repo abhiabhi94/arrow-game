@@ -34,42 +34,55 @@ void main() {
     expect(container.read(settingsProvider).musicOn, isFalse);
     expect(find.byType(Slider), findsNothing);
 
-    await tester.scrollUntilVisible(find.text('Haptic feedback'), 200);
+    await _reach(tester, 'Haptic feedback');
     await tester.tap(find.text('Haptic feedback'));
     await tester.pump();
     expect(container.read(settingsProvider).hapticsOn, isFalse);
 
-    await tester.scrollUntilVisible(find.text('Dark'), 200);
+    await _reach(tester, 'Dark');
     await tester.tap(find.text('Dark'));
     await tester.pump();
     expect(container.read(settingsProvider).themeChoice, ThemeChoice.dark);
-    await tester.scrollUntilVisible(find.text('How to play'), 200);
+    await _reach(tester, 'How to play');
     expect(find.text('How to play'), findsOneWidget);
   });
 
-  testWidgets('gameplay comes first: time limits stay by default, extra time waits for a clock', (tester) async {
+  testWidgets('the clock comes first, as one choice of three', (tester) async {
     await usePhoneSurface(tester);
     final container = await pumpApp(tester, const SettingsScreen());
-    expect(container.read(settingsProvider).noTimeLimit, isFalse);
-    // Its own card at the top, apart from sound and looks.
-    expect(find.text('Gameplay'), findsOneWidget);
+    Settings settings() => container.read(settingsProvider);
+    expect(settings().clock, ClockChoice.standard);
+    // Its own card at the top, above sound and looks.
+    expect(find.text('Level clock'), findsOneWidget);
     expect(
-      tester.getTopLeft(find.text('Remove time limits')).dy,
+      tester.getTopLeft(find.text('No limit')).dy,
       lessThan(tester.getTopLeft(find.text('Music')).dy),
     );
-    SwitchListTile tile(String title) =>
-        tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, title));
-    expect(tile('Remove time limits').value, isFalse);
-    expect(tile('Extra time').onChanged, isNotNull);
+    // One choice: picking one is picking out of the others.
     await tester.tap(find.text('Extra time'));
     await tester.pump();
-    expect(container.read(settingsProvider).extraTime, isTrue);
+    expect(settings().extraTime, isTrue);
+    expect(settings().noTimeLimit, isFalse);
 
-    await tester.tap(find.text('Remove time limits'));
+    await tester.tap(find.text('No limit'));
     await tester.pump();
-    expect(container.read(settingsProvider).noTimeLimit, isTrue);
-    // Nothing to stretch while there is no clock.
-    expect(tile('Extra time').onChanged, isNull);
+    expect(settings().noTimeLimit, isTrue);
+    expect(settings().extraTime, isFalse);
+    expect(settings().clock, ClockChoice.off);
+
+    await tester.tap(find.text('Standard'));
+    await tester.pump();
+    expect(settings().clock, ClockChoice.standard);
+    expect(settings().noTimeLimit, isFalse);
+    expect(settings().extraTime, isFalse);
+  });
+
+  testWidgets('sound, haptics and the rest share their cards', (tester) async {
+    await usePhoneSurface(tester);
+    await pumpApp(tester, const SettingsScreen());
+    expect(find.text('Sound & touch'), findsOneWidget);
+    await _reach(tester, 'More');
+    expect(find.text('More'), findsOneWidget);
   });
 
   testWidgets('picks a language, with the device as the default', (tester) async {
@@ -91,14 +104,14 @@ void main() {
     await usePhoneSurface(tester);
     await pumpApp(tester, const SettingsScreen());
     // Both rows sit below a phone's fold since the accessibility card.
-    await tester.scrollUntilVisible(find.text('Music credits'), 200);
+    await _reach(tester, 'Music credits');
     await tester.tap(find.text('Music credits'));
     await tester.pumpAndSettle();
     expect(find.byType(CreditsScreen), findsOneWidget);
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(find.text('How to play'), 200);
+    await _reach(tester, 'How to play');
     await tester.tap(find.text('How to play'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -125,7 +138,7 @@ void main() {
     expect(container.read(savedGameProvider)?.level, 2);
 
     // The accessibility card pushed the reset card below a phone's fold.
-    await tester.scrollUntilVisible(find.text('Reset progress'), 200);
+    await _reach(tester, 'Reset progress');
     await tester.tap(find.text('Reset progress'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancel'));
@@ -150,8 +163,16 @@ void main() {
     expect(tester.takeException(), isNull);
     final card = tester.getRect(find.byType(Switch).first);
     expect(card.right, lessThanOrEqualTo((1440 + kMaxContentWidth) / 2));
-    await tester.scrollUntilVisible(find.text('How to play'), 200);
+    await _reach(tester, 'How to play');
     final title = tester.getRect(find.text('How to play'));
     expect(title.left, greaterThanOrEqualTo((1440 - kMaxContentWidth) / 2));
   });
+}
+
+/// Scrolls [text] into full view, so a tap lands on it rather than at the
+/// edge of the list.
+Future<void> _reach(WidgetTester tester, String text) async {
+  await tester.scrollUntilVisible(find.text(text), 200);
+  await tester.ensureVisible(find.text(text));
+  await tester.pumpAndSettle();
 }

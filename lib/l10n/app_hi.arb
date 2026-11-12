@@ -496,5 +496,14 @@
   "settingsRemoveTimeLimitsSubtitle": "किसी लेवल पर घड़ी नहीं — अपनी रफ़्तार से खेलो",
   "homeResumeProgressUntimed": "{total} में से {out} तीर बाहर",
   "resumeBodyUntimed": "आपने यह लेवल {total} में से {out} तीर बाहर के साथ छोड़ा था।",
-  "gamePausedBodyUntimed": "साँस ले लीजिए। बोर्ड इंतज़ार करेगा।"
+  "gamePausedBodyUntimed": "साँस ले लीजिए। बोर्ड इंतज़ार करेगा।",
+  "settingsClock": "लेवल की घड़ी",
+  "clockStandard": "सामान्य",
+  "clockExtra": "दुगना समय",
+  "clockOff": "बिना घड़ी",
+  "clockStandardBody": "हर लेवल की अपनी घड़ी",
+  "settingsSoundAndTouch": "आवाज़ और कंपन",
+  "settingsMore": "और",
+  "gameShareLevel": "इस लेवल का लिंक कॉपी करें",
+  "gameShareCopied": "लेवल {level} का लिंक कॉपी हो गया। किसी दोस्त को भेजिए!"
 }

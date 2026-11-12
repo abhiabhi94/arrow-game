@@ -100,6 +100,12 @@ class SettingsNotifier extends StateNotifier<Settings> {
 
   void setNoTimeLimit(bool on) => _update(state.copyWith(noTimeLimit: on));
 
+  /// Sets both clock flags from Settings' one choice.
+  void setClock(ClockChoice choice) => _update(state.copyWith(
+        noTimeLimit: choice == ClockChoice.off,
+        extraTime: choice == ClockChoice.extra,
+      ));
+
   void completeOnboarding() => _update(state.copyWith(onboardingDone: true));
 
   void _update(Settings next) {

@@ -925,5 +925,21 @@
       }
     }
   },
-  "gamePausedBodyUntimed": "Take a breath. The board will wait."
+  "gamePausedBodyUntimed": "Take a breath. The board will wait.",
+  "settingsClock": "Level clock",
+  "clockStandard": "Standard",
+  "clockExtra": "Extra time",
+  "clockOff": "No limit",
+  "clockStandardBody": "Every level has its own clock",
+  "settingsSoundAndTouch": "Sound & touch",
+  "settingsMore": "More",
+  "gameShareLevel": "Copy a link to this level",
+  "gameShareCopied": "Link to level {level} copied. Send it to a friend!",
+  "@gameShareCopied": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  }
 }

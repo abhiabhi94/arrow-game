@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:confetti/confetti.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +30,7 @@ import '../ui/layout.dart';
 import '../ui/motion.dart';
 import '../utils/format.dart';
 import '../utils/labels.dart';
+import '../utils/level_link.dart';
 import '../widgets/board_toolbar.dart';
 import '../widgets/chapter_demo.dart';
 import '../widgets/cube_map.dart';
@@ -507,6 +509,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
     if (next != null && next != _cursor) setState(() => _cursor = next);
   }
 
+  /// Copies the link to this level ([levelLinkFor]) and says so.
+  Future<void> _copyLevelLink() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final link = levelLinkFor(widget.level, here: kIsWeb ? Uri.base : null);
+    await Clipboard.setData(ClipboardData(text: '$link'));
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.gameShareCopied(widget.level))));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -618,6 +631,14 @@ class _GameScreenState extends ConsumerState<GameScreen>
             ],
           ),
           actions: [
+            // A link straight to this level, to send to someone. The daily
+            // board is dealt per install, so it has none.
+            if (!widget.isDaily)
+              IconButton(
+                tooltip: l10n.gameShareLevel,
+                onPressed: _copyLevelLink,
+                icon: const Icon(Icons.link_rounded),
+              ),
             if (state.isPlaying) ...[
               IconButton(
                 tooltip: l10n.gameRestart,

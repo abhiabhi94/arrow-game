@@ -156,6 +156,18 @@ OFL, static weights 400–800) is bundled in `assets/fonts/` and declared
 under `flutter: fonts:` as `GoogleSansFlex` — no `google_fonts`, no runtime
 fetch.
 
+**A link to a level** (`utils/level_link.dart`): `?level=N` on the web
+build (`https://abhiabhi94.github.io/arrow-game/?level=42`, also read after
+a `#`) opens level N over home (`screens/level_link_launcher.dart`), so the
+board is the first thing seen and Back goes home — whether or not the
+player has reached it: a link is an invitation. The game screen's link
+button (not on the daily board, which is dealt per install) copies it —
+the page it was copied from in a browser (a PR preview links to itself),
+the public site from the phone app. The phone app does not open these
+links itself: that needs Android App Links verified on the domain's root,
+which a project page on github.io does not have. `?perf&level=N` is still
+the profiler's own way in (`perf_hooks.dart`), straight onto the board.
+
 **Desktop browser (`lib/ui/layout.dart`):** the design is phone-first, so
 every screen keeps its content in a centred column no wider than
 `kMaxContentWidth` (480) — `ContentColumn` for one-block screens (game,
@@ -1153,10 +1165,16 @@ Key patterns:
     moves that carries no information: no screen jolt, hop, confetti, slump,
     shake or entrance animation, a still hint glow, a bump that flashes
     without travelling (`_BoardPainter.travel` = 0). Arrows still slide out.
-  - *Time.* Settings opens on a **Gameplay** card of its own (apart from
-    sound and looks; `_CardHeading` is the heading it shares with
-    Accessibility). **Remove time limits** (`Settings.noTimeLimit`,
-    `arrow_no_time_limit`) is **off by default** — turning it on by default
+  - *Time.* Settings opens on the **Level clock** card: one choice of
+    three (`ClockChoice`: Standard, Extra time, No limit — radio rows, since
+    a row of segments overflowed at 2× text), a view of the two stored
+    flags through `Settings.clock` / `SettingsNotifier.setClock`. It was two
+    switches, "Remove time limits" and "Extra time", and the second meant
+    nothing while the first was on. The rest of Settings is four more
+    cards: **Sound & touch** (music and its volume, sound effects,
+    haptics), language and theme, **Accessibility** (reduce motion) and
+    **More** (how to play, credits, reset). **No limit**
+    (`Settings.noTimeLimit`, `arrow_no_time_limit`) is **off by default** — turning it on by default
     would have changed every existing player's game. On, every level and
     the daily board are dealt with `LevelSpec.untimed()` (`timed: false`)
     and **no time is counted at all**: `tick` does nothing, there is no
@@ -1169,9 +1187,8 @@ Key patterns:
     Continue line say nothing about a clock (`*Untimed` strings). The trail
     shows whatever best time a level already had from timed play and none
     for a level only ever cleared untimed. A saved game fits whatever it
-    reads. Off, every level's clock counts down to zero, and **Extra time**
-    (the card's second switch, disabled while time limits are removed)
-    doubles it (`LevelSpec.withClockFactor`, applied in `gameProvider`; the
+    reads. Otherwise every level's clock counts down to zero, and **Extra
+    time** doubles it (`LevelSpec.withClockFactor`, applied in `gameProvider`; the
     seed, board and stars are untouched, so saved games still fit). The
     curve is brisk by design; this is the opt-out for hands and eyes that
     need longer.
