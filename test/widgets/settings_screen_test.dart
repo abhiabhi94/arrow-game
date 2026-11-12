@@ -47,17 +47,17 @@ void main() {
     expect(find.text('How to play'), findsOneWidget);
   });
 
-  testWidgets('the clock comes first, as one choice of three', (tester) async {
+  testWidgets('the clock is one choice of three, after sound', (tester) async {
     await usePhoneSurface(tester);
     final container = await pumpApp(tester, const SettingsScreen());
     Settings settings() => container.read(settingsProvider);
     expect(settings().clock, ClockChoice.standard);
-    // Its own card at the top, above sound and looks.
-    expect(find.text('Level clock'), findsOneWidget);
+    // Its own card after sound and touch, the setting changed most often.
     expect(
-      tester.getTopLeft(find.text('No limit')).dy,
-      lessThan(tester.getTopLeft(find.text('Music')).dy),
+      tester.getTopLeft(find.text('Haptic feedback', skipOffstage: false)).dy,
+      lessThan(tester.getTopLeft(find.text('Level clock', skipOffstage: false)).dy),
     );
+    await _reach(tester, 'No limit');
     // One choice: picking one is picking out of the others.
     await tester.tap(find.text('Extra time'));
     await tester.pump();

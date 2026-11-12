@@ -1165,17 +1165,18 @@ Key patterns:
     moves that carries no information: no screen jolt, hop, confetti, slump,
     shake or entrance animation, a still hint glow, a bump that flashes
     without travelling (`_BoardPainter.travel` = 0). Arrows still slide out.
-  - *Time.* Settings opens on the **Level clock** card: one choice of
+  - *Time.* Settings' **Level clock** card (second, after Sound & touch:
+    the usual order, most-changed first and the reset last) is one choice of
     three (`ClockChoice`: Standard, Extra time, No limit — radio rows, since
     a row of segments overflowed at 2× text), a view of the two stored
     flags through `Settings.clock` / `SettingsNotifier.setClock` — the keys
     are unchanged and No limit leaves `extraTime` as it was, as Remove time
     limits did, so a stored pair means what it always meant. It was two
     switches, "Remove time limits" and "Extra time", and the second meant
-    nothing while the first was on. The rest of Settings is four more
-    cards: **Sound & touch** (music and its volume, sound effects,
-    haptics), language and theme, **Accessibility** (reduce motion) and
-    **More** (how to play, credits, reset). **No limit**
+    nothing while the first was on. Settings is five cards in that order:
+    **Sound & touch** (music and its volume, sound effects, haptics), the
+    Level clock, language and theme, **Accessibility** (reduce motion) and
+    **More** (how to play, credits, and Reset progress at the very bottom). **No limit**
     (`Settings.noTimeLimit`, `arrow_no_time_limit`) is **off by default** — turning it on by default
     would have changed every existing player's game. On, every level and
     the daily board are dealt with `LevelSpec.untimed()` (`timed: false`)

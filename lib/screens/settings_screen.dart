@@ -15,10 +15,12 @@ import '../ui/layout.dart';
 import 'credits_screen.dart';
 import 'onboarding_screen.dart';
 
-/// Settings, in five cards: the level clock (one choice: standard, extra
-/// time or none), sound and touch (music and its volume, sound effects,
-/// haptics), language and theme, accessibility (reduce motion), and the
-/// rest (the walkthrough again, music credits, a progress reset).
+/// Settings, in five cards, in the usual order — what is changed most first,
+/// what is dangerous last: sound and touch (music and its volume, sound
+/// effects, haptics), the level clock (one choice: standard, extra time or
+/// none), language and theme, accessibility (reduce motion), and the rest
+/// (the walkthrough again, music credits, and the progress reset at the
+/// very bottom).
 ///
 /// The emoji on each row are decoration and kept from the screen reader; the
 /// volume slider carries its own name and reads its value as a percentage.
@@ -74,41 +76,6 @@ class SettingsScreen extends ConsumerWidget {
               contentGutter(constraints.maxWidth) +
               MediaQuery.paddingOf(context),
           children: [
-            // How the game plays: the clock is one choice, not two switches
-            // that only made sense together.
-            _SettingCard(
-              child: Column(
-                children: [
-                  _CardHeading(emoji: '⏱️', title: l10n.settingsClock),
-                  // Three options, each saying what it does: a row of
-                  // segments overflowed with the system font at 2×.
-                  RadioGroup<ClockChoice>(
-                    groupValue: settings.clock,
-                    onChanged: (choice) => notifier.setClock(choice!),
-                    child: Column(
-                      children: [
-                        RadioListTile<ClockChoice>(
-                          value: ClockChoice.standard,
-                          title: Text(l10n.clockStandard),
-                          subtitle: Text(l10n.clockStandardBody),
-                        ),
-                        RadioListTile<ClockChoice>(
-                          value: ClockChoice.extra,
-                          title: Text(l10n.clockExtra),
-                          subtitle: Text(l10n.settingsExtraTimeSubtitle),
-                        ),
-                        RadioListTile<ClockChoice>(
-                          value: ClockChoice.off,
-                          title: Text(l10n.clockOff),
-                          subtitle: Text(l10n.settingsRemoveTimeLimitsSubtitle),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
             // What the game sounds and feels like, in one card.
             _SettingCard(
               child: Column(
@@ -170,6 +137,41 @@ class SettingsScreen extends ConsumerWidget {
                     secondary: const _Emoji('📳'),
                     title: Text(l10n.settingsHaptics),
                     subtitle: Text(l10n.settingsHapticsSubtitle),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // How the game plays: the clock is one choice, not two switches
+            // that only made sense together.
+            _SettingCard(
+              child: Column(
+                children: [
+                  _CardHeading(emoji: '⏱️', title: l10n.settingsClock),
+                  // Three options, each saying what it does: a row of
+                  // segments overflowed with the system font at 2×.
+                  RadioGroup<ClockChoice>(
+                    groupValue: settings.clock,
+                    onChanged: (choice) => notifier.setClock(choice!),
+                    child: Column(
+                      children: [
+                        RadioListTile<ClockChoice>(
+                          value: ClockChoice.standard,
+                          title: Text(l10n.clockStandard),
+                          subtitle: Text(l10n.clockStandardBody),
+                        ),
+                        RadioListTile<ClockChoice>(
+                          value: ClockChoice.extra,
+                          title: Text(l10n.clockExtra),
+                          subtitle: Text(l10n.settingsExtraTimeSubtitle),
+                        ),
+                        RadioListTile<ClockChoice>(
+                          value: ClockChoice.off,
+                          title: Text(l10n.clockOff),
+                          subtitle: Text(l10n.settingsRemoveTimeLimitsSubtitle),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
