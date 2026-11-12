@@ -259,18 +259,18 @@ void main() {
           }
           // The clock: 1.4 s for every arrow there will be, the twists'
           // seconds and 20 s over, before the trim — level 125 was
-          // cleared in two and a half minutes on a laptop — and half as
-          // long again with mirrors landing (126–150), which played tight.
+          // cleared in two and a half minutes on a laptop — and 1.22x that
+          // with mirrors landing (126–150): level 150 at 4:20.
           final think = f.mirrors * 0.5 + f.locks * 2 + f.hidden * 1.5 + f.pairs * 1.5 + drops.count * drops.mirrors * 0.5;
-          final base = untrimmed(s) / (level >= kFirstMirrorsLevel ? 1.5 : 1);
+          final base = untrimmed(s) / (level >= kFirstMirrorsLevel ? 1.22 : 1);
           expect((base - 20000 - think * 1000) / (s.arrows + drops.arrowTotal), inInclusiveRange(1390, 1410),
               reason: 'level $level');
         }
       }
-      // The last level of each half: about three minutes, and about five
-      // with mirrors landing.
+      // The last level of each half: about three minutes, and 4:20 with
+      // mirrors landing.
       final finale = specForLevel(chapter.lastLevel).timeLimitMs;
-      expect(finale, chapter.lastLevel < kFirstMirrorsLevel ? inInclusiveRange(180000, 220000) : inInclusiveRange(290000, 340000));
+      expect(finale, chapter.lastLevel < kFirstMirrorsLevel ? inInclusiveRange(180000, 220000) : inInclusiveRange(240000, 280000));
       // Late drops bring long arrows.
       expect(specForLevel(chapter.lastLevel).drops!.maxLength, greaterThanOrEqualTo(8));
       // Past the teaching board: more to clear every level.

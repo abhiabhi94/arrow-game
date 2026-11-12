@@ -29,7 +29,7 @@ waits; in the seventh, mirrors land with them, each on some arrow's way
 out, turning it. Nothing appears out of thin air: the cells a drop will
 land on glow first, then its arrows and mirrors drop in. The clocks are
 brisk (level 125 was cleared in 2:27 on a laptop; its clock is 3:20),
-and half as long again from 126, where mirrors land too (150: 5:20).
+and 1.22× that from 126, where mirrors land too (150: 4:20).
 Each half has its card (a demo board where arrows, and a mirror, glow and
 land) and a line under its first board ("New arrows appear as time goes
 by.") —
@@ -878,14 +878,14 @@ Key patterns:
   40–60% full; the clock is `rushPace` (1.4 s) for every arrow the level
   will hold, half the flat chapters' seconds for each twist and 20 s over
   (trimmed) — the first cut gave 3 s an arrow and level 125 was cleared
-  in 2:27 of its six minutes — then 1.5× that on 126–150
+  in 2:27 of its six minutes — then 1.22× that on 126–150
   (`rushLongClock`, from `rushLongClockFrom`), which played too tight
-  with mirrors landing; the drops every 55% of the *base* clock over
+  with mirrors landing (1.5× first; a phone round settled level 150 at 4:20); the drops every 55% of the *base* clock over
   their count, 4–12 s, so the longer clock does not slow them. Levels 107, 127, 129 and 130 are dealt from
   variant 1, the first board on which every twist found a place.
   `level_specs_test` pins the curve (every twist past the teaching board,
   mirrors landing only in the second half, a strict climb in everything
-  to clear, level 125 about three minutes and 150 about five, the drops
+  to clear, level 125 about three minutes and 150 about four and a third, the drops
   well inside the clock); `rushChecks` plays every level at 1.2 s a tap.
   **The block (151–200)** has `openMoves` 1: a
   teaching cube of six arrows a face and no twists (8×8), warm-up faces of
